@@ -52,7 +52,7 @@ export const logsEntityEnum = pgEnum("logs_entity", [
   "loan",
   "item",
   "fine",
-  "user",
+  "Users",
 ]);
 
 // ==========================================
@@ -82,8 +82,8 @@ export const vendors = pgTable("vendors", {
 // 3. AUTHENTICATION (BETTER AUTH + CUSTOM)
 // ==========================================
 
-export const user = pgTable(
-  "user",
+export const Users = pgTable(
+  "users",
   {
     id: text("id").primaryKey(),
     name: text("name").notNull(),
@@ -122,7 +122,7 @@ export const session = pgTable("session", {
   userAgent: text("user_agent"),
   userId: text("user_id")
     .notNull()
-    .references(() => user.id),
+    .references(() => Users.id),
 
   // Required by Better Auth Admin Plugin for Impersonation
   impersonatedBy: text("impersonated_by"),
@@ -134,7 +134,7 @@ export const account = pgTable("account", {
   providerId: text("provider_id").notNull(),
   userId: text("user_id")
     .notNull()
-    .references(() => user.id),
+    .references(() => Users.id),
   accessToken: text("access_token"),
   refreshToken: text("refresh_token"),
   idToken: text("id_token"),
@@ -166,7 +166,7 @@ export const members = pgTable(
     userId: text("user_id")
       .notNull()
       .unique()
-      .references(() => user.id),
+      .references(() => Users.id),
     memberType: varchar("member_type", { length: 100 }).notNull(), // 'Student', 'Lecture'
     nimNidn: varchar("nim_nidn", { length: 255 }).notNull(),
     faculty: varchar("faculty", { length: 255 }).notNull(),
@@ -219,7 +219,7 @@ export const collectionViews = pgTable(
     collectionId: integer("collection_id")
       .notNull()
       .references(() => collections.id),
-    userId: text("user_id").references(() => user.id),
+    userId: text("user_id").references(() => Users.id),
     ipAddress: varchar("ip_address", { length: 45 }),
     viewedAt: timestamp("viewed_at").defaultNow(),
   },
@@ -275,7 +275,7 @@ export const loans = pgTable(
     dueDate: date("due_date").notNull(),
     returnDate: date("return_date"),
     status: loansStatusEnum("status").notNull(),
-    approvedBy: text("approved_by").references(() => user.id),
+    approvedBy: text("approved_by").references(() => Users.id),
     createdAt: timestamp("created_at").defaultNow(),
     updatedAt: timestamp("updated_at").defaultNow(),
     deletedAt: timestamp("deleted_at"),
@@ -322,7 +322,7 @@ export const transactions = pgTable("transactions", {
   paymentMethod: varchar("payment_method", { length: 100 }),
   confirmedBy: text("confirmed_by")
     .notNull()
-    .references(() => user.id),
+    .references(() => Users.id),
   paidAt: date("paid_at"),
   createdAt: timestamp("created_at").defaultNow(),
 });
@@ -348,7 +348,7 @@ export const logs = pgTable("logs", {
   id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
   userId: text("user_id")
     .notNull()
-    .references(() => user.id),
+    .references(() => Users.id),
   action: logsStatusEnum("action").notNull(),
   entity: logsEntityEnum("entity").notNull(),
   entityId: integer("entity_id"),
@@ -361,7 +361,7 @@ export const webTraffic = pgTable("web_traffic", {
     .primaryKey()
     .$defaultFn(() => crypto.randomUUID()),
   ipAddress: varchar("ip_address", { length: 45 }),
-  userId: text("user_id").references(() => user.id),
+  userId: text("user_id").references(() => Users.id),
   pageVisited: varchar("page_visited", { length: 255 }),
   visitTimestamp: timestamp("visit_timestamp").defaultNow(),
   userAgent: text("user_agent"),
@@ -372,9 +372,9 @@ export const webTraffic = pgTable("web_traffic", {
 // ==========================================
 
 // Relasi Users -> Roles / Members
-export const userRelations = relations(user, ({ one }) => ({
+export const userRelations = relations(Users, ({ one }) => ({
   member: one(members, {
-    fields: [user.id],
+    fields: [Users.id],
     references: [members.userId],
   }),
 }));
@@ -410,8 +410,8 @@ export const loanRelations = relations(loans, ({ one }) => ({
     fields: [loans.itemId],
     references: [items.id],
   }),
-  authApproved: one(user, {
+  authApproved: one(Users, {
     fields: [loans.approvedBy],
-    references: [user.id],
+    references: [Users.id],
   }),
 }));

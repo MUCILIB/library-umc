@@ -1,9 +1,9 @@
 {
   "scripts": {
     "dev": "bun run --watch src/index.ts",
-    "build": "tsc",
+    "build": "bunx tsc && echo ✅ Build successfully finished!",
     "start": "bun run src/index.ts",
-    "db:seed": "bun run src/db/seed/seed.ts"
+    "db:seed": "bun run src/db/seed.ts"
   },
   "dependencies": {
     "@types/cors": "^2.8.19",
@@ -21,7 +21,7 @@
   "devDependencies": {
     "@types/express": "^5.0.6",
     "@types/multer": "^2.0.0",
-    "@types/node": "^25.0.6",
+    "@types/node": "^25.0.8",
     "@types/pg": "^8.16.0",
     "drizzle-kit": "^0.31.8",
     "ts-node": "^10.9.2",

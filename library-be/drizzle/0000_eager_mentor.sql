@@ -1,12 +1,30 @@
+CREATE TYPE "public"."collection_type" AS ENUM('physical_book', 'ebook', 'journal', 'thesis');--> statement-breakpoint
 CREATE TYPE "public"."content_type" AS ENUM('text', 'pdf', 'url');--> statement-breakpoint
 CREATE TYPE "public"."fines_status" AS ENUM('paid', 'unpaid');--> statement-breakpoint
 CREATE TYPE "public"."item_status" AS ENUM('available', 'loaned', 'damaged', 'lost');--> statement-breakpoint
 CREATE TYPE "public"."loans_status" AS ENUM('pending', 'approved', 'returned', 'extended');--> statement-breakpoint
-CREATE TYPE "public"."logs_entity" AS ENUM('loan', 'item', 'fine', 'user');--> statement-breakpoint
+CREATE TYPE "public"."logs_entity" AS ENUM('loan', 'item', 'fine', 'Users');--> statement-breakpoint
 CREATE TYPE "public"."logs_status" AS ENUM('create', 'update', 'delete', 'approve', 'blacklist');--> statement-breakpoint
 CREATE TYPE "public"."reservations_status" AS ENUM('waiting', 'fulfilled', 'canceled');--> statement-breakpoint
 CREATE TYPE "public"."status_user" AS ENUM('active', 'blacklist');--> statement-breakpoint
-ALTER TYPE "public"."status" RENAME TO "collection_type";--> statement-breakpoint
+CREATE TABLE "users" (
+	"id" text PRIMARY KEY NOT NULL,
+	"name" text NOT NULL,
+	"email" text NOT NULL,
+	"email_verified" boolean NOT NULL,
+	"image" text,
+	"created_at" timestamp NOT NULL,
+	"updated_at" timestamp NOT NULL,
+	"status" "status_user" DEFAULT 'active',
+	"password_hash" varchar(255),
+	"deleted_at" timestamp,
+	"role" text,
+	"banned" boolean,
+	"ban_reason" text,
+	"ban_expires" timestamp,
+	CONSTRAINT "users_email_unique" UNIQUE("email")
+);
+--> statement-breakpoint
 CREATE TABLE "account" (
 	"id" text PRIMARY KEY NOT NULL,
 	"account_id" text NOT NULL,
@@ -158,6 +176,7 @@ CREATE TABLE "session" (
 	"ip_address" text,
 	"user_agent" text,
 	"user_id" text NOT NULL,
+	"impersonated_by" text,
 	CONSTRAINT "session_token_unique" UNIQUE("token")
 );
 --> statement-breakpoint
@@ -168,21 +187,6 @@ CREATE TABLE "transactions" (
 	"confirmed_by" text NOT NULL,
 	"paid_at" date,
 	"created_at" timestamp DEFAULT now()
-);
---> statement-breakpoint
-CREATE TABLE "user" (
-	"id" text PRIMARY KEY NOT NULL,
-	"name" text NOT NULL,
-	"email" text NOT NULL,
-	"email_verified" boolean NOT NULL,
-	"image" text,
-	"created_at" timestamp NOT NULL,
-	"updated_at" timestamp NOT NULL,
-	"role_id" integer,
-	"status" "status_user" DEFAULT 'active',
-	"password_hash" varchar(255),
-	"deleted_at" timestamp,
-	CONSTRAINT "user_email_unique" UNIQUE("email")
 );
 --> statement-breakpoint
 CREATE TABLE "vendors" (
@@ -209,37 +213,29 @@ CREATE TABLE "web_traffic" (
 	"user_agent" text
 );
 --> statement-breakpoint
-ALTER TABLE "users" DISABLE ROW LEVEL SECURITY;--> statement-breakpoint
-DROP TABLE "users" CASCADE;--> statement-breakpoint
-ALTER TABLE "collections" ALTER COLUMN "type" SET DATA TYPE text;--> statement-breakpoint
-DROP TYPE "public"."collection_type";--> statement-breakpoint
-CREATE TYPE "public"."collection_type" AS ENUM('physical_book', 'ebook', 'journal', 'thesis');--> statement-breakpoint
-ALTER TABLE "collections" ALTER COLUMN "type" SET DATA TYPE "public"."collection_type" USING "type"::"public"."collection_type";--> statement-breakpoint
-ALTER TABLE "roles" ALTER COLUMN "id" ADD GENERATED ALWAYS AS IDENTITY (sequence name "roles_id_seq" INCREMENT BY 1 MINVALUE 1 MAXVALUE 2147483647 START WITH 1 CACHE 1);--> statement-breakpoint
-ALTER TABLE "roles" ALTER COLUMN "role_name" SET DATA TYPE varchar(70);--> statement-breakpoint
-ALTER TABLE "roles" ALTER COLUMN "role_name" DROP DEFAULT;--> statement-breakpoint
-ALTER TABLE "account" ADD CONSTRAINT "account_user_id_user_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."user"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "account" ADD CONSTRAINT "account_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "acquisitions" ADD CONSTRAINT "acquisitions_vendor_id_vendors_id_fk" FOREIGN KEY ("vendor_id") REFERENCES "public"."vendors"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "acquisitions" ADD CONSTRAINT "acquisitions_collection_id_collections_id_fk" FOREIGN KEY ("collection_id") REFERENCES "public"."collections"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "collection_contents" ADD CONSTRAINT "collection_contents_collection_id_collections_id_fk" FOREIGN KEY ("collection_id") REFERENCES "public"."collections"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "collection_views" ADD CONSTRAINT "collection_views_collection_id_collections_id_fk" FOREIGN KEY ("collection_id") REFERENCES "public"."collections"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "collection_views" ADD CONSTRAINT "collection_views_user_id_user_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."user"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "collection_views" ADD CONSTRAINT "collection_views_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "collections" ADD CONSTRAINT "collections_category_id_categories_id_fk" FOREIGN KEY ("category_id") REFERENCES "public"."categories"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "fines" ADD CONSTRAINT "fines_loan_id_loans_id_fk" FOREIGN KEY ("loan_id") REFERENCES "public"."loans"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "items" ADD CONSTRAINT "items_collection_id_collections_id_fk" FOREIGN KEY ("collection_id") REFERENCES "public"."collections"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "items" ADD CONSTRAINT "items_location_id_locations_id_fk" FOREIGN KEY ("location_id") REFERENCES "public"."locations"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "loans" ADD CONSTRAINT "loans_member_id_members_id_fk" FOREIGN KEY ("member_id") REFERENCES "public"."members"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "loans" ADD CONSTRAINT "loans_item_id_items_id_fk" FOREIGN KEY ("item_id") REFERENCES "public"."items"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "loans" ADD CONSTRAINT "loans_approved_by_user_id_fk" FOREIGN KEY ("approved_by") REFERENCES "public"."user"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "logs" ADD CONSTRAINT "logs_user_id_user_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."user"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "members" ADD CONSTRAINT "members_user_id_user_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."user"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "loans" ADD CONSTRAINT "loans_approved_by_users_id_fk" FOREIGN KEY ("approved_by") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "logs" ADD CONSTRAINT "logs_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "members" ADD CONSTRAINT "members_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "reservations" ADD CONSTRAINT "reservations_member_id_members_id_fk" FOREIGN KEY ("member_id") REFERENCES "public"."members"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "reservations" ADD CONSTRAINT "reservations_collection_id_collections_id_fk" FOREIGN KEY ("collection_id") REFERENCES "public"."collections"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "session" ADD CONSTRAINT "session_user_id_user_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."user"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "session" ADD CONSTRAINT "session_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "transactions" ADD CONSTRAINT "transactions_fine_id_fines_id_fk" FOREIGN KEY ("fine_id") REFERENCES "public"."fines"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "transactions" ADD CONSTRAINT "transactions_confirmed_by_user_id_fk" FOREIGN KEY ("confirmed_by") REFERENCES "public"."user"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "user" ADD CONSTRAINT "user_role_id_roles_id_fk" FOREIGN KEY ("role_id") REFERENCES "public"."roles"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "web_traffic" ADD CONSTRAINT "web_traffic_user_id_user_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."user"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "transactions" ADD CONSTRAINT "transactions_confirmed_by_users_id_fk" FOREIGN KEY ("confirmed_by") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "web_traffic" ADD CONSTRAINT "web_traffic_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+CREATE INDEX "user_status_idx" ON "users" USING btree ("status");--> statement-breakpoint
+CREATE INDEX "user_deleted_at_idx" ON "users" USING btree ("deleted_at");--> statement-breakpoint
 CREATE INDEX "cv_collection_idx" ON "collection_views" USING btree ("collection_id");--> statement-breakpoint
 CREATE INDEX "cv_viewed_at_idx" ON "collection_views" USING btree ("viewed_at");--> statement-breakpoint
 CREATE INDEX "item_collection_idx" ON "items" USING btree ("collection_id");--> statement-breakpoint
@@ -248,8 +244,4 @@ CREATE INDEX "item_deleted_at_idx" ON "items" USING btree ("deleted_at");--> sta
 CREATE INDEX "loan_status_idx" ON "loans" USING btree ("status");--> statement-breakpoint
 CREATE INDEX "loan_deleted_at_idx" ON "loans" USING btree ("deleted_at");--> statement-breakpoint
 CREATE INDEX "member_nim_idx" ON "members" USING btree ("nim_nidn");--> statement-breakpoint
-CREATE INDEX "member_deleted_at_idx" ON "members" USING btree ("deleted_at");--> statement-breakpoint
-CREATE INDEX "user_role_idx" ON "user" USING btree ("role_id");--> statement-breakpoint
-CREATE INDEX "user_status_idx" ON "user" USING btree ("status");--> statement-breakpoint
-CREATE INDEX "user_deleted_at_idx" ON "user" USING btree ("deleted_at");--> statement-breakpoint
-ALTER TABLE "roles" ADD CONSTRAINT "roles_role_name_unique" UNIQUE("role_name");
+CREATE INDEX "member_deleted_at_idx" ON "members" USING btree ("deleted_at");
