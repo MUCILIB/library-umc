@@ -54,7 +54,7 @@ export const auth = betterAuth({
           const campusUser = await AuthService.getCampusUser(user.email);
           if (!campusUser) {
             console.warn(
-              "[HOOK] Campus Verification FAILED. Marking user as UNAUTHORIZED."
+              "[HOOK] Campus Verification FAILED. Marking user as UNAUTHORIZED.",
             );
             // Soft Block: Jangan throw error (bikin crash), tapi tandai role user ini
             return {
@@ -72,7 +72,7 @@ export const auth = betterAuth({
           if (user.role === "unauthorized") {
             console.log(
               "[HOOK] Skipping Sync for UNAUTHORIZED user:",
-              user.email
+              user.email,
             );
             return;
           }
