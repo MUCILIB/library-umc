@@ -1,9 +1,9 @@
 {
   "scripts": {
-    "dev": "bun run --watch src/index.ts",
-    "build": "bunx tsc && echo ✅ Build successfully finished!",
-    "start": "bun run src/index.ts",
-    "db:seed": "bun run src/db/seed.ts"
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc && echo ✅ Build successfully finished!",
+    "start": "tsx src/index.ts",
+    "db:seed": "tsx src/db/seed.ts"
   },
   "dependencies": {
     "@types/cors": "^2.8.19",
@@ -16,6 +16,7 @@
     "multer": "^2.0.2",
     "multer-storage-cloudinary": "^4.0.0",
     "pg": "^8.16.3",
+    "tsx": "^4.21.0",
     "zod": "^4.3.5"
   },
   "devDependencies": {
@@ -25,7 +26,6 @@
     "@types/pg": "^8.16.0",
     "drizzle-kit": "^0.31.8",
     "ts-node": "^10.9.2",
-    "tsx": "^4.21.0",
     "typescript": "^5.9.3"
   }
 }
