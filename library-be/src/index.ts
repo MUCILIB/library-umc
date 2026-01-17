@@ -8,11 +8,13 @@ import { auth } from "./lib/auth";
 dotenv.config();
 
 const app = express();
+
+app.set("trust proxy", true);
+
 app.use(
   cors({
     origin: process.env.FRONTEND_URL, // Ganti sesuai URL frontend Anda
     credentials: true,
-    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
   }),
 );
@@ -28,7 +30,7 @@ const PORT = process.env.PORT || 4000;
 
 app.get("/", (req, res) => {
   res.json({
-    message: "Backend is Running with Bun & Express!",
+    message: "Backend is Running with Node.js & Express!",
     status: "OK",
     timestamp: new Date().toISOString(),
   });
