@@ -39,6 +39,12 @@ export const auth = betterAuth({
   cookies: {
     prefix: "ba_",
   },
+  advanced: {
+    defaultCookieAttributes: {
+      sameSite: "none",
+      secure: true,
+    },
+  },
   plugins: [
     admin({
       defaultRole: "student",
