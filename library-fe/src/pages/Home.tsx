@@ -2,6 +2,17 @@ import { authClient } from "@/lib/auth-client";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useNavigate } from "react-router";
 
+type User = {
+  id: string;
+  createdAt: Date;
+  updatedAt: Date;
+  email: string;
+  emailVerified: boolean;
+  name: string;
+  image?: string | null | undefined;
+  role: string;
+};
+
 export default function Home() {
   const { data: session } = authClient.useSession();
   const navigate = useNavigate();
@@ -19,7 +30,7 @@ export default function Home() {
         </h1>
 
         {session ? (
-          session.user.role === "unauthorized" ? (
+          (session.user as User).role === "unauthorized" ? (
             <div className="flex flex-col items-center gap-4 p-8 bg-red-50 rounded-xl shadow-sm border border-red-200 max-w-md">
               <div className="text-red-500 bg-red-100 p-3 rounded-full">
                 <svg
@@ -68,7 +79,7 @@ export default function Home() {
                 <p className="text-xl font-semibold">{session.user.name}</p>
                 <p className="text-sm text-gray-500">{session.user.email}</p>
                 <div className="mt-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                  {session.user.role || "User"}
+                  {(session.user as User).role || "User"}
                 </div>
               </div>
               <button
