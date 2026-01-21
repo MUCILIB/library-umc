@@ -35,7 +35,7 @@ app.use("/api", routes);
 // Better Auth Handler
 app.all("/api/auth/*path", toNodeHandler(auth));
 
-const PORT = process.env.PORT || 4000;
+const PORT = process.env.PORT;
 
 app.get("/", (req, res) => {
   res.redirect("/docs");
