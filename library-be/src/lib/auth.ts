@@ -4,7 +4,6 @@ import { db } from "../db";
 import * as schema from "../db/schema";
 import { admin } from "better-auth/plugins";
 import { AuthService } from "../service/auth.service";
-import { APIError } from "better-auth/api";
 
 export const auth = betterAuth({
   trustedOrigins: [process.env.FRONTEND_URL ?? "http://localhost:5173"], // Whitelist URL frontend

@@ -3,9 +3,10 @@ import { Routes, Route } from "react-router";
 // Pages
 import Home from "../pages/Home";
 import About from "../pages/About";
-import Login from "../components/ui/login";
+import Login from "../pages/LoginPage";
 import Register from "../pages/Register";
-import Handle from "@/pages/handlelogout";
+import HandleLogout from "../pages/HandleLogout";
+import SuperAdminDashboard from "../pages/dashboard/SuperAdminDashboard";
 
 const AppRoutes = () => {
   return (
@@ -15,7 +16,8 @@ const AppRoutes = () => {
 
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
-      <Route path="/handle" element={<Handle/>} />
+      <Route path="/handle" element={<HandleLogout />} />
+      <Route path="/dashboard/super-admin" element={<SuperAdminDashboard />} />
 
       {/* 404 Not Found */}
       <Route

@@ -120,7 +120,7 @@ export const Users = pgTable(
     return {
       deletedAtIdx: index("user_deleted_at_idx").on(table.deletedAt),
     };
-  }
+  },
 );
 
 export const session = pgTable("session", {
@@ -191,7 +191,7 @@ export const members = pgTable(
       nimIdx: index("member_nim_idx").on(table.nimNidn),
       deletedAtIdx: index("member_deleted_at_idx").on(table.deletedAt),
     };
-  }
+  },
 );
 
 // ==========================================
@@ -208,6 +208,7 @@ export const collections = pgTable("collections", {
   type: collectionTypeEnum("type"),
   categoryId: integer("category_id").references(() => categories.id),
   description: text("description"),
+  image: text("image"), // Stores Cloudinary URL
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
   deletedAt: timestamp("deleted_at"),
@@ -240,7 +241,7 @@ export const collectionViews = pgTable(
       collIdx: index("cv_collection_idx").on(table.collectionId),
       viewedAtIdx: index("cv_viewed_at_idx").on(table.viewedAt),
     };
-  }
+  },
 );
 
 // ==========================================
@@ -270,7 +271,7 @@ export const items = pgTable(
       statusIdx: index("item_status_idx").on(table.status),
       deletedAtIdx: index("item_deleted_at_idx").on(table.deletedAt),
     };
-  }
+  },
 );
 
 export const loans = pgTable(
@@ -297,7 +298,7 @@ export const loans = pgTable(
       statusIdx: index("loan_status_idx").on(table.status),
       deletedAtIdx: index("loan_deleted_at_idx").on(table.deletedAt),
     };
-  }
+  },
 );
 
 export const reservations = pgTable("reservations", {
@@ -449,5 +450,5 @@ export const recommendationRelations = relations(
       fields: [recommendations.dosenId],
       references: [Users.id],
     }),
-  })
+  }),
 );

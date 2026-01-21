@@ -1,7 +1,6 @@
 import { eq } from "drizzle-orm";
 import { db } from "../db";
 import { Users, members } from "../db/schema";
-import { APIError } from "better-auth/api";
 
 export const AuthService = {
   // Ambil data user dari API Kampus

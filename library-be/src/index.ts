@@ -4,6 +4,9 @@ import cors from "cors";
 import { routes } from "./routes";
 import { toNodeHandler } from "better-auth/node";
 import { auth } from "./lib/auth";
+import path from "path";
+import { swaggerSpec } from "./config/swagger";
+import swaggerUi from "swagger-ui-express";
 
 dotenv.config();
 
@@ -20,20 +23,22 @@ app.use(
 );
 app.use(express.json());
 
-// Better Auth Handler
-app.all("/api/auth/*path", toNodeHandler(auth));
+// Serve static files from public directory
+app.use(express.static(path.join(__dirname, "../public")));
+
+// Swagger UI using swagger-ui-express
+app.use("/docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 // Routes
 app.use("/api", routes);
 
-const PORT = process.env.PORT || 4000;
+// Better Auth Handler
+app.all("/api/auth/*path", toNodeHandler(auth));
+
+const PORT = 4000;
 
 app.get("/", (req, res) => {
-  res.json({
-    message: "Backend is Running with Node.js & Express!",
-    status: "OK",
-    timestamp: new Date().toISOString(),
-  });
+  res.redirect("/docs");
 });
 
 app.get("/health", (req, res) => {
