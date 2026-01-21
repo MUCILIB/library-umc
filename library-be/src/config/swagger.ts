@@ -3,7 +3,7 @@ import swaggerJSDoc from "swagger-jsdoc";
 const swaggerDefinition = {
   openapi: "3.0.0",
   info: {
-    title: "Library Management System - UMC API",
+    title: "MUCILIB - UMC API",
     version: "1.0.0",
     description: "API Documentation for Library Management System Backend",
     contact: {
@@ -13,12 +13,12 @@ const swaggerDefinition = {
   },
   servers: [
     {
-      url: "http://localhost:4000/api",
-      description: "Development Server",
-    },
-    {
       url: "https://api-library-be.leapcell.app/api",
       description: "Production Server",
+    },
+    {
+      url: "http://localhost:4000/api",
+      description: "Development Server",
     },
   ],
   components: {
