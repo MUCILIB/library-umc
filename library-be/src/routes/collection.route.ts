@@ -5,15 +5,16 @@ import {
   createCollection,
   getAllCollections,
 } from "../controller/CollectionController";
+import { publicApiLimiter } from "../middleware/rateLimiter";
 
 const router = Router();
 
-// GET ALL COLLECTIONS (Public or Authenticated?)
+// GET ALL COLLECTIONS (Public with rate limiting to prevent abuse)
 // Sesuai SRS (OPAC), biasanya public bisa cari buku, tapi untuk detail mungkin login.
 // Kita buat public dulu untuk list.
-router.get("/collections", getAllCollections);
+router.get("/collections", publicApiLimiter, getAllCollections);
 
-// CREATE COLLECTION (Admin & Staff Only)
+// CREATE COLLECTION (Admin & Staff Only with upload rate limiting)
 router.post(
   "/collections",
   isAuthenticated,

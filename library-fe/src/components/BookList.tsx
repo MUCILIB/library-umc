@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState } from "react";
 
 const BookList = () => {
   // Data Buku Fisik
@@ -9,7 +9,7 @@ const BookList = () => {
       author: "Morgan Housel",
       tags: ["Self-Help", "Personal Finance"],
       status: "Tersedia",
-      coverColor: "bg-purple-500"
+      coverColor: "bg-purple-500",
     },
     {
       id: 2,
@@ -17,7 +17,7 @@ const BookList = () => {
       author: "Matt Ridley",
       tags: ["Business", "Science", "Technology"],
       status: "Dipinjam",
-      coverColor: "bg-amber-500"
+      coverColor: "bg-amber-500",
     },
     {
       id: 3,
@@ -25,7 +25,7 @@ const BookList = () => {
       author: "Oscar Wilde",
       tags: ["Fiction", "Fantasy"],
       status: "Tersedia",
-      coverColor: "bg-gray-800"
+      coverColor: "bg-gray-800",
     },
     {
       id: 4,
@@ -33,8 +33,8 @@ const BookList = () => {
       author: "Emily Bronte",
       tags: ["Romance", "Classic"],
       status: "Tersedia",
-      coverColor: "bg-gray-700"
-    }
+      coverColor: "bg-gray-700",
+    },
   ];
 
   // Data E-Book
@@ -45,7 +45,7 @@ const BookList = () => {
       author: "James Clear",
       tags: ["Self-Help", "Productivity"],
       status: "Tersedia",
-      coverColor: "bg-blue-500"
+      coverColor: "bg-blue-500",
     },
     {
       id: 6,
@@ -53,7 +53,7 @@ const BookList = () => {
       author: "Cal Newport",
       tags: ["Productivity", "Technology"],
       status: "Tersedia",
-      coverColor: "bg-indigo-500"
+      coverColor: "bg-indigo-500",
     },
     {
       id: 7,
@@ -61,7 +61,7 @@ const BookList = () => {
       author: "Yuval Noah Harari",
       tags: ["History", "Science"],
       status: "Dipinjam",
-      coverColor: "bg-emerald-500"
+      coverColor: "bg-emerald-500",
     },
     {
       id: 8,
@@ -69,14 +69,14 @@ const BookList = () => {
       author: "Daniel Kahneman",
       tags: ["Psychology", "Economics"],
       status: "Tersedia",
-      coverColor: "bg-rose-500"
-    }
+      coverColor: "bg-rose-500",
+    },
   ];
 
   const [activeTab, setActiveTab] = useState(0); // 0 = Buku Fisik, 1 = E-Book
 
   // Fungsi helper untuk status badge
-  const getStatusBadge = (status) => {
+  const getStatusBadge = (status: string) => {
     const baseClasses = "px-3 py-1 text-xs rounded-full";
     if (status === "Tersedia") {
       return `${baseClasses} bg-green-100 text-green-800`;
@@ -114,13 +114,19 @@ const BookList = () => {
             className="flex items-center p-2 lg:p-4 bg-white rounded-lg shadow-lg hover:shadow-md transition-shadow "
           >
             {/* Cover placeholder */}
-            <div className={`w-16 h-24 ${book.coverColor} rounded mr-4 flex items-center justify-center`}>
+            <div
+              className={`w-16 h-24 ${book.coverColor} rounded mr-4 flex items-center justify-center`}
+            >
               <span className="text-white text-xs text-center px-1">Cover</span>
             </div>
-            
+
             <div className="flex-1">
-              <h3 className="font-semibold lg:text-[17px] text-[10px] text-gray-900">{book.title}</h3>
-              <p className="text-sm text-gray-600 text-[10px] lg:text-[14px]">{book.author}</p>
+              <h3 className="font-semibold lg:text-[17px] text-[10px] text-gray-900">
+                {book.title}
+              </h3>
+              <p className="text-sm text-gray-600 text-[10px] lg:text-[14px]">
+                {book.author}
+              </p>
               <div className="flex flex-wrap gap-2 mt-2">
                 {book.tags.map((tag, idx) => (
                   <span
@@ -132,11 +138,9 @@ const BookList = () => {
                 ))}
               </div>
             </div>
-            
+
             <div className="ml-4">
-              <span className={getStatusBadge(book.status)}>
-                {book.status}
-              </span>
+              <span className={getStatusBadge(book.status)}>{book.status}</span>
             </div>
           </div>
         ))}

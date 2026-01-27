@@ -7,6 +7,7 @@ import { auth } from "./lib/auth";
 import path from "path";
 import { swaggerSpec } from "./config/swagger";
 import swaggerUi from "swagger-ui-express";
+import { generalLimiter } from "./middleware/rateLimiter";
 
 dotenv.config();
 
@@ -31,6 +32,9 @@ app.use(express.static(path.join(__dirname, "../public")));
 
 // Swagger UI using swagger-ui-express
 app.use("/docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+
+// General rate limiter for all API routes (baseline protection)
+app.use("/api", generalLimiter);
 
 // Routes
 app.use("/api", routes);
