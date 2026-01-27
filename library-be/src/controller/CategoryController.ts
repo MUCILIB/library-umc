@@ -19,6 +19,17 @@ export const getAllCategories = async (req: Request, res: Response) => {
 
 export const createCategories = async (req: Request, res: Response) => {
   try {
+    // SECURITY: Ambil userId dari session, bukan dari params
+    const sessionUser = res.locals.user;
+
+    if (!sessionUser || !sessionUser.id) {
+      return res.status(401).json({
+        success: false,
+        message: "Unauthorized",
+        data: null,
+      });
+    }
+
     const result = await CategoryService.createCategory(req.body);
     if (!result.success) {
       return res.status(401).json(result);

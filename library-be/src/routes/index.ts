@@ -3,6 +3,7 @@ import { authRoutes } from "./auth.route";
 import { memberRoutes } from "./member.route";
 import { collectionRoutes } from "./collection.route";
 import { categoryRoutes } from "./category.route";
+import { guestRoutes } from "./guest.route";
 
 const router = Router();
 
@@ -17,5 +18,8 @@ router.use(collectionRoutes);
 
 // Categories
 router.use(categoryRoutes);
+
+// Guests
+router.use(guestRoutes);
 
 export const routes = router;

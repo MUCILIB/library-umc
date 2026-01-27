@@ -6,7 +6,10 @@ import { admin } from "better-auth/plugins";
 import { AuthService } from "../service/auth.service";
 
 export const auth = betterAuth({
-  trustedOrigins: [process.env.FRONTEND_URL ?? "http://localhost:5173"], // Whitelist URL frontend
+  trustedOrigins: [
+    process.env.FRONTEND_URL ?? "http://localhost:5173",
+    "http://localhost:4173",
+  ], // Whitelist URL frontend
   database: drizzleAdapter(db, {
     provider: "pg",
     schema: {

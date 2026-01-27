@@ -395,7 +395,22 @@ export const webTraffic = pgTable("web_traffic", {
 });
 
 // ==========================================
-// 8. RELATIONS (DRIZZLE ORM)
+// 8. ADDITION: GUEST LOGS (PENGUNJUNG)
+// ==========================================
+
+export const guestLogs = pgTable("guest_logs", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  email: varchar("email", { length: 255 }),
+  name: varchar("name", { length: 255 }).notNull(),
+  identifier: varchar("identifier", { length: 100 }).notNull(), // NIM/NIDN/KTP
+  institution: varchar("institution", { length: 255 }), // UMC / UMUM
+  faculty: varchar("faculty", { length: 255 }), // If Student/Lecturer
+  major: varchar("major", { length: 255 }), // If Student (Prodi)
+  visitDate: timestamp("visit_date").defaultNow(),
+});
+
+// ==========================================
+// 9. RELATIONS (DRIZZLE ORM)
 // ==========================================
 
 // Relasi Users -> Roles / Members

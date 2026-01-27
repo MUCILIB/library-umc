@@ -77,7 +77,7 @@ const swaggerDefinition = {
     { name: "Members", description: "Member profile management" },
     {
       name: "Collections",
-      description: "Book & Collection management (Coming Soon)",
+      description: "Book & Collection management",
     },
   ],
   paths: {
@@ -164,6 +164,7 @@ const swaggerDefinition = {
         summary: "Get All Collections",
         description: "Retrieve a list of all collections (books, etc).",
         tags: ["Collections"],
+        security: [],
         responses: {
           200: {
             description: "List of collections",
@@ -255,6 +256,7 @@ const swaggerDefinition = {
         summary: "Get All Categories",
         description: "Retrieve a list of all book categories.",
         tags: ["Categories"],
+        security: [],
         responses: {
           200: {
             description: "List of categories",
@@ -307,6 +309,96 @@ const swaggerDefinition = {
           },
           400: { description: "Validation Error" },
           500: { description: "Server Error" },
+        },
+      },
+    },
+    "/guests": {
+      get: {
+        summary: "Get Guest Logs",
+        description: "Retrieve list of guest visits (Admin Only).",
+        tags: ["Guests (Pengunjung)"],
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            in: "query",
+            name: "page",
+            schema: { type: "integer", default: 1 },
+            description: "Page number",
+          },
+          {
+            in: "query",
+            name: "limit",
+            schema: { type: "integer", default: 50 },
+            description: "Items per page",
+          },
+        ],
+        responses: {
+          200: {
+            description: "List of guest logs",
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/ApiResponse",
+                },
+              },
+            },
+          },
+        },
+      },
+      post: {
+        summary: "Create Guest Log",
+        description: "Record a new visitor/guest (Admin Only).",
+        tags: ["Guests (Pengunjung)"],
+        security: [{ bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                properties: {
+                  name: { type: "string" },
+                  email: { type: "string" },
+                  identifier: { type: "string", description: "NIM or KTP" },
+                  institution: { type: "string", default: "UMC" },
+                  faculty: { type: "string" },
+                  major: { type: "string" },
+                  purpose: { type: "string" },
+                },
+                required: ["name", "identifier"],
+              },
+            },
+          },
+        },
+        responses: {
+          201: {
+            description: "Guest log created",
+            content: {
+              "application/json": {
+                schema: { $ref: "#/components/schemas/ApiResponse" },
+              },
+            },
+          },
+        },
+      },
+    },
+    "/guests/stats": {
+      get: {
+        summary: "Get Guest Statistics",
+        description: "Get analytics about visitors by Faculty and Major.",
+        tags: ["Guests (Pengunjung)"],
+        security: [{ bearerAuth: [] }],
+        responses: {
+          200: {
+            description: "Guest statistics",
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/ApiResponse",
+                },
+              },
+            },
+          },
         },
       },
     },
