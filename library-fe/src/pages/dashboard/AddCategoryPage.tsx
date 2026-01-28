@@ -26,6 +26,16 @@ export default function AddCategoryPage() {
         body: JSON.stringify(formData),
       });
 
+      const contentType = res.headers.get("content-type");
+      if (!contentType || !contentType.includes("application/json")) {
+        const text = await res.text();
+        console.error("Non-JSON Response from API:", text);
+        alert(
+          `Terjadi kesalahan pada server (Bukan JSON). Cek Console untuk detail.\nKemungkinan URL API salah: ${API_BASE_URL}`,
+        );
+        throw new Error("Received non-JSON response from server");
+      }
+
       const data = await res.json();
 
       if (data.success) {
