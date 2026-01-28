@@ -5,6 +5,8 @@ import * as schema from "../db/schema";
 import { admin } from "better-auth/plugins";
 import { AuthService } from "../service/auth.service";
 
+const authService = new AuthService();
+
 export const auth = betterAuth({
   trustedOrigins: [
     process.env.FRONTEND_URL ?? "http://localhost:5173",
@@ -59,7 +61,7 @@ export const auth = betterAuth({
         before: async (user) => {
           console.log("[HOOK] User Create BEFORE:", user.email);
           // Validasi: User harus terdaftar di API Kampus
-          const campusUser = await AuthService.getCampusUser(user.email);
+          const campusUser = await authService.getCampusUser(user.email);
           if (!campusUser) {
             console.warn(
               "[HOOK] Campus Verification FAILED. Marking user as UNAUTHORIZED.",
@@ -87,10 +89,10 @@ export const auth = betterAuth({
 
           console.log("[HOOK] User Create AFTER Triggered. ID:", user.id);
           // Sync: Masukkan data ke tabel Member menggunakan Service
-          const campusUser = await AuthService.getCampusUser(user.email);
+          const campusUser = await authService.getCampusUser(user.email);
           if (campusUser) {
             console.log("[HOOK] Calling SyncMember...");
-            await AuthService.syncMember(user.id, campusUser);
+            await authService.syncMember(user.id, campusUser);
           } else {
             console.warn("[HOOK] Failed to fetch campus user in AFTER hook!");
           }

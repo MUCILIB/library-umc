@@ -2,10 +2,33 @@ import { db } from "../db";
 import { members } from "../db/schema";
 import { eq } from "drizzle-orm";
 
-export const MemberService = {
-  // Get member by id
-  getMemberByUserId: async (userId: string) => {
+type ServiceResponse<T> = {
+  success: boolean;
+  message: string;
+  data: T | null;
+};
+
+type UpdateProfileData = {
+  nimNidn?: string;
+  faculty?: string;
+  phone?: string;
+};
+
+export class MemberService {
+  /**
+   * Get member by user ID
+   */
+  async getMemberByUserId(userId: string): Promise<ServiceResponse<any>> {
     try {
+      // Validate userId
+      if (!userId) {
+        return {
+          success: false,
+          message: "User ID is required",
+          data: null,
+        };
+      }
+
       const member = await db.query.members.findFirst({
         where: eq(members.userId, userId),
         with: {
@@ -23,23 +46,37 @@ export const MemberService = {
 
       return {
         success: true,
-        message: "Get Member By User Id Successfully",
+        message: "Member retrieved successfully",
         data: member,
       };
     } catch (err) {
-      console.error("[MemberService] Error getting number userId", err);
+      console.error("[MemberService] Error getting member by userId:", err);
       return {
         success: false,
-        message: "Get Member By User id failed",
+        message: "Failed to get member",
         data: null,
       };
     }
-  },
+  }
 
-  // Update profile
-  updateProfile: async (userId: string, data: any) => {
+  /**
+   * Update member profile with validation
+   */
+  async updateProfile(
+    userId: string,
+    data: UpdateProfileData,
+  ): Promise<ServiceResponse<any>> {
     try {
-      // Pastikan member ada
+      // Validate userId
+      if (!userId) {
+        return {
+          success: false,
+          message: "User ID is required",
+          data: null,
+        };
+      }
+
+      // Check if member exists
       const member = await db.query.members.findFirst({
         where: eq(members.userId, userId),
       });
@@ -52,14 +89,27 @@ export const MemberService = {
         };
       }
 
+      // Validate phone number format (if provided)
+      if (data.phone && data.phone.trim() !== "") {
+        const phoneRegex = /^[\d\s\-+()]+$/;
+        if (!phoneRegex.test(data.phone)) {
+          return {
+            success: false,
+            message: "Invalid phone number format",
+            data: null,
+          };
+        }
+      }
+
+      // Prepare update data
       const updateDataMember = {
-        nimNidn: data.nimNidn,
-        faculty: data.faculty,
-        phone: data.phone,
+        nimNidn: data.nimNidn?.trim() || member.nimNidn,
+        faculty: data.faculty?.trim() || member.faculty,
+        phone: data.phone?.trim() || member.phone,
         updatedAt: new Date(),
       };
 
-      // Tambahkan .returning() agar mengembalikan data yang sudah diupdate
+      // Update member
       const [updatedMember] = await db
         .update(members)
         .set(updateDataMember)
@@ -69,23 +119,23 @@ export const MemberService = {
       if (!updatedMember) {
         return {
           success: false,
-          message: "Update Profile Failed",
+          message: "Failed to update profile",
           data: null,
         };
       }
 
       return {
         success: true,
-        message: "Update Profile Successfully",
+        message: "Profile updated successfully",
         data: updatedMember,
       };
     } catch (err) {
-      console.error("[MemberService] Error updating profile", err);
+      console.error("[MemberService] Error updating profile:", err);
       return {
         success: false,
-        message: "Update Profile Failed",
+        message: "Failed to update profile",
         data: null,
       };
     }
-  },
-};
+  }
+}

@@ -1,8 +1,21 @@
 @import "tailwindcss";
 @import "tw-animate-css";
+@import url("https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap");
 
 @custom-variant dark (&:is(.dark *));
 
+/* ============================================
+   SHADCN UI GENERATED THEME (COMMENTED OUT)
+   ============================================
+   Original Shadcn UI theme configuration has
+   been replaced with Bitcoin DeFi design system.
+   
+   If you need to restore Shadcn defaults, 
+   uncomment the section below and comment out
+   the Bitcoin DeFi section.
+   ============================================ */
+
+/* Shadcn Original :root variables
 :root {
   --radius: 0.625rem;
   --background: oklch(1 0 0);
@@ -37,7 +50,9 @@
   --sidebar-border: oklch(0.922 0 0);
   --sidebar-ring: oklch(0.708 0 0);
 }
+*/
 
+/* Shadcn Original @theme inline
 @theme inline {
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
@@ -78,7 +93,9 @@
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
 }
+*/
 
+/* Shadcn Original .dark theme
 .dark {
   --background: oklch(0.145 0 0);
   --foreground: oklch(0.985 0 0);
@@ -112,12 +129,325 @@
   --sidebar-border: oklch(1 0 0 / 10%);
   --sidebar-ring: oklch(0.556 0 0);
 }
+*/
 
+/* Shadcn Original @layer base
 @layer base {
   * {
     @apply border-border outline-ring/50;
   }
   body {
     @apply bg-background text-foreground;
+  }
+}
+*/
+
+/* ============================================
+   BITCOIN DEFI DESIGN SYSTEM (ACTIVE)
+   ============================================
+   Custom design system inspired by Bitcoin
+   and DeFi aesthetics. Features:
+   - Dark void backgrounds (#030304)
+   - Bitcoin orange accents (#F7931A)
+   - Digital gold highlights (#FFD600)
+   - Glass morphism effects
+   - Orange/gold glow shadows
+   - Custom typography (Space Grotesk, Inter, JetBrains Mono)
+   ============================================ */
+
+:root {
+  /* Core Colors - Bitcoin DeFi Palette */
+  --void: #030304;
+  --dark-matter: #0f1115;
+  --pure-light: #ffffff;
+  --stardust: #94a3b8;
+  --dim-boundary: #1e293b;
+  --bitcoin-orange: #f7931a;
+  --burnt-orange: #ea580c;
+  --digital-gold: #ffd600;
+
+  /* Shadcn compatibility */
+  --radius: 0.625rem;
+  --background: var(--void);
+  --foreground: var(--pure-light);
+  --card: var(--dark-matter);
+  --card-foreground: var(--pure-light);
+  --popover: var(--dark-matter);
+  --popover-foreground: var(--pure-light);
+  --primary: var(--bitcoin-orange);
+  --primary-foreground: var(--pure-light);
+  --secondary: var(--burnt-orange);
+  --secondary-foreground: var(--pure-light);
+  --muted: var(--stardust);
+  --muted-foreground: var(--stardust);
+  --accent: var(--digital-gold);
+  --accent-foreground: var(--void);
+  --destructive: #ef4444;
+  --border: rgba(255, 255, 255, 0.1);
+  --input: rgba(255, 255, 255, 0.15);
+  --ring: var(--bitcoin-orange);
+}
+
+/* Shadcn Compatibility - Theme Inline Variables */
+@theme inline {
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --radius-2xl: calc(var(--radius) + 8px);
+  --radius-3xl: calc(var(--radius) + 12px);
+  --radius-4xl: calc(var(--radius) + 16px);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+}
+
+/* ============================================
+   BASE LAYER - Foundation Styles
+   ============================================ */
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    background-color: #030304;
+    color: white;
+    font-family: "Inter", sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* Typography Classes */
+  .font-heading {
+    font-family: "Space Grotesk", sans-serif;
+  }
+
+  .font-body {
+    font-family: "Inter", sans-serif;
+  }
+
+  .font-mono {
+    font-family: "JetBrains Mono", monospace;
+  }
+}
+
+/* ============================================
+   UTILITIES LAYER - Utility Classes
+   ============================================ */
+@layer utilities {
+  /* Bitcoin Orange Glow */
+  .glow-orange {
+    box-shadow: 0 0 20px -5px rgba(234, 88, 12, 0.5);
+  }
+
+  .glow-orange-lg {
+    box-shadow: 0 0 30px -5px rgba(247, 147, 26, 0.6);
+  }
+
+  /* Gold Glow */
+  .glow-gold {
+    box-shadow: 0 0 20px rgba(255, 214, 0, 0.3);
+  }
+
+  /* Card Elevation */
+  .card-elevation {
+    box-shadow: 0 0 50px -10px rgba(247, 147, 26, 0.1);
+  }
+
+  /* Gradient Text */
+  .gradient-text {
+    background: linear-gradient(to right, #f7931a, #ffd600);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  .gradient-text-orange {
+    background: linear-gradient(to right, #ea580c, #f7931a);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  /* Glass Morphism */
+  .glass {
+    backdrop-filter: blur(16px);
+    background-color: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  .glass-dark {
+    backdrop-filter: blur(16px);
+    background-color: rgba(0, 0, 0, 0.4);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  /* Grid Pattern Background */
+  .bg-grid-pattern {
+    background-size: 50px 50px;
+    background-image:
+      linear-gradient(to right, rgba(30, 41, 59, 0.5) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(30, 41, 59, 0.5) 1px, transparent 1px);
+    mask-image: radial-gradient(circle at center, black 40%, transparent 100%);
+  }
+
+  /* Radial Blur */
+  .radial-blur-orange {
+    position: absolute;
+    border-radius: 9999px;
+    background-color: #f7931a;
+    opacity: 0.1;
+    filter: blur(120px);
+  }
+
+  .radial-blur-gold {
+    position: absolute;
+    border-radius: 9999px;
+    background-color: #ffd600;
+    opacity: 0.1;
+    filter: blur(120px);
+  }
+
+  /* Custom Animations */
+  .animate-float {
+    animation: float 8s ease-in-out infinite;
+  }
+
+  .animate-pulse-glow {
+    animation: pulse-glow 2s ease-in-out infinite;
+  }
+}
+
+/* ============================================
+   COMPONENTS LAYER - Reusable Components
+   ============================================ */
+@layer components {
+  /* Primary Button - Bitcoin Orange Gradient */
+  .btn-primary {
+    background: linear-gradient(to right, #ea580c, #f7931a);
+    color: white;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    border-radius: 9999px;
+    padding: 0.75rem 1.5rem;
+    min-height: 44px;
+    transition: all 300ms;
+    box-shadow: 0 0 20px -5px rgba(234, 88, 12, 0.5);
+  }
+
+  .btn-primary:hover {
+    transform: scale(1.05);
+    box-shadow: 0 0 30px -5px rgba(247, 147, 26, 0.6);
+  }
+
+  /* Outline Button */
+  .btn-outline {
+    background-color: transparent;
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    color: white;
+    border-radius: 9999px;
+    padding: 0.75rem 1.5rem;
+    min-height: 44px;
+    transition: all 300ms;
+  }
+
+  .btn-outline:hover {
+    border-color: white;
+    background-color: rgba(255, 255, 255, 0.1);
+  }
+
+  /* Ghost Button */
+  .btn-ghost {
+    background-color: transparent;
+    color: white;
+    border-radius: 9999px;
+    padding: 0.75rem 1.5rem;
+    transition: all 300ms;
+  }
+
+  .btn-ghost:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+    color: #f7931a;
+  }
+
+  /* Card - Standard */
+  .card-standard {
+    background-color: #0f1115;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 1rem;
+    padding: 2rem;
+    transition: all 300ms;
+  }
+
+  .card-standard:hover {
+    transform: translateY(-4px);
+    border-color: rgba(247, 147, 26, 0.5);
+    box-shadow: 0 0 30px -10px rgba(247, 147, 26, 0.2);
+  }
+
+  /* Input - Technical */
+  .input-technical {
+    background-color: rgba(0, 0, 0, 0.5);
+    border-bottom: 2px solid rgba(255, 255, 255, 0.2);
+    height: 3rem;
+    padding: 0.5rem 1rem;
+    color: white;
+    font-size: 0.875rem;
+    transition: all 200ms;
+    outline: none;
+  }
+
+  .input-technical::placeholder {
+    color: rgba(255, 255, 255, 0.3);
+  }
+
+  .input-technical:focus-visible {
+    border-bottom-color: #f7931a;
+    box-shadow: 0 10px 20px -10px rgba(247, 147, 26, 0.3);
+  }
+
+  .input-technical:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+/* ============================================
+   KEYFRAME ANIMATIONS
+   ============================================ */
+@keyframes float {
+  0%,
+  100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-20px);
+  }
+}
+
+@keyframes pulse-glow {
+  0%,
+  100% {
+    box-shadow: 0 0 20px -5px rgba(247, 147, 26, 0.5);
+  }
+  50% {
+    box-shadow: 0 0 40px -5px rgba(247, 147, 26, 0.8);
   }
 }

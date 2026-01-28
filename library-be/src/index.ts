@@ -7,13 +7,14 @@ import { auth } from "./lib/auth";
 import path from "path";
 import { swaggerSpec } from "./config/swagger";
 import swaggerUi from "swagger-ui-express";
-import { generalLimiter } from "./middleware/rateLimiter";
+import { generalLimiter } from "./middlewares/rateLimiter";
+import { errorMiddleware } from "./middlewares/error.middleware";
 
 dotenv.config();
 
 const app = express();
 
-app.set("trust proxy", true);
+app.set("trust proxy", 1);
 
 app.use(
   cors({
@@ -32,6 +33,8 @@ app.use(express.static(path.join(__dirname, "../public")));
 
 // Swagger UI using swagger-ui-express
 app.use("/docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+
+app.use(errorMiddleware);
 
 // General rate limiter for all API routes (baseline protection)
 app.use("/api", generalLimiter);

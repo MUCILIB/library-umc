@@ -3,7 +3,7 @@ import { db } from "../db";
 import { items, loanRelations, members } from "../db/schema";
 
 export class LoanService {
-  async createLoan(memberId: number, itemId: number, dueDate: Date) {
+  async createLoan(memberId: string, itemId: string, dueDate: Date) {
     // Cek member
     const member = await db.query.members.findFirst({
       where: eq(members.id, memberId),

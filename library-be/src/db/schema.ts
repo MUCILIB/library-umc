@@ -9,6 +9,7 @@ import {
   date,
   numeric,
   index,
+  uuid,
 } from "drizzle-orm/pg-core";
 import { relations, sql } from "drizzle-orm";
 
@@ -69,7 +70,7 @@ export const memberType = pgEnum("member_type", [
 ]);
 
 // ==========================================
-// 2. MASTER DATA
+// 2. MASTER DATA (Keep Integer for Static Data)
 // ==========================================
 
 export const categories = pgTable("categories", {
@@ -98,7 +99,7 @@ export const vendors = pgTable("vendors", {
 export const Users = pgTable(
   "users",
   {
-    id: text("id").primaryKey(),
+    id: text("id").primaryKey(), // Better Auth uses String ID
     name: text("name").notNull(),
     email: text("email").notNull().unique(),
     emailVerified: boolean("email_verified").notNull(),
@@ -173,7 +174,7 @@ export const verification = pgTable("verification", {
 export const members = pgTable(
   "members",
   {
-    id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+    id: uuid("id").primaryKey().defaultRandom(), // Converted to UUID
     userId: text("user_id")
       .notNull()
       .unique()
@@ -199,14 +200,14 @@ export const members = pgTable(
 // ==========================================
 
 export const collections = pgTable("collections", {
-  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  id: uuid("id").primaryKey().defaultRandom(), // Converted to UUID
   isbn: varchar("isbn", { length: 255 }),
   title: varchar("title", { length: 255 }),
   author: varchar("author", { length: 255 }),
   publisher: varchar("publisher", { length: 150 }),
   publicationYear: varchar("publication_year", { length: 100 }),
   type: collectionTypeEnum("type"),
-  categoryId: integer("category_id").references(() => categories.id),
+  categoryId: integer("category_id").references(() => categories.id), // Category stays Integer
   description: text("description"),
   image: text("image"), // Stores Cloudinary URL
   createdAt: timestamp("created_at").defaultNow(),
@@ -215,8 +216,8 @@ export const collections = pgTable("collections", {
 });
 
 export const collectionContents = pgTable("collection_contents", {
-  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
-  collectionId: integer("collection_id").references(() => collections.id),
+  id: uuid("id").primaryKey().defaultRandom(), // Converted to UUID
+  collectionId: uuid("collection_id").references(() => collections.id), // Reference UUID
   contentType: contentTypeEnum("content_type"),
   content: text("content"), // Caution: Large text
   contentUrl: varchar("content_url", { length: 255 }),
@@ -228,10 +229,10 @@ export const collectionContents = pgTable("collection_contents", {
 export const collectionViews = pgTable(
   "collection_views",
   {
-    id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
-    collectionId: integer("collection_id")
+    id: uuid("id").primaryKey().defaultRandom(), // Converted to UUID
+    collectionId: uuid("collection_id")
       .notNull()
-      .references(() => collections.id),
+      .references(() => collections.id), // Reference UUID
     userId: text("user_id").references(() => Users.id),
     ipAddress: varchar("ip_address", { length: 45 }),
     viewedAt: timestamp("viewed_at").defaultNow(),
@@ -251,16 +252,16 @@ export const collectionViews = pgTable(
 export const items = pgTable(
   "items",
   {
-    id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
-    collectionId: integer("collection_id")
+    id: uuid("id").primaryKey().defaultRandom(), // Converted to UUID
+    collectionId: uuid("collection_id")
       .notNull()
-      .references(() => collections.id),
+      .references(() => collections.id), // Reference UUID
     barcode: varchar("barcode", { length: 50 }).unique(),
     uniqueCode: varchar("unique_code", { length: 30 }).unique(),
     status: itemStatusEnum("status").notNull().default("available"),
     locationId: integer("location_id")
       .notNull()
-      .references(() => locations.id),
+      .references(() => locations.id), // References Integer
     createdAt: timestamp("created_at").defaultNow(),
     updatedAt: timestamp("updated_at").defaultNow(),
     deletedAt: timestamp("deleted_at"),
@@ -270,6 +271,7 @@ export const items = pgTable(
       collIdx: index("item_collection_idx").on(table.collectionId),
       statusIdx: index("item_status_idx").on(table.status),
       deletedAtIdx: index("item_deleted_at_idx").on(table.deletedAt),
+      locationIdx: index("item_location_idx").on(table.locationId),
     };
   },
 );
@@ -277,13 +279,13 @@ export const items = pgTable(
 export const loans = pgTable(
   "loans",
   {
-    id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
-    memberId: integer("member_id")
+    id: uuid("id").primaryKey().defaultRandom(), // Converted to UUID
+    memberId: uuid("member_id")
       .notNull()
-      .references(() => members.id),
-    itemId: integer("item_id")
+      .references(() => members.id), // Reference UUID
+    itemId: uuid("item_id")
       .notNull()
-      .references(() => items.id),
+      .references(() => items.id), // Reference UUID
     loanDate: date("loan_date").notNull(),
     dueDate: date("due_date").notNull(),
     returnDate: date("return_date"),
@@ -297,18 +299,21 @@ export const loans = pgTable(
     return {
       statusIdx: index("loan_status_idx").on(table.status),
       deletedAtIdx: index("loan_deleted_at_idx").on(table.deletedAt),
+      memberIdx: index("loan_member_idx").on(table.memberId),
+      itemIdx: index("loan_item_idx").on(table.itemId),
+      activeLoanIdx: index("loan_active_idx").on(table.itemId, table.status),
     };
   },
 );
 
 export const reservations = pgTable("reservations", {
-  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
-  memberId: integer("member_id")
+  id: uuid("id").primaryKey().defaultRandom(), // Converted to UUID
+  memberId: uuid("member_id")
     .notNull()
-    .references(() => members.id),
-  collectionId: integer("collection_id") // References Collection, not Item (book generalized)
+    .references(() => members.id), // Reference UUID
+  collectionId: uuid("collection_id") // References Collection
     .notNull()
-    .references(() => collections.id),
+    .references(() => collections.id), // Reference UUID
   status: reservationsStatusEnum("status").notNull(),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
@@ -316,10 +321,10 @@ export const reservations = pgTable("reservations", {
 });
 
 export const fines = pgTable("fines", {
-  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
-  loanId: integer("loan_id")
+  id: uuid("id").primaryKey().defaultRandom(), // Converted to UUID
+  loanId: uuid("loan_id")
     .notNull()
-    .references(() => loans.id),
+    .references(() => loans.id), // Reference UUID
   amount: numeric("amount", { precision: 12, scale: 2 }),
   status: finesStatusEnum("status").notNull(),
   createdAt: timestamp("created_at").defaultNow(),
@@ -328,10 +333,10 @@ export const fines = pgTable("fines", {
 });
 
 export const transactions = pgTable("transactions", {
-  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
-  fineId: integer("fine_id")
+  id: uuid("id").primaryKey().defaultRandom(), // Converted to UUID
+  fineId: uuid("fine_id")
     .notNull()
-    .references(() => fines.id),
+    .references(() => fines.id), // Reference UUID
   paymentMethod: varchar("payment_method", { length: 100 }),
   confirmedBy: text("confirmed_by")
     .notNull()
@@ -341,13 +346,13 @@ export const transactions = pgTable("transactions", {
 });
 
 export const acquisitions = pgTable("acquisitions", {
-  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  id: uuid("id").primaryKey().defaultRandom(), // Converted to UUID
   vendorId: integer("vendor_id")
     .notNull()
-    .references(() => vendors.id),
-  collectionId: integer("collection_id")
+    .references(() => vendors.id), // References Integer
+  collectionId: uuid("collection_id")
     .notNull()
-    .references(() => collections.id),
+    .references(() => collections.id), // Reference UUID
   quantity: integer("quantity"),
   acquiredAt: date("acquired_at"),
   createdAt: date("created_at").defaultNow(),
@@ -355,7 +360,7 @@ export const acquisitions = pgTable("acquisitions", {
 
 // Tabel rekomendasi dosen ke pustakaawan
 export const recommendations = pgTable("recommendations", {
-  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  id: uuid("id").primaryKey().defaultRandom(), // Converted to UUID
   dosenId: text("dosen_id")
     .notNull()
     .references(() => Users.id),
@@ -374,19 +379,19 @@ export const recommendations = pgTable("recommendations", {
 // ==========================================
 
 export const logs = pgTable("logs", {
-  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  id: uuid("id").primaryKey().defaultRandom(), // Converted to UUID
   userId: text("user_id")
     .notNull()
     .references(() => Users.id),
   action: logsStatusEnum("action").notNull(),
   entity: logsEntityEnum("entity").notNull(),
-  entityId: integer("entity_id"),
+  entityId: varchar("entity_id", { length: 255 }), // Changed to varchar to support both UUID and Text IDs
   ipAddress: varchar("ip_address", { length: 255 }),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
 export const webTraffic = pgTable("web_traffic", {
-  id: text("id").primaryKey(),
+  id: text("id").primaryKey(), // Already Text/UUID
   ipAddress: varchar("ip_address", { length: 45 }),
   userId: text("user_id").references(() => Users.id),
   pageVisited: varchar("page_visited", { length: 255 }),
@@ -399,11 +404,10 @@ export const webTraffic = pgTable("web_traffic", {
 // ==========================================
 
 export const guestLogs = pgTable("guest_logs", {
-  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  id: uuid("id").primaryKey().defaultRandom(), // Converted to UUID
   email: varchar("email", { length: 255 }),
   name: varchar("name", { length: 255 }).notNull(),
   identifier: varchar("identifier", { length: 100 }).notNull(), // NIM/NIDN/KTP
-  institution: varchar("institution", { length: 255 }), // UMC / UMUM
   faculty: varchar("faculty", { length: 255 }), // If Student/Lecturer
   major: varchar("major", { length: 255 }), // If Student (Prodi)
   visitDate: timestamp("visit_date").defaultNow(),

@@ -25,6 +25,8 @@ async function reset() {
       "categories",
       "locations",
       "vendors",
+      "recommendations",
+      "guest_logs",
       "drizzle_migrations", // Internal drizzle table
     ];
 

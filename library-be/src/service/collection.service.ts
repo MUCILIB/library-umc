@@ -1,11 +1,23 @@
 import { db } from "../db";
-import { collections, items } from "../db/schema";
+import { collections, items, categories } from "../db/schema";
 import { uploadToCloudinary } from "../utils/upload";
 import { eq } from "drizzle-orm";
 
-export const CollectionService = {
+type CollectionData = {
+  coverImageUrl?: string;
+  title?: string;
+  author?: string;
+  publisher?: string;
+  publicationYear?: string;
+  isbn?: string;
+  type?: "physical_book" | "ebook" | "journal" | "thesis";
+  categoryId?: number;
+  description?: string;
+};
+
+export class CollectionService {
   // Get All Collections (Simple pagination placeholder)
-  getAllCollections: async () => {
+  async getAllCollections() {
     try {
       const result = await db.query.collections.findMany({
         with: {
@@ -28,12 +40,42 @@ export const CollectionService = {
         data: null,
       };
     }
-  },
+  }
 
   // Create New Collection
-  createCollection: async (data: any, file?: Express.Multer.File) => {
+  async createCollection(data: CollectionData, file?: Express.Multer.File) {
     try {
-      // 1. Upload Cover Image ke Cloudinary (Jika ada)
+      // 1. Validate categoryId
+      if (data.categoryId) {
+        const category = await db.query.categories.findFirst({
+          where: eq(categories.id, data.categoryId),
+        });
+
+        if (!category) {
+          return {
+            success: false,
+            message: "Category not found. Please select a valid category.",
+            data: null,
+          };
+        }
+      }
+
+      // 2. Check for duplicate ISBN (if provided)
+      if (data.isbn && data.isbn.trim() !== "") {
+        const existingBook = await db.query.collections.findFirst({
+          where: eq(collections.isbn, data.isbn.trim()),
+        });
+
+        if (existingBook) {
+          return {
+            success: false,
+            message: "A book with this ISBN already exists",
+            data: null,
+          };
+        }
+      }
+
+      // 3. Upload Cover Image ke Cloudinary (Jika ada)
       let coverImageUrl = null;
       let coverPublicId = null;
 
@@ -51,25 +93,26 @@ export const CollectionService = {
         author: data.author,
         publisher: data.publisher,
         publicationYear: data.publicationYear,
-        isbn: data.isbn,
+        isbn: data.isbn?.trim() || null,
         type: data.type,
-        categoryId: data.categoryId, // Pastikan ID Kategori valid di DB
+        categoryId: data.categoryId,
         description: data.description,
         image: coverImageUrl,
       };
 
-      // 3. Insert ke Database
+      // 4. Insert ke Database
       const [newCollection] = await db
         .insert(collections)
         .values(collectionData)
         .returning();
 
       if (!newCollection) {
-        throw new Error("Failed to insert collection");
+        return {
+          success: false,
+          message: "Failed to insert collection",
+          data: null,
+        };
       }
-
-      // 4. (Opsional) Jika buku fisik, bisa auto-generate item inventory di sini
-      // Namun membutuhkan locationId yang valid. Kita skip dulu untuk kesederhanaan.
 
       return {
         success: true,
@@ -83,9 +126,152 @@ export const CollectionService = {
       console.error("[CollectionService] Error creating collection:", err);
       return {
         success: false,
-        message: "Failed to create collection. Ensure Category ID exists.",
+        message: "Failed to create collection. Please try again.",
         data: null,
       };
     }
-  },
-};
+  }
+
+  async updateCollection(
+    id: string,
+    data: CollectionData,
+    file?: Express.Multer.File,
+  ) {
+    try {
+      const collection = await db.query.collections.findFirst({
+        where: eq(collections.id, id),
+      });
+
+      if (!collection) {
+        return {
+          success: false,
+          message: "Collection not found",
+          data: null,
+        };
+      }
+
+      // Handle Image Upload if file provided
+      let coverImageUrl = collection.image; // Keep existing image by default
+      if (file) {
+        const uploadResult = await uploadToCloudinary(
+          file.buffer,
+          "library/covers",
+        );
+        coverImageUrl = uploadResult.url;
+      }
+
+      const updateData = {
+        ...data,
+        image: coverImageUrl,
+        updatedAt: new Date(),
+      };
+
+      const [updatedCollection] = await db
+        .update(collections)
+        .set(updateData)
+        .where(eq(collections.id, id))
+        .returning();
+
+      if (!updatedCollection) {
+        return {
+          success: false,
+          message: "Failed to update collection",
+          data: null,
+        };
+      }
+
+      return {
+        success: true,
+        message: "Collection updated successfully",
+        data: updatedCollection,
+      };
+    } catch (err) {
+      console.error("[CollectionService] Error updating collection:", err);
+      return {
+        success: false,
+        message: "Failed to update collection",
+        data: null,
+      };
+    }
+  }
+
+  async deleteCollection(id: string) {
+    try {
+      const collection = await db.query.collections.findFirst({
+        where: eq(collections.id, id),
+      });
+
+      if (!collection) {
+        return {
+          success: false,
+          message: "Collection not found",
+          data: null,
+        };
+      }
+
+      const deletedCollection = await db
+        .delete(collections)
+        .where(eq(collections.id, id));
+
+      if (!deletedCollection) {
+        return {
+          success: false,
+          message: "Failed to delete collection",
+          data: null,
+        };
+      }
+
+      return {
+        success: true,
+        message: "Collection deleted successfully",
+        data: deletedCollection,
+      };
+    } catch (err) {
+      console.error("[Collection Service] Error deleting collections ", err);
+      return {
+        success: false,
+        message: "Failed to delete collection",
+        data: null,
+      };
+    }
+  }
+
+  async getCollectionById(id: string) {
+    try {
+      // Validate ID
+      if (!id) {
+        return {
+          success: false,
+          message: "Invalid collection ID",
+          data: null,
+        };
+      }
+
+      // Check if collection exists
+      const existingCollection = await db.query.collections.findFirst({
+        where: eq(collections.id, id),
+      });
+
+      if (!existingCollection) {
+        return {
+          success: false,
+          message: "Collection not found",
+          data: null,
+        };
+      }
+
+      return {
+        success: true,
+        message: "Collection retrieved successfully",
+        data: existingCollection,
+      };
+    } catch (err) {
+      console.error("[CollectionService] Error getting collection:", err);
+      return {
+        success: false,
+        message: "Failed to get collection",
+        data: null,
+      };
+    }
+  }
+}
