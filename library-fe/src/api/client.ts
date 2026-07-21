@@ -58,8 +58,6 @@ export interface Bibliography {
   faculties?: { id: number; name: string; code?: string }[];
   studyPrograms?: { id: number; name: string; code?: string; faculty?: { id: number; name: string } }[];
   isPopular?: boolean;
-  faculties?: Array<{ id: number; name: string }>;
-  studyPrograms?: Array<{ id: number; name: string }>;
   createdAt?: string;
   updatedAt?: string;
 }

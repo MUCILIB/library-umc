@@ -1,5 +1,5 @@
 // src/pages/Katalog.tsx
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect } from "react";
 import { useSearchParams } from "react-router";
 import Navbar from "@/components/ui/navbar";
 import Footer from "@/components/Footer";

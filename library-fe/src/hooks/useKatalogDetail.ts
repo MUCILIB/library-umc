@@ -20,7 +20,7 @@ export function useKatalogDetail(
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const [similarBooks, setSimilarBooks] = useState<Bibliography[]>([]);
+  const [similarBooks] = useState<Bibliography[]>([]);
 
   useEffect(() => {
     const fetchData = async () => {
