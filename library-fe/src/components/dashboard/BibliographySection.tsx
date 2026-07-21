@@ -545,12 +545,8 @@ function BibliographyForm({ bib, onClose, onSuccess }: BibliographyFormProps) {
     image: bib?.image || "",
     isPopular: bib?.isPopular || false,
     publisherName: bib?.publisher?.name || "",
-    // Extra fields from design UI
-    gmdId: bib?.gmd?.id?.toString() || "1", // Defaults to Text GMD
-    contentType: "Text",
-    mediaType: "Unmediated",
-    carrierType: "Volume",
-    frequency: "Satu Kali Terbit",
+    // Defaults to Text GMD
+    gmdId: bib?.gmd?.id?.toString() || "1",
     publishPlace: bib?.publicationPlace?.name || "",
   });
 
@@ -1195,53 +1191,7 @@ function BibliographyForm({ bib, onClose, onSuccess }: BibliographyFormProps) {
               </div>
             </div>
 
-            {/* Carrier, Media, Content Type Dropdowns */}
-            <div className="grid gap-4 md:grid-cols-3 pt-4 border-t border-border">
-              <div>
-                <label className="mb-2 block text-xs font-bold text-foreground uppercase tracking-wider">
-                  Tipe Isi (Content Type)
-                </label>
-                <select
-                  value={formData.contentType}
-                  onChange={(e) => setFormData({ ...formData, contentType: e.target.value })}
-                  className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary bg-background"
-                >
-                  <option value="Text">Text</option>
-                  <option value="Performed Music">Performed Music</option>
-                  <option value="Spoken Word">Spoken Word</option>
-                </select>
-              </div>
 
-              <div>
-                <label className="mb-2 block text-xs font-bold text-foreground uppercase tracking-wider">
-                  Tipe Media (Media Type)
-                </label>
-                <select
-                  value={formData.mediaType}
-                  onChange={(e) => setFormData({ ...formData, mediaType: e.target.value })}
-                  className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary bg-background"
-                >
-                  <option value="Unmediated">Unmediated</option>
-                  <option value="Computer">Computer</option>
-                  <option value="Microform">Microform</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="mb-2 block text-xs font-bold text-foreground uppercase tracking-wider">
-                  Tipe Pembawa (Carrier Type)
-                </label>
-                <select
-                  value={formData.carrierType}
-                  onChange={(e) => setFormData({ ...formData, carrierType: e.target.value })}
-                  className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary bg-background"
-                >
-                  <option value="Volume">Volume</option>
-                  <option value="Online Resource">Online Resource</option>
-                  <option value="Microfiche">Microfiche</option>
-                </select>
-              </div>
-            </div>
           </div>
         )}
 
@@ -1281,22 +1231,7 @@ function BibliographyForm({ bib, onClose, onSuccess }: BibliographyFormProps) {
                 />
               </div>
 
-              <div>
-                <label className="mb-2 block text-xs font-bold text-foreground uppercase tracking-wider">
-                  Frekuensi Penerbitan
-                </label>
-                <select
-                  value={formData.frequency}
-                  onChange={(e) => setFormData({ ...formData, frequency: e.target.value })}
-                  className="w-full rounded-lg border border-border px-3 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary bg-background"
-                >
-                  <option value="Satu Kali Terbit">Satu Kali Terbit</option>
-                  <option value="Mingguan">Mingguan</option>
-                  <option value="Bulanan">Bulanan</option>
-                  <option value="Tahunan">Tahunan</option>
-                  <option value="Tidak Teratur">Tidak Teratur</option>
-                </select>
-              </div>
+
 
               <div className="md:col-span-2">
                 <label className="mb-2 block text-xs font-bold text-foreground uppercase tracking-wider">
