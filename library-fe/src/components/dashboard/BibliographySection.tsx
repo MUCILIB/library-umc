@@ -23,6 +23,7 @@ import {
   UploadCloud,
   Check,
 } from "lucide-react";
+import { API_BASE_URL } from "@/utils/api-config";
 import { bibliographyApi, type Bibliography, type BibliographyListResponse, type Location, type Item, locationApi, itemApi } from "@/api/client";
 
 interface BibliographySectionProps {
@@ -517,6 +518,11 @@ function BibliographyDetail({
 // ==========================================
 // BIBLIOGRAPHY FORM COMPONENT
 // ==========================================
+
+interface DuplicateItem {
+  id: string; title: string; isbnIssn?: string;
+  authors: Array<{ name: string }>; similarity: string;
+}
 
 interface BibliographyFormProps {
   bib: Bibliography | null;
