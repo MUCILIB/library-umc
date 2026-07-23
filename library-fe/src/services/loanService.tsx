@@ -28,13 +28,28 @@ export interface Loan {
   member?: Record<string, unknown>;
   item?: {
     id: string;
+    itemCode?: string;
+    barcode?: string;
+    uniqueCode?: string;
+    locationId?: number;
+    location?: {
+      id?: number;
+      room?: string;
+      rack?: string;
+      shelf?: string;
+    };
     bibliographyId: string;
     status: string;
     bibliography: {
       id: string;
       title: string;
-      author: string;
+      author?: string;
+      sor?: string;
       image?: string;
+      callNumber?: string;
+      classification?: string;
+      authors?: Array<{ id?: number; name: string }>;
+      bibliographyAuthors?: Array<{ author?: { name: string } }>;
     };
   } & Record<string, unknown>;
 }

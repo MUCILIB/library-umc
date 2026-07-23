@@ -85,9 +85,12 @@ export default function ReturnApprovalsSection() {
                   <BookOpen size={24} />
                 </div>
                 <div>
-                  <h4 className="font-bold text-foreground text-[15px]">{req.loan?.item?.bibliography?.title}</h4>
+                  <h4 className="font-bold text-foreground text-[15px]">{req.loan?.item?.bibliography?.title || 'Judul tidak tersedia'}</h4>
+                  <p className="text-[11px] font-mono font-bold text-primary mt-1">
+                    Kode Buku: <span className="px-1.5 py-0.5 bg-primary/10 rounded border border-primary/20">{req.loan?.item?.itemCode || req.loan?.item?.barcode || (req.loan as any)?.itemCode || "-"}</span>
+                  </p>
                   <p className="text-[13px] font-medium text-muted-foreground mt-1">
-                    Oleh: {req.loan?.member?.user?.name}
+                    Oleh: {req.loan?.member?.user?.name || req.loan?.memberName || 'Peminjam tidak diketahui'}
                   </p>
                   <p className="text-[11px] text-muted-foreground mt-2 flex items-center gap-1 font-bold">
                     <Clock size={12} />

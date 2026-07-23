@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { API_BASE_URL } from "../utils/api-config";
+import { cleanIsbn } from "../utils/format";
 import type { Bibliography, Reservation } from "../types";
 // ponytail: only 2 lines changed, global var replaced raw env var
 
@@ -76,7 +77,7 @@ export function useBookList(
         ? item.publisher?.name || ""
         : item.publisher || "",
       publicationYear: String(item.publishYear ?? ""),
-      isbn: item.isbnIssn || item.isbn || "",
+      isbn: cleanIsbn(item.isbnIssn || item.isbn || ""),
       type: item.type || "physical_book",
       image: item.image || null,
       stock: item.stock ?? item.totalItems ?? 0,

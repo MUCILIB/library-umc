@@ -138,7 +138,17 @@ export class LoanService {
       ),
       with: {
         member: { with: { user: true } },
-        item: { with: { bibliography: true } }
+        item: {
+          with: {
+            bibliography: {
+              with: {
+                bibliographyAuthors: {
+                  with: { author: true }
+                }
+              }
+            }
+          }
+        }
       }
     });
 
@@ -163,7 +173,17 @@ export class LoanService {
         where: and(eq(loans.id, loanId), isNull(loans.deletedAt)),
         with: {
           member: { with: { user: true } },
-          item: { with: { bibliography: true } }
+          item: {
+            with: {
+              bibliography: {
+                with: {
+                  bibliographyAuthors: {
+                    with: { author: true }
+                  }
+                }
+              }
+            }
+          }
         }
       });
 
@@ -445,7 +465,17 @@ export class LoanService {
         loan: {
           with: {
             member: { with: { user: true } },
-            item: { with: { bibliography: true } }
+            item: {
+              with: {
+                bibliography: {
+                  with: {
+                    bibliographyAuthors: {
+                      with: { author: true }
+                    }
+                  }
+                }
+              }
+            }
           }
         }
       }
@@ -492,7 +522,13 @@ export class LoanService {
       with: {
         item: {
           with: {
-            bibliography: true,
+            bibliography: {
+              with: {
+                bibliographyAuthors: {
+                  with: { author: true }
+                }
+              }
+            },
             location: true
           }
         },
@@ -507,10 +543,23 @@ export class LoanService {
     });
 
     const loansWithQr = await Promise.all(
-      result.map(async (loan) => {
-        if (loan.status === "pending" && loan.verificationToken) {
+      result.map(async (loan: any) => {
+        // Standardize author name on item.bibliography
+        if (loan.item?.bibliography) {
+          const bib = loan.item.bibliography;
+          const authorNames = Array.isArray(bib.bibliographyAuthors)
+            ? bib.bibliographyAuthors.map((ba: any) => ba.author?.name).filter(Boolean).join(", ")
+            : "";
+          bib.author = authorNames || bib.author || bib.sor || "Penulis tidak tersedia";
+          bib.authors = Array.isArray(bib.bibliographyAuthors)
+            ? bib.bibliographyAuthors.map((ba: any) => ba.author).filter(Boolean)
+            : [];
+        }
+
+        const qrData = loan.verificationToken || loan.item?.itemCode || loan.item?.barcode || loan.id;
+        if (qrData) {
           try {
-            const qrCodeUrl = await qrcode.toDataURL(loan.verificationToken, {
+            const qrCodeUrl = await qrcode.toDataURL(qrData, {
               width: 300,
               errorCorrectionLevel: "H"
             });

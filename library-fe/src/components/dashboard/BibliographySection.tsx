@@ -24,6 +24,7 @@ import {
   Check,
 } from "lucide-react";
 import { API_BASE_URL } from "@/utils/api-config";
+import { cleanIsbn } from "@/utils/format";
 import { bibliographyApi, type Bibliography, type BibliographyListResponse, type Location, type Item, locationApi, itemApi } from "@/api/client";
 
 interface BibliographySectionProps {
@@ -280,7 +281,7 @@ export default function BibliographySection({
                       {bib.publishYear || "-"}
                     </td>
                     <td className="px-4 py-3 text-muted-foreground">
-                      {bib.isbnIssn || "-"}
+                      {cleanIsbn(bib.isbnIssn) || "-"}
                     </td>
                     <td className="px-4 py-3 text-center">
                       <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 dark:bg-emerald-950 px-2 py-0.5 text-xs font-medium text-emerald-700 dark:text-emerald-400">
@@ -420,7 +421,7 @@ function BibliographyDetail({
 
         {/* Metadata Grid */}
         <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          <MetaField label="ISBN/ISSN" value={bib.isbnIssn} />
+          <MetaField label="ISBN/ISSN" value={cleanIsbn(bib.isbnIssn)} />
           <MetaField label="Edisi" value={bib.edition} />
           <MetaField label="Penerbit" value={bib.publisher?.name} />
           <MetaField label="Tahun Terbit" value={bib.publishYear?.toString()} />
@@ -625,7 +626,7 @@ function BibliographyForm({ bib, onClose, onSuccess }: BibliographyFormProps) {
 
   const handleIsbnChange = (val: string) => {
     // Strip everything except digits and x/X
-    let clean = val.replace(/[^0-9Xx]/g, "");
+    let clean = val.replace(/^ISBN[:\s]*/i, "").replace(/[^0-9Xx]/g, "");
     let formatted = clean;
 
     if (clean.startsWith("9")) {
@@ -855,13 +856,13 @@ function BibliographyForm({ bib, onClose, onSuccess }: BibliographyFormProps) {
   };
 
   // Submit all steps
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async (e?: React.FormEvent | React.MouseEvent) => {
+    if (e) e.preventDefault();
     setLoading(true);
     setError(null);
 
     // Auto-format ISBN / ISSN — send clean digits only
-    let formattedIsbn = formData.isbnIssn.trim();
+    let formattedIsbn = formData.isbnIssn.trim().replace(/^ISBN[:\s]*/i, "");
     if (formattedIsbn) {
       const clean = formattedIsbn.replace(/[^0-9Xx]/g, "");
       if (clean.length === 10 || clean.length === 13) {
@@ -925,7 +926,9 @@ function BibliographyForm({ bib, onClose, onSuccess }: BibliographyFormProps) {
       }
     }
     setError(null);
-    setStep(step + 1);
+    if (step < 5) {
+      setStep(step + 1);
+    }
   };
 
   const prevStep = () => {
@@ -938,7 +941,8 @@ function BibliographyForm({ bib, onClose, onSuccess }: BibliographyFormProps) {
     { num: 1, label: "1. Informasi Dasar & Pengarang", icon: Info },
     { num: 2, label: "2. Penerbitan & Klasifikasi", icon: BookOpen },
     { num: 3, label: "3. Inventaris & Salinan", icon: Database },
-    { num: 4, label: "4. Konten, Sampul & Berkas", icon: ImageIcon },
+    { num: 4, label: "4. Sampul & Berkas", icon: ImageIcon },
+    { num: 5, label: "5. Pratinjau & Simpan", icon: Check },
   ];
 
   return (
@@ -966,7 +970,7 @@ function BibliographyForm({ bib, onClose, onSuccess }: BibliographyFormProps) {
 
       {/* Stepper Wizard Indicator */}
       <div className="bg-card border border-border rounded-2xl p-4 shadow-sm">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 md:gap-2">
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-4 md:gap-2">
           {stepsConfig.map((item) => {
             const isActive = step === item.num;
             const isCompleted = step > item.num;
@@ -975,7 +979,7 @@ function BibliographyForm({ bib, onClose, onSuccess }: BibliographyFormProps) {
                 key={item.num}
                 type="button"
                 onClick={() => {
-                  if (item.num < step || (item.num === 2 && formData.title.trim())) {
+                  if (item.num < step || (item.num <= step + 1 && formData.title.trim())) {
                     setStep(item.num);
                   }
                 }}
@@ -1029,7 +1033,7 @@ function BibliographyForm({ bib, onClose, onSuccess }: BibliographyFormProps) {
               <div key={d.id} className="flex items-center justify-between bg-white rounded-lg p-3 border border-amber-100">
                 <div className="min-w-0">
                   <p className="text-sm font-medium text-amber-900 truncate">{d.title}</p>
-                  <p className="text-xs text-amber-700">{d.authors.map((a) => a.name).join(", ")}{d.isbnIssn ? ` — ${d.isbnIssn}` : ""}</p>
+                  <p className="text-xs text-amber-700">{d.authors.map((a) => a.name).join(", ")}{d.isbnIssn ? ` — ${cleanIsbn(d.isbnIssn)}` : ""}</p>
                 </div>
                 <button
                   type="button"
@@ -1045,7 +1049,10 @@ function BibliographyForm({ bib, onClose, onSuccess }: BibliographyFormProps) {
       )}
 
       {/* Wizard Form Panels */}
-      <form onSubmit={handleSubmit} className="space-y-6">
+      <form
+        onSubmit={(e) => e.preventDefault()}
+        className="space-y-6"
+      >
         {/* STEP 1: INFORMASI DASAR & PENGARANG */}
         {step === 1 && (
           <div className="bg-card border border-border rounded-2xl p-6 shadow-sm space-y-6 animate-fadeIn">
@@ -1698,7 +1705,7 @@ function BibliographyForm({ bib, onClose, onSuccess }: BibliographyFormProps) {
                       {authors.filter((a) => a.name.trim()).map((a) => a.name).join(", ") || "Penulis"}
                     </p>
                     <p className="text-xs text-muted-foreground/80 font-mono line-clamp-1">
-                      {formData.isbnIssn || "ISBN:"}
+                      {cleanIsbn(formData.isbnIssn) || "-"}
                     </p>
                   </div>
                 </div>
@@ -1728,6 +1735,132 @@ function BibliographyForm({ bib, onClose, onSuccess }: BibliographyFormProps) {
           </div>
         )}
 
+        {/* STEP 5: PRATINJAU & KONFIRMASI */}
+        {step === 5 && (
+          <div className="bg-card border border-border rounded-2xl p-6 shadow-sm space-y-6 animate-fadeIn">
+            <div className="flex items-center justify-between border-b border-border pb-3">
+              <div>
+                <h3 className="text-base font-semibold text-foreground">
+                  Pratinjau & Konfirmasi Bibliografi
+                </h3>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Periksa kembali seluruh informasi data buku sebelum menyimpan ke sistem.
+                </p>
+              </div>
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-3.5 py-1 text-xs font-bold text-primary border border-primary/20">
+                <Check className="size-4" /> Siap Disimpan
+              </span>
+            </div>
+
+            <div className="grid gap-6 md:grid-cols-3">
+              {/* Sampul Preview */}
+              <div className="md:col-span-1 space-y-3">
+                <div className="border border-border rounded-xl p-4 bg-muted/20 flex flex-col items-center justify-center text-center gap-3 min-h-[220px]">
+                  {formData.image ? (
+                    <div className="relative w-36 h-48 rounded-lg overflow-hidden border border-border shadow-md">
+                      <img
+                        src={formData.image}
+                        alt="Sampul Buku"
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                  ) : (
+                    <div className="flex flex-col items-center justify-center p-6 text-muted-foreground">
+                      <ImageIcon className="size-16 opacity-30 mb-2" />
+                      <p className="text-xs font-medium">Belum ada gambar sampul</p>
+                      <button
+                        type="button"
+                        onClick={() => setStep(4)}
+                        className="mt-3 text-xs text-primary font-bold hover:underline"
+                      >
+                        + Tambah Sampul di Langkah 4
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {digitalFile && (
+                  <div className="p-3 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/40 rounded-xl flex items-center gap-2 text-xs font-medium text-emerald-800 dark:text-emerald-300">
+                    <Check className="size-4 shrink-0 text-emerald-600" />
+                    <span className="truncate">File PDF: {digitalFile.name}</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Rincian Ringkas Data */}
+              <div className="md:col-span-2 space-y-4">
+                <div>
+                  <span className="text-[10px] uppercase font-bold text-primary tracking-widest">
+                    {formData.type ? formData.type.replace("_", " ") : "Buku Fisik"}
+                  </span>
+                  <h3 className="text-xl font-bold text-foreground mt-0.5">
+                    {formData.title || "Judul Belum Diisi"}
+                  </h3>
+                  <p className="text-sm font-semibold text-muted-foreground mt-1">
+                    Oleh: {authors.filter((a) => a.name.trim()).map((a) => a.name).join(", ") || "Penulis belum diisi"}
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3 text-xs bg-muted/30 p-4 rounded-xl border border-border">
+                  <div>
+                    <span className="text-muted-foreground font-semibold">ISBN / ISSN:</span>
+                    <p className="font-bold text-foreground font-mono mt-0.5">{cleanIsbn(formData.isbnIssn) || "-"}</p>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground font-semibold">Edisi:</span>
+                    <p className="font-medium text-foreground mt-0.5">{formData.edition || "-"}</p>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground font-semibold">Penerbit:</span>
+                    <p className="font-medium text-foreground mt-0.5">{formData.publisherName || "-"}</p>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground font-semibold">Tahun Terbit:</span>
+                    <p className="font-medium text-foreground mt-0.5">{formData.publishYear || "-"}</p>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground font-semibold">GMD:</span>
+                    <p className="font-medium text-foreground mt-0.5">
+                      {formData.gmdId === "2" ? "Electronic" : formData.gmdId === "3" ? "Audio" : formData.gmdId === "4" ? "Video" : "Text"}
+                    </p>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground font-semibold">Call Number:</span>
+                    <p className="font-medium text-foreground mt-0.5">{formData.callNumber || "-"}</p>
+                  </div>
+                </div>
+
+                {subjects.length > 0 && (
+                  <div className="space-y-1.5">
+                    <span className="text-xs font-semibold text-muted-foreground">Subjek / Kata Kunci:</span>
+                    <div className="flex flex-wrap gap-1.5">
+                      {subjects.map((subj, idx) => (
+                        <span key={idx} className="rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-bold text-primary">
+                          {subj.name}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                <div className="p-3 bg-muted/40 border border-border rounded-xl flex items-center justify-between text-xs">
+                  <span className="font-semibold text-muted-foreground">Eksemplar yang akan terdaftar:</span>
+                  <span className="font-bold text-primary">
+                    {bib ? `${itemsList.length} Eksemplar Terdaftar` : `${localNewItems.length} Eksemplar Baru`}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div className="p-4 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/40 rounded-xl flex items-center gap-3 text-xs text-amber-800 dark:text-amber-300">
+              <Info className="size-5 shrink-0 text-amber-600" />
+              <span>
+                Semua data sudah siap. Klik tombol <strong>"Simpan Bibliografi"</strong> di bawah untuk menyelesaikan penyimpanan.
+              </span>
+            </div>
+          </div>
+        )}
+
         {/* Wizard Navigation Action Controls */}
         <div className="flex justify-between items-center bg-card border border-border rounded-xl p-4 shadow-sm">
           <div>
@@ -1750,7 +1883,7 @@ function BibliographyForm({ bib, onClose, onSuccess }: BibliographyFormProps) {
               </button>
             )}
 
-            {step < 4 ? (
+            {step < 5 ? (
               <button
                 type="button"
                 onClick={nextStep}
@@ -1760,8 +1893,9 @@ function BibliographyForm({ bib, onClose, onSuccess }: BibliographyFormProps) {
               </button>
             ) : (
               <button
-                type="submit"
+                type="button"
                 disabled={loading}
+                onClick={handleSubmit}
                 className="flex items-center gap-2 rounded-lg bg-primary px-6 py-2.5 text-sm font-bold text-white hover:bg-primary/95 disabled:opacity-50 transition-all"
               >
                 {loading && <Loader2 className="size-4 animate-spin" />}
