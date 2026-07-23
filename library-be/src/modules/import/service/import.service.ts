@@ -615,7 +615,7 @@ export class ImportService {
           // Create bibliography
           const [bib] = await tx.insert(bibliographies).values({
             title: resolved.title,
-            isbnIssn: resolved.isbn_issn || null,
+            isbnIssn: resolved.isbn_issn ? resolved.isbn_issn.replace(/^ISBN[:\s]*/i, "").trim() || null : null,
             edition: resolved.edition || null,
             publishYear: resolved.publish_year ? parseInt(resolved.publish_year) : null,
             collation: resolved.collation || null,

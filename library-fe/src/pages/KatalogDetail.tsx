@@ -22,7 +22,7 @@ import {
   BookOpen,
   X,
 } from "lucide-react";
-import { generateColorFromSeed } from "@/utils/format";
+import { generateColorFromSeed, cleanIsbn } from "@/utils/format";
 
 const KatalogDetail = () => {
   const { id } = useParams<{ id: string }>();
@@ -504,7 +504,7 @@ const KatalogDetail = () => {
                   ISBN
                 </p>
                 <p className="text-[11px] sm:text-xs font-bold text-slate-700 dark:text-slate-200">
-                  {bibliography?.isbn || "-"}
+                  {cleanIsbn(bibliography?.isbn) || "-"}
                 </p>
               </div>
               <div>

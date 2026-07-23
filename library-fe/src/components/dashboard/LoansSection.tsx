@@ -35,9 +35,16 @@ interface Loan {
   approvedBy?: string;
   approvedDate?: string;
   rejectReason?: string;
+  bibliographyTitle?: string;
+  memberName?: string;
+  itemCode?: string;
   item?: {
+    itemCode?: string;
+    barcode?: string;
     bibliography?: {
       title?: string;
+      author?: string;
+      image?: string;
     };
   };
   member?: {
@@ -729,14 +736,21 @@ export default function LoansSection({ searchTerm, onSearchChange }: LoansSectio
                 <h3 className="text-[18px] font-extrabold text-foreground mb-5">Konfirmasi Pengembalian Buku</h3>
 
                 <div className="p-4 bg-muted rounded-xl space-y-3 border border-border mb-6">
+                  <p className="text-[13px] text-muted-foreground flex justify-between items-center">
+                    <span className="font-bold text-muted-foreground">Kode Buku</span>
+                    <span className="font-mono font-bold text-primary px-2 py-0.5 bg-primary/10 rounded border border-primary/20 text-xs">
+                      {returnModalLoan.item?.itemCode || returnModalLoan.item?.barcode || (returnModalLoan as any).itemCode || "-"}
+                    </span>
+                  </p>
+                  <div className="h-px bg-muted"></div>
                   <p className="text-[13px] text-muted-foreground flex justify-between">
-                    <span className="font-bold text-muted-foreground">Buku</span>
-                    <span className="font-bold text-foreground text-right max-w-[60%] truncate">{returnModalLoan.item?.bibliography?.title}</span>
+                    <span className="font-bold text-muted-foreground">Judul Buku</span>
+                    <span className="font-bold text-foreground text-right max-w-[60%] truncate">{returnModalLoan.item?.bibliography?.title || returnModalLoan.bibliographyTitle || "-"}</span>
                   </p>
                   <div className="h-px bg-muted"></div>
                   <p className="text-[13px] text-muted-foreground flex justify-between">
                     <span className="font-bold text-muted-foreground">Peminjam</span>
-                    <span className="font-bold text-foreground">{returnModalLoan.member?.user?.name}</span>
+                    <span className="font-bold text-foreground">{returnModalLoan.member?.user?.name || returnModalLoan.memberName || "-"}</span>
                   </p>
                   <div className="h-px bg-muted"></div>
                   <p className="text-[13px] text-muted-foreground flex justify-between">
