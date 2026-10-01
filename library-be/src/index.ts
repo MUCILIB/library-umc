@@ -19,15 +19,8 @@ const app = express();
 // Trust proxy fully for secure cookie (X-Forwarded-Proto) from PaaS like Railway, Render, Coolify, etc.
 app.set("trust proxy", 1);
 
-// ponytail: HTTPS redirect — works behind PaaS / reverse proxy
-app.use((req, res, next) => {
-  if (req.path === "/health") return next();
-  const proto = req.headers["x-forwarded-proto"];
-  if (process.env.NODE_ENV === "production" && proto && !(Array.isArray(proto) ? proto[0] : proto)?.startsWith("https")) {
-    return res.redirect(301, `https://${req.headers.host}${req.originalUrl}`);
-  }
-  next();
-});
+// ponytail: HTTPS redirect handled at reverse proxy boundary (Caddy/Traefik)
+// Skip app-level redirect to prevent reverse proxy loops with TLS termination
 
 const allowedOrigins = [
   process.env.FRONTEND_URL || "http://localhost:5173",
