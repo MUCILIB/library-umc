@@ -292,6 +292,11 @@ router.get(
  *         description: Traffic successfully tracked
  */
 router.post(
+  "/reports/web-traffic/ping",
+  publicApiLimiter,
+  reportController.trackWebTraffic.bind(reportController)
+);
+router.post(
   "/reports/web-traffic/track",
   publicApiLimiter,
   reportController.trackWebTraffic.bind(reportController)

@@ -32,7 +32,7 @@ export default function WebTrafficTracker() {
       sessionId: getSessionId()
     };
 
-    const url = `${API_BASE_URL}/api/reports/web-traffic/track`;
+    const url = `${API_BASE_URL}/api/reports/web-traffic/ping`;
     const body = JSON.stringify(payload);
 
     if (navigator.sendBeacon) {
