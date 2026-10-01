@@ -5,7 +5,7 @@ import {
   authors, subjects, publishers, publicationPlaces, gmds,
   languages, locations, vendors, collectionTypes, faculties, studyPrograms
 } from "../../../db/schema";
-import { eq, and, isNull, asc, sql } from "drizzle-orm";
+import { eq, and, isNull, asc, inArray, ilike } from "drizzle-orm";
 
 const BIBLIO_HEADERS = [
   "title", "gmd_name", "edition", "isbn_issn", "publisher_name",
@@ -21,6 +21,14 @@ const ITEM_HEADERS = [
   "order_date", "item_status_name", "site", "source", "invoice",
   "price", "price_currency", "invoice_date", "input_date", "last_update", "title"
 ];
+
+export interface ExportFilter {
+  facultyId?: number;
+  studyProgramId?: number;
+  categoryId?: number;
+  subject?: string;
+  status?: string;
+}
 
 function escapeCsvField(value: string | null | undefined): string {
   if (value === null || value === undefined) return "";
@@ -38,11 +46,83 @@ function formatDate(d: Date | string | null | undefined): string {
   return date.toISOString().split("T")[0];
 }
 
+async function getFilteredBibliographyIds(filter: ExportFilter): Promise<string[] | null> {
+  const hasFilter = Boolean(
+    filter.facultyId ||
+    filter.studyProgramId ||
+    filter.categoryId ||
+    filter.subject ||
+    filter.status
+  );
+  if (!hasFilter) return null;
+
+  const conditions: any[] = [isNull(bibliographies.deletedAt)];
+
+  if (filter.facultyId) {
+    const facultyBibs = await db
+      .select({ bibId: bibliographyFaculties.bibliographyId })
+      .from(bibliographyFaculties)
+      .innerJoin(faculties, eq(bibliographyFaculties.facultyId, faculties.id))
+      .where(eq(bibliographyFaculties.facultyId, filter.facultyId));
+    const ids = facultyBibs.map((r: any) => r.bibId);
+    if (ids.length === 0) return [];
+    conditions.push(inArray(bibliographies.id, ids));
+  }
+
+  if (filter.studyProgramId) {
+    const spBibs = await db
+      .select({ bibId: bibliographyStudyPrograms.bibliographyId })
+      .from(bibliographyStudyPrograms)
+      .innerJoin(studyPrograms, eq(bibliographyStudyPrograms.studyProgramId, studyPrograms.id))
+      .where(eq(bibliographyStudyPrograms.studyProgramId, filter.studyProgramId));
+    const ids = spBibs.map((r: any) => r.bibId);
+    if (ids.length === 0) return [];
+    conditions.push(inArray(bibliographies.id, ids));
+  }
+
+  if (filter.categoryId) {
+    conditions.push(eq(bibliographies.categoryId, filter.categoryId));
+  }
+
+  if (filter.subject) {
+    const subjectBibs = await db
+      .select({ bibId: bibliographySubjects.bibliographyId })
+      .from(bibliographySubjects)
+      .innerJoin(subjects, eq(bibliographySubjects.subjectId, subjects.id))
+      .where(ilike(subjects.name, `%${filter.subject}%`));
+    const ids = subjectBibs.map((r: any) => r.bibId);
+    if (ids.length === 0) return [];
+    conditions.push(inArray(bibliographies.id, ids));
+  }
+
+  if (filter.status) {
+    const itemBibs = await db
+      .selectDistinct({ bibId: items.bibliographyId })
+      .from(items)
+      .where(and(isNull(items.deletedAt), eq(items.status, filter.status as any)));
+    const ids = itemBibs.map((r: any) => r.bibId).filter(Boolean) as string[];
+    if (ids.length === 0) return [];
+    conditions.push(inArray(bibliographies.id, ids));
+  }
+
+  const rows = await db.select({ id: bibliographies.id }).from(bibliographies).where(and(...conditions));
+  return rows.map((r: any) => r.id);
+}
+
 export class ExportService {
 
-  async exportBibliographies(): Promise<string> {
+  async exportBibliographies(filter?: ExportFilter): Promise<string> {
+    const matchingIds = filter ? await getFilteredBibliographyIds(filter) : null;
+    if (matchingIds !== null && matchingIds.length === 0) {
+      return "\uFEFF" + BIBLIO_HEADERS.join(";") + "\n";
+    }
+
+    const where = matchingIds !== null
+      ? and(isNull(bibliographies.deletedAt), inArray(bibliographies.id, matchingIds))
+      : isNull(bibliographies.deletedAt);
+
     const rows = await db.query.bibliographies.findMany({
-      where: isNull(bibliographies.deletedAt),
+      where,
       with: {
         gmd: true,
         publisher: true,
@@ -94,9 +174,33 @@ export class ExportService {
     return "\uFEFF" + lines.join("\n");
   }
 
-  async exportItems(): Promise<string> {
+  async exportItems(filter?: ExportFilter): Promise<string> {
+    const itemConditions: any[] = [isNull(items.deletedAt)];
+
+    if (filter?.status) {
+      itemConditions.push(eq(items.status, filter.status as any));
+    }
+
+    if (filter && (filter.facultyId || filter.studyProgramId || filter.categoryId || filter.subject)) {
+      const bibFilter: ExportFilter = {
+        facultyId: filter.facultyId,
+        studyProgramId: filter.studyProgramId,
+        categoryId: filter.categoryId,
+        subject: filter.subject,
+      };
+      const matchingBibIds = await getFilteredBibliographyIds(bibFilter);
+      if (matchingBibIds !== null && matchingBibIds.length === 0) {
+        return "\uFEFF" + ITEM_HEADERS.join(";") + "\n";
+      }
+      if (matchingBibIds !== null) {
+        itemConditions.push(inArray(items.bibliographyId, matchingBibIds));
+      }
+    }
+
+    const where = itemConditions.length > 1 ? and(...itemConditions) : isNull(items.deletedAt);
+
     const allItems = await db.query.items.findMany({
-      where: isNull(items.deletedAt),
+      where,
       with: {
         bibliography: true,
         location: true,

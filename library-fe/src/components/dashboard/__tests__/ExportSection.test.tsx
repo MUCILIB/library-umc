@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, fireEvent } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import ExportSection from "@/components/dashboard/ExportSection";
 
@@ -8,21 +8,46 @@ vi.mock("@/api/client", () => ({
     downloadBibliographies: vi.fn(),
     downloadItems: vi.fn(),
   },
+  facultyApi: {
+    list: vi.fn().mockResolvedValue({
+      data: [
+        { id: 1, name: "Fakultas Teknik" },
+        { id: 2, name: "Fakultas Ekonomi" },
+      ],
+    }),
+  },
+  studyProgramApi: {
+    list: vi.fn().mockResolvedValue({
+      data: [{ id: 10, name: "Teknik Informatika", facultyId: 1 }],
+    }),
+  },
 }));
 
-import { exportApi } from "@/api/client";
+import { exportApi, facultyApi, studyProgramApi } from "@/api/client";
 
 describe("ExportSection", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    (facultyApi.list as ReturnType<typeof vi.fn>).mockResolvedValue({
+      data: [
+        { id: 1, name: "Fakultas Teknik" },
+        { id: 2, name: "Fakultas Ekonomi" },
+      ],
+    });
+    (studyProgramApi.list as ReturnType<typeof vi.fn>).mockResolvedValue({
+      data: [{ id: 10, name: "Teknik Informatika", facultyId: 1 }],
+    });
   });
 
-  it("should render export section with title and buttons", () => {
+  it("should render export section with title and buttons", async () => {
     render(<ExportSection />);
 
     expect(screen.getByText("Export Data")).toBeInTheDocument();
     expect(screen.getAllByText("Export Bibliografi").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Export Item").length).toBeGreaterThan(0);
+    await waitFor(() => {
+      expect(screen.getByText("Fakultas Teknik")).toBeInTheDocument();
+    });
   });
 
   it("should show loading state when exporting bibliographies", async () => {
@@ -78,6 +103,48 @@ describe("ExportSection", () => {
 
     await waitFor(() => {
       expect(screen.getByText("Berhasil!")).toBeInTheDocument();
+    });
+  });
+
+  it("should pass selected facultyId and studyProgramId when exporting", async () => {
+    (exportApi.downloadBibliographies as ReturnType<typeof vi.fn>).mockResolvedValue(undefined);
+    (exportApi.downloadItems as ReturnType<typeof vi.fn>).mockResolvedValue(undefined);
+
+    render(<ExportSection />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Fakultas Teknik")).toBeInTheDocument();
+    });
+
+    const facultySelect = screen.getByLabelText("Filter Fakultas");
+    fireEvent.change(facultySelect, { target: { value: "1" } });
+
+    await waitFor(() => {
+      expect(studyProgramApi.list).toHaveBeenCalledWith(1);
+      expect(screen.getByText("Teknik Informatika")).toBeInTheDocument();
+    });
+
+    const prodiSelect = screen.getByLabelText("Filter Program Studi");
+    fireEvent.change(prodiSelect, { target: { value: "10" } });
+
+    const biblioButton = screen.getByRole("button", { name: /Export Bibliografi/i });
+    fireEvent.click(biblioButton);
+
+    await waitFor(() => {
+      expect(exportApi.downloadBibliographies).toHaveBeenCalledWith({
+        facultyId: 1,
+        studyProgramId: 10,
+      });
+    });
+
+    const itemButton = screen.getByRole("button", { name: /Export Item/i });
+    fireEvent.click(itemButton);
+
+    await waitFor(() => {
+      expect(exportApi.downloadItems).toHaveBeenCalledWith({
+        facultyId: 1,
+        studyProgramId: 10,
+      });
     });
   });
 });

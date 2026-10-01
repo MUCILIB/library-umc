@@ -452,10 +452,34 @@ export const importApi = {
 // Export API
 // ==========================================
 
-export const exportApi = {
-  downloadBibliographies: () =>
-    apiFetchBlob("/api/export/bibliographies", "bibliographies_export.csv"),
+export interface ExportFilterParams {
+  facultyId?: number | string;
+  studyProgramId?: number | string;
+  categoryId?: number | string;
+  subject?: string;
+  status?: string;
+}
 
-  downloadItems: () =>
-    apiFetchBlob("/api/export/items", "items_export.csv"),
+export const exportApi = {
+  downloadBibliographies: (params?: ExportFilterParams) => {
+    const query = new URLSearchParams();
+    if (params?.facultyId) query.set("facultyId", String(params.facultyId));
+    if (params?.studyProgramId) query.set("studyProgramId", String(params.studyProgramId));
+    if (params?.categoryId) query.set("categoryId", String(params.categoryId));
+    if (params?.subject) query.set("subject", params.subject);
+    if (params?.status) query.set("status", params.status);
+    const qs = query.toString();
+    return apiFetchBlob(`/api/export/bibliographies${qs ? `?${qs}` : ""}`, "bibliographies_export.csv");
+  },
+
+  downloadItems: (params?: ExportFilterParams) => {
+    const query = new URLSearchParams();
+    if (params?.facultyId) query.set("facultyId", String(params.facultyId));
+    if (params?.studyProgramId) query.set("studyProgramId", String(params.studyProgramId));
+    if (params?.categoryId) query.set("categoryId", String(params.categoryId));
+    if (params?.subject) query.set("subject", params.subject);
+    if (params?.status) query.set("status", params.status);
+    const qs = query.toString();
+    return apiFetchBlob(`/api/export/items${qs ? `?${qs}` : ""}`, "items_export.csv");
+  },
 };
