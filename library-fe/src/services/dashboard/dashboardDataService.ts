@@ -48,11 +48,18 @@ export interface CategoryItem {
 export interface GuestLogItem {
   id: string;
   name: string;
-  email: string;
+  email?: string | null;
   identifier: string;
-  faculty: string;
-  major: string;
+  faculty?: string | null;
+  major?: string | null;
+  institution?: string | null;
+  purpose?: string | null;
+  phone?: string | null;
+  studyProgramId?: number | null;
+  facultyId?: number | null;
+  type?: "member" | "non-member" | string;
   visitDate: string;
+  memberId?: string | null;
 }
 
 const jsonOrThrow = async (res: Response) => {
@@ -84,8 +91,19 @@ export const dashboardDataService = {
     return data.success && Array.isArray(data.data) ? data.data : [];
   },
 
-  async getGuests(): Promise<GuestLogItem[]> {
-    const res = await fetch(`${API_BASE_URL}/api/guests`, {
+  async getGuests(params?: {
+    studyProgramId?: number;
+    facultyId?: number;
+    type?: string;
+    search?: string;
+  }): Promise<GuestLogItem[]> {
+    const query = new URLSearchParams();
+    if (params?.studyProgramId) query.set("studyProgramId", String(params.studyProgramId));
+    if (params?.facultyId) query.set("facultyId", String(params.facultyId));
+    if (params?.type) query.set("type", params.type);
+    if (params?.search) query.set("search", params.search);
+    const qs = query.toString();
+    const res = await fetch(`${API_BASE_URL}/api/guests${qs ? `?${qs}` : ""}`, {
       credentials: "include"
     });
     const data = await jsonOrThrow(res);

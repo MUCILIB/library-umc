@@ -1,5 +1,10 @@
 import { type Request, type Response } from "express";
 import { GuestService } from "../service/guest.service";
+import {
+  scanMemberSchema,
+  createNonMemberGuestSchema,
+  guestFilterQuerySchema
+} from "../validation/guest.validation";
 
 const guestService = new GuestService();
 
@@ -125,6 +130,76 @@ export class GuestController {
   }
 
   /**
+   * POST /guests/scan - Scan Presensi Member (KTM / Barcode / QR / NIM)
+   */
+  async scanMember(req: Request, res: Response) {
+    try {
+      const parsed = scanMemberSchema.safeParse(req.body);
+      if (!parsed.success) {
+        res.status(400).json({
+          success: false,
+          message: parsed.error.issues[0]?.message || "Validation error",
+          data: null
+        });
+        return;
+      }
+
+      const result = await guestService.scanMember(parsed.data.memberIdentifier);
+
+      if (!result.success) {
+        if (result.code === "not_found") {
+          res.status(404).json(result);
+          return;
+        }
+        res.status(400).json(result);
+        return;
+      }
+
+      res.status(200).json(result);
+    } catch (error) {
+      console.error("[GuestController] Error scanning member:", error);
+      res.status(500).json({
+        success: false,
+        message: "Internal Server Error",
+        data: null
+      });
+    }
+  }
+
+  /**
+   * POST /guests/non-member - Presensi Pengunjung Non-Member (Tamu Umum)
+   */
+  async createNonMember(req: Request, res: Response) {
+    try {
+      const parsed = createNonMemberGuestSchema.safeParse(req.body);
+      if (!parsed.success) {
+        res.status(400).json({
+          success: false,
+          message: parsed.error.issues[0]?.message || "Validation error",
+          data: null
+        });
+        return;
+      }
+
+      const result = await guestService.createNonMemberGuest(parsed.data);
+
+      if (!result.success) {
+        res.status(400).json(result);
+        return;
+      }
+
+      res.status(201).json(result);
+    } catch (error) {
+      console.error("[GuestController] Error creating non-member guest:", error);
+      res.status(500).json({
+        success: false,
+        message: "Internal Server Error",
+        data: null
+      });
+    }
+  }
+
+  /**
    * POST /guests - Create Guest Log
    */
   async createGuestLog(req: Request, res: Response) {
@@ -163,10 +238,15 @@ export class GuestController {
    */
   async getGuestLogs(req: Request, res: Response) {
     try {
-      const page = parseInt(req.query.page as string) || 1;
-      const limit = parseInt(req.query.limit as string) || 50;
+      const parsed = guestFilterQuerySchema.safeParse(req.query);
+      const query = parsed.success
+        ? parsed.data
+        : {
+            page: parseInt(req.query.page as string) || 1,
+            limit: parseInt(req.query.limit as string) || 50
+          };
 
-      const result = await guestService.getAllGuestLogs(limit, page);
+      const result = await guestService.getAllGuestLogs(query);
 
       if (!result.success) {
         res.status(400).json(result);

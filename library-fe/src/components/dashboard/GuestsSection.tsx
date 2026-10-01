@@ -18,7 +18,7 @@ import {
 } from "lucide-react";
 import { dashboardDataService } from "@/services/dashboard/dashboardDataService";
 import { useToast } from "@/hooks/useToast";
-import { exportApi, importApi } from "@/api/client";
+import { exportApi, importApi, facultyApi, studyProgramApi, type Faculty, type StudyProgram } from "@/api/client";
 import AddMemberModal from "./AddMemberModal";
 
 interface GuestLog {
@@ -28,6 +28,12 @@ interface GuestLog {
   identifier: string;
   faculty?: string | null;
   major?: string | null;
+  institution?: string | null;
+  purpose?: string | null;
+  phone?: string | null;
+  studyProgramId?: number | null;
+  facultyId?: number | null;
+  type?: "member" | "non-member" | string;
   visitDate: string;
   createdAt?: string;
 }
@@ -61,6 +67,49 @@ export default function GuestsSection({
   const [exportingGuests, setExportingGuests] = useState(false);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
 
+  // Filters for Faculty & Study Program
+  const [faculties, setFaculties] = useState<Faculty[]>([]);
+  const [studyPrograms, setStudyPrograms] = useState<StudyProgram[]>([]);
+  const [selectedFaculty, setSelectedFaculty] = useState<string>("all");
+  const [selectedStudyProgram, setSelectedStudyProgram] = useState<string>("all");
+  const [selectedType, setSelectedType] = useState<string>("all");
+
+  useEffect(() => {
+    facultyApi
+      .list()
+      .then((res) => setFaculties(res.data || []))
+      .catch((err) => console.error("Failed to load faculties:", err));
+
+    studyProgramApi
+      .list()
+      .then((res) => setStudyPrograms(res.data || []))
+      .catch((err) => console.error("Failed to load study programs:", err));
+  }, []);
+
+  const availableStudyPrograms =
+    selectedFaculty === "all"
+      ? studyPrograms
+      : studyPrograms.filter((sp) => {
+          const fid = Number(selectedFaculty);
+          return sp.facultyId === fid || sp.faculty?.id === fid;
+        });
+
+  const handleFacultyChange = (value: string) => {
+    setSelectedFaculty(value);
+    setSelectedStudyProgram("all");
+    setCurrentPage(1);
+  };
+
+  const handleStudyProgramChange = (value: string) => {
+    setSelectedStudyProgram(value);
+    setCurrentPage(1);
+  };
+
+  const handleTypeChange = (value: string) => {
+    setSelectedType(value);
+    setCurrentPage(1);
+  };
+
   const handleExportGuests = async () => {
     setExportingGuests(true);
     try {
@@ -89,21 +138,56 @@ export default function GuestsSection({
     return () => document.removeEventListener("mousedown", handler);
   }, [isMemberDropdownOpen]);
 
-  const filteredGuests = guests.filter(
-    (item) =>
-      item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.identifier.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (item.faculty || "").toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredGuests = guests.filter((item) => {
+    const q = searchTerm.toLowerCase();
+    const matchesSearch =
+      q === "" ||
+      item.name.toLowerCase().includes(q) ||
+      item.identifier.toLowerCase().includes(q) ||
+      (item.faculty || "").toLowerCase().includes(q) ||
+      (item.major || "").toLowerCase().includes(q) ||
+      (item.institution || "").toLowerCase().includes(q) ||
+      (item.purpose || "").toLowerCase().includes(q);
 
-  const filteredMembers = members.filter(
-    (item) =>
-      (item.user?.name || "")
-        .toLowerCase()
-        .includes(searchTerm.toLowerCase()) ||
-      (item.nimNidn || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (item.memberType || "").toLowerCase().includes(searchTerm.toLowerCase())
-  );
+    const matchesFaculty =
+      selectedFaculty === "all" ||
+      (item.facultyId && String(item.facultyId) === selectedFaculty) ||
+      (item.faculty &&
+        faculties.find((f) => String(f.id) === selectedFaculty)?.name.toLowerCase() ===
+          item.faculty.toLowerCase());
+
+    const matchesStudyProgram =
+      selectedStudyProgram === "all" ||
+      (item.studyProgramId && String(item.studyProgramId) === selectedStudyProgram) ||
+      (item.major &&
+        studyPrograms
+          .find((sp) => String(sp.id) === selectedStudyProgram)
+          ?.name.toLowerCase() === item.major.toLowerCase());
+
+    const matchesType =
+      selectedType === "all" ||
+      (item.type && item.type.toLowerCase() === selectedType.toLowerCase()) ||
+      (!item.type && selectedType === "member");
+
+    return matchesSearch && matchesFaculty && matchesStudyProgram && matchesType;
+  });
+
+  const filteredMembers = members.filter((item) => {
+    const q = searchTerm.toLowerCase();
+    const matchesSearch =
+      q === "" ||
+      (item.user?.name || "").toLowerCase().includes(q) ||
+      (item.nimNidn || "").toLowerCase().includes(q) ||
+      (item.memberType || "").toLowerCase().includes(q);
+
+    const matchesFaculty =
+      selectedFaculty === "all" ||
+      (item.faculty &&
+        faculties.find((f) => String(f.id) === selectedFaculty)?.name.toLowerCase() ===
+          item.faculty.toLowerCase());
+
+    return matchesSearch && matchesFaculty;
+  });
 
   const activeList = activeTab === "anggota" ? filteredMembers : filteredGuests;
   const totalPages = Math.max(1, Math.ceil(activeList.length / itemsPerPage));
@@ -351,21 +435,83 @@ export default function GuestsSection({
       {/* Main Card */}
       <div className="bg-card rounded-[24px] border border-border shadow-sm overflow-hidden flex flex-col">
         {/* Controls Bar */}
-        <div className="p-6 flex flex-col sm:flex-row items-center justify-end gap-3 border-b border-border">
-          <button className="flex items-center gap-2 px-4 py-2.5 bg-muted hover:bg-muted text-muted-foreground rounded-xl text-sm font-bold transition-colors border border-border">
-            Filter:{" "}
-            <span className="font-medium text-muted-foreground">Tidak ada</span>
-            <ChevronDown size={16} className="text-muted-foreground ml-1" />
-          </button>
+        <div className="p-6 flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-4 border-b border-border">
+          {/* Dropdown Filters for Fakultas & Program Studi */}
+          <div className="flex flex-wrap items-center gap-2.5">
+            {/* Filter Fakultas */}
+            <div className="flex items-center gap-1.5">
+              <span className="text-xs font-bold text-muted-foreground whitespace-nowrap">Fakultas:</span>
+              <select
+                value={selectedFaculty}
+                onChange={(e) => handleFacultyChange(e.target.value)}
+                className="px-3 py-2 bg-muted text-foreground border border-border rounded-xl text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-primary/20"
+              >
+                <option value="all">Semua Fakultas</option>
+                {faculties.map((f) => (
+                  <option key={f.id} value={f.id}>
+                    {f.name}
+                  </option>
+                ))}
+              </select>
+            </div>
 
-          <div className="relative w-full sm:w-[300px]">
+            {/* Filter Program Studi */}
+            <div className="flex items-center gap-1.5">
+              <span className="text-xs font-bold text-muted-foreground whitespace-nowrap">Prodi:</span>
+              <select
+                value={selectedStudyProgram}
+                onChange={(e) => handleStudyProgramChange(e.target.value)}
+                className="px-3 py-2 bg-muted text-foreground border border-border rounded-xl text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-primary/20 max-w-[200px] truncate"
+              >
+                <option value="all">Semua Prodi</option>
+                {availableStudyPrograms.map((sp) => (
+                  <option key={sp.id} value={sp.id}>
+                    {sp.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Filter Tipe on Buku Tamu */}
+            {activeTab === "tamu" && (
+              <div className="flex items-center gap-1.5">
+                <span className="text-xs font-bold text-muted-foreground whitespace-nowrap">Tipe:</span>
+                <select
+                  value={selectedType}
+                  onChange={(e) => handleTypeChange(e.target.value)}
+                  className="px-3 py-2 bg-muted text-foreground border border-border rounded-xl text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-primary/20"
+                >
+                  <option value="all">Semua Tipe</option>
+                  <option value="member">Member UMC</option>
+                  <option value="non-member">Tamu Non-Member</option>
+                </select>
+              </div>
+            )}
+
+            {(selectedFaculty !== "all" || selectedStudyProgram !== "all" || selectedType !== "all") && (
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedFaculty("all");
+                  setSelectedStudyProgram("all");
+                  setSelectedType("all");
+                  setCurrentPage(1);
+                }}
+                className="text-xs font-bold text-red-500 hover:text-red-600 px-2 py-1 rounded-lg hover:bg-red-50 dark:hover:bg-red-950/40 transition-colors"
+              >
+                Reset Filter
+              </button>
+            )}
+          </div>
+
+          <div className="relative w-full lg:w-[280px]">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground w-4 h-4" />
             <input
               type="text"
               placeholder={
                 activeTab === "anggota"
                   ? "Cari NIM, Nama..."
-                  : "Cari Nama, Fakultas..."
+                  : "Cari Nama, NIM, Institusi..."
               }
               className="w-full pl-11 pr-4 py-2.5 bg-muted border border-border rounded-xl text-sm font-medium focus:ring-2 focus:ring-red-500/10 focus:border-primary/40 transition-all outline-none placeholder:text-muted-foreground"
               value={searchTerm}
@@ -386,6 +532,12 @@ export default function GuestsSection({
                     </th>
                     <th className="px-8 py-4 text-[11px] font-bold text-muted-foreground uppercase tracking-widest whitespace-nowrap">
                       NAMA PENGUNJUNG
+                    </th>
+                    <th className="px-8 py-4 text-[11px] font-bold text-muted-foreground uppercase tracking-widest whitespace-nowrap">
+                      TIPE
+                    </th>
+                    <th className="px-8 py-4 text-[11px] font-bold text-muted-foreground uppercase tracking-widest whitespace-nowrap">
+                      PRODI / ASAL INSTANSI
                     </th>
                     <th className="px-8 py-4 text-[11px] font-bold text-muted-foreground uppercase tracking-widest whitespace-nowrap">
                       FAKULTAS
@@ -409,7 +561,7 @@ export default function GuestsSection({
                 paginatedList.length === 0 ? (
                   <tr>
                     <td
-                      colSpan={3}
+                      colSpan={5}
                       className="px-8 py-12 text-center text-muted-foreground"
                     >
                       <Users size={48} className="mx-auto mb-4 opacity-20" />
@@ -440,12 +592,39 @@ export default function GuestsSection({
                           </p>
                           <p className="text-[11px] font-semibold text-muted-foreground tracking-wide mt-1">
                             {guest.identifier || "-"}
+                            {guest.phone ? ` • ${guest.phone}` : ""}
                           </p>
+                          {guest.purpose && (
+                            <p className="text-[10px] text-muted-foreground/80 mt-0.5 italic">
+                              "{guest.purpose}"
+                            </p>
+                          )}
                         </div>
                       </td>
                       <td className="px-8 py-5">
+                        <span
+                          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
+                            guest.type === "non-member"
+                              ? "bg-blue-500/10 text-blue-500 border border-blue-500/20"
+                              : "bg-emerald-500/10 text-emerald-500 border border-emerald-500/20"
+                          }`}
+                        >
+                          {guest.type === "non-member" ? "Non-Member" : "Member"}
+                        </span>
+                      </td>
+                      <td className="px-8 py-5">
+                        <p className="text-[13px] font-semibold text-foreground">
+                          {guest.major || guest.institution || "-"}
+                        </p>
+                        {guest.institution && guest.major !== guest.institution && (
+                          <p className="text-[11px] text-muted-foreground">
+                            {guest.institution}
+                          </p>
+                        )}
+                      </td>
+                      <td className="px-8 py-5">
                         <p className="text-[13px] font-medium text-muted-foreground">
-                          {guest.major || "Umum"}
+                          {guest.faculty || "-"}
                         </p>
                       </td>
                     </tr>
