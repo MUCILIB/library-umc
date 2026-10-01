@@ -20,6 +20,7 @@ import { dashboardDataService } from "@/services/dashboard/dashboardDataService"
 import { useToast } from "@/hooks/useToast";
 import { exportApi, importApi, facultyApi, studyProgramApi, type Faculty, type StudyProgram } from "@/api/client";
 import AddMemberModal from "./AddMemberModal";
+import AddGuestModal from "./AddGuestModal";
 
 interface GuestLog {
   id: string;
@@ -55,6 +56,7 @@ export default function GuestsSection({
   onRefresh
 }: GuestsSectionProps) {
   const [isMemberModalOpen, setIsMemberModalOpen] = useState(false);
+  const [isManualGuestModalOpen, setIsManualGuestModalOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<"anggota" | "tamu">("anggota");
   const [currentPage, setCurrentPage] = useState(1);
   const [recordingId, setRecordingId] = useState<string | null>(null);
@@ -286,6 +288,14 @@ export default function GuestsSection({
               <Download size={16} strokeWidth={2.5} />
             )}
             Export CSV
+          </button>
+
+          <button
+            onClick={() => setIsManualGuestModalOpen(true)}
+            className="bg-primary hover:bg-primary/90 text-white px-5 py-3 rounded-full text-sm font-bold flex items-center justify-center gap-2 shadow-lg shadow-primary/20 transition-all"
+          >
+            <Plus size={16} strokeWidth={2.5} />
+            Input Pengunjung (Nama & Prodi)
           </button>
 
           <button
@@ -753,6 +763,12 @@ export default function GuestsSection({
       <AddMemberModal
         isOpen={isMemberModalOpen}
         onClose={() => setIsMemberModalOpen(false)}
+        onRefresh={onRefresh}
+      />
+
+      <AddGuestModal
+        isOpen={isManualGuestModalOpen}
+        onClose={() => setIsManualGuestModalOpen(false)}
         onRefresh={onRefresh}
       />
 

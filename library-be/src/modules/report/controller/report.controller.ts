@@ -232,6 +232,29 @@ class ReportController {
     }
   }
 
+  // GET /reports/visitor-analytics
+  async getVisitorAnalytics(req: Request, res: Response, next: NextFunction) {
+    try {
+      const range = (req.query.range as "day" | "week" | "month" | "custom") || "week";
+      const startDate = req.query.startDate as string | undefined;
+      const endDate = req.query.endDate as string | undefined;
+
+      const result = await reportService.getVisitorAnalytics({
+        range,
+        startDate,
+        endDate
+      });
+
+      return res.status(200).json({
+        success: true,
+        message: "Data analitik pengunjung berhasil diambil",
+        data: result.data
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
   // GET /reports/web-traffic?days=30
   async getWebTraffic(req: Request, res: Response, next: NextFunction) {
     try {

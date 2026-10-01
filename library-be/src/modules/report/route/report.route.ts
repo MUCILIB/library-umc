@@ -209,6 +209,40 @@ router.get(
 
 /**
  * @swagger
+ * /reports/visitor-analytics:
+ *   get:
+ *     summary: Get comparative visitor analytics (physical vs web)
+ *     tags: [Reports]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: range
+ *         schema:
+ *           type: string
+ *           enum: [day, week, month, custom]
+ *       - in: query
+ *         name: startDate
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: endDate
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Visitor analytics data
+ */
+router.get(
+  "/reports/visitor-analytics",
+  publicApiLimiter,
+  isAuthenticated,
+  requireRole(["super_admin", "staff"]),
+  reportController.getVisitorAnalytics.bind(reportController)
+);
+
+/**
+ * @swagger
  * /reports/web-traffic:
  *   get:
  *     summary: Get web traffic summary aggregated by day

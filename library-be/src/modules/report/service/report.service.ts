@@ -9,7 +9,8 @@ import {
   guestLogs,
   reservations,
   Users,
-  webTraffic
+  webTraffic,
+  studyPrograms
 } from "../../../db/schema";
 import { eq, sql, and, desc, isNull } from "drizzle-orm";
 import PDFDocument from "pdfkit";
@@ -240,6 +241,172 @@ export class ReportService {
       return { success: true, data: result };
     } catch (error) {
       console.error("[ReportService] getPopularBooks error:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get comparative visitor analytics: Physical (guest_logs) vs Web Traffic (web_traffic)
+   */
+  async getVisitorAnalytics(query: {
+    range?: "day" | "week" | "month" | "custom";
+    startDate?: string;
+    endDate?: string;
+  }) {
+    try {
+      const range = query.range || "week";
+      let start: Date;
+      let end: Date = new Date();
+      end.setHours(23, 59, 59, 999);
+
+      if (range === "day") {
+        start = new Date();
+        start.setHours(0, 0, 0, 0);
+      } else if (range === "month") {
+        start = new Date();
+        start.setDate(start.getDate() - 29);
+        start.setHours(0, 0, 0, 0);
+      } else if (range === "custom" && query.startDate && query.endDate) {
+        start = new Date(query.startDate);
+        start.setHours(0, 0, 0, 0);
+        end = new Date(query.endDate);
+        end.setHours(23, 59, 59, 999);
+      } else {
+        // week default (last 7 days)
+        start = new Date();
+        start.setDate(start.getDate() - 6);
+        start.setHours(0, 0, 0, 0);
+      }
+
+      // 1. Physical visits aggregated
+      const physicalRaw = range === "day"
+        ? await db
+            .select({
+              timeKey: sql<string>`TO_CHAR(DATE_TRUNC('hour', ${guestLogs.visitDate}), 'HH24:00')`,
+              count: sql<number>`count(*)::int`
+            })
+            .from(guestLogs)
+            .where(
+              and(
+                sql`${guestLogs.visitDate} >= ${start} AND ${guestLogs.visitDate} <= ${end}`,
+                isNull(guestLogs.deletedAt)
+              )
+            )
+            .groupBy(sql`DATE_TRUNC('hour', ${guestLogs.visitDate})`)
+            .orderBy(sql`DATE_TRUNC('hour', ${guestLogs.visitDate})`)
+        : await db
+            .select({
+              timeKey: sql<string>`TO_CHAR(DATE(${guestLogs.visitDate}), 'YYYY-MM-DD')`,
+              count: sql<number>`count(*)::int`
+            })
+            .from(guestLogs)
+            .where(
+              and(
+                sql`${guestLogs.visitDate} >= ${start} AND ${guestLogs.visitDate} <= ${end}`,
+                isNull(guestLogs.deletedAt)
+              )
+            )
+            .groupBy(sql`DATE(${guestLogs.visitDate})`)
+            .orderBy(sql`DATE(${guestLogs.visitDate})`);
+
+      // 2. Web traffic visits aggregated (unique visitors)
+      const webRaw = range === "day"
+        ? await db
+            .select({
+              timeKey: sql<string>`TO_CHAR(DATE_TRUNC('hour', ${webTraffic.visitTimestamp}), 'HH24:00')`,
+              count: sql<number>`COUNT(DISTINCT COALESCE(${webTraffic.userId}, ${webTraffic.ipAddress}, 'unknown'))::int`
+            })
+            .from(webTraffic)
+            .where(
+              sql`${webTraffic.visitTimestamp} >= ${start} AND ${webTraffic.visitTimestamp} <= ${end}`
+            )
+            .groupBy(sql`DATE_TRUNC('hour', ${webTraffic.visitTimestamp})`)
+            .orderBy(sql`DATE_TRUNC('hour', ${webTraffic.visitTimestamp})`)
+        : await db
+            .select({
+              timeKey: sql<string>`TO_CHAR(DATE(${webTraffic.visitTimestamp}), 'YYYY-MM-DD')`,
+              count: sql<number>`COUNT(DISTINCT COALESCE(${webTraffic.userId}, ${webTraffic.ipAddress}, 'unknown'))::int`
+            })
+            .from(webTraffic)
+            .where(
+              sql`${webTraffic.visitTimestamp} >= ${start} AND ${webTraffic.visitTimestamp} <= ${end}`
+            )
+            .groupBy(sql`DATE(${webTraffic.visitTimestamp})`)
+            .orderBy(sql`DATE(${webTraffic.visitTimestamp})`);
+
+      // 3. Physical visits breakdown by Study Program & Faculty
+      const prodiBreakdown = await db
+        .select({
+          studyProgramName: sql<string>`COALESCE(${studyPrograms.name}, ${guestLogs.major}, 'Umum / Lainnya')`,
+          count: sql<number>`count(*)::int`
+        })
+        .from(guestLogs)
+        .leftJoin(studyPrograms, eq(guestLogs.studyProgramId, studyPrograms.id))
+        .where(
+          and(
+            sql`${guestLogs.visitDate} >= ${start} AND ${guestLogs.visitDate} <= ${end}`,
+            isNull(guestLogs.deletedAt)
+          )
+        )
+        .groupBy(sql`COALESCE(${studyPrograms.name}, ${guestLogs.major}, 'Umum / Lainnya')`)
+        .orderBy(desc(sql`count(*)`))
+        .limit(10);
+
+      // Build unified timeline
+      const physicalMap = new Map(physicalRaw.map(r => [r.timeKey, Number(r.count) || 0]));
+      const webMap = new Map(webRaw.map(r => [r.timeKey, Number(r.count) || 0]));
+
+      const timeline: { label: string; key: string; physical: number; web: number; total: number }[] = [];
+
+      if (range === "day") {
+        for (let h = 0; h < 24; h++) {
+          const key = `${String(h).padStart(2, "0")}:00`;
+          const p = physicalMap.get(key) || 0;
+          const w = webMap.get(key) || 0;
+          timeline.push({ label: key, key, physical: p, web: w, total: p + w });
+        }
+      } else {
+        const cur = new Date(start);
+        while (cur <= end) {
+          const yyyy = cur.getFullYear();
+          const mm = String(cur.getMonth() + 1).padStart(2, "0");
+          const dd = String(cur.getDate()).padStart(2, "0");
+          const key = `${yyyy}-${mm}-${dd}`;
+          const p = physicalMap.get(key) || 0;
+          const w = webMap.get(key) || 0;
+          timeline.push({
+            label: `${cur.getDate()}/${cur.getMonth() + 1}`,
+            key,
+            physical: p,
+            web: w,
+            total: p + w
+          });
+          cur.setDate(cur.getDate() + 1);
+        }
+      }
+
+      const totalPhysical = timeline.reduce((acc, t) => acc + t.physical, 0);
+      const totalWeb = timeline.reduce((acc, t) => acc + t.web, 0);
+
+      return {
+        success: true,
+        data: {
+          range,
+          startDate: start.toISOString(),
+          endDate: end.toISOString(),
+          summary: {
+            totalPhysical,
+            totalWeb,
+            combinedTotal: totalPhysical + totalWeb,
+            physicalPercentage: totalPhysical + totalWeb > 0 ? Math.round((totalPhysical / (totalPhysical + totalWeb)) * 100) : 0,
+            webPercentage: totalPhysical + totalWeb > 0 ? Math.round((totalWeb / (totalPhysical + totalWeb)) * 100) : 0
+          },
+          timeline,
+          studyProgramDistribution: prodiBreakdown
+        }
+      };
+    } catch (error) {
+      console.error("[ReportService] getVisitorAnalytics error:", error);
       throw error;
     }
   }

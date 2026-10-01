@@ -8,7 +8,16 @@ import {
   DownloadCloud,
   UploadCloud
 } from "lucide-react";
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  Tooltip,
+  ResponsiveContainer,
+  CartesianGrid,
+  Legend
+} from "recharts";
 import { API_BASE_URL } from "@/utils/api-config";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/useToast";
@@ -31,25 +40,7 @@ interface PopularBookItem {
   loanCount: number;
 }
 
-interface GuestStatItem {
-  date: string;
-  count: number;
-}
-
-const dayLabels = [
-  "Minggu",
-  "Senin",
-  "Selasa",
-  "Rabu",
-  "Kamis",
-  "Jum'at",
-  "Sabtu"
-];
-
-const monthLabels = [
-  "Jan", "Feb", "Mar", "Apr", "Mei", "Jun",
-  "Jul", "Agu", "Sep", "Okt", "Nov", "Des"
-];
+// Helper labels
 
 export default function ReportsSection({
   className = ""
@@ -58,37 +49,45 @@ export default function ReportsSection({
   const cssVar = (name: string) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
   const chartFg = cssVar("--foreground");
   const chartMuted = cssVar("--muted-foreground");
-  const chartPrimary = cssVar("--primary");
-  const chartBg = cssVar("--muted");
   const chartBorder = cssVar("--border");
   const importInputRef = useRef<HTMLInputElement | null>(null);
   const now = new Date();
   const [selectedMonth, setSelectedMonth] = useState(now.getMonth() + 1);
   const [selectedYear, setSelectedYear] = useState(now.getFullYear());
-  const [chartRange, setChartRange] = useState<"day" | "week" | "month">("week");
+  const [chartRange, setChartRange] = useState<"day" | "week" | "month" | "custom">("week");
+  const [customStartDate, setCustomStartDate] = useState("");
+  const [customEndDate, setCustomEndDate] = useState("");
+  const [visitorFilter, setVisitorFilter] = useState<"all" | "physical" | "web">("all");
 
   const [stats, setStats] = useState({
     totalVisitors: 0,
     successfulLoans: 0,
     totalPaidFines: 0,
     outstandingFines: 0,
-    visitsPastWeek: 0
+    visitsPastWeek: 0,
+    totalPhysical: 0,
+    totalWeb: 0
   });
   const [loading, setLoading] = useState(true);
-  const [chartData, setChartData] = useState<{ day: string; visits: number }[]>(
+  const [chartData, setChartData] = useState<{ day: string; physical: number; web: number; total: number }[]>(
     []
   );
   const [popularBooks, setPopularBooks] = useState<PopularBookItem[]>([]);
+  const [prodiDistribution, setProdiDistribution] = useState<{ studyProgramName: string; count: number }[]>([]);
 
   useEffect(() => {
     const fetchStats = async () => {
       setLoading(true);
       try {
+        const visitorAnalyticsUrl = chartRange === "custom" && customStartDate && customEndDate
+          ? `${API_BASE_URL}/api/reports/visitor-analytics?range=custom&startDate=${customStartDate}&endDate=${customEndDate}`
+          : `${API_BASE_URL}/api/reports/visitor-analytics?range=${chartRange}`;
+
         const [
           guestsRes,
           loansRes,
           revenueSummaryRes,
-          guestStatsRes,
+          visitorAnalyticsRes,
           popularBooksRes
         ] = await Promise.all([
           fetch(`${API_BASE_URL}/api/guests`, { credentials: "include" }),
@@ -99,9 +98,7 @@ export default function ReportsSection({
             `${API_BASE_URL}/api/reports/fines/revenue?month=${selectedMonth}&year=${selectedYear}`,
             { credentials: "include" }
           ),
-          fetch(`${API_BASE_URL}/api/reports/guest-stats?range=${chartRange}`, {
-            credentials: "include"
-          }),
+          fetch(visitorAnalyticsUrl, { credentials: "include" }),
           fetch(`${API_BASE_URL}/api/reports/popular-books?limit=5`, {
             credentials: "include"
           })
@@ -111,21 +108,22 @@ export default function ReportsSection({
           guestsData,
           loansData,
           revenueSummaryData,
-          guestStatsData,
+          visitorAnalyticsData,
           popularBooksData
         ] = await Promise.all([
           guestsRes.json(),
           loansRes.json(),
           revenueSummaryRes.json(),
-          guestStatsRes.json(),
+          visitorAnalyticsRes.json(),
           popularBooksRes.json()
         ]);
 
         let guestsCount = 0;
-        let visitsPastWeek = 0;
         let loansCount = 0;
         let finesRevenue = 0;
         let outstandingFines = 0;
+        let totalPhysical = 0;
+        let totalWeb = 0;
 
         if (guestsData.success && Array.isArray(guestsData.data)) {
           guestsCount = guestsData.data.length;
@@ -135,71 +133,24 @@ export default function ReportsSection({
           loansCount = loansData.data.length;
         }
 
-        if (guestStatsData.success && Array.isArray(guestStatsData.data)) {
-          const source = guestStatsData.data as GuestStatItem[];
-          const mapByDate = new Map<string, number>();
-          source.forEach((row) => {
-            mapByDate.set(row.date, Number(row.count) || 0);
-          });
+        if (visitorAnalyticsData.success && visitorAnalyticsData.data) {
+          const vData = visitorAnalyticsData.data;
+          totalPhysical = vData.summary?.totalPhysical ?? 0;
+          totalWeb = vData.summary?.totalWeb ?? 0;
+          setProdiDistribution(vData.studyProgramDistribution ?? []);
 
-          if (chartRange === "day") {
-            const hourly = Array.from({ length: 24 }, (_, h) => {
-              const label = `${String(h).padStart(2, "0")}:00`;
-              const count = mapByDate.get(label) ?? 0;
-              visitsPastWeek += count;
-              return { day: label, visits: count };
-            });
-            setChartData(hourly);
-          } else if (chartRange === "month") {
-            const last30Days = Array.from({ length: 30 }, (_, index) => {
-              const d = new Date();
-              d.setDate(d.getDate() - (29 - index));
-              const yyyy = d.getFullYear();
-              const mm = String(d.getMonth() + 1).padStart(2, "0");
-              const dd = String(d.getDate()).padStart(2, "0");
-              const key = `${yyyy}-${mm}-${dd}`;
-              const count = mapByDate.get(key) ?? 0;
-              visitsPastWeek += count;
-              return {
-                day: `${d.getDate()} ${monthLabels[d.getMonth()]}`,
-                visits: count
-              };
-            });
-            setChartData(last30Days);
-          } else {
-            const last7Days = Array.from({ length: 7 }, (_, index) => {
-              const d = new Date();
-              d.setDate(d.getDate() - (6 - index));
-              const yyyy = d.getFullYear();
-              const mm = String(d.getMonth() + 1).padStart(2, "0");
-              const dd = String(d.getDate()).padStart(2, "0");
-              const key = `${yyyy}-${mm}-${dd}`;
-              const count = mapByDate.get(key) ?? 0;
-              visitsPastWeek += count;
-              return {
-                day: dayLabels[d.getDay()],
-                visits: count
-              };
-            });
-            setChartData(last7Days);
+          if (Array.isArray(vData.timeline)) {
+            setChartData(
+              vData.timeline.map((item: any) => ({
+                day: item.label,
+                physical: Number(item.physical) || 0,
+                web: Number(item.web) || 0,
+                total: Number(item.total) || 0
+              }))
+            );
           }
         } else {
-          const fallbackLength = chartRange === "day" ? 24 : chartRange === "month" ? 30 : 7;
-          setChartData(
-            Array.from({ length: fallbackLength }, (_, index) => {
-              if (chartRange === "day") {
-                return { day: `${String(index).padStart(2, "0")}:00`, visits: 0 };
-              }
-              const d = new Date();
-              d.setDate(d.getDate() - (fallbackLength - 1 - index));
-              return {
-                day: chartRange === "month"
-                  ? `${d.getDate()} ${monthLabels[d.getMonth()]}`
-                  : dayLabels[d.getDay()],
-                visits: 0
-              };
-            })
-          );
+          setChartData([]);
         }
 
         if (popularBooksData.success && Array.isArray(popularBooksData.data)) {
@@ -232,7 +183,9 @@ export default function ReportsSection({
           successfulLoans: loansCount,
           totalPaidFines: finesRevenue,
           outstandingFines,
-          visitsPastWeek
+          visitsPastWeek: totalPhysical + totalWeb,
+          totalPhysical,
+          totalWeb
         });
       } catch (error) {
         console.error("Gagal mengambil data reports:", error);
@@ -242,7 +195,7 @@ export default function ReportsSection({
     };
 
     fetchStats();
-  }, [selectedMonth, selectedYear, chartRange]);
+  }, [selectedMonth, selectedYear, chartRange, customStartDate, customEndDate]);
 
   const monthOptions = [
     { value: 1, label: "Januari" },
@@ -559,39 +512,110 @@ export default function ReportsSection({
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Bar Chart Section */}
         <div className="lg:col-span-2 bg-card p-8 rounded-[24px] border border-border shadow-sm flex flex-col">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
-            <h3 className="text-[15px] font-extrabold text-foreground">
-              Grafik Kunjungan
-            </h3>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+            <div>
+              <h3 className="text-[16px] font-extrabold text-foreground">
+                Grafik Komparasi Pengunjung
+              </h3>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Membedakan kunjungan fisik langsung ke perpus vs trafik website
+              </p>
+            </div>
+
+            {/* Filter Jenis Pengunjung */}
             <div className="flex items-center gap-1 bg-muted rounded-xl p-1">
-              {(["day", "week", "month"] as const).map((range) => (
-                <button
-                  key={range}
-                  onClick={() => setChartRange(range)}
-                  className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${
-                    chartRange === range
-                      ? "bg-primary text-white shadow-sm"
-                      : "text-muted-foreground hover:text-muted-foreground"
-                  }`}
-                >
-                  {range === "day" ? "Hari" : range === "week" ? "Minggu" : "Bulan"}
-                </button>
-              ))}
+              <button
+                type="button"
+                onClick={() => setVisitorFilter("all")}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                  visitorFilter === "all"
+                    ? "bg-card text-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                Semua
+              </button>
+              <button
+                type="button"
+                onClick={() => setVisitorFilter("physical")}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                  visitorFilter === "physical"
+                    ? "bg-emerald-600 text-white shadow-sm"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                Fisik (Perpus)
+              </button>
+              <button
+                type="button"
+                onClick={() => setVisitorFilter("web")}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                  visitorFilter === "web"
+                    ? "bg-blue-600 text-white shadow-sm"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                Web Online
+              </button>
             </div>
           </div>
 
-          <div className="flex-1 w-full h-[300px] mb-6">
+          {/* Filter Range & Custom Date Picker */}
+          <div className="flex flex-wrap items-center justify-between gap-3 mb-6 pb-4 border-b border-border">
+            <div className="flex items-center gap-1 bg-muted rounded-xl p-1">
+              {(["day", "week", "month", "custom"] as const).map((range) => (
+                <button
+                  key={range}
+                  type="button"
+                  onClick={() => setChartRange(range)}
+                  className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                    chartRange === range
+                      ? "bg-primary text-white shadow-sm"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  {range === "day"
+                    ? "Hari Ini"
+                    : range === "week"
+                    ? "7 Hari"
+                    : range === "month"
+                    ? "30 Hari"
+                    : "Custom Range"}
+                </button>
+              ))}
+            </div>
+
+            {chartRange === "custom" && (
+              <div className="flex items-center gap-2">
+                <input
+                  type="date"
+                  value={customStartDate}
+                  onChange={(e) => setCustomStartDate(e.target.value)}
+                  className="px-3 py-1.5 bg-muted border border-border rounded-xl text-xs font-semibold text-foreground"
+                />
+                <span className="text-xs text-muted-foreground">s/d</span>
+                <input
+                  type="date"
+                  value={customEndDate}
+                  onChange={(e) => setCustomEndDate(e.target.value)}
+                  className="px-3 py-1.5 bg-muted border border-border rounded-xl text-xs font-semibold text-foreground"
+                />
+              </div>
+            )}
+          </div>
+
+          <div className="flex-1 w-full h-[320px] mb-6">
             <ResponsiveContainer
               width="100%"
-              height={300}
+              height={320}
               minWidth={1}
               minHeight={1}
             >
               <BarChart
-                key={chartRange}
+                key={`${chartRange}-${visitorFilter}`}
                 data={chartData}
                 margin={{ top: 10, right: 10, left: -10, bottom: 10 }}
-                barSize={chartRange === "week" ? 50 : chartRange === "day" ? 14 : 16}
+                barSize={chartRange === "week" ? 28 : chartRange === "day" ? 10 : 12}
               >
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={chartBorder} />
                 <Tooltip
@@ -603,17 +627,23 @@ export default function ReportsSection({
                     fontSize: "13px",
                     fontWeight: 600
                   }}
-                  formatter={(value: any) => [`${value} pengunjung`, "Kunjungan"]}
+                />
+                <Legend
+                  wrapperStyle={{ paddingTop: 10 }}
+                  formatter={(value) => (
+                    <span className="text-xs font-bold text-foreground capitalize mr-4">
+                      {value === "physical" ? "Pengunjung Fisik (Perpus)" : value === "web" ? "Trafik Web Online" : "Total"}
+                    </span>
+                  )}
                 />
 
                 <XAxis
                   dataKey="day"
                   axisLine={false}
                   tickLine={false}
-                  tick={{ fill: chartFg, fontSize: 12, fontWeight: 700 }}
-                  tickMargin={15}
-                  height={40}
-                  interval={chartRange === "month" ? 4 : chartRange === "day" ? 2 : 0}
+                  tick={{ fill: chartFg, fontSize: 11, fontWeight: 700 }}
+                  tickMargin={12}
+                  height={35}
                 />
 
                 <YAxis
@@ -625,22 +655,56 @@ export default function ReportsSection({
                   width={35}
                 />
 
-                <Bar
-                  dataKey="visits"
-                  fill={chartPrimary}
-                  radius={[4, 4, 0, 0]}
-                  background={{ fill: chartBg, radius: 4 }}
-                  name="Kunjungan"
-                />
+                {(visitorFilter === "all" || visitorFilter === "physical") && (
+                  <Bar
+                    dataKey="physical"
+                    name="physical"
+                    fill="#10B981"
+                    radius={[4, 4, 0, 0]}
+                  />
+                )}
+                {(visitorFilter === "all" || visitorFilter === "web") && (
+                  <Bar
+                    dataKey="web"
+                    name="web"
+                    fill="#3B82F6"
+                    radius={[4, 4, 0, 0]}
+                  />
+                )}
               </BarChart>
             </ResponsiveContainer>
           </div>
 
-          <div className="border-t-2 border-border pt-5">
-            <p className="text-center text-sm font-bold text-muted-foreground">
-              Total : {stats.visitsPastWeek} pengunjung{" "}
-              {chartRange === "day" ? "hari ini" : chartRange === "month" ? "bulan ini" : "minggu ini"}
-            </p>
+          {/* Breakdown Per Program Studi yang hadir */}
+          {prodiDistribution.length > 0 && (
+            <div className="mt-4 pt-4 border-t border-border">
+              <p className="text-[12px] font-extrabold text-muted-foreground uppercase tracking-wider mb-2.5">
+                Top Program Studi Pengunjung Fisik:
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {prodiDistribution.slice(0, 5).map((p, idx) => (
+                  <span
+                    key={idx}
+                    className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800"
+                  >
+                    <span>{p.studyProgramName}:</span>
+                    <strong className="font-extrabold">{p.count} orang</strong>
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div className="border-t-2 border-border pt-4 mt-4 flex flex-wrap items-center justify-between text-xs font-bold text-muted-foreground">
+            <span>
+              Kunjungan Fisik: <strong className="text-emerald-600">{stats.totalPhysical} orang</strong>
+            </span>
+            <span>
+              Trafik Web: <strong className="text-blue-600">{stats.totalWeb} pengunjung</strong>
+            </span>
+            <span>
+              Total Gabungan: <strong className="text-foreground">{stats.visitsPastWeek} kunjungan</strong>
+            </span>
           </div>
         </div>
 
