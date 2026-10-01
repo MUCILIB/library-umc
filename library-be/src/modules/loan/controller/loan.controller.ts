@@ -109,6 +109,42 @@ export class LoanController {
   }
 
   /**
+   * POST /loans/:id/cancel — Batalkan pemesanan peminjaman (Member)
+   */
+  async cancelLoan(req: Request, res: Response, next: NextFunction) {
+    try {
+      const user = req.user;
+      if (!user) {
+        return sendError(res, "Tidak terautentikasi", 401);
+      }
+
+      const loanId = String(req.params.id);
+      const memberId = await loanService.getMemberIdByUserId(user.id);
+      if (!memberId && user.role !== "super_admin" && user.role !== "staff") {
+        return sendError(res, "Member tidak ditemukan", 400);
+      }
+
+      const result = await loanService.cancelLoan(
+        loanId,
+        memberId || "",
+        user.role || undefined
+      );
+      sendSuccess(res, "Pemesanan berhasil dibatalkan", result);
+    } catch (error: unknown) {
+      const err = error as Error;
+      if (
+        err.message &&
+        (err.message.includes("tidak ditemukan") ||
+          err.message.includes("Akses ditolak") ||
+          err.message.includes("status pending"))
+      ) {
+        return sendError(res, err.message, 400);
+      }
+      next(error);
+    }
+  }
+
+  /**
    * PATCH /loans/return/:loanId — Proses pengembalian buku (Admin/Staff)
    */
   async returnLoan(req: Request, res: Response, next: NextFunction) {

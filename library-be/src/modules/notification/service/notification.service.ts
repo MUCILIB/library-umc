@@ -3,6 +3,7 @@ import {
   buildLoanEmail,
   buildFineEmail,
   buildReservationEmail,
+  buildBookingCanceledEmail,
   buildResetPasswordEmail,
   buildEmailTemplate,
   escapeHtml,
@@ -84,6 +85,24 @@ export class NotificationService {
         error
       );
       throw error;
+    }
+  }
+
+  async sendBookingCanceledNotification(
+    email: string,
+    name: string,
+    bookTitle: string,
+    reason?: string
+  ) {
+    try {
+      const subject = "Pemesanan Buku Dibatalkan — Perpustakaan UMC";
+      const html = buildBookingCanceledEmail({ name, bookTitle, reason });
+      await this.sendEmail(email, subject, html);
+    } catch (error) {
+      console.error(
+        "[NotificationService] Failed to send booking cancel notification:",
+        error
+      );
     }
   }
 

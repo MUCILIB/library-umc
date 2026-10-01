@@ -134,6 +134,39 @@ export function buildReservationEmail(opts: {
 }
 
 // ──────────────────────────────────────────────────────────────
+// Booking Canceled Email (Auto-Cancel 20 Menit / Manual Cancel)
+// ──────────────────────────────────────────────────────────────
+export function buildBookingCanceledEmail(opts: {
+  name: string;
+  bookTitle: string;
+  reason?: string;
+}): string {
+  const { name, bookTitle, reason } = opts;
+  const rows: InfoRow[] = [
+    { label: "Judul Buku", value: bookTitle },
+    { label: "Status", value: "Dibatalkan" },
+  ];
+  if (reason) {
+    rows.push({ label: "Keterangan", value: reason });
+  }
+
+  return buildBaseTemplate({
+    badgeText: "Pemesanan Dibatalkan",
+    badgeColor: "#991b1b",
+    title: "Pemesanan Buku Dibatalkan",
+    summary: `Halo ${escapeHtml(name)}, pemesanan buku Anda telah dibatalkan.`,
+    rows,
+    infoBox: {
+      text: "Buku telah dikembalikan ke status tersedia untuk peminjam lain. Anda dapat melakukan pemesanan ulang jika masih membutuhkan buku tersebut.",
+      color: "#7f1d1d",
+      bg: "#fef2f2",
+      border: "#fca5a5",
+    },
+    footerNote: "Perpustakaan Universitas Muhammadiyah Cirebon",
+  });
+}
+
+// ──────────────────────────────────────────────────────────────
 // Reset Password Email
 // ──────────────────────────────────────────────────────────────
 export function buildResetPasswordEmail(opts: {

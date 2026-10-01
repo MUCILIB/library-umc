@@ -10,6 +10,7 @@ import swaggerUi from "swagger-ui-express";
 import { generalLimiter } from "./middlewares/rateLimiter";
 import { errorMiddleware } from "./middlewares/error.middleware";
 import { initCronJobs } from "./cron/fineScheduler";
+import { initBookingCancelScheduler } from "./cron/bookingCancelScheduler";
 
 dotenv.config();
 
@@ -94,4 +95,5 @@ const PORT = process.env.PORT || 4000;
 app.listen(PORT, () => {
   console.log(`SERVER RUNNING ON PORT ${PORT}`);
   initCronJobs();
+  initBookingCancelScheduler();
 });

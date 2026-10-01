@@ -47,6 +47,11 @@ app.post("/loans/:loanId/return", (req, res) => {
   loanController.returnLoan(req, res, (() => undefined) as any);
 });
 
+app.post("/loans/:id/cancel", (req, res) => {
+  (req as any).user = { id: "user-student-1", role: "student" };
+  loanController.cancelLoan(req, res, (() => undefined) as any);
+});
+
 app.get("/loans", (req, res) => {
   (req as any).user = { id: "admin-1", role: "super_admin" };
   loanController.getAllLoans(req, res, (() => undefined) as any);
@@ -240,6 +245,41 @@ describe("LoanController Unit Tests", () => {
 
       expect(response.status).toBe(400);
       expect(response.body.message).toBe("Validation Error");
+    });
+  });
+
+  // ==========================================================
+  // POST /loans/:id/cancel
+  // ==========================================================
+  describe("POST /loans/:id/cancel", () => {
+    it("harus return 200 ketika member berhasil membatalkan pemesanan", async () => {
+      vi.spyOn(LoanService.prototype, "getMemberIdByUserId").mockResolvedValueOnce(
+        "member-1"
+      );
+      vi.spyOn(LoanService.prototype, "cancelLoan").mockResolvedValueOnce({
+        id: "loan-xyz",
+        status: "rejected",
+      } as any);
+
+      const response = await request(app).post("/loans/loan-xyz/cancel");
+
+      expect(response.status).toBe(200);
+      expect(response.body.success).toBe(true);
+      expect(response.body.message).toContain("berhasil dibatalkan");
+    });
+
+    it("harus return 400 jika status peminjaman tidak bisa dibatalkan", async () => {
+      vi.spyOn(LoanService.prototype, "getMemberIdByUserId").mockResolvedValueOnce(
+        "member-1"
+      );
+      vi.spyOn(LoanService.prototype, "cancelLoan").mockRejectedValueOnce(
+        new Error("Hanya pemesanan dengan status pending yang dapat dibatalkan")
+      );
+
+      const response = await request(app).post("/loans/loan-xyz/cancel");
+
+      expect(response.status).toBe(400);
+      expect(response.body.message).toContain("status pending");
     });
   });
 });
