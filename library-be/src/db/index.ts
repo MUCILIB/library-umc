@@ -7,4 +7,8 @@ const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
 });
 
+pool.on("error", (err: Error) => {
+  console.error("Unexpected error on idle database client", err);
+});
+
 export const db = drizzle(pool, { schema });
