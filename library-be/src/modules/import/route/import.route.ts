@@ -28,4 +28,10 @@ router.get("/import/batches/:batchId/errors.csv", publicApiLimiter, isAuthentica
 router.post("/import/batches/:batchId/approve", publicApiLimiter, isAuthenticated, requireRole(["super_admin"]), (req, res, next) => importController.approveBatch(req, res, next));
 router.post("/import/batches/:batchId/cancel", publicApiLimiter, isAuthenticated, requireRole(["super_admin"]), (req, res, next) => importController.cancelBatch(req, res, next));
 
+// Universal Template & Simple Imports (TICK-02)
+router.get("/import/template/:module", publicApiLimiter, isAuthenticated, requireRole(["super_admin", "staff"]), (req, res, next) => importController.downloadTemplate(req, res, next));
+router.post("/import/guests", publicApiLimiter, isAuthenticated, requireRole(["super_admin", "staff"]), upload.single("file"), (req, res, next) => importController.importGuests(req, res, next));
+router.post("/import/users", publicApiLimiter, isAuthenticated, requireRole(["super_admin"]), upload.single("file"), (req, res, next) => importController.importUsers(req, res, next));
+router.post("/import/loans", publicApiLimiter, isAuthenticated, requireRole(["super_admin", "staff"]), upload.single("file"), (req, res, next) => importController.importLoans(req, res, next));
+
 export default router;

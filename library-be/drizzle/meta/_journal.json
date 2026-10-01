@@ -37,5 +37,12 @@
       "tag": "0004_magenta_angel",
       "breakpoints": true
     },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1790864437109,
+      "tag": "0005_legal_hiroim",
+      "breakpoints": true
+    }
   ]
 }

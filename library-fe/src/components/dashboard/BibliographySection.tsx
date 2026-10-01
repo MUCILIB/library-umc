@@ -22,6 +22,7 @@ import {
   Image as ImageIcon,
   UploadCloud,
   Check,
+  FileDown,
 } from "lucide-react";
 import { API_BASE_URL } from "@/utils/api-config";
 import { cleanIsbn } from "@/utils/format";
@@ -41,18 +42,31 @@ export default function BibliographySection({
   const [error, setError] = useState<string | null>(null);
   const [page, setPage] = useState(1);
   const [searchInput, setSearchInput] = useState(searchTerm);
+  const [faculties, setFaculties] = useState<Faculty[]>([]);
+  const [selectedFacultyId, setSelectedFacultyId] = useState<string>("");
+  const [exporting, setExporting] = useState(false);
   const [selectedBib, setSelectedBib] = useState<Bibliography | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [editingBib, setEditingBib] = useState<Bibliography | null>(null);
   const limit = 10;
 
-  const fetchData = useCallback(async (pageNum: number, query?: string) => {
+  useEffect(() => {
+    facultyApi
+      .list()
+      .then((res) => {
+        setFaculties(res.data || []);
+      })
+      .catch(() => {});
+  }, []);
+
+  const fetchData = useCallback(async (pageNum: number, query?: string, facultyId?: string) => {
     setLoading(true);
     setError(null);
     try {
       const params: Record<string, string | number> = { page: pageNum, limit };
       if (query) params.q = query;
+      if (facultyId) params.facultyId = Number(facultyId);
       const result = await bibliographyApi.list(params);
       setData(result.data);
     } catch (err: unknown) {
@@ -63,8 +77,8 @@ export default function BibliographySection({
   }, []);
 
   useEffect(() => {
-    fetchData(page, searchTerm || undefined);
-  }, [page, searchTerm, fetchData]);
+    fetchData(page, searchTerm || undefined, selectedFacultyId || undefined);
+  }, [page, searchTerm, selectedFacultyId, fetchData]);
 
   const handleSearch = () => {
     setPage(1);
@@ -77,8 +91,22 @@ export default function BibliographySection({
 
   const handleClearSearch = () => {
     setSearchInput("");
+    setSelectedFacultyId("");
     onSearchChange("");
     setPage(1);
+  };
+
+  const handleExport = async () => {
+    setExporting(true);
+    try {
+      await exportApi.downloadBibliographies({
+        facultyId: selectedFacultyId ? Number(selectedFacultyId) : undefined,
+      });
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Export gagal");
+    } finally {
+      setExporting(false);
+    }
   };
 
   const openDetail = async (id: string) => {
@@ -192,7 +220,24 @@ export default function BibliographySection({
             )}
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <select
+            value={selectedFacultyId}
+            onChange={(e) => {
+              setSelectedFacultyId(e.target.value);
+              setPage(1);
+            }}
+            aria-label="Filter Fakultas"
+            className="rounded-lg border border-border bg-card px-3 py-2 text-sm text-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+          >
+            <option value="">Semua Fakultas</option>
+            {faculties.map((f) => (
+              <option key={f.id} value={f.id}>
+                {f.name}
+              </option>
+            ))}
+          </select>
+
           <div className="relative flex-1 sm:w-64">
             <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
             <input
@@ -210,7 +255,7 @@ export default function BibliographySection({
           >
             Cari
           </button>
-          {searchTerm && (
+          {(searchTerm || selectedFacultyId) && (
             <button
               onClick={handleClearSearch}
               className="rounded-lg border border-border bg-card px-4 py-2 text-sm font-medium text-muted-foreground hover:bg-surface-hover"
@@ -218,6 +263,19 @@ export default function BibliographySection({
               Reset
             </button>
           )}
+          <button
+            onClick={handleExport}
+            disabled={exporting}
+            className="flex items-center gap-2 rounded-lg border border-border bg-card px-3 py-2 text-sm font-medium text-foreground hover:bg-surface-hover disabled:opacity-50"
+            title={selectedFacultyId ? "Export buku fakultas terpilih" : "Export semua buku"}
+          >
+            {exporting ? (
+              <Loader2 className="size-4 animate-spin" />
+            ) : (
+              <FileDown className="size-4 text-primary" />
+            )}
+            Export
+          </button>
           <button
             onClick={handleCreate}
             className="flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700"

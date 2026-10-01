@@ -75,6 +75,64 @@ function StatusBadge({ status }: { status: VisualStatus }) {
   );
 }
 
+// ─── Sub-component: Booking Countdown Timer ──────────────────────────────────
+
+function BookingCountdownTimer({
+  createdAt,
+  expiresAt,
+  onExpire,
+}: {
+  createdAt?: string;
+  expiresAt?: string;
+  onExpire?: () => void;
+}) {
+  const getRemainingSeconds = useCallback(() => {
+    let targetMs: number | null = null;
+    if (expiresAt) {
+      targetMs = new Date(expiresAt).getTime();
+    } else if (createdAt) {
+      targetMs = new Date(createdAt).getTime() + 20 * 60 * 1000;
+    }
+    if (!targetMs || isNaN(targetMs)) return 0;
+    const diff = Math.floor((targetMs - Date.now()) / 1000);
+    return Math.max(0, diff);
+  }, [createdAt, expiresAt]);
+
+  const [remaining, setRemaining] = useState(getRemainingSeconds);
+
+  useEffect(() => {
+    setRemaining(getRemainingSeconds());
+    const interval = setInterval(() => {
+      const sec = getRemainingSeconds();
+      setRemaining(sec);
+      if (sec <= 0) {
+        clearInterval(interval);
+        onExpire?.();
+      }
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [getRemainingSeconds, onExpire]);
+
+  const mm = String(Math.floor(remaining / 60)).padStart(2, "0");
+  const ss = String(remaining % 60).padStart(2, "0");
+
+  if (remaining <= 0) {
+    return (
+      <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-red-100 text-red-700 rounded-full text-xs font-bold border border-red-200">
+        <Clock size={12} className="text-red-500 shrink-0" />
+        <span>Batas Waktu Habis (Expired)</span>
+      </div>
+    );
+  }
+
+  return (
+    <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-amber-100 text-amber-900 rounded-full text-xs font-bold border border-amber-300">
+      <Clock size={12} className="text-amber-600 shrink-0 animate-pulse" />
+      <span>Sisa Waktu: <span className="font-mono text-amber-950 font-extrabold">{mm}:{ss}</span></span>
+    </div>
+  );
+}
+
 // ─── Sub-component: Loan Card ─────────────────────────────────────────────────
 
 interface LoanCardProps {
@@ -82,9 +140,12 @@ interface LoanCardProps {
   status: VisualStatus;
   isExtending: boolean;
   isReturning: boolean;
+  isCanceling?: boolean;
   onExtend: (loanId: string) => void;
   onReturn: (loanId: string) => void;
+  onCancel: (loanId: string) => void;
   onViewDetail: (loan: Loan) => void;
+  onExpire?: () => void;
 }
 
 function LoanCard({ loan, status, isExtending, isReturning, onExtend, onReturn, onViewDetail }: LoanCardProps) {
@@ -205,9 +266,27 @@ function LoanCard({ loan, status, isExtending, isReturning, onExtend, onReturn, 
         ) : null}
 
         {status === "pending" && (
-          <div className="w-full bg-yellow-50 text-yellow-700 py-3 rounded-xl font-bold text-xs flex items-center justify-center gap-2">
-            <Clock size={13} />
-            MENUNGGU KONFIRMASI PEMINJAMAN
+          <div className="w-full bg-amber-50/80 border border-amber-200/80 text-amber-900 p-3 rounded-xl font-bold text-xs flex flex-col items-center justify-center gap-2">
+            <div className="flex items-center gap-1.5 text-amber-800">
+              <Clock size={13} className="text-amber-600" />
+              <span>Menunggu Konfirmasi Loket</span>
+            </div>
+            <BookingCountdownTimer
+              createdAt={loan.createdAt}
+              expiresAt={loan.verificationExpiresAt}
+              onExpire={onExpire}
+            />
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onCancel(loan.id);
+              }}
+              disabled={isCanceling}
+              className="mt-1 w-full bg-white hover:bg-red-50 text-red-600 border border-red-200 py-1.5 px-3 rounded-lg font-bold text-[11px] flex items-center justify-center gap-1.5 transition-all shadow-2xs"
+            >
+              <XCircle size={12} />
+              {isCanceling ? "MEMBATALKAN..." : "Batalkan Pemesanan"}
+            </button>
           </div>
         )}
 
@@ -243,9 +322,12 @@ interface DetailModalProps {
   status: VisualStatus;
   isExtending: boolean;
   isReturning: boolean;
+  isCanceling?: boolean;
   onExtend: (id: string) => void;
   onReturn: (id: string) => void;
+  onCancel: (id: string) => void;
   onClose: () => void;
+  onExpire?: () => void;
 }
 
 function DetailModal({ loan, status, isExtending, isReturning, onExtend, onReturn, onClose }: DetailModalProps) {
@@ -381,6 +463,17 @@ function DetailModal({ loan, status, isExtending, isReturning, onExtend, onRetur
               >
                 Tutup
               </button>
+
+              {status === "pending" && (
+                <button
+                  onClick={() => { onCancel(loan.id); onClose(); }}
+                  disabled={isCanceling}
+                  className="flex-1 px-4 py-3 bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2"
+                >
+                  <XCircle size={15} />
+                  {isCanceling ? "Membatalkan..." : "Batalkan Pemesanan"}
+                </button>
+              )}
               
               {loan.returnRequests?.some(r => r.status === "pending") ? (
                 <div className="flex-1 px-4 py-3 bg-yellow-50 text-yellow-700 rounded-xl font-bold text-sm flex items-center justify-center gap-2 border border-yellow-200">
@@ -524,6 +617,29 @@ export default function MyLoansPage() {
       );
     } finally {
       setReturningId(null);
+    }
+  }, [fetchLoans]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ─── Batalkan Pemesanan Pending ───────────────────────────────────────────────
+
+  const [cancelingId, setCancelingId] = useState<string | null>(null);
+
+  const handleCancel = useCallback(async (loanId: string) => {
+    setCancelingId(loanId);
+    const loadingId = toast.loading("Memproses...", "Sedang membatalkan pemesanan buku");
+    try {
+      const result = await loanService.cancelLoan(loanId);
+      toast.removeToast(loadingId);
+      toast.success("Pemesanan Dibatalkan", result.message || "Pemesanan berhasil dibatalkan");
+      await fetchLoans(true);
+    } catch (err) {
+      toast.removeToast(loadingId);
+      toast.error(
+        "Pembatalan Gagal",
+        err instanceof Error ? err.message : "Terjadi kesalahan"
+      );
+    } finally {
+      setCancelingId(null);
     }
   }, [fetchLoans]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -708,9 +824,12 @@ export default function MyLoansPage() {
                 status={status}
                 isExtending={extendingId === loan.id}
                 isReturning={returningId === loan.id}
+                isCanceling={cancelingId === loan.id}
                 onExtend={handleExtend}
                 onReturn={handleReturn}
+                onCancel={handleCancel}
                 onViewDetail={setSelectedLoan}
+                onExpire={() => fetchLoans(true)}
               />
             ))}
           </div>
@@ -724,9 +843,12 @@ export default function MyLoansPage() {
           status={getLoanStatus(selectedLoan) as VisualStatus}
           isExtending={extendingId === selectedLoan.id}
           isReturning={returningId === selectedLoan.id}
+          isCanceling={cancelingId === selectedLoan.id}
           onExtend={handleExtend}
           onReturn={handleReturn}
+          onCancel={handleCancel}
           onClose={() => setSelectedLoan(null)}
+          onExpire={() => fetchLoans(true)}
         />
       )}
 

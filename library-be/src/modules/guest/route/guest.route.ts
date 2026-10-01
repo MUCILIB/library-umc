@@ -230,6 +230,74 @@ router.post(
 
 /**
  * @swagger
+ * /guests/scan:
+ *   post:
+ *     summary: Kiosk scan presensi member
+ *     description: Scan QR/Barcode KTM atau masukkan NIM/Email member untuk absensi cepat
+ *     tags: [Guests]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - memberIdentifier
+ *             properties:
+ *               memberIdentifier:
+ *                 type: string
+ *                 description: NIM, Card Number / Barcode, atau Email member
+ *     responses:
+ *       200:
+ *         description: Member found and attendance recorded
+ *       404:
+ *         description: Member not found (redirect to non-member form)
+ *       400:
+ *         description: Validation error
+ */
+router.post("/guests/scan", guestController.scanMember);
+
+/**
+ * @swagger
+ * /guests/non-member:
+ *   post:
+ *     summary: Presensi pengunjung non-member (tamu umum)
+ *     description: Catat kehadiran tamu umum non-member
+ *     tags: [Guests]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - fullName
+ *               - institution
+ *               - purpose
+ *               - phone
+ *             properties:
+ *               fullName:
+ *                 type: string
+ *               institution:
+ *                 type: string
+ *               purpose:
+ *                 type: string
+ *               phone:
+ *                 type: string
+ *               studyProgramId:
+ *                 type: integer
+ *               facultyId:
+ *                 type: integer
+ *     responses:
+ *       201:
+ *         description: Guest attendance registered successfully
+ *       400:
+ *         description: Validation error
+ */
+router.post("/guests/non-member", guestController.createNonMember);
+
+/**
+ * @swagger
  * /guest/absensi:
  *   post:
  *     summary: Create absensi log
@@ -238,8 +306,6 @@ router.post(
 
 router.post(
   "/guest/absensi",
-  isAuthenticated,
-  requireRole(["super_admin", "staff"]),
   guestController.createAbsensi
 );
 
@@ -304,6 +370,27 @@ router.post(
  *           type: integer
  *           default: 50
  *         description: Number of items per page
+ *       - in: query
+ *         name: studyProgramId
+ *         schema:
+ *           type: integer
+ *         description: Filter by Program Studi ID
+ *       - in: query
+ *         name: facultyId
+ *         schema:
+ *           type: integer
+ *         description: Filter by Fakultas ID
+ *       - in: query
+ *         name: type
+ *         schema:
+ *           type: string
+ *           enum: [member, non-member]
+ *         description: Filter by tipe pengunjung (member/non-member)
+ *       - in: query
+ *         name: search
+ *         schema:
+ *           type: string
+ *         description: Search by nama, NIM, email, atau institusi
  *     responses:
  *       200:
  *         description: Guest logs retrieved successfully

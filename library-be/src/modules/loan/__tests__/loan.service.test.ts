@@ -241,4 +241,75 @@ describe("LoanService Unit Tests", () => {
       );
     });
   });
+
+  describe("cancelLoan", () => {
+    it("throw jika loan tidak ditemukan", async () => {
+      (db.transaction as any).mockImplementationOnce(async (cb: any) => {
+        const tx = createTxForStockSync(0);
+        tx.query.loans.findFirst = vi.fn().mockResolvedValueOnce(null);
+        return cb(tx);
+      });
+
+      await expect(
+        loanService.cancelLoan("loan-x", "member-1")
+      ).rejects.toThrowError("Peminjaman tidak ditemukan");
+    });
+
+    it("throw jika member bukan pemilik loan dan bukan admin", async () => {
+      (db.transaction as any).mockImplementationOnce(async (cb: any) => {
+        const tx = createTxForStockSync(0);
+        tx.query.loans.findFirst = vi.fn().mockResolvedValueOnce({
+          id: "loan-1",
+          memberId: "member-other",
+          status: "pending",
+        });
+        return cb(tx);
+      });
+
+      await expect(
+        loanService.cancelLoan("loan-1", "member-1")
+      ).rejects.toThrowError("Akses ditolak");
+    });
+
+    it("throw jika status bukan pending", async () => {
+      (db.transaction as any).mockImplementationOnce(async (cb: any) => {
+        const tx = createTxForStockSync(0);
+        tx.query.loans.findFirst = vi.fn().mockResolvedValueOnce({
+          id: "loan-1",
+          memberId: "member-1",
+          status: "approved",
+        });
+        return cb(tx);
+      });
+
+      await expect(
+        loanService.cancelLoan("loan-1", "member-1")
+      ).rejects.toThrowError("status pending");
+    });
+
+    it("sukses membatalkan loan pending oleh member", async () => {
+      (db.transaction as any).mockImplementationOnce(async (cb: any) => {
+        const tx = createTxForStockSync(1);
+        tx.query.loans.findFirst = vi.fn().mockResolvedValueOnce({
+          id: "loan-1",
+          memberId: "member-1",
+          itemId: "item-1",
+          status: "pending",
+          member: { user: { email: "member@umc.ac.id", name: "Member" } },
+          item: { bibliographyId: "bib-1", bibliography: { title: "Buku A" } },
+        });
+        tx.update = vi.fn().mockReturnValue({
+          set: vi.fn().mockReturnValue({
+            where: vi.fn().mockReturnValue({
+              returning: vi.fn().mockResolvedValue([{ id: "loan-1", status: "rejected" }]),
+            }),
+          }),
+        });
+        return cb(tx);
+      });
+
+      const result = await loanService.cancelLoan("loan-1", "member-1");
+      expect(result.status).toBe("rejected");
+    });
+  });
 });

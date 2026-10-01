@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   FileDown,
   Book,
@@ -6,22 +6,60 @@ import {
   Loader2,
   CheckCircle,
   AlertCircle,
+  Filter,
 } from "lucide-react";
-import { exportApi } from "@/api/client";
+import {
+  exportApi,
+  facultyApi,
+  studyProgramApi,
+  type Faculty,
+  type StudyProgram,
+} from "@/api/client";
 
 export default function ExportSection() {
+  const [faculties, setFaculties] = useState<Faculty[]>([]);
+  const [studyPrograms, setStudyPrograms] = useState<StudyProgram[]>([]);
+  const [selectedFacultyId, setSelectedFacultyId] = useState<string>("");
+  const [selectedStudyProgramId, setSelectedStudyProgramId] = useState<string>("");
+
   const [exportingBiblio, setExportingBiblio] = useState(false);
   const [exportingItem, setExportingItem] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successBiblio, setSuccessBiblio] = useState(false);
   const [successItem, setSuccessItem] = useState(false);
 
+  useEffect(() => {
+    facultyApi
+      .list()
+      .then((res) => {
+        setFaculties(res.data || []);
+      })
+      .catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    if (selectedFacultyId) {
+      studyProgramApi
+        .list(Number(selectedFacultyId))
+        .then((res) => {
+          setStudyPrograms(res.data || []);
+        })
+        .catch(() => {});
+    } else {
+      setStudyPrograms([]);
+      setSelectedStudyProgramId("");
+    }
+  }, [selectedFacultyId]);
+
   const handleExportBibliographies = async () => {
     setExportingBiblio(true);
     setError(null);
     setSuccessBiblio(false);
     try {
-      await exportApi.downloadBibliographies();
+      await exportApi.downloadBibliographies({
+        facultyId: selectedFacultyId ? Number(selectedFacultyId) : undefined,
+        studyProgramId: selectedStudyProgramId ? Number(selectedStudyProgramId) : undefined,
+      });
       setSuccessBiblio(true);
       setTimeout(() => setSuccessBiblio(false), 3000);
     } catch (err: unknown) {
@@ -36,7 +74,10 @@ export default function ExportSection() {
     setError(null);
     setSuccessItem(false);
     try {
-      await exportApi.downloadItems();
+      await exportApi.downloadItems({
+        facultyId: selectedFacultyId ? Number(selectedFacultyId) : undefined,
+        studyProgramId: selectedStudyProgramId ? Number(selectedStudyProgramId) : undefined,
+      });
       setSuccessItem(true);
       setTimeout(() => setSuccessItem(false), 3000);
     } catch (err: unknown) {
@@ -63,6 +104,79 @@ export default function ExportSection() {
           </div>
         </div>
       )}
+
+      {/* Filter Section */}
+      <div className="rounded-2xl border border-border bg-card p-4 sm:p-6">
+        <div className="mb-4 flex items-center gap-2">
+          <Filter className="size-4 text-primary" />
+          <h3 className="font-semibold text-foreground">Filter Data Export</h3>
+        </div>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div>
+            <label
+              htmlFor="filter-faculty"
+              className="mb-1.5 block text-xs font-medium text-muted-foreground"
+            >
+              Fakultas
+            </label>
+            <select
+              id="filter-faculty"
+              aria-label="Filter Fakultas"
+              value={selectedFacultyId}
+              onChange={(e) => {
+                setSelectedFacultyId(e.target.value);
+                setSelectedStudyProgramId("");
+              }}
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+            >
+              <option value="">Semua Fakultas</option>
+              {faculties.map((f) => (
+                <option key={f.id} value={f.id}>
+                  {f.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label
+              htmlFor="filter-prodi"
+              className="mb-1.5 block text-xs font-medium text-muted-foreground"
+            >
+              Program Studi
+            </label>
+            <select
+              id="filter-prodi"
+              aria-label="Filter Program Studi"
+              value={selectedStudyProgramId}
+              onChange={(e) => setSelectedStudyProgramId(e.target.value)}
+              disabled={!selectedFacultyId}
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary disabled:opacity-50"
+            >
+              <option value="">Semua Program Studi</option>
+              {studyPrograms.map((sp) => (
+                <option key={sp.id} value={sp.id}>
+                  {sp.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+        {(selectedFacultyId || selectedStudyProgramId) && (
+          <div className="mt-3 flex items-center justify-between text-xs text-muted-foreground">
+            <span>Filter diterapkan pada file hasil export.</span>
+            <button
+              onClick={() => {
+                setSelectedFacultyId("");
+                setSelectedStudyProgramId("");
+              }}
+              className="font-medium text-primary hover:underline"
+            >
+              Reset Filter
+            </button>
+          </div>
+        )}
+      </div>
 
       <div className="grid gap-4 sm:grid-cols-2">
         {/* Bibliography Export */}

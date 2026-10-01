@@ -1,6 +1,6 @@
 import { db } from "../../../db";
-import { guestLogs } from "../../../db/schema";
-import { desc, sql, eq, and, gte, isNull } from "drizzle-orm";
+import { guestLogs, members, Users, faculties, studyPrograms } from "../../../db/schema";
+import { desc, sql, eq, and, or, gte, isNull, ilike } from "drizzle-orm";
 
 type DataGuest = {
   name: string;
@@ -14,6 +14,7 @@ type ServiceResponse<T> = {
   success: boolean;
   message: string;
   data: T | null;
+  code?: string;
   meta?: any;
 };
 
@@ -145,6 +146,246 @@ export class GuestService {
       return {
         success: false,
         message: "Failed to create absensi",
+        data: null
+      };
+    }
+  }
+
+  /**
+   * Kiosk Scan: Scan Member Card (KTM / Barcode / QR / NIM / Email)
+   */
+  async scanMember(memberIdentifier: string): Promise<ServiceResponse<any>> {
+    try {
+      const trimmed = memberIdentifier?.trim();
+      if (!trimmed) {
+        return {
+          success: false,
+          message: "Identifier kartu atau NIM tidak boleh kosong",
+          data: null
+        };
+      }
+
+      // 1. Cari di tabel members berdasarkan cardNumber atau nimNidn
+      let memberRecord = await db.query.members.findFirst({
+        where: and(
+          or(
+            eq(members.cardNumber, trimmed),
+            eq(members.nimNidn, trimmed),
+            sql`LOWER(${members.cardNumber}) = LOWER(${trimmed})`,
+            sql`LOWER(${members.nimNidn}) = LOWER(${trimmed})`
+          ),
+          isNull(members.deletedAt)
+        ),
+        with: {
+          user: true
+        }
+      });
+
+      // 2. Jika belum ketemu, cari via Users (email atau id atau nama)
+      if (!memberRecord) {
+        const userRecord = await db.query.Users.findFirst({
+          where: or(
+            sql`LOWER(${Users.email}) = LOWER(${trimmed})`,
+            eq(Users.id, trimmed)
+          )
+        });
+
+        if (userRecord) {
+          memberRecord = await db.query.members.findFirst({
+            where: and(
+              eq(members.userId, userRecord.id),
+              isNull(members.deletedAt)
+            ),
+            with: {
+              user: true
+            }
+          });
+        }
+      }
+
+      // 3. Jika tidak ditemukan sama sekali, kembalikan 404 / 'not_found'
+      if (!memberRecord) {
+        return {
+          success: false,
+          code: "not_found",
+          message: "Data anggota tidak ditemukan. Silakan isi presensi tamu non-member.",
+          data: null
+        };
+      }
+
+      const userName = memberRecord.user?.name || "Anggota Perpustakaan";
+      const userEmail = memberRecord.user?.email || null;
+      const userFaculty = memberRecord.faculty || null;
+
+      // Cari relasi Fakultas jika nama fakultas ada
+      let facultyId: number | null = null;
+      let facultyName: string | null = userFaculty;
+      if (userFaculty) {
+        const fac = await db.query.faculties.findFirst({
+          where: and(
+            or(
+              eq(faculties.name, userFaculty),
+              sql`LOWER(${faculties.name}) = LOWER(${userFaculty})`,
+              eq(faculties.code, userFaculty)
+            ),
+            isNull(faculties.deletedAt)
+          )
+        });
+        if (fac) {
+          facultyId = fac.id;
+          facultyName = fac.name;
+        }
+      }
+
+      // Cek apakah member sudah scan hari ini (mencegah duplikasi tak sengaja)
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      const existingLog = await db.query.guestLogs.findFirst({
+        where: and(
+          eq(guestLogs.memberId, memberRecord.id),
+          gte(guestLogs.visitDate, today),
+          isNull(guestLogs.deletedAt)
+        )
+      });
+
+      if (existingLog) {
+        return {
+          success: true,
+          message: `Selamat datang kembali, ${userName}! Kehadiran Anda hari ini sudah tercatat.`,
+          data: {
+            id: existingLog.id,
+            memberId: memberRecord.id,
+            name: userName,
+            email: userEmail,
+            prodi: existingLog.major || facultyName || "-",
+            faculty: existingLog.faculty || facultyName || "-",
+            timestamp: existingLog.visitDate,
+            cardNumber: memberRecord.cardNumber,
+            nim: memberRecord.nimNidn,
+            alreadyCheckedIn: true
+          }
+        };
+      }
+
+      // Catat absensi member baru
+      const [newLog] = await db
+        .insert(guestLogs)
+        .values({
+          memberId: memberRecord.id,
+          name: userName,
+          email: userEmail,
+          identifier: memberRecord.nimNidn || memberRecord.cardNumber || trimmed,
+          faculty: facultyName,
+          facultyId: facultyId,
+          major: facultyName || "UMC Member",
+          type: "member",
+          visitDate: new Date()
+        })
+        .returning();
+
+      return {
+        success: true,
+        message: `Selamat datang di perpustakaan, ${userName}! Kehadiran Anda berhasil dicatat.`,
+        data: {
+          id: newLog.id,
+          memberId: memberRecord.id,
+          name: userName,
+          email: userEmail,
+          prodi: newLog.major || facultyName || "-",
+          faculty: newLog.faculty || facultyName || "-",
+          timestamp: newLog.visitDate,
+          cardNumber: memberRecord.cardNumber,
+          nim: memberRecord.nimNidn,
+          alreadyCheckedIn: false
+        }
+      };
+    } catch (err) {
+      console.error("[GuestService] Error scanning member:", err);
+      return {
+        success: false,
+        message: "Gagal memproses scan presensi member",
+        data: null
+      };
+    }
+  }
+
+  /**
+   * Catat absensi pengunjung Non-Member
+   */
+  async createNonMemberGuest(data: {
+    fullName: string;
+    institution: string;
+    purpose: string;
+    phone: string;
+    studyProgramId?: number | null;
+    facultyId?: number | null;
+  }): Promise<ServiceResponse<any>> {
+    try {
+      let facultyId = data.facultyId || null;
+      let facultyName: string | null = null;
+      let studyProgramName: string | null = null;
+
+      if (data.studyProgramId) {
+        const sp = await db.query.studyPrograms.findFirst({
+          where: and(
+            eq(studyPrograms.id, data.studyProgramId),
+            isNull(studyPrograms.deletedAt)
+          ),
+          with: {
+            faculty: true
+          }
+        });
+        if (sp) {
+          studyProgramName = sp.name;
+          if (!facultyId && sp.facultyId) {
+            facultyId = sp.facultyId;
+            facultyName = sp.faculty?.name || null;
+          }
+        }
+      }
+
+      if (facultyId && !facultyName) {
+        const fac = await db.query.faculties.findFirst({
+          where: and(
+            eq(faculties.id, facultyId),
+            isNull(faculties.deletedAt)
+          )
+        });
+        if (fac) {
+          facultyName = fac.name;
+        }
+      }
+
+      const guestData = {
+        name: data.fullName,
+        identifier: data.phone || `GUEST-${Date.now()}`,
+        institution: data.institution,
+        purpose: data.purpose,
+        phone: data.phone,
+        studyProgramId: data.studyProgramId || null,
+        facultyId: facultyId,
+        major: studyProgramName || data.institution,
+        faculty: facultyName || null,
+        type: "non-member",
+        visitDate: new Date()
+      };
+
+      const [newLog] = await db
+        .insert(guestLogs)
+        .values(guestData)
+        .returning();
+
+      return {
+        success: true,
+        message: "Absensi pengunjung non-member berhasil dicatat",
+        data: newLog
+      };
+    } catch (err) {
+      console.error("[GuestService] Error creating non-member guest:", err);
+      return {
+        success: false,
+        message: "Gagal mencatat absensi pengunjung non-member",
         data: null
       };
     }
@@ -538,18 +779,87 @@ export class GuestService {
   }
 
   /**
-   * Get All Guest Logs (with Pagination)
+   * Get All Guest Logs (with Pagination, Filter prodi/fakultas/type)
    */
   async getAllGuestLogs(
-    limit = 100,
-    page = 1
+    options?: {
+      limit?: number;
+      page?: number;
+      studyProgramId?: number;
+      facultyId?: number;
+      type?: "member" | "non-member";
+      search?: string;
+    } | number,
+    pageArg = 1
   ): Promise<ServiceResponse<any[]>> {
     try {
+      const opts =
+        typeof options === "object" && options !== null
+          ? options
+          : { limit: typeof options === "number" ? options : 50, page: pageArg };
+
+      const limit = opts.limit ?? 50;
+      const page = opts.page ?? 1;
       const offset = (page - 1) * limit;
+
+      const conditions: any[] = [isNull(guestLogs.deletedAt)];
+
+      if (opts.type) {
+        conditions.push(eq(guestLogs.type, opts.type));
+      }
+
+      if (opts.facultyId) {
+        const fac = await db.query.faculties.findFirst({
+          where: eq(faculties.id, opts.facultyId)
+        });
+        if (fac) {
+          conditions.push(
+            or(
+              eq(guestLogs.facultyId, opts.facultyId),
+              eq(guestLogs.faculty, fac.name)
+            )
+          );
+        } else {
+          conditions.push(eq(guestLogs.facultyId, opts.facultyId));
+        }
+      }
+
+      if (opts.studyProgramId) {
+        const sp = await db.query.studyPrograms.findFirst({
+          where: eq(studyPrograms.id, opts.studyProgramId)
+        });
+        if (sp) {
+          conditions.push(
+            or(
+              eq(guestLogs.studyProgramId, opts.studyProgramId),
+              eq(guestLogs.major, sp.name)
+            )
+          );
+        } else {
+          conditions.push(eq(guestLogs.studyProgramId, opts.studyProgramId));
+        }
+      }
+
+      if (opts.search) {
+        const q = `%${opts.search}%`;
+        conditions.push(
+          or(
+            ilike(guestLogs.name, q),
+            ilike(guestLogs.identifier, q),
+            ilike(guestLogs.email, q),
+            ilike(guestLogs.institution, q),
+            ilike(guestLogs.major, q),
+            ilike(guestLogs.faculty, q)
+          )
+        );
+      }
+
+      const whereClause = conditions.length > 1 ? and(...conditions) : conditions[0];
+
       const data = await db
         .select()
         .from(guestLogs)
-        .where(isNull(guestLogs.deletedAt))
+        .where(whereClause)
         .limit(limit)
         .offset(offset)
         .orderBy(desc(guestLogs.visitDate));
@@ -557,17 +867,17 @@ export class GuestService {
       const [countResult] = await db
         .select({ count: sql<number>`count(*)` })
         .from(guestLogs)
-        .where(isNull(guestLogs.deletedAt));
+        .where(whereClause);
 
       return {
         success: true,
         message: "Guest logs retrieved successfully",
         data: data,
         meta: {
-          total: Number(countResult.count),
+          total: Number(countResult?.count || 0),
           page,
           limit,
-          totalPages: Math.ceil(Number(countResult.count) / limit)
+          totalPages: Math.ceil(Number(countResult?.count || 0) / limit)
         }
       };
     } catch (err) {

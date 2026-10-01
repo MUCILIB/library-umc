@@ -13,11 +13,14 @@ import {
   RotateCcw,
   AlertTriangle,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  Download,
+  Loader2
 } from "lucide-react";
 import { API_BASE_URL } from "@/utils/api-config";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/useToast";
+import { exportApi } from "@/api/client";
 
 
 interface Loan {
@@ -75,6 +78,23 @@ export default function LoansSection({ searchTerm, onSearchChange }: LoansSectio
   const toast = useToast();
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 5;
+  const [exportingLoans, setExportingLoans] = useState(false);
+
+  const handleExportLoans = async () => {
+    setExportingLoans(true);
+    try {
+      const statusParam = filter === "all" ? undefined : filter === "pending_extension" ? "approved" : filter;
+      await exportApi.downloadLoans({
+        status: statusParam,
+        search: searchTerm || undefined,
+      });
+      toast.success("Export Berhasil", "Data peminjaman berhasil diunduh.");
+    } catch (err: unknown) {
+      toast.error("Export Gagal", err instanceof Error ? err.message : "Gagal mengunduh CSV");
+    } finally {
+      setExportingLoans(false);
+    }
+  };
 
   useEffect(() => {
     fetchLoans();
@@ -396,6 +416,21 @@ export default function LoansSection({ searchTerm, onSearchChange }: LoansSectio
               title="Refresh data"
             >
               <RefreshCw size={16} strokeWidth={2.5} />
+            </button>
+
+            {/* Export CSV Button */}
+            <button
+              onClick={handleExportLoans}
+              disabled={exportingLoans}
+              className="h-10 px-4 bg-background rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted transition-all flex items-center gap-2 shrink-0 text-[13px] font-bold border border-border/50 disabled:opacity-50"
+              title="Export riwayat peminjaman ke CSV"
+            >
+              {exportingLoans ? (
+                <Loader2 size={16} className="animate-spin" />
+              ) : (
+                <Download size={16} strokeWidth={2.5} />
+              )}
+              <span>Export CSV</span>
             </button>
           </div>
         </div>

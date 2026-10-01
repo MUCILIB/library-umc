@@ -10,22 +10,24 @@ import swaggerUi from "swagger-ui-express";
 import { generalLimiter } from "./middlewares/rateLimiter";
 import { errorMiddleware } from "./middlewares/error.middleware";
 import { initCronJobs } from "./cron/fineScheduler";
+import { initBookingCancelScheduler } from "./cron/bookingCancelScheduler";
 
 dotenv.config();
 
 const app = express();
 
-// ponytail: HTTPS redirect — 3 lines, works behind PaaS proxy
+// Trust proxy fully for secure cookie (X-Forwarded-Proto) from PaaS like Railway, Render, Coolify, etc.
+app.set("trust proxy", 1);
+
+// ponytail: HTTPS redirect — works behind PaaS / reverse proxy
 app.use((req, res, next) => {
+  if (req.path === "/health") return next();
   const proto = req.headers["x-forwarded-proto"];
-  if (process.env.NODE_ENV === "production" && !(Array.isArray(proto) ? proto[0] : proto)?.startsWith("https")) {
+  if (process.env.NODE_ENV === "production" && proto && !(Array.isArray(proto) ? proto[0] : proto)?.startsWith("https")) {
     return res.redirect(301, `https://${req.headers.host}${req.originalUrl}`);
   }
   next();
 });
-
-// Trust proxy fully for secure cookie (X-Forwarded-Proto) from PaaS like Railway, Render, etc.
-app.set("trust proxy", 1);
 
 const allowedOrigins = [
   process.env.FRONTEND_URL || "http://localhost:5173",
@@ -93,4 +95,5 @@ const PORT = process.env.PORT || 4000;
 app.listen(PORT, () => {
   console.log(`SERVER RUNNING ON PORT ${PORT}`);
   initCronJobs();
+  initBookingCancelScheduler();
 });

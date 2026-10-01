@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, fireEvent } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import BibliographySection from "@/components/dashboard/BibliographySection";
 
@@ -11,9 +11,15 @@ vi.mock("@/api/client", () => ({
     update: vi.fn(),
     delete: vi.fn(),
   },
+  facultyApi: {
+    list: vi.fn().mockResolvedValue({ data: [{ id: 1, name: "Teknik" }] }),
+  },
+  exportApi: {
+    downloadBibliographies: vi.fn(),
+  },
 }));
 
-import { bibliographyApi } from "@/api/client";
+import { bibliographyApi, exportApi } from "@/api/client";
 
 const mockBibliographies = {
   items: [
@@ -139,6 +145,33 @@ describe("BibliographySection", () => {
 
     await waitFor(() => {
       expect(screen.getByPlaceholderText("Cari bibliografi...")).toBeInTheDocument();
+    });
+  });
+
+  it("should render faculty filter and trigger export with selected faculty", async () => {
+    (exportApi.downloadBibliographies as ReturnType<typeof vi.fn>).mockResolvedValue(undefined);
+
+    render(<BibliographySection searchTerm="" onSearchChange={vi.fn()} />);
+
+    await waitFor(() => {
+      expect(screen.getByLabelText("Filter Fakultas")).toBeInTheDocument();
+      expect(screen.getByText("Teknik")).toBeInTheDocument();
+    });
+
+    const select = screen.getByLabelText("Filter Fakultas");
+    fireEvent.change(select, { target: { value: "1" } });
+
+    await waitFor(() => {
+      expect(bibliographyApi.list).toHaveBeenCalledWith(
+        expect.objectContaining({ facultyId: 1 })
+      );
+    });
+
+    const exportButton = screen.getByRole("button", { name: /Export/i });
+    fireEvent.click(exportButton);
+
+    await waitFor(() => {
+      expect(exportApi.downloadBibliographies).toHaveBeenCalledWith({ facultyId: 1 });
     });
   });
 });

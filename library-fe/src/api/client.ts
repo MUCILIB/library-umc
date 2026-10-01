@@ -446,16 +446,169 @@ export const importApi = {
 
   downloadErrors: (batchId: string) =>
     apiFetchBlob(`/api/import/batches/${batchId}/errors.csv`, `errors-${batchId}.csv`),
+
+  downloadTemplate: (module: string) =>
+    apiFetchBlob(`/api/import/template/${module}`, `template_${module}.csv`),
+
+  uploadGuests: async (file: File) => {
+    const formData = new FormData();
+    formData.append("file", file);
+    return apiFetch<{
+      total: number;
+      successCount: number;
+      errorCount: number;
+      errors: Array<{ row: number; errors: string[] }>;
+    }>("/api/import/guests", { method: "POST", body: formData });
+  },
+
+  uploadUsers: async (file: File) => {
+    const formData = new FormData();
+    formData.append("file", file);
+    return apiFetch<{
+      total: number;
+      successCount: number;
+      errorCount: number;
+      errors: Array<{ row: number; errors: string[] }>;
+    }>("/api/import/users", { method: "POST", body: formData });
+  },
+
+  uploadLoans: async (file: File) => {
+    const formData = new FormData();
+    formData.append("file", file);
+    return apiFetch<{
+      total: number;
+      successCount: number;
+      errorCount: number;
+      errors: Array<{ row: number; errors: string[] }>;
+    }>("/api/import/loans", { method: "POST", body: formData });
+  },
 };
 
 // ==========================================
 // Export API
 // ==========================================
 
-export const exportApi = {
-  downloadBibliographies: () =>
-    apiFetchBlob("/api/export/bibliographies", "bibliographies_export.csv"),
+export interface ExportFilterParams {
+  facultyId?: number | string;
+  studyProgramId?: number | string;
+  categoryId?: number | string;
+  subject?: string;
+  status?: string;
+}
 
-  downloadItems: () =>
-    apiFetchBlob("/api/export/items", "items_export.csv"),
+export const exportApi = {
+  downloadBibliographies: (params?: ExportFilterParams) => {
+    const query = new URLSearchParams();
+    if (params?.facultyId) query.set("facultyId", String(params.facultyId));
+    if (params?.studyProgramId) query.set("studyProgramId", String(params.studyProgramId));
+    if (params?.categoryId) query.set("categoryId", String(params.categoryId));
+    if (params?.subject) query.set("subject", params.subject);
+    if (params?.status) query.set("status", params.status);
+    const qs = query.toString();
+    return apiFetchBlob(`/api/export/bibliographies${qs ? `?${qs}` : ""}`, "bibliographies_export.csv");
+  },
+
+  downloadItems: (params?: ExportFilterParams) => {
+    const query = new URLSearchParams();
+    if (params?.facultyId) query.set("facultyId", String(params.facultyId));
+    if (params?.studyProgramId) query.set("studyProgramId", String(params.studyProgramId));
+    if (params?.categoryId) query.set("categoryId", String(params.categoryId));
+    if (params?.subject) query.set("subject", params.subject);
+    if (params?.status) query.set("status", params.status);
+    const qs = query.toString();
+    return apiFetchBlob(`/api/export/items${qs ? `?${qs}` : ""}`, "items_export.csv");
+  },
+
+  downloadGuests: (params?: { startDate?: string; endDate?: string; faculty?: string; major?: string; search?: string }) => {
+    const query = new URLSearchParams();
+    if (params?.startDate) query.set("startDate", params.startDate);
+    if (params?.endDate) query.set("endDate", params.endDate);
+    if (params?.faculty) query.set("faculty", params.faculty);
+    if (params?.major) query.set("major", params.major);
+    if (params?.search) query.set("search", params.search);
+    const qs = query.toString();
+    return apiFetchBlob(`/api/export/guests${qs ? `?${qs}` : ""}`, "guests_export.csv");
+  },
+
+  downloadLoans: (params?: { status?: string; startDate?: string; endDate?: string; faculty?: string; search?: string }) => {
+    const query = new URLSearchParams();
+    if (params?.status && params.status !== "all") query.set("status", params.status);
+    if (params?.startDate) query.set("startDate", params.startDate);
+    if (params?.endDate) query.set("endDate", params.endDate);
+    if (params?.faculty) query.set("faculty", params.faculty);
+    if (params?.search) query.set("search", params.search);
+    const qs = query.toString();
+    return apiFetchBlob(`/api/export/loans${qs ? `?${qs}` : ""}`, "loans_export.csv");
+  },
+
+  downloadUsers: (params?: { role?: string; faculty?: string; banned?: boolean; search?: string }) => {
+    const query = new URLSearchParams();
+    if (params?.role && params.role !== "all") query.set("role", params.role);
+    if (params?.faculty) query.set("faculty", params.faculty);
+    if (params?.banned !== undefined) query.set("banned", String(params.banned));
+    if (params?.search) query.set("search", params.search);
+    const qs = query.toString();
+    return apiFetchBlob(`/api/export/users${qs ? `?${qs}` : ""}`, "users_export.csv");
+  },
+};
+
+// ==========================================
+// Guest / Presensi Kiosk API
+// ==========================================
+
+export interface GuestScanResponse {
+  id: string;
+  memberId: string;
+  name: string;
+  email?: string | null;
+  prodi: string;
+  faculty: string;
+  timestamp: string;
+  cardNumber?: string;
+  nim?: string;
+  alreadyCheckedIn: boolean;
+}
+
+export interface NonMemberGuestPayload {
+  fullName: string;
+  institution: string;
+  purpose: string;
+  phone: string;
+  studyProgramId?: number | null;
+  facultyId?: number | null;
+}
+
+export const guestApi = {
+  scan: (memberIdentifier: string) =>
+    apiFetch<GuestScanResponse>("/api/guests/scan", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ memberIdentifier }),
+    }),
+
+  createNonMember: (data: NonMemberGuestPayload) =>
+    apiFetch<any>("/api/guests/non-member", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    }),
+
+  list: (params?: {
+    page?: number;
+    limit?: number;
+    studyProgramId?: number;
+    facultyId?: number;
+    type?: string;
+    search?: string;
+  }) => {
+    const query = new URLSearchParams();
+    if (params?.page) query.set("page", String(params.page));
+    if (params?.limit) query.set("limit", String(params.limit));
+    if (params?.studyProgramId) query.set("studyProgramId", String(params.studyProgramId));
+    if (params?.facultyId) query.set("facultyId", String(params.facultyId));
+    if (params?.type) query.set("type", params.type);
+    if (params?.search) query.set("search", params.search);
+    const qs = query.toString();
+    return apiFetch<any[]>(`/api/guests${qs ? `?${qs}` : ""}`);
+  },
 };

@@ -20,6 +20,7 @@ export interface Loan {
   approvedBy?: string;
   createdAt?: string;
   updatedAt?: string;
+  verificationExpiresAt?: string;
   notes?: string;
   rejectReason?: string;
   fine?: number;
@@ -238,6 +239,19 @@ class LoanService {
     const result = await response.json();
     if (!result.success)
       throw new Error(result.message || "Gagal menolak perpanjangan");
+    return result;
+  }
+
+  // POST /api/loans/{loanId}/cancel - Cancel pending booking (Member)
+  async cancelLoan(loanId: string): Promise<{ success: boolean; message: string; data?: unknown }> {
+    const response = await fetch(`${this.baseUrl}/api/loans/${loanId}/cancel`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include"
+    });
+    const result = await response.json();
+    if (!result.success)
+      throw new Error(result.message || "Gagal membatalkan peminjaman");
     return result;
   }
 }

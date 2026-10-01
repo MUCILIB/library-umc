@@ -526,14 +526,26 @@ export const webTraffic = pgTable("web_traffic", {
 
 export const guestLogs = pgTable("guest_logs", {
   id: uuid("id").primaryKey().defaultRandom(),
+  memberId: uuid("member_id").references(() => members.id),
   email: varchar("email", { length: 255 }),
   name: varchar("name", { length: 255 }).notNull(),
   identifier: varchar("identifier", { length: 100 }).notNull(),
   faculty: varchar("faculty", { length: 255 }),
   major: varchar("major", { length: 255 }),
+  institution: varchar("institution", { length: 255 }),
+  purpose: text("purpose"),
+  phone: varchar("phone", { length: 100 }),
+  studyProgramId: integer("study_program_id").references(() => studyPrograms.id),
+  facultyId: integer("faculty_id").references(() => faculties.id),
+  type: varchar("type", { length: 50 }).default("member"),
   visitDate: timestamp("visit_date").defaultNow(),
   deletedAt: timestamp("deleted_at")
-});
+}, (table) => ({
+  studyProgramIdx: index("guest_log_sp_idx").on(table.studyProgramId),
+  facultyIdx: index("guest_log_faculty_idx").on(table.facultyId),
+  typeIdx: index("guest_log_type_idx").on(table.type),
+  memberIdx: index("guest_log_member_idx").on(table.memberId)
+}));
 
 // ==========================================
 // 9. IMPORT STAGING
@@ -629,7 +641,8 @@ export const userRelations = relations(Users, ({ one }) => ({
 
 export const memberRelations = relations(members, ({ one, many }) => ({
   user: one(Users, { fields: [members.userId], references: [Users.id] }),
-  loans: many(loans)
+  loans: many(loans),
+  guestLogs: many(guestLogs)
 }));
 
 export const bibliographyRelations = relations(bibliographies, ({ one, many }) => ({
@@ -703,12 +716,20 @@ export const importErrorRelations = relations(importErrors, ({ one }) => ({
 
 export const facultyRelations = relations(faculties, ({ many }) => ({
   studyPrograms: many(studyPrograms),
-  bibliographyFaculties: many(bibliographyFaculties)
+  bibliographyFaculties: many(bibliographyFaculties),
+  guestLogs: many(guestLogs)
 }));
 
 export const studyProgramRelations = relations(studyPrograms, ({ one, many }) => ({
   faculty: one(faculties, { fields: [studyPrograms.facultyId], references: [faculties.id] }),
-  bibliographyStudyPrograms: many(bibliographyStudyPrograms)
+  bibliographyStudyPrograms: many(bibliographyStudyPrograms),
+  guestLogs: many(guestLogs)
+}));
+
+export const guestLogRelations = relations(guestLogs, ({ one }) => ({
+  member: one(members, { fields: [guestLogs.memberId], references: [members.id] }),
+  faculty: one(faculties, { fields: [guestLogs.facultyId], references: [faculties.id] }),
+  studyProgram: one(studyPrograms, { fields: [guestLogs.studyProgramId], references: [studyPrograms.id] })
 }));
 
 export const bibliographyFacultyRelations = relations(bibliographyFaculties, ({ one }) => ({

@@ -94,9 +94,9 @@ export class LoanService {
       throw new Error("Buku ini sedang tidak tersedia untuk dipinjam");
     }
 
-    // Generate token & expire (2 jam) untuk verifikasi di tempat
+    // Generate token & expire (20 menit) untuk verifikasi di tempat
     const token = crypto.randomBytes(16).toString("hex");
-    const expiresAt = new Date(Date.now() + 2 * 60 * 60 * 1000); // 2 jam
+    const expiresAt = new Date(Date.now() + 20 * 60 * 1000); // 20 menit
 
     const finalLoanDate = reqLoanDate || new Date().toISOString().split("T")[0];
     const finalDueDate =
@@ -275,6 +275,78 @@ export class LoanService {
     return {
       message: "Peminjaman berhasil ditolak"
     };
+  }
+
+  /**
+   * Member membatalkan pemesanan/peminjaman (hanya jika status pending)
+   */
+  async cancelLoan(loanId: string, memberId: string, userRole?: string) {
+    return await db.transaction(async (tx) => {
+      const loanData = await tx.query.loans.findFirst({
+        where: and(eq(loans.id, loanId), isNull(loans.deletedAt)),
+        with: {
+          member: { with: { user: true } },
+          item: { with: { bibliography: true } }
+        }
+      });
+
+      if (!loanData) {
+        throw new Error("Peminjaman tidak ditemukan");
+      }
+
+      const isOwner = loanData.memberId === memberId;
+      const isAdmin = userRole === "super_admin" || userRole === "staff";
+      if (!isOwner && !isAdmin) {
+        throw new Error("Akses ditolak: Anda tidak memiliki hak untuk membatalkan peminjaman ini");
+      }
+
+      if (loanData.status !== "pending") {
+        throw new Error("Hanya pemesanan dengan status pending yang dapat dibatalkan");
+      }
+
+      const [updatedLoan] = await tx
+        .update(loans)
+        .set({
+          status: "rejected",
+          verificationToken: null,
+          updatedAt: new Date()
+        })
+        .where(and(eq(loans.id, loanId), isNull(loans.deletedAt)))
+        .returning();
+
+      await tx
+        .update(items)
+        .set({ status: "available", updatedAt: new Date() })
+        .where(eq(items.id, loanData.itemId));
+
+      if (loanData.item?.bibliographyId) {
+        await syncCollectionAvailableStock(tx, loanData.item.bibliographyId);
+      }
+
+      // Auto-fulfill reservasi berikutnya jika ada
+      if (loanData.item?.bibliographyId) {
+        void reservationService.fulfillNextReservation(loanData.item.bibliographyId);
+      }
+
+      // Kirim notifikasi email pembatalan jika user memiliki email
+      const userEmail = loanData.member?.user?.email;
+      const userName = loanData.member?.user?.name || "Anggota Perpustakaan";
+      const bookTitle = loanData.item?.bibliography?.title || "Buku Perpustakaan";
+      if (userEmail) {
+        try {
+          await notificationService.sendBookingCanceledNotification(
+            userEmail,
+            userName,
+            bookTitle,
+            "Pemesanan dibatalkan oleh pengguna."
+          );
+        } catch (mailError) {
+          console.error("[LoanService] Gagal kirim email cancel booking:", mailError);
+        }
+      }
+
+      return updatedLoan;
+    });
   }
 
   /**

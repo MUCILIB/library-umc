@@ -1,11 +1,21 @@
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi, beforeEach } from "vitest";
 
 // Mock the database
+const queryMock = {
+  from: vi.fn().mockReturnThis(),
+  innerJoin: vi.fn().mockReturnThis(),
+  where: vi.fn().mockResolvedValue([]),
+};
+
 vi.mock("../../../db", () => ({
   db: {
+    select: vi.fn(() => queryMock),
+    selectDistinct: vi.fn(() => queryMock),
     query: {
       bibliographies: { findMany: vi.fn() },
       items: { findMany: vi.fn() },
+      loans: { findMany: vi.fn() },
+      Users: { findMany: vi.fn() },
     },
   },
 }));
@@ -15,6 +25,8 @@ vi.mock("../../../db/schema", () => ({
   items: Symbol("items"),
   bibliographyAuthors: Symbol("bibliographyAuthors"),
   bibliographySubjects: Symbol("bibliographySubjects"),
+  bibliographyFaculties: Symbol("bibliographyFaculties"),
+  bibliographyStudyPrograms: Symbol("bibliographyStudyPrograms"),
   authors: Symbol("authors"),
   subjects: Symbol("subjects"),
   publishers: Symbol("publishers"),
@@ -24,8 +36,15 @@ vi.mock("../../../db/schema", () => ({
   locations: Symbol("locations"),
   vendors: Symbol("vendors"),
   collectionTypes: Symbol("collectionTypes"),
+  faculties: Symbol("faculties"),
+  studyPrograms: Symbol("studyPrograms"),
+  guestLogs: Symbol("guestLogs"),
+  loans: Symbol("loans"),
+  Users: Symbol("Users"),
+  members: Symbol("members"),
 }));
 
+import { db } from "../../../db";
 import { ExportService } from "../service/export.service";
 
 describe("Export Service", () => {
@@ -33,6 +52,9 @@ describe("Export Service", () => {
 
   beforeEach(() => {
     vi.resetAllMocks();
+    queryMock.from.mockReturnThis();
+    queryMock.innerJoin.mockReturnThis();
+    queryMock.where.mockResolvedValue([]);
     exportService = new ExportService();
   });
 
@@ -44,8 +66,6 @@ describe("Export Service", () => {
         "language_name", "place_name", "classification", "notes", "image",
         "sor", "authors", "topics", "item_code"
       ];
-      // Verify by parsing the first line of export output
-      // This is a structural test - actual data tests require DB
       expect(expectedHeaders.length).toBe(18);
     });
   });
@@ -62,10 +82,54 @@ describe("Export Service", () => {
     });
   });
 
+  describe("Faculty and Study Program Filters", () => {
+    it("should return empty bibliography CSV with headers when no matches for facultyId", async () => {
+      queryMock.where.mockResolvedValueOnce([]); // no bibs for faculty
+      const csv = await exportService.exportBibliographies({ facultyId: 99 });
+
+      expect(csv.startsWith("\uFEFF")).toBe(true);
+      const lines = csv.replace("\uFEFF", "").trim().split("\n");
+      expect(lines.length).toBe(1);
+      expect(lines[0]).toContain("faculty_name");
+      expect(db.query.bibliographies.findMany).not.toHaveBeenCalled();
+    });
+
+    it("should query bibliographies by facultyId when matches exist", async () => {
+      queryMock.where
+        .mockResolvedValueOnce([{ bibId: "b-1" }]) // faculty join
+        .mockResolvedValueOnce([{ id: "b-1" }]); // bibliographies select
+      (db.query.bibliographies.findMany as ReturnType<typeof vi.fn>).mockResolvedValueOnce([
+        {
+          title: "Buku Teknik",
+          bibliographyAuthors: [],
+          bibliographySubjects: [],
+          bibliographyFaculties: [{ faculty: { name: "Teknik" } }],
+          bibliographyStudyPrograms: [{ studyProgram: { name: "Informatika" } }],
+          items: [],
+        },
+      ]);
+
+      const csv = await exportService.exportBibliographies({ facultyId: 1 });
+      expect(csv).toContain("Buku Teknik");
+      expect(csv).toContain("Teknik");
+      expect(csv).toContain("Informatika");
+      expect(db.query.bibliographies.findMany).toHaveBeenCalled();
+    });
+
+    it("should return empty item CSV with headers when no matches for facultyId", async () => {
+      queryMock.where.mockResolvedValueOnce([]); // no bibs for faculty
+      const csv = await exportService.exportItems({ facultyId: 99 });
+
+      expect(csv.startsWith("\uFEFF")).toBe(true);
+      const lines = csv.replace("\uFEFF", "").trim().split("\n");
+      expect(lines.length).toBe(1);
+      expect(lines[0]).toContain("item_code");
+      expect(db.query.items.findMany).not.toHaveBeenCalled();
+    });
+  });
+
   describe("CSV Security", () => {
     it("should escape fields containing semicolons", () => {
-      // Test the escapeCsvField function indirectly through export
-      // A field like "Title; Part 2" should be quoted
       const testValue = "Title; Part 2";
       expect(testValue.includes(";")).toBe(true);
     });
@@ -76,7 +140,6 @@ describe("Export Service", () => {
     });
 
     it("should handle formula injection prevention", () => {
-      // Values starting with =, +, -, @ should be handled
       const dangerousValues = ["=CMD()", "+CMD()", "-CMD()", "@SUM(A1)"];
       for (const v of dangerousValues) {
         expect(["=", "+", "-", "@"]).toContain(v[0]);
@@ -118,6 +181,87 @@ describe("Export Service", () => {
       const codes = ["ITEM001", "ITEM002"];
       const serialized = codes.map(c => `<${c}>`).join("");
       expect(serialized).toBe("<ITEM001><ITEM002>");
+    });
+  });
+
+  describe("Universal Exports (Guests, Loans, Users)", () => {
+    it("should export guests with UTF-8 BOM and correct headers", async () => {
+      (queryMock.where as any).mockReturnValueOnce({
+        orderBy: vi.fn().mockResolvedValueOnce([
+          {
+            name: "John Doe",
+            identifier: "2021001",
+            email: "john@example.com",
+            faculty: "Teknik",
+            major: "Informatika",
+            visitDate: new Date("2025-01-15T08:00:00.000Z"),
+          }
+        ])
+      });
+
+      const csv = await exportService.exportGuests();
+      expect(csv.startsWith("\uFEFF")).toBe(true);
+      const lines = csv.replace("\uFEFF", "").trim().split("\n");
+      expect(lines[0]).toBe("name;identifier;email;faculty;major;visit_date");
+      expect(lines[1]).toContain("John Doe");
+      expect(lines[1]).toContain("2021001");
+    });
+
+    it("should export loans with correct headers and data", async () => {
+      (db.query.loans.findMany as ReturnType<typeof vi.fn>).mockResolvedValueOnce([
+        {
+          id: "loan-1",
+          member: {
+            faculty: "Teknik",
+            nimNidn: "2021001",
+            user: { name: "Budi", email: "budi@example.com" }
+          },
+          item: {
+            itemCode: "ITEM-01",
+            bibliography: { title: "Algoritma" }
+          },
+          loanDate: "2025-01-10",
+          dueDate: "2025-01-17",
+          returnDate: null,
+          status: "approved",
+          extendCount: 0
+        }
+      ]);
+
+      const csv = await exportService.exportLoans();
+      expect(csv.startsWith("\uFEFF")).toBe(true);
+      const lines = csv.replace("\uFEFF", "").trim().split("\n");
+      expect(lines[0]).toBe("loan_id;borrower_name;borrower_email;identifier;faculty;item_code;title;loan_date;due_date;return_date;status;extend_count");
+      expect(lines[1]).toContain("loan-1");
+      expect(lines[1]).toContain("Budi");
+      expect(lines[1]).toContain("ITEM-01");
+    });
+
+    it("should export users with correct headers and data", async () => {
+      (db.query.Users.findMany as ReturnType<typeof vi.fn>).mockResolvedValueOnce([
+        {
+          id: "u-1",
+          name: "Siti",
+          email: "siti@example.com",
+          role: "student",
+          banned: false,
+          createdAt: new Date("2025-01-01T00:00:00.000Z"),
+          member: {
+            nimNidn: "2021002",
+            faculty: "Ekonomi",
+            phone: "08123456789",
+            cardStatus: "active"
+          }
+        }
+      ]);
+
+      const csv = await exportService.exportUsers();
+      expect(csv.startsWith("\uFEFF")).toBe(true);
+      const lines = csv.replace("\uFEFF", "").trim().split("\n");
+      expect(lines[0]).toBe("id;name;email;role;identifier;faculty;phone;card_status;banned;created_at");
+      expect(lines[1]).toContain("u-1");
+      expect(lines[1]).toContain("Siti");
+      expect(lines[1]).toContain("Ekonomi");
     });
   });
 });

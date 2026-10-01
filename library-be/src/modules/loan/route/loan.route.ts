@@ -148,6 +148,37 @@ router.post(
 
 /**
  * @swagger
+ * /loans/{id}/cancel:
+ *   post:
+ *     summary: Cancel pending loan booking
+ *     description: Member cancels their own pending loan booking.
+ *     tags: [Loans]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Loan ID
+ *     responses:
+ *       200:
+ *         description: Loan canceled successfully
+ *       400:
+ *         description: Cannot cancel loan
+ *       401:
+ *         description: Unauthorized
+ */
+router.post(
+  "/loans/:id/cancel",
+  publicApiLimiter,
+  isAuthenticated,
+  loanController.cancelLoan,
+);
+
+/**
+ * @swagger
  * /loans/{loanId}/return:
  *   post:
  *     summary: Return a book
