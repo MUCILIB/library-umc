@@ -36,6 +36,8 @@ const AppRoutes = () => {
         <Route path="/e-resource" element={<NonAdminRoute><Eresource /></NonAdminRoute>} />
         <Route path="/tentang" element={<NonAdminRoute><TentangPage /></NonAdminRoute>} />
         <Route path="/absensi" element={<NonAdminRoute><AbsensiPage /></NonAdminRoute>} />
+        <Route path="/input-kunjungan" element={<NonAdminRoute><AbsensiPage /></NonAdminRoute>} />
+        <Route path="/buku-tamu" element={<NonAdminRoute><AbsensiPage /></NonAdminRoute>} />
         
         <Route 
           path="/my-loans" 

@@ -14,7 +14,8 @@ import {
   Upload,
   AlertCircle,
   CheckCircle,
-  Loader2
+  Loader2,
+  ExternalLink
 } from "lucide-react";
 import { dashboardDataService } from "@/services/dashboard/dashboardDataService";
 import { useToast } from "@/hooks/useToast";
@@ -295,8 +296,19 @@ export default function GuestsSection({
             className="bg-primary hover:bg-primary/90 text-white px-5 py-3 rounded-full text-sm font-bold flex items-center justify-center gap-2 shadow-lg shadow-primary/20 transition-all"
           >
             <Plus size={16} strokeWidth={2.5} />
-            Input Pengunjung (Nama & Prodi)
+            Input Pengunjung
           </button>
+
+          <a
+            href="/input-kunjungan"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="bg-card hover:bg-muted text-foreground border border-border px-5 py-3 rounded-full text-sm font-bold flex items-center justify-center gap-2 shadow-sm transition-all"
+            title="Buka halaman Kiosk Presensi Mandiri di tab baru"
+          >
+            <ExternalLink size={16} strokeWidth={2.5} />
+            Buka Halaman Presensi (/input-kunjungan)
+          </a>
 
           <button
             onClick={() => setIsImportModalOpen(true)}
