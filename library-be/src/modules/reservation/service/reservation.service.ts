@@ -146,14 +146,35 @@ class ReservationService {
           eq(reservations.memberId, memberId),
           isNull(reservations.deletedAt),
         ),
-        with: { bibliography: true },
+        with: {
+          bibliography: {
+            with: {
+              bibliographyAuthors: {
+                with: { author: true }
+              }
+            }
+          }
+        },
         orderBy: [desc(reservations.createdAt)],
+      });
+
+      const mappedData = result.map((res: any) => {
+        if (res.bibliography) {
+          const authorNames = Array.isArray(res.bibliography.bibliographyAuthors)
+            ? res.bibliography.bibliographyAuthors.map((ba: any) => ba.author?.name).filter(Boolean).join(", ")
+            : "";
+          res.bibliography.author = authorNames || res.bibliography.author || res.bibliography.sor || "Penulis tidak tersedia";
+          res.bibliography.authors = Array.isArray(res.bibliography.bibliographyAuthors)
+            ? res.bibliography.bibliographyAuthors.map((ba: any) => ba.author).filter(Boolean)
+            : [];
+        }
+        return res;
       });
 
       return {
         success: true,
         message: "Berhasil mengambil riwayat reservasi.",
-        data: result,
+        data: mappedData,
       };
     } catch (error) {
       console.error("ReservationService.getMemberReservations Error:", error);

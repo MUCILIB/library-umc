@@ -26,6 +26,11 @@ export const formatDateID = (dateStr: string): string => {
   });
 };
 
+export const cleanIsbn = (isbn?: string | null): string => {
+  if (!isbn) return "";
+  return isbn.replace(/^ISBN[:\s]*/i, "").trim();
+};
+
 
 export function generateColorFromSeed(seed: string): string {
   const colors = [

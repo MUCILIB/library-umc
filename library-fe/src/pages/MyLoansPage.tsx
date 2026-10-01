@@ -15,6 +15,7 @@ import {
   Filter,
   CalendarDays,
   RotateCcw,
+  Barcode,
 } from "lucide-react";
 import loanService, { type Loan } from "@/services/loanService";
 import { authClient } from "@/utils/auth-client";
@@ -147,21 +148,23 @@ interface LoanCardProps {
   onExpire?: () => void;
 }
 
-function LoanCard({
-  loan,
-  status,
-  isExtending,
-  isReturning,
-  isCanceling,
-  onExtend,
-  onReturn,
-  onCancel,
-  onViewDetail,
-  onExpire,
-}: LoanCardProps) {
-  const title = loan.item?.bibliography?.title ?? loan.bibliographyTitle ?? "Judul tidak tersedia";
-  const author = loan.item?.bibliography?.author ?? loan.bibliographyAuthor ?? "Penulis tidak tersedia";
-  const image = loan.item?.bibliography?.image;
+function LoanCard({ loan, status, isExtending, isReturning, onExtend, onReturn, onViewDetail }: LoanCardProps) {
+  const bib = loan.item?.bibliography;
+  const title = bib?.title ?? loan.bibliographyTitle ?? "Judul tidak tersedia";
+  const author =
+    (Array.isArray(bib?.authors) && bib.authors.length > 0
+      ? bib.authors.map((a: any) => typeof a === "string" ? a : a.name).filter(Boolean).join(", ")
+      : undefined) ||
+    (Array.isArray(bib?.bibliographyAuthors) && bib.bibliographyAuthors.length > 0
+      ? bib.bibliographyAuthors.map((ba: any) => ba.author?.name || ba.name).filter(Boolean).join(", ")
+      : undefined) ||
+    bib?.author ||
+    bib?.sor ||
+    loan.bibliographyAuthor ||
+    "Penulis tidak tersedia";
+
+  const itemCode = (loan.item as any)?.itemCode || (loan.item as any)?.barcode || (loan.item as any)?.uniqueCode || (loan as any).itemCode || "-";
+  const image = bib?.image;
   const lateDays = calcLateDays(loan.dueDate);
 
   return (
@@ -183,8 +186,14 @@ function LoanCard({
           <h3 className="font-bold text-slate-900 leading-snug mb-1 line-clamp-2 text-sm">
             {title}
           </h3>
-          <p className="text-[11px] text-slate-400 font-medium mb-3 truncate">{author}</p>
-          <StatusBadge status={status} />
+          <p className="text-[11px] text-slate-500 font-medium mb-1.5 truncate">{author}</p>
+          <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-[10px] font-mono font-bold text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 mb-2">
+            <Barcode size={12} className="text-slate-400" />
+            <span>Kode: {itemCode}</span>
+          </div>
+          <div>
+            <StatusBadge status={status} />
+          </div>
         </div>
       </div>
 
@@ -321,20 +330,22 @@ interface DetailModalProps {
   onExpire?: () => void;
 }
 
-function DetailModal({
-  loan,
-  status,
-  isExtending,
-  isReturning,
-  isCanceling,
-  onExtend,
-  onReturn,
-  onCancel,
-  onClose,
-  onExpire,
-}: DetailModalProps) {
-  const title = loan.item?.bibliography?.title ?? loan.bibliographyTitle ?? "Judul tidak tersedia";
-  const author = loan.item?.bibliography?.author ?? loan.bibliographyAuthor ?? "Penulis tidak tersedia";
+function DetailModal({ loan, status, isExtending, isReturning, onExtend, onReturn, onClose }: DetailModalProps) {
+  const bib = loan.item?.bibliography;
+  const title = bib?.title ?? loan.bibliographyTitle ?? "Judul tidak tersedia";
+  const author =
+    (Array.isArray(bib?.authors) && bib.authors.length > 0
+      ? bib.authors.map((a: any) => typeof a === "string" ? a : a.name).filter(Boolean).join(", ")
+      : undefined) ||
+    (Array.isArray(bib?.bibliographyAuthors) && bib.bibliographyAuthors.length > 0
+      ? bib.bibliographyAuthors.map((ba: any) => ba.author?.name || ba.name).filter(Boolean).join(", ")
+      : undefined) ||
+    bib?.author ||
+    bib?.sor ||
+    loan.bibliographyAuthor ||
+    "Penulis tidak tersedia";
+
+  const itemCode = (loan.item as any)?.itemCode || (loan.item as any)?.barcode || (loan.item as any)?.uniqueCode || (loan as any).itemCode || "-";
   const lateDays = calcLateDays(loan.dueDate);
 
   return (
@@ -364,6 +375,18 @@ function DetailModal({
                 <h3 className="font-bold text-slate-900 mb-1">{title}</h3>
                 <p className="text-sm text-slate-500 mb-2">{author}</p>
                 <StatusBadge status={status} />
+              </div>
+            </div>
+
+            {/* Info Kode Buku & Call Number */}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="p-3 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-100 dark:border-slate-700">
+                <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">Kode Buku / Item</p>
+                <p className="font-mono font-bold text-slate-900 dark:text-slate-100 text-sm">{itemCode}</p>
+              </div>
+              <div className="p-3 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-100 dark:border-slate-700">
+                <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">Call Number / Rak</p>
+                <p className="font-mono font-bold text-slate-900 dark:text-slate-100 text-sm">{bib?.callNumber || (loan.item?.location as any)?.rack || "-"}</p>
               </div>
             </div>
 
@@ -417,25 +440,16 @@ function DetailModal({
               </div>
             )}
 
-            {/* QR Code & Countdown */}
-            {status === "pending" && (
-              <div className="p-4 bg-amber-50/70 border border-amber-200 rounded-2xl flex flex-col items-center gap-3">
-                <div className="text-center">
-                  <p className="text-xs font-bold text-amber-900">Batas Waktu Pengambilan: 20 Menit</p>
-                  <p className="text-[11px] text-slate-500">Tunjukkan QR Code ini ke petugas loket sebelum waktu habis</p>
+            {/* QR Code */}
+            {loan.qrCodeUrl && (
+              <div className="p-4 bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700 rounded-2xl flex flex-col items-center text-center">
+                <p className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase mb-2">Kode QR Peminjaman (Tunjukkan ke Petugas)</p>
+                <div className="bg-white p-3 rounded-2xl border border-slate-200 shadow-xs">
+                  <img src={loan.qrCodeUrl} alt="QR Code Peminjaman" className="w-44 h-44 object-contain" />
                 </div>
-
-                <BookingCountdownTimer
-                  createdAt={loan.createdAt}
-                  expiresAt={loan.verificationExpiresAt}
-                  onExpire={onExpire}
-                />
-
-                {loan.qrCodeUrl && (
-                  <div className="bg-white p-3 rounded-xl border border-slate-200 shadow-xs">
-                    <img src={loan.qrCodeUrl} alt="QR Code Peminjaman" className="w-48 h-48 object-contain" />
-                  </div>
-                )}
+                <p className="text-xs font-mono font-bold text-primary bg-primary/10 px-3 py-1 rounded-full mt-2">
+                  {itemCode}
+                </p>
               </div>
             )}
           </div>

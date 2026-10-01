@@ -12,6 +12,12 @@ function normalizeName(name: string): string {
   return name.trim().toLowerCase().replace(/\s+/g, " ");
 }
 
+function cleanIsbn(val?: string | null): string | null {
+  if (!val) return null;
+  const cleaned = val.trim().replace(/^ISBN[:\s]*/i, "").trim();
+  return cleaned || null;
+}
+
 export class BibliographyService {
 
   private async resolveOrCreateAuthor(tx: any, authorName: string): Promise<number> {
@@ -101,7 +107,7 @@ export class BibliographyService {
         description: data.description || null,
         image: data.image || null,
         type: data.type || null,
-        isbnIssn: data.isbnIssn || null,
+        isbnIssn: cleanIsbn(data.isbnIssn),
         edition: data.edition || null,
         publishYear: data.publishYear || null,
         collation: data.collation || null,
@@ -150,6 +156,9 @@ export class BibliographyService {
         if (data[key as keyof UpdateBibliographyData] !== undefined) {
           updateData[key] = data[key as keyof UpdateBibliographyData];
         }
+      }
+      if (updateData.isbnIssn !== undefined) {
+        updateData.isbnIssn = cleanIsbn(updateData.isbnIssn);
       }
       if (publisherId !== undefined) {
         updateData.publisherId = publisherId;

@@ -12,6 +12,7 @@ import fineService from "@/services/fineService";
 import RiwayatPeminjaman from "@/components/RiwayatPeminjaman";
 import FinesList from "@/components/FinesList";
 import MemberCard from "@/components/MemberCard";
+import SavedBooksTab from "@/components/SavedBooksTab";
 import { useToast } from "@/hooks/useToast";
 import { API_BASE_URL } from "@/utils/api-config";
 import { Settings, Mail, BookMarked, Send, Loader2, Info } from "lucide-react";
@@ -27,6 +28,7 @@ const Profile = () => {
   const [cardActionLoading, setCardActionLoading] = useState(false);
   const [activeLoanCount, setActiveLoanCount] = useState(0);
   const [unpaidFineCount, setUnpaidFineCount] = useState(0);
+  const [savedCount, setSavedCount] = useState(0);
   const { success, error } = useToast();
   const currentUserId = session?.user?.id;
 
@@ -88,6 +90,18 @@ const Profile = () => {
       navigate("/login");
     }
   }, [session, sessionLoading, navigate]);
+
+  useEffect(() => {
+    const updateCount = () => {
+      const savedIds = JSON.parse(localStorage.getItem("umc_library_bookmarks") || "[]");
+      setSavedCount(savedIds.length);
+    };
+    updateCount();
+    window.addEventListener("storage", updateCount);
+    return () => {
+      window.removeEventListener("storage", updateCount);
+    };
+  }, []);
 
   useEffect(() => {
     const fetchProfileCounters = async () => {
@@ -249,6 +263,11 @@ const Profile = () => {
       label: "Tagihan & Denda",
       count: unpaidFineCount > 0 ? unpaidFineCount : null
     },
+    {
+      id: "buku-disimpan",
+      label: "Buku Disimpan",
+      count: savedCount > 0 ? savedCount : null
+    },
     { id: "kartu-member", label: "Kartu Member", count: null },
     ...(isLecturerOnly
       ? [{ id: "usulan-koleksi", label: "Usulan Koleksi", count: null }]
@@ -350,6 +369,7 @@ const Profile = () => {
             <RiwayatPeminjaman type="history" view="table" />
           )}
           {activeTab === "tagihan-denda" && <FinesList />}
+          {activeTab === "buku-disimpan" && <SavedBooksTab />}
           {activeTab === "kartu-member" && (
             <div className="flex justify-center">
               <MemberCard
