@@ -26,7 +26,7 @@ import {
 } from "lucide-react";
 import { API_BASE_URL } from "@/utils/api-config";
 import { cleanIsbn } from "@/utils/format";
-import { bibliographyApi, type Bibliography, type BibliographyListResponse, type Location, type Item, locationApi, itemApi } from "@/api/client";
+import { bibliographyApi, type Bibliography, type BibliographyListResponse, type Location, type Item, locationApi, itemApi, facultyApi, type Faculty, exportApi } from "@/api/client";
 
 interface BibliographySectionProps {
   searchTerm: string;

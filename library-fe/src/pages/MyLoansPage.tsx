@@ -148,7 +148,7 @@ interface LoanCardProps {
   onExpire?: () => void;
 }
 
-function LoanCard({ loan, status, isExtending, isReturning, onExtend, onReturn, onViewDetail }: LoanCardProps) {
+function LoanCard({ loan, status, isExtending, isReturning, isCanceling, onExtend, onReturn, onCancel, onViewDetail, onExpire }: LoanCardProps) {
   const bib = loan.item?.bibliography;
   const title = bib?.title ?? loan.bibliographyTitle ?? "Judul tidak tersedia";
   const author =
@@ -330,7 +330,8 @@ interface DetailModalProps {
   onExpire?: () => void;
 }
 
-function DetailModal({ loan, status, isExtending, isReturning, onExtend, onReturn, onClose }: DetailModalProps) {
+function DetailModal({ loan, status, isExtending, isReturning, isCanceling, onExtend, onReturn, onCancel, onClose, onExpire }: DetailModalProps) {
+  void onExpire;
   const bib = loan.item?.bibliography;
   const title = bib?.title ?? loan.bibliographyTitle ?? "Judul tidak tersedia";
   const author =
