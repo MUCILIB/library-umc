@@ -635,8 +635,13 @@ export const importBibliographyItemCodes = pgTable("import_bibliography_item_cod
 // 10. RELATIONS
 // ==========================================
 
-export const userRelations = relations(Users, ({ one }) => ({
-  member: one(members)
+export const userRelations = relations(Users, ({ one, many }) => ({
+  member: one(members),
+  recommendations: many(recommendations)
+}));
+
+export const recommendationsRelations = relations(recommendations, ({ one }) => ({
+  dosen: one(Users, { fields: [recommendations.dosenId], references: [Users.id] })
 }));
 
 export const memberRelations = relations(members, ({ one, many }) => ({
