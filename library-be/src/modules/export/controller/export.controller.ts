@@ -42,6 +42,53 @@ export class ExportController {
       res.send(csv);
     } catch (error) { next(error); }
   }
+
+  async exportGuests(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { startDate, endDate, dateFrom, dateTo, faculty, major, studyProgram, search } = req.query as Record<string, string>;
+      const csv = await exportService.exportGuests({
+        startDate: startDate || dateFrom,
+        endDate: endDate || dateTo,
+        faculty,
+        major: major || studyProgram,
+        search,
+      });
+      res.setHeader("Content-Type", "text/csv; charset=utf-8");
+      res.setHeader("Content-Disposition", 'attachment; filename="guests_export.csv"');
+      res.send(csv);
+    } catch (error) { next(error); }
+  }
+
+  async exportLoans(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { status, startDate, endDate, loanDateFrom, loanDateTo, faculty, search } = req.query as Record<string, string>;
+      const csv = await exportService.exportLoans({
+        status,
+        startDate: startDate || loanDateFrom,
+        endDate: endDate || loanDateTo,
+        faculty,
+        search,
+      });
+      res.setHeader("Content-Type", "text/csv; charset=utf-8");
+      res.setHeader("Content-Disposition", 'attachment; filename="loans_export.csv"');
+      res.send(csv);
+    } catch (error) { next(error); }
+  }
+
+  async exportUsers(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { role, faculty, banned, search } = req.query as Record<string, string>;
+      const csv = await exportService.exportUsers({
+        role,
+        faculty,
+        banned: banned === "true" ? true : banned === "false" ? false : undefined,
+        search,
+      });
+      res.setHeader("Content-Type", "text/csv; charset=utf-8");
+      res.setHeader("Content-Disposition", 'attachment; filename="users_export.csv"');
+      res.send(csv);
+    } catch (error) { next(error); }
+  }
 }
 
 export const exportController = new ExportController();

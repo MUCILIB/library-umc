@@ -5,11 +5,14 @@ import {
   bibliographies, items, bibliographyAuthors, bibliographySubjects,
   bibliographyFaculties, bibliographyStudyPrograms,
   authors, subjects, publishers, publicationPlaces, gmds, collectionTypes,
-  languages, locations, vendors, faculties, studyPrograms
+  languages, locations, vendors, faculties, studyPrograms,
+  guestLogs, loans, Users, account, members
 } from "../../../db/schema";
 import { eq, and, isNull, sql, asc, inArray } from "drizzle-orm";
 import { syncCollectionAvailableStock } from "../../shared/utils/stock-sync";
 import crypto from "crypto";
+import { z } from "zod";
+import { hashPassword } from "better-auth/crypto";
 
 // ==========================================
 // CONSTANTS
@@ -913,6 +916,359 @@ export class ImportService {
     if (batch.status === "committed") throw new Error("Cannot cancel committed batch");
     await db.update(importBatches).set({ status: "cancelled" }).where(eq(importBatches.id, batchId));
     return { success: true };
+  }
+
+  // ==========================================
+  // UNIVERSAL TEMPLATES & IMPORTS (TICK-02)
+  // ==========================================
+
+  getTemplate(module: string): { filename: string; csv: string } | null {
+    const mod = module.toLowerCase();
+    if (mod === "guests" || mod === "visitors") {
+      const header = "name;identifier;email;faculty;major;visit_date";
+      const sample = [
+        "Budi Santoso;2021001;budi@example.com;Fakultas Teknik;Teknik Informatika;2025-01-15 08:30:00",
+        "Siti Rahma;2021002;siti@example.com;Fakultas Ekonomi;Manajemen;2025-01-15 09:00:00"
+      ].join("\n");
+      return {
+        filename: "template_guests.csv",
+        csv: "\uFEFF" + header + "\n" + sample + "\n"
+      };
+    }
+
+    if (mod === "users") {
+      const header = "name;email;password;role;identifier;faculty;phone";
+      const sample = [
+        "Ahmad Dahlan;ahmad@example.com;Password123!;student;2021003;Fakultas Agama Islam;081234567890",
+        "Dewi Sartika;dewi@example.com;Password123!;lecturer;19850101;Fakultas Keguruan;081298765432"
+      ].join("\n");
+      return {
+        filename: "template_users.csv",
+        csv: "\uFEFF" + header + "\n" + sample + "\n"
+      };
+    }
+
+    if (mod === "loans") {
+      const header = "identifier;item_code;loan_date;due_date;status";
+      const sample = [
+        "2021001;ITEM-0001;2025-01-10;2025-01-17;approved",
+        "2021002;ITEM-0002;2025-01-12;2025-01-19;returned"
+      ].join("\n");
+      return {
+        filename: "template_loans.csv",
+        csv: "\uFEFF" + header + "\n" + sample + "\n"
+      };
+    }
+
+    if (mod === "bibliographies" || mod === "bibliography") {
+      const header = "title;gmd_name;edition;isbn_issn;publisher_name;publish_year;collation;series_title;call_number;language_name;place_name;classification;notes;image;sor;authors;topics;item_code;faculty_name;study_program_name";
+      const sample = "Pemrograman Web Modern;Text;1;978-602-0000-01;Informatika Press;2024;xii, 250 hlm;Seri TI;005.13;Indonesia;Bandung;005;Buku ajar;;Andi;<Budi Santoso><Siti Rahma>;<Web><React>;<WEB001><WEB002>;Teknik;Teknik Informatika";
+      return {
+        filename: "template_bibliographies.csv",
+        csv: "\uFEFF" + header + "\n" + sample + "\n"
+      };
+    }
+
+    if (mod === "items" || mod === "item") {
+      const header = "item_code;call_number;coll_type_name;inventory_code;received_date;supplier_name;order_no;location_name;order_date;item_status_name;site;source;invoice;price;price_currency;invoice_date;input_date;last_update;title";
+      const sample = "ITEM-0001;005.13 AND p;Buku Teks;INV-2024-001;2024-01-05;Toko Buku Gramedia;ORD-01;Perpustakaan Pusat, Lantai 1, Rak A1;2024-01-01;Available;Main;Pembelian;INV-2024-01;125000;IDR;2024-01-02;2024-01-05;2024-01-05;Pemrograman Web Modern";
+      return {
+        filename: "template_items.csv",
+        csv: "\uFEFF" + header + "\n" + sample + "\n"
+      };
+    }
+
+    return null;
+  }
+
+  private parseCsvRows(content: string): { headers: string[]; rows: { rowNumber: number; data: Record<string, string> }[] } {
+    const clean = stripBom(content).trim();
+    if (!clean) return { headers: [], rows: [] };
+    const delimiter = detectDelimiter(clean);
+    const lines = clean.split(/\r?\n/).filter(line => line.trim().length > 0);
+    if (lines.length <= 1) return { headers: [], rows: [] };
+
+    const rawHeaders = parseCsvLine(lines[0], delimiter).map(h => h.trim().toLowerCase());
+    const rows: { rowNumber: number; data: Record<string, string> }[] = [];
+
+    for (let i = 1; i < lines.length; i++) {
+      const values = parseCsvLine(lines[i], delimiter);
+      const rowObj: Record<string, string> = {};
+      for (let j = 0; j < rawHeaders.length; j++) {
+        rowObj[rawHeaders[j]] = values[j]?.trim() ?? "";
+      }
+      rows.push({ rowNumber: i + 1, data: rowObj });
+    }
+
+    return { headers: rawHeaders, rows };
+  }
+
+  async importGuests(content: string) {
+    const GuestImportSchema = z.object({
+      name: z.string().min(1, "Nama wajib diisi"),
+      identifier: z.string().min(1, "NIM/NIDN/Identifier wajib diisi"),
+      email: z.string().email("Format email tidak valid").optional().or(z.literal("")),
+      faculty: z.string().optional(),
+      major: z.string().optional(),
+      visitDate: z.string().optional(),
+    });
+
+    const { rows } = this.parseCsvRows(content);
+    const errors: Array<{ row: number; errors: string[] }> = [];
+    let successCount = 0;
+
+    for (const { rowNumber, data } of rows) {
+      const rawRow = {
+        name: data["name"] || data["nama"] || "",
+        identifier: data["identifier"] || data["nim"] || data["nidn"] || data["nim_nidn"] || "",
+        email: data["email"] || "",
+        faculty: data["faculty"] || data["fakultas"] || "",
+        major: data["major"] || data["prodi"] || data["jurusan"] || data["study_program"] || "",
+        visitDate: data["visit_date"] || data["visitdate"] || data["tanggal"] || data["date"] || "",
+      };
+
+      const parsed = GuestImportSchema.safeParse(rawRow);
+      if (!parsed.success) {
+        errors.push({
+          row: rowNumber,
+          errors: parsed.error.issues.map(e => e.message),
+        });
+        continue;
+      }
+
+      try {
+        let visitDate = new Date();
+        if (parsed.data.visitDate) {
+          const d = new Date(parsed.data.visitDate);
+          if (!isNaN(d.getTime())) visitDate = d;
+        }
+
+        await db.insert(guestLogs).values({
+          name: parsed.data.name,
+          identifier: parsed.data.identifier,
+          email: parsed.data.email || null,
+          faculty: parsed.data.faculty || null,
+          major: parsed.data.major || null,
+          visitDate,
+        });
+        successCount++;
+      } catch (err: any) {
+        errors.push({
+          row: rowNumber,
+          errors: [err.message || "Gagal menyimpan data pengunjung"],
+        });
+      }
+    }
+
+    return {
+      total: rows.length,
+      successCount,
+      errorCount: errors.length,
+      errors,
+    };
+  }
+
+  async importUsers(content: string) {
+    const UserImportSchema = z.object({
+      name: z.string().min(1, "Nama wajib diisi"),
+      email: z.string().email("Format email tidak valid"),
+      password: z.string().min(6, "Password minimal 6 karakter").optional().default("Password123!"),
+      role: z.enum(["super_admin", "staff", "student", "lecturer"]).optional().default("student"),
+      identifier: z.string().optional(),
+      faculty: z.string().optional(),
+      phone: z.string().optional(),
+    });
+
+    const { rows } = this.parseCsvRows(content);
+    const errors: Array<{ row: number; errors: string[] }> = [];
+    let successCount = 0;
+
+    for (const { rowNumber, data } of rows) {
+      const rawRow = {
+        name: data["name"] || data["nama"] || "",
+        email: data["email"] || "",
+        password: data["password"] || "Password123!",
+        role: (data["role"] || "student").toLowerCase(),
+        identifier: data["identifier"] || data["nim"] || data["nidn"] || "",
+        faculty: data["faculty"] || data["fakultas"] || "",
+        phone: data["phone"] || data["no_hp"] || data["telepon"] || "",
+      };
+
+      const parsed = UserImportSchema.safeParse(rawRow);
+      if (!parsed.success) {
+        errors.push({
+          row: rowNumber,
+          errors: parsed.error.issues.map(e => e.message),
+        });
+        continue;
+      }
+
+      try {
+        const existing = await db.query.Users.findFirst({
+          where: eq(Users.email, parsed.data.email.toLowerCase()),
+        });
+        if (existing) {
+          errors.push({
+            row: rowNumber,
+            errors: [`Email '${parsed.data.email}' sudah terdaftar`],
+          });
+          continue;
+        }
+
+        const userId = crypto.randomUUID();
+        const passwordHash = await hashPassword(parsed.data.password || "Password123!");
+        const now = new Date();
+
+        await db.insert(Users).values({
+          id: userId,
+          name: parsed.data.name,
+          email: parsed.data.email.toLowerCase(),
+          emailVerified: true,
+          role: parsed.data.role,
+          passwordHash: passwordHash,
+          createdAt: now,
+          updatedAt: now,
+        });
+
+        await db.insert(account).values({
+          id: `account-${userId}-credential`,
+          accountId: parsed.data.email.toLowerCase(),
+          providerId: "credential",
+          userId: userId,
+          password: passwordHash,
+          createdAt: now,
+          updatedAt: now,
+        });
+
+        if (parsed.data.identifier || parsed.data.faculty || parsed.data.phone) {
+          const memberType = parsed.data.role === "lecturer" ? "lecturer" : parsed.data.role === "staff" ? "staff" : "student";
+          await db.insert(members).values({
+            userId,
+            memberType,
+            nimNidn: parsed.data.identifier || "-",
+            faculty: parsed.data.faculty || "-",
+            phone: parsed.data.phone || null,
+            createdAt: now,
+            updatedAt: now,
+          });
+        }
+
+        successCount++;
+      } catch (err: any) {
+        errors.push({
+          row: rowNumber,
+          errors: [err.message || "Gagal menyimpan user"],
+        });
+      }
+    }
+
+    return {
+      total: rows.length,
+      successCount,
+      errorCount: errors.length,
+      errors,
+    };
+  }
+
+  async importLoans(content: string) {
+    const LoanImportSchema = z.object({
+      identifier: z.string().min(1, "Identifier/NIM/Email peminjam wajib diisi"),
+      itemCode: z.string().min(1, "Item code wajib diisi"),
+      loanDate: z.string().min(1, "Tanggal pinjam wajib diisi"),
+      dueDate: z.string().min(1, "Batas tanggal kembali wajib diisi"),
+      status: z.enum(["pending", "approved", "returned", "extended"]).optional().default("approved"),
+    });
+
+    const { rows } = this.parseCsvRows(content);
+    const errors: Array<{ row: number; errors: string[] }> = [];
+    let successCount = 0;
+
+    for (const { rowNumber, data } of rows) {
+      const rawRow = {
+        identifier: data["identifier"] || data["nim"] || data["email"] || "",
+        itemCode: data["item_code"] || data["itemcode"] || data["kode_buku"] || data["barcode"] || "",
+        loanDate: data["loan_date"] || data["loandate"] || data["tanggal_pinjam"] || "",
+        dueDate: data["due_date"] || data["duedate"] || data["tanggal_kembali"] || "",
+        status: (data["status"] || "approved").toLowerCase(),
+      };
+
+      const parsed = LoanImportSchema.safeParse(rawRow);
+      if (!parsed.success) {
+        errors.push({
+          row: rowNumber,
+          errors: parsed.error.issues.map(e => e.message),
+        });
+        continue;
+      }
+
+      try {
+        const member = await db.query.members.findFirst({
+          where: eq(members.nimNidn, parsed.data.identifier),
+        });
+        let resolvedMemberId = member?.id;
+        if (!resolvedMemberId) {
+          const user = await db.query.Users.findFirst({
+            where: eq(Users.email, parsed.data.identifier.toLowerCase()),
+            with: { member: true },
+          });
+          if (user?.member) {
+            resolvedMemberId = user.member.id;
+          }
+        }
+
+        if (!resolvedMemberId) {
+          errors.push({
+            row: rowNumber,
+            errors: [`Member dengan NIM/Email '${parsed.data.identifier}' tidak ditemukan`],
+          });
+          continue;
+        }
+
+        const item = await db.query.items.findFirst({
+          where: and(eq(items.itemCode, parsed.data.itemCode), isNull(items.deletedAt)),
+        });
+
+        if (!item) {
+          errors.push({
+            row: rowNumber,
+            errors: [`Buku/Item dengan kode '${parsed.data.itemCode}' tidak ditemukan`],
+          });
+          continue;
+        }
+
+        const now = new Date();
+        await db.insert(loans).values({
+          memberId: resolvedMemberId,
+          itemId: item.id,
+          loanDate: parsed.data.loanDate,
+          dueDate: parsed.data.dueDate,
+          returnDate: parsed.data.status === "returned" ? parsed.data.dueDate : null,
+          status: parsed.data.status,
+          createdAt: now,
+          updatedAt: now,
+        });
+
+        if (parsed.data.status === "approved" || parsed.data.status === "extended") {
+          await db.update(items).set({ status: "loaned", updatedAt: now }).where(eq(items.id, item.id));
+        } else if (parsed.data.status === "returned") {
+          await db.update(items).set({ status: "available", updatedAt: now }).where(eq(items.id, item.id));
+        }
+
+        successCount++;
+      } catch (err: any) {
+        errors.push({
+          row: rowNumber,
+          errors: [err.message || "Gagal menyimpan peminjaman"],
+        });
+      }
+    }
+
+    return {
+      total: rows.length,
+      successCount,
+      errorCount: errors.length,
+      errors,
+    };
   }
 }
 

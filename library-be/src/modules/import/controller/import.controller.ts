@@ -95,6 +95,51 @@ export class ImportController {
       sendSuccess(res, "Batch retrieved", batch);
     } catch (error) { next(error); }
   }
+
+  async downloadTemplate(req: Request, res: Response, next: NextFunction) {
+    try {
+      const rawModule = req.params.module;
+      const mod = Array.isArray(rawModule) ? rawModule[0] : String(rawModule || "");
+      const result = importService.getTemplate(mod);
+      if (!result) {
+        return sendError(
+          res,
+          `Template untuk modul '${mod}' tidak ditemukan. Modul yang tersedia: guests, users, loans, bibliographies, items`,
+          400
+        );
+      }
+      res.setHeader("Content-Type", "text/csv; charset=utf-8");
+      res.setHeader("Content-Disposition", `attachment; filename="${result.filename}"`);
+      res.send(result.csv);
+    } catch (error) { next(error); }
+  }
+
+  async importGuests(req: Request, res: Response, next: NextFunction) {
+    try {
+      if (!req.file) return sendError(res, "File CSV wajib diunggah", 400);
+      const content = req.file.buffer.toString("utf-8");
+      const result = await importService.importGuests(content);
+      sendSuccess(res, `Import pengunjung selesai: ${result.successCount} berhasil, ${result.errorCount} gagal`, result);
+    } catch (error) { next(error); }
+  }
+
+  async importUsers(req: Request, res: Response, next: NextFunction) {
+    try {
+      if (!req.file) return sendError(res, "File CSV wajib diunggah", 400);
+      const content = req.file.buffer.toString("utf-8");
+      const result = await importService.importUsers(content);
+      sendSuccess(res, `Import user selesai: ${result.successCount} berhasil, ${result.errorCount} gagal`, result);
+    } catch (error) { next(error); }
+  }
+
+  async importLoans(req: Request, res: Response, next: NextFunction) {
+    try {
+      if (!req.file) return sendError(res, "File CSV wajib diunggah", 400);
+      const content = req.file.buffer.toString("utf-8");
+      const result = await importService.importLoans(content);
+      sendSuccess(res, `Import peminjaman selesai: ${result.successCount} berhasil, ${result.errorCount} gagal`, result);
+    } catch (error) { next(error); }
+  }
 }
 
 export const importController = new ImportController();
