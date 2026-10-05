@@ -162,10 +162,10 @@ const KatalogDetail = () => {
       toastError("Tidak Ada Salinan", "Buku ini tidak memiliki salinan fisik (item).");
       return;
     }
-    // Filter available items first, fallback to any item
+    // Prioritize first available item, otherwise first item in list
     const availableItems = bibliography.items.filter((i) => i.status === "available");
     const chosenItem = availableItems.length > 0
-      ? availableItems[Math.floor(Math.random() * availableItems.length)]
+      ? availableItems[0]
       : bibliography.items[0];
 
     setSelectedItemForQr(chosenItem);
@@ -302,13 +302,15 @@ const KatalogDetail = () => {
 
               {/* QR Code Frame */}
               <div className="flex flex-col items-center justify-center p-6 bg-slate-50 rounded-2xl border border-slate-100 dark:bg-muted/30">
-                <img
-                  src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(selectedItemForQr.itemCode || "")}`}
-                  alt={selectedItemForQr.itemCode}
-                  className="w-48 h-48 bg-white p-2 rounded-2xl shadow-md border border-slate-200"
-                />
+                <div className="w-48 h-48 bg-white p-2 rounded-2xl shadow-md border border-slate-200 flex items-center justify-center">
+                  <img
+                    src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(selectedItemForQr.itemCode || bibliography?.isbn || bibliography?.id || "")}`}
+                    alt={selectedItemForQr.itemCode || bibliography?.title}
+                    className="w-full h-full object-contain"
+                  />
+                </div>
                 <span className="mt-4 font-mono font-extrabold text-sm text-slate-800 tracking-wider">
-                  {selectedItemForQr.itemCode}
+                  {selectedItemForQr.itemCode || "-"}
                 </span>
                 <span className={`mt-1.5 px-2.5 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider ${
                   selectedItemForQr.status === "available"

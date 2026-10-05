@@ -14,6 +14,7 @@ import {
   Tag,
   Plus,
   Pencil,
+  Archive,
   Trash2,
   X,
   Info,
@@ -620,10 +621,10 @@ export default function BibliographySection({
                         </button>
                         <button
                           onClick={() => handleDelete(bib)}
-                          className="rounded-lg p-1.5 text-red-400 hover:bg-warning-bg hover:text-destructive"
+                          className="rounded-lg p-1.5 text-amber-500 hover:bg-amber-50 dark:bg-amber-950 hover:text-amber-700 dark:text-amber-400"
                           title="Arsipkan"
                         >
-                          <Trash2 className="size-4" />
+                          <Archive className="size-4" />
                         </button>
                       </div>
                     </td>
@@ -709,9 +710,9 @@ function BibliographyDetail({
           </button>
           <button
             onClick={() => onDelete(bib)}
-            className="flex items-center gap-2 rounded-lg bg-destructive px-4 py-2 text-sm font-medium text-white hover:bg-destructive/90"
+            className="flex items-center gap-2 rounded-lg bg-amber-600 px-4 py-2 text-sm font-medium text-white hover:bg-amber-700"
           >
-            <Trash2 className="size-4" />
+            <Archive className="size-4" />
             Arsipkan
           </button>
         </div>

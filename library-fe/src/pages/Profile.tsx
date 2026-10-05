@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router";
+import { useNavigate, useSearchParams } from "react-router";
 import Navbar from "@/components/ui/navbar";
 import Footer from "@/components/Footer";
 import { authClient } from "@/utils/auth-client";
@@ -20,10 +20,16 @@ import type { AuthUser } from "@/types/auth";
 
 const Profile = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { data: session, isPending: sessionLoading } = authClient.useSession();
   const [profile, setProfile] = useState<MemberProfile | null>(null);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState("peminjaman-aktif");
+  const tabParam = searchParams.get("tab");
+  const [activeTab, setActiveTab] = useState(
+    tabParam === "loans" || tabParam === "riwayat-peminjaman"
+      ? "riwayat-peminjaman"
+      : tabParam || "peminjaman-aktif"
+  );
   const [updateLoading, setUpdateLoading] = useState(false);
   const [cardActionLoading, setCardActionLoading] = useState(false);
   const [activeLoanCount, setActiveLoanCount] = useState(0);
@@ -47,6 +53,16 @@ const Profile = () => {
     publisher: "",
     reason: ""
   });
+
+  useEffect(() => {
+    if (tabParam) {
+      if (tabParam === "loans" || tabParam === "riwayat-peminjaman") {
+        setActiveTab("riwayat-peminjaman");
+      } else {
+        setActiveTab(tabParam);
+      }
+    }
+  }, [tabParam]);
 
   useEffect(() => {
     const currentUserId = session?.user?.id;
