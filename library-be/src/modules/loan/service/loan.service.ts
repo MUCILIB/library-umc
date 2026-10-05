@@ -28,7 +28,8 @@ export class LoanService {
     memberId: string,
     bibliographyId: string,
     reqLoanDate?: string,
-    reqDueDate?: string
+    reqDueDate?: string,
+    notes?: string
   ) {
     // Best Practice: Cek apakah member sudah meminjam terlalu banyak (Limit: 3 buku aktif)
     const activeLoansCount = await db
@@ -113,6 +114,7 @@ export class LoanService {
         status: "pending",
         loanDate: finalLoanDate,
         dueDate: finalDueDate,
+        notes: notes || null,
         verificationToken: token,
         verificationExpiresAt: expiresAt
       })

@@ -40,7 +40,8 @@ export class LoanController {
         eligibility.data.memberId,
         validation.data.bibliographyId,
         validation.data.loanDate,
-        validation.data.dueDate
+        validation.data.dueDate,
+        validation.data.notes
       );
       sendSuccess(res, "Permintaan peminjaman berhasil diajukan", result);
     } catch (error) {
