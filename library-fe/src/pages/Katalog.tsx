@@ -185,7 +185,7 @@ const Katalog = () => {
         <div className="flex flex-col lg:flex-row gap-8">
           {/* Sidebar Filter (Kiri) */}
           <aside className={`
-            fixed inset-0 z-[60] lg:relative lg:inset-auto lg:z-0 lg:w-1/4 
+            fixed inset-0 z-40 lg:relative lg:inset-auto lg:z-0 lg:w-1/4 
             transition-transform duration-300 ease-in-out lg:translate-x-0
             ${isSidebarOpen ? "translate-x-0" : "-translate-x-full"}
           `}>

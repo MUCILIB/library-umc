@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router";
+import { ArrowRight, Calendar, Search } from "lucide-react";
 import { useBookList } from "../hooks/useBookList";
 import type { Bibliography, LibraryUser } from "../types";
 import { generateColorFromSeed } from "@/utils/format";
@@ -271,8 +272,8 @@ const BookList = ({
       {/* Book List Stack */}
       <div className="flex flex-col gap-4">
         {currentItems.length === 0 ? (
-          <div className="bg-card border border-border rounded-2xl text-center py-16 text-muted-foreground shadow-sm">
-            <div className="text-4xl mb-4">🔍</div>
+          <div className="bg-card border border-border rounded-2xl text-center py-16 text-muted-foreground shadow-sm flex flex-col items-center justify-center">
+            <Search className="w-10 h-10 mb-4 opacity-40 text-muted-foreground" />
             <p className="text-lg font-bold text-foreground mb-2">
               Tidak ada hasil ditemukan
             </p>
@@ -363,9 +364,9 @@ const BookList = ({
                     <span className="text-primary font-bold text-xs sm:text-sm hover:underline flex items-center gap-1.5 group-hover:translate-x-0.5 transition-transform">
                       {actionLabel}
                       {showCalendarIcon ? (
-                        <span className="text-sm">📅</span>
+                        <Calendar size={14} className="text-primary" />
                       ) : (
-                        <span className="text-sm">→</span>
+                        <ArrowRight size={14} className="text-primary" />
                       )}
                     </span>
                   </div>

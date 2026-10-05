@@ -420,6 +420,7 @@ export const loans = pgTable("loans", {
   dueDate: date("due_date").notNull(),
   returnDate: date("return_date"),
   status: loansStatusEnum("status").notNull(),
+  notes: text("notes"),
   extendCount: integer("extend_count").default(0).notNull(),
   extensionStatus: varchar("extension_status", { length: 50 }).default("none"),
   approvedBy: text("approved_by").references(() => Users.id),

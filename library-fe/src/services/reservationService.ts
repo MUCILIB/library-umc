@@ -52,14 +52,33 @@ class ReservationService {
     return result.data;
   }
 
-  // DELETE /reservations/:id — batalkan reservasi
+  // DELETE /reservations/:id — batalkan reservasi (or PATCH /reservations/:id/cancel)
   async cancelReservation(reservationId: string): Promise<void> {
-    const response = await fetch(`${this.baseUrl}/api/reservations/${reservationId}`, {
-      method: 'DELETE',
+    const response = await fetch(`${this.baseUrl}/api/reservations/${reservationId}/cancel`, {
+      method: 'PATCH',
       credentials: 'include',
     });
     const result = await response.json();
     if (!result.success) throw new Error(result.message || 'Gagal membatalkan reservasi');
+  }
+
+  // GET /reservations — lihat semua reservasi (Super Admin / Staff)
+  async getAllReservations(params?: {
+    status?: 'waiting' | 'fulfilled' | 'canceled';
+    memberId?: string;
+    bibliographyId?: string;
+  }): Promise<Reservation[]> {
+    const queryParams = new URLSearchParams();
+    if (params?.status) queryParams.append('status', params.status);
+    if (params?.memberId) queryParams.append('memberId', params.memberId);
+    if (params?.bibliographyId) queryParams.append('bibliographyId', params.bibliographyId);
+    const queryString = queryParams.toString() ? `?${queryParams.toString()}` : '';
+    const response = await fetch(`${this.baseUrl}/api/reservations${queryString}`, {
+      credentials: 'include',
+    });
+    const result = await response.json();
+    if (!result.success) throw new Error(result.message || 'Gagal memuat daftar reservasi');
+    return Array.isArray(result.data) ? result.data : [];
   }
 }
 

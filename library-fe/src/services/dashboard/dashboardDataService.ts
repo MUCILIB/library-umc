@@ -10,6 +10,7 @@ export interface DashboardStats {
   activeBorrowings: number;
   outstandingFines: number;
   totalFineRevenue: number;
+  waitingReservations?: number;
 }
 
 interface WebTrafficSummaryResponse {
@@ -118,7 +119,8 @@ export const dashboardDataService = {
       loansRes,
       unpaidFinesRes,
       paidFinesRes,
-      webTrafficRes
+      webTrafficRes,
+      reservationsRes
     ] = await Promise.all([
       this.getBibliographies(),
       this.getCategories(),
@@ -134,13 +136,17 @@ export const dashboardDataService = {
       }),
       fetch(`${API_BASE_URL}/api/reports/web-traffic?days=1`, {
         credentials: "include"
-      })
+      }),
+      fetch(`${API_BASE_URL}/api/reservations?status=waiting&limit=200`, {
+        credentials: "include"
+      }).catch(() => null)
     ]);
 
     let activeBorrowings = 0;
     let outstandingFines = 0;
     let totalFineRevenue = 0;
     let webVisits = 0;
+    let waitingReservations = 0;
 
     try {
       const loansData = await loansRes.json();
@@ -187,6 +193,17 @@ export const dashboardDataService = {
       webVisits = 0;
     }
 
+    try {
+      if (reservationsRes) {
+        const reservationsData = await reservationsRes.json();
+        if (reservationsData.success && Array.isArray(reservationsData.data)) {
+          waitingReservations = reservationsData.data.length;
+        }
+      }
+    } catch {
+      waitingReservations = 0;
+    }
+
     return {
       totalBibliographies: bibliographies.length,
       totalItems: bibliographies.reduce((sum, item) => sum + (Number(item.stock) || 0), 0),
@@ -196,7 +213,8 @@ export const dashboardDataService = {
       combinedVisits: guests.length + webVisits,
       activeBorrowings,
       outstandingFines,
-      totalFineRevenue
+      totalFineRevenue,
+      waitingReservations
     };
   },
 

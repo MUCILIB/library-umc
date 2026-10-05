@@ -261,7 +261,7 @@ export function useKatalogActions({
       navigate("/login");
       return;
     }
-    navigate("/my-loans");
+    navigate("/profile?tab=riwayat-peminjaman");
   };
 
   return {
