@@ -1,6 +1,6 @@
 // src/pages/Home.tsx
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router";
+import { useNavigate, Link } from "react-router";
 import Navbar from "@/components/ui/navbar";
 import Background from "@/assets/bg1.jpeg";
 import DialogUnauthorized from "@/components/DialogUnauthorized";
@@ -209,8 +209,8 @@ export default function Home() {
           </a>
 
           {/* Card 3 */}
-          <a
-            href="#"
+          <Link
+            to="/lokasi"
             className="flex flex-col items-center text-center shadow-lg rounded-lg p-4 sm:p-6 bg-card hover:shadow-xl transition-shadow h-full"
           >
             <span>
@@ -237,7 +237,7 @@ export default function Home() {
             <p className="text-[10px] sm:text-[12px] text-muted-foreground mt-2">
               Temukan lokasi perpustakaan dan fasilitasnya
             </p>
-          </a>
+          </Link>
 
           {/* Card 4 */}
           <a
