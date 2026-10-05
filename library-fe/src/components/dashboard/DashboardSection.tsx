@@ -140,6 +140,13 @@ export default function DashboardSection({ stats }: DashboardSectionProps) {
       bg: "bg-indigo-50 dark:bg-indigo-950"
     },
     {
+      label: "Antrean Reservasi",
+      value: displayStats.waitingReservations ?? 0,
+      icon: <Clock />,
+      color: "text-amber-600 dark:text-amber-400",
+      bg: "bg-amber-50 dark:bg-amber-950"
+    },
+    {
       label: "Tagihan Denda Aktif",
       value: `Rp ${(displayStats.outstandingFines ?? 0).toLocaleString("id-ID")}`,
       icon: <Wallet />,

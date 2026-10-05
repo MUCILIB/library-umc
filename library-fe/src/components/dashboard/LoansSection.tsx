@@ -1,6 +1,7 @@
 // src/components/dashboard/LoansSection.tsx
 import { useState, useEffect, Fragment } from "react";
-import {
+import reservationService, { type Reservation } from "@/services/reservationService";
+import { 
   Clock,
   CheckCircle,
   XCircle,
@@ -66,7 +67,8 @@ interface LoansSectionProps {
 export default function LoansSection({ searchTerm, onSearchChange }: LoansSectionProps) {
   const [loans, setLoans] = useState<Loan[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState<"all" | "pending" | "approved" | "returned" | "pending_extension">("pending");
+  const [filter, setFilter] = useState<"all" | "pending" | "approved" | "returned" | "pending_extension" | "reservations">("pending");
+  const [reservations, setReservations] = useState<Reservation[]>([]);
   const [selectedLoan, setSelectedLoan] = useState<Loan | null>(null);
   const [actionNotes, setActionNotes] = useState("");
   const [processingId, setProcessingId] = useState<string | null>(null);
@@ -106,6 +108,12 @@ export default function LoansSection({ searchTerm, onSearchChange }: LoansSectio
     setLoading(true);
     setError(null);
     try {
+      if (filter === "reservations") {
+        const resList = await reservationService.getAllReservations({ status: "waiting" });
+        setReservations(resList);
+        setLoading(false);
+        return;
+      }
       let statusParam = "";
       if (filter === "pending_extension") {
         statusParam = "?status=approved";
@@ -337,7 +345,7 @@ export default function LoansSection({ searchTerm, onSearchChange }: LoansSectio
   };
 
   // Filter dengan pengecekan keamanan
-  const filteredLoans = Array.isArray(loans) 
+  const filteredLoans = filter === "reservations" ? [] : (Array.isArray(loans) 
     ? loans.filter(loan => {
         if (!loan) return false;
         
@@ -354,11 +362,29 @@ export default function LoansSection({ searchTerm, onSearchChange }: LoansSectio
                borrowerName.includes(searchLower) ||
                borrowerNim.includes(searchTerm);
       })
-    : [];
+    : []);
+
+  const filteredReservations = filter === "reservations" ? (Array.isArray(reservations)
+    ? reservations.filter(res => {
+        if (!res) return false;
+        const bookTitle = res.bibliography?.title?.toLowerCase() || '';
+        const borrowerName = res.member?.user?.name?.toLowerCase() || '';
+        const borrowerNim = res.member?.nimNidn?.toString() || '';
+        const searchLower = searchTerm.toLowerCase();
+        return bookTitle.includes(searchLower) ||
+               borrowerName.includes(searchLower) ||
+               borrowerNim.includes(searchTerm);
+      })
+    : []) : [];
 
   // Pagination Logic
-  const totalPages = Math.max(1, Math.ceil(filteredLoans.length / itemsPerPage));
+  const totalCount = filter === "reservations" ? filteredReservations.length : filteredLoans.length;
+  const totalPages = Math.max(1, Math.ceil(totalCount / itemsPerPage));
   const paginatedLoans = filteredLoans.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
+  const paginatedReservations = filteredReservations.slice(
     (currentPage - 1) * itemsPerPage,
     currentPage * itemsPerPage
   );
@@ -390,6 +416,7 @@ export default function LoansSection({ searchTerm, onSearchChange }: LoansSectio
               >
                 <option value="pending">Menunggu Persetujuan</option>
                 <option value="pending_extension">Menunggu Perpanjangan</option>
+                <option value="reservations">Antrean Reservasi</option>
                 <option value="approved">Sedang Dipinjam</option>
                 <option value="returned">Dikembalikan</option>
                 <option value="all">Semua</option>
@@ -501,6 +528,64 @@ export default function LoansSection({ searchTerm, onSearchChange }: LoansSectio
                 <Skeleton key={i} className="h-[140px] w-full rounded-[20px]" />
               ))}
             </div>
+          ) : filter === "reservations" ? (
+            paginatedReservations.length === 0 ? (
+              <div className="h-full min-h-[300px] flex flex-col items-center justify-center text-center text-muted-foreground">
+                <Clock className="w-12 h-12 mb-4 opacity-20" />
+                <p className="text-[15px] font-bold text-muted-foreground">
+                  {searchTerm ? "Tidak ada hasil reservasi" : "Tidak ada antrean reservasi saat ini"}
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {paginatedReservations.map((res) => (
+                  <div
+                    key={res.id}
+                    className="bg-background rounded-[20px] p-6 border border-border hover:bg-card hover:shadow-lg transition-all group"
+                  >
+                    <div className="flex flex-col sm:flex-row items-start justify-between gap-4 mb-5">
+                      <div className="flex items-start gap-4">
+                        <div className="w-12 h-12 bg-amber-50 dark:bg-amber-950 text-amber-600 rounded-xl flex items-center justify-center shrink-0 border border-amber-200 dark:border-amber-800">
+                          <Clock size={20} />
+                        </div>
+                        <div>
+                          <h4 className="font-extrabold text-foreground text-[15px] leading-snug">
+                            {res.bibliography?.title || "Judul tidak tersedia"}
+                          </h4>
+                          <div className="flex items-center gap-2 mt-1.5">
+                            <User size={13} className="text-muted-foreground" />
+                            <span className="text-[13px] font-bold text-muted-foreground">
+                              {res.member?.user?.name || "Nama tidak tersedia"}
+                            </span>
+                            {res.member?.nimNidn && (
+                              <span className="text-[11px] font-medium text-muted-foreground bg-card px-2 py-0.5 rounded-md border border-border">
+                                {res.member.nimNidn}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-amber-100 dark:bg-amber-950 text-amber-700 dark:text-amber-400">
+                        <Clock size={12} />
+                        Antrean Reservasi (Menunggu)
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-card p-4 rounded-xl border border-border text-sm">
+                      <div>
+                        <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest block mb-1">Pengarang</span>
+                        <span className="font-medium text-foreground">{res.bibliography?.author || "-"}</span>
+                      </div>
+                      <div>
+                        <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest block mb-1">Tanggal Diajukan</span>
+                        <span className="font-medium text-foreground">
+                          {res.createdAt ? new Date(res.createdAt).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "-"}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )
           ) : paginatedLoans.length === 0 ? (
             <div className="h-full min-h-[300px] flex flex-col items-center justify-center text-center text-muted-foreground">
               <BookOpen className="w-12 h-12 mb-4 opacity-20" />
@@ -555,10 +640,10 @@ export default function LoansSection({ searchTerm, onSearchChange }: LoansSectio
                         </span>
                       </div>
                     </div>
-                    {loan.purpose && (
+                    {(loan.notes || loan.purpose) && (
                       <div className="md:col-span-2 lg:col-span-1">
-                        <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-1.5">Tujuan / Catatan</p>
-                        <span className="text-[13px] font-medium text-muted-foreground truncate block">{loan.purpose}</span>
+                        <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-1.5">Catatan Member</p>
+                        <span className="text-[13px] font-medium text-foreground bg-muted/60 px-2 py-1 rounded block">{loan.notes || loan.purpose}</span>
                       </div>
                     )}
                   </div>
