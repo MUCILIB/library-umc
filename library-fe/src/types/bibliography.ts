@@ -45,6 +45,12 @@ export interface Bibliography {
     name: string;
     code?: string;
   }[];
+  studyPrograms?: {
+    id: number;
+    name: string;
+    code?: string;
+    faculty?: { id: number; name: string };
+  }[];
   createdAt?: string;
   updatedAt?: string;
 }

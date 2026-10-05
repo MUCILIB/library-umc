@@ -2,7 +2,7 @@ import { db } from "../../../db";
 import {
   bibliographies, bibliographyAuthors, bibliographySubjects,
   bibliographyFaculties, bibliographyStudyPrograms,
-  authors, subjects, publishers, publicationPlaces, items
+  authors, subjects, publishers, publicationPlaces, items, studyPrograms
 } from "../../../db/schema";
 import { eq, and, isNull, ilike, or, sql, desc, asc, inArray, notExists } from "drizzle-orm";
 import type { CreateBibliographyData, UpdateBibliographyData, BibliographyQuery } from "../validation/bibliography.validation";
@@ -127,8 +127,20 @@ export class BibliographyService {
       const [bib] = await tx.insert(bibliographies).values(insertData).returning();
       if (data.authors && data.authors.length > 0) await this.syncAuthors(tx, bib.id, data.authors);
       if (data.subjects && data.subjects.length > 0) await this.syncSubjects(tx, bib.id, data.subjects);
-      if (data.facultyIds) await this.syncFaculties(tx, bib.id, data.facultyIds);
-      if (data.studyProgramIds) await this.syncStudyPrograms(tx, bib.id, data.studyProgramIds);
+
+      let resolvedFacultyIds = data.facultyIds ? [...data.facultyIds] : [];
+      if (data.studyProgramIds && data.studyProgramIds.length > 0) {
+        const spRows = await tx.select({ facultyId: studyPrograms.facultyId })
+          .from(studyPrograms)
+          .where(inArray(studyPrograms.id, data.studyProgramIds));
+        for (const sp of spRows) {
+          if (sp.facultyId && !resolvedFacultyIds.includes(sp.facultyId)) {
+            resolvedFacultyIds.push(sp.facultyId);
+          }
+        }
+      }
+      if (resolvedFacultyIds.length > 0) await this.syncFaculties(tx, bib.id, resolvedFacultyIds);
+      if (data.studyProgramIds && data.studyProgramIds.length > 0) await this.syncStudyPrograms(tx, bib.id, data.studyProgramIds);
       return bib;
     });
     return this.getById(result.id);
@@ -172,8 +184,28 @@ export class BibliographyService {
       }
       if (data.authors !== undefined) await this.syncAuthors(tx, id, data.authors);
       if (data.subjects !== undefined) await this.syncSubjects(tx, id, data.subjects);
-      if (data.facultyIds !== undefined) await this.syncFaculties(tx, id, data.facultyIds);
-      if (data.studyProgramIds !== undefined) await this.syncStudyPrograms(tx, id, data.studyProgramIds);
+
+      if (data.facultyIds !== undefined || data.studyProgramIds !== undefined) {
+        let facultyIds = data.facultyIds !== undefined ? [...data.facultyIds] : undefined;
+        if (data.studyProgramIds && data.studyProgramIds.length > 0) {
+          const spRows = await tx.select({ facultyId: studyPrograms.facultyId })
+            .from(studyPrograms)
+            .where(inArray(studyPrograms.id, data.studyProgramIds));
+          if (facultyIds === undefined) {
+            const currentFacs = await tx.select({ facultyId: bibliographyFaculties.facultyId })
+              .from(bibliographyFaculties)
+              .where(eq(bibliographyFaculties.bibliographyId, id));
+            facultyIds = currentFacs.map((f: any) => f.facultyId);
+          }
+          for (const sp of spRows) {
+            if (sp.facultyId && !facultyIds.includes(sp.facultyId)) {
+              facultyIds.push(sp.facultyId);
+            }
+          }
+        }
+        if (facultyIds !== undefined) await this.syncFaculties(tx, id, facultyIds);
+        if (data.studyProgramIds !== undefined) await this.syncStudyPrograms(tx, id, data.studyProgramIds);
+      }
     });
     return this.getById(id);
   }
@@ -266,56 +298,23 @@ export class BibliographyService {
     }
 
     if (query.facultyId) {
-      const facultyBibIds = db.$with("faculty_bibs").as(
-        db.select({ bibId: bibliographyFaculties.bibliographyId })
-          .from(bibliographyFaculties)
-          .where(eq(bibliographyFaculties.facultyId, query.facultyId))
-      );
-      const allBibIds = db.$with("all_bibs").as(
-        db.select({ id: bibliographies.id })
-          .from(bibliographies)
-          .where(
-            and(
-              isNull(bibliographies.deletedAt),
-              notExists(
-                db.select().from(bibliographyFaculties)
-                  .where(eq(bibliographyFaculties.bibliographyId, bibliographies.id))
-              )
-            )
-          )
-      );
       conditions.push(
-        or(
-          inArray(bibliographies.id, sql`(select bib_id from ${facultyBibIds})`),
-          inArray(bibliographies.id, sql`(select id from ${allBibIds})`)
-        )
+        sql`"bibliographies"."id" IN (
+          SELECT bf.bibliography_id FROM bibliography_faculties bf WHERE bf.faculty_id = ${query.facultyId}
+          UNION
+          SELECT bsp.bibliography_id FROM bibliography_study_programs bsp 
+          INNER JOIN study_programs sp ON bsp.study_program_id = sp.id 
+          WHERE sp.faculty_id = ${query.facultyId}
+        )`
       );
     }
 
     if (query.studyProgramId) {
-      const spBibIds = db.$with("sp_bibs").as(
-        db.select({ bibId: bibliographyStudyPrograms.bibliographyId })
-          .from(bibliographyStudyPrograms)
-          .where(eq(bibliographyStudyPrograms.studyProgramId, query.studyProgramId))
-      );
-      const allSpBibIds = db.$with("all_sp_bibs").as(
-        db.select({ id: bibliographies.id })
-          .from(bibliographies)
-          .where(
-            and(
-              isNull(bibliographies.deletedAt),
-              notExists(
-                db.select().from(bibliographyStudyPrograms)
-                  .where(eq(bibliographyStudyPrograms.bibliographyId, bibliographies.id))
-              )
-            )
-          )
-      );
       conditions.push(
-        or(
-          inArray(bibliographies.id, sql`(select bib_id from ${spBibIds})`),
-          inArray(bibliographies.id, sql`(select id from ${allSpBibIds})`)
-        )
+        sql`"bibliographies"."id" IN (
+          SELECT bsp.bibliography_id FROM bibliography_study_programs bsp 
+          WHERE bsp.study_program_id = ${query.studyProgramId}
+        )`
       );
     }
 

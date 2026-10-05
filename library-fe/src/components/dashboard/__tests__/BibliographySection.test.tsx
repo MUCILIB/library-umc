@@ -14,12 +14,15 @@ vi.mock("@/api/client", () => ({
   facultyApi: {
     list: vi.fn().mockResolvedValue({ data: [{ id: 1, name: "Teknik" }] }),
   },
+  studyProgramApi: {
+    list: vi.fn().mockResolvedValue({ data: [{ id: 10, name: "Teknik Informatika", facultyId: 1 }] }),
+  },
   exportApi: {
     downloadBibliographies: vi.fn(),
   },
 }));
 
-import { bibliographyApi, exportApi } from "@/api/client";
+import { bibliographyApi, exportApi, studyProgramApi } from "@/api/client";
 
 const mockBibliographies = {
   items: [
@@ -32,6 +35,8 @@ const mockBibliographies = {
       stock: 5,
       authors: [{ id: 1, name: "John Doe", role: "primary", position: 1 }],
       subjects: [{ id: 1, name: "Programming" }],
+      faculties: [{ id: 1, name: "Teknik" }],
+      studyPrograms: [{ id: 10, name: "Teknik Informatika" }],
       totalItems: 5,
       availableItems: 3,
       publisher: { id: 1, name: "Test Publisher" },
@@ -44,6 +49,8 @@ const mockBibliographies = {
       stock: 2,
       authors: [],
       subjects: [],
+      faculties: [],
+      studyPrograms: [],
       totalItems: 2,
       availableItems: 2,
     },
@@ -92,6 +99,17 @@ describe("BibliographySection", () => {
 
     await waitFor(() => {
       expect(screen.getByText("3/5")).toBeInTheDocument();
+    });
+  });
+
+  it("should display faculty and prodi in table", async () => {
+    render(<BibliographySection searchTerm="" onSearchChange={vi.fn()} />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Fakultas & Prodi")).toBeInTheDocument();
+      expect(screen.getAllByText("Teknik").length).toBeGreaterThan(0);
+      // "Teknik Informatika" appears in both the dropdown option and the table badge
+      expect(screen.getAllByText("Teknik Informatika").length).toBeGreaterThan(0);
     });
   });
 
@@ -155,7 +173,7 @@ describe("BibliographySection", () => {
 
     await waitFor(() => {
       expect(screen.getByLabelText("Filter Fakultas")).toBeInTheDocument();
-      expect(screen.getByText("Teknik")).toBeInTheDocument();
+      expect(screen.getAllByText("Teknik").length).toBeGreaterThan(0);
     });
 
     const select = screen.getByLabelText("Filter Fakultas");
@@ -171,7 +189,90 @@ describe("BibliographySection", () => {
     fireEvent.click(exportButton);
 
     await waitFor(() => {
-      expect(exportApi.downloadBibliographies).toHaveBeenCalledWith({ facultyId: 1 });
+      expect(exportApi.downloadBibliographies).toHaveBeenCalledWith(
+        expect.objectContaining({ facultyId: 1 })
+      );
+    });
+  });
+
+  it("should render prodi filter and trigger filter and export with selected prodi", async () => {
+    (exportApi.downloadBibliographies as ReturnType<typeof vi.fn>).mockResolvedValue(undefined);
+
+    render(<BibliographySection searchTerm="" onSearchChange={vi.fn()} />);
+
+    await waitFor(() => {
+      expect(screen.getByLabelText("Filter Program Studi")).toBeInTheDocument();
+    });
+
+    const prodiSelect = screen.getByLabelText("Filter Program Studi");
+    fireEvent.change(prodiSelect, { target: { value: "10" } });
+
+    await waitFor(() => {
+      expect(bibliographyApi.list).toHaveBeenCalledWith(
+        expect.objectContaining({ studyProgramId: 10 })
+      );
+    });
+
+    const exportButton = screen.getByRole("button", { name: /Export/i });
+    fireEvent.click(exportButton);
+
+    await waitFor(() => {
+      expect(exportApi.downloadBibliographies).toHaveBeenCalledWith(
+        expect.objectContaining({ studyProgramId: 10 })
+      );
+    });
+  });
+
+  it("should render column picker button", async () => {
+    render(<BibliographySection searchTerm="" onSearchChange={vi.fn()} />);
+
+    await waitFor(() => {
+      expect(screen.getByLabelText("Pilih Kolom")).toBeInTheDocument();
+    });
+  });
+
+  it("should open column picker and show all columns as checked", async () => {
+    render(<BibliographySection searchTerm="" onSearchChange={vi.fn()} />);
+
+    await waitFor(() => {
+      expect(screen.getByLabelText("Pilih Kolom")).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByLabelText("Pilih Kolom"));
+
+    await waitFor(() => {
+      expect(screen.getByText("Tampilkan Kolom")).toBeInTheDocument();
+      expect(screen.getByText("Tampilkan semua")).toBeInTheDocument();
+    });
+  });
+
+  it("should hide a column when toggled off in column picker", async () => {
+    render(<BibliographySection searchTerm="" onSearchChange={vi.fn()} />);
+
+    await waitFor(() => {
+      expect(screen.getByLabelText("Pilih Kolom")).toBeInTheDocument();
+    });
+
+    // Initially, "Tahun" column header is visible
+    expect(screen.getByRole("columnheader", { name: "Tahun" })).toBeInTheDocument();
+
+    // Open column picker
+    fireEvent.click(screen.getByLabelText("Pilih Kolom"));
+
+    await waitFor(() => {
+      expect(screen.getByText("Tampilkan Kolom")).toBeInTheDocument();
+    });
+
+    // Toggle off "Tahun" column
+    const allButtons = screen.getAllByRole("button");
+    const tahunButton = allButtons.find(
+      (btn) => btn.textContent?.includes("Tahun") && !btn.getAttribute("aria-label")
+    );
+    expect(tahunButton).toBeDefined();
+    fireEvent.click(tahunButton!);
+
+    await waitFor(() => {
+      expect(screen.queryByRole("columnheader", { name: "Tahun" })).not.toBeInTheDocument();
     });
   });
 });

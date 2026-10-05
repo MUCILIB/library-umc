@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import {
   Book,
   Search,
@@ -23,10 +23,24 @@ import {
   UploadCloud,
   Check,
   FileDown,
+  Columns3,
 } from "lucide-react";
 import { API_BASE_URL } from "@/utils/api-config";
 import { cleanIsbn } from "@/utils/format";
-import { bibliographyApi, type Bibliography, type BibliographyListResponse, type Location, type Item, locationApi, itemApi, facultyApi, type Faculty, exportApi } from "@/api/client";
+import {
+  bibliographyApi,
+  type Bibliography,
+  type BibliographyListResponse,
+  type Location,
+  type Item,
+  locationApi,
+  itemApi,
+  facultyApi,
+  type Faculty,
+  studyProgramApi,
+  type StudyProgram,
+  exportApi,
+} from "@/api/client";
 
 interface BibliographySectionProps {
   searchTerm: string;
@@ -43,13 +57,54 @@ export default function BibliographySection({
   const [page, setPage] = useState(1);
   const [searchInput, setSearchInput] = useState(searchTerm);
   const [faculties, setFaculties] = useState<Faculty[]>([]);
+  const [studyPrograms, setStudyPrograms] = useState<StudyProgram[]>([]);
   const [selectedFacultyId, setSelectedFacultyId] = useState<string>("");
+  const [selectedStudyProgramId, setSelectedStudyProgramId] = useState<string>("");
   const [exporting, setExporting] = useState(false);
   const [selectedBib, setSelectedBib] = useState<Bibliography | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [editingBib, setEditingBib] = useState<Bibliography | null>(null);
   const limit = 10;
+
+  // Column visibility
+  type ColumnKey = "fakultasProdi" | "penulis" | "penerbit" | "tahun" | "isbn" | "stok";
+  const ALL_COLUMNS: { key: ColumnKey; label: string }[] = [
+    { key: "fakultasProdi", label: "Fakultas & Prodi" },
+    { key: "penulis", label: "Penulis" },
+    { key: "penerbit", label: "Penerbit" },
+    { key: "tahun", label: "Tahun" },
+    { key: "isbn", label: "ISBN" },
+    { key: "stok", label: "Stok" },
+  ];
+  const [visibleColumns, setVisibleColumns] = useState<Set<ColumnKey>>(
+    new Set(["fakultasProdi", "penulis", "penerbit", "tahun", "isbn", "stok"])
+  );
+  const [showColumnPicker, setShowColumnPicker] = useState(false);
+  const columnPickerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (columnPickerRef.current && !columnPickerRef.current.contains(e.target as Node)) {
+        setShowColumnPicker(false);
+      }
+    };
+    if (showColumnPicker) document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [showColumnPicker]);
+
+  const toggleColumn = (key: ColumnKey) => {
+    setVisibleColumns((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) {
+        // Always keep at least 1 column visible
+        if (next.size > 1) next.delete(key);
+      } else {
+        next.add(key);
+      }
+      return next;
+    });
+  };
 
   useEffect(() => {
     facultyApi
@@ -58,27 +113,83 @@ export default function BibliographySection({
         setFaculties(res.data || []);
       })
       .catch(() => {});
+
+    studyProgramApi
+      .list()
+      .then((res) => {
+        setStudyPrograms(res.data || []);
+      })
+      .catch(() => {});
   }, []);
 
-  const fetchData = useCallback(async (pageNum: number, query?: string, facultyId?: string) => {
-    setLoading(true);
-    setError(null);
-    try {
-      const params: Record<string, string | number> = { page: pageNum, limit };
-      if (query) params.q = query;
-      if (facultyId) params.facultyId = Number(facultyId);
-      const result = await bibliographyApi.list(params);
-      setData(result.data);
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Gagal memuat data");
-    } finally {
-      setLoading(false);
+  const availableStudyPrograms = selectedFacultyId
+    ? studyPrograms.filter(
+        (sp) =>
+          sp.facultyId === Number(selectedFacultyId) ||
+          sp.faculty?.id === Number(selectedFacultyId)
+      )
+    : studyPrograms;
+
+  const handleFacultyFilterChange = (facultyId: string) => {
+    setSelectedFacultyId(facultyId);
+    if (facultyId && selectedStudyProgramId) {
+      const belongs = studyPrograms.some(
+        (sp) =>
+          String(sp.id) === selectedStudyProgramId &&
+          (sp.facultyId === Number(facultyId) ||
+            sp.faculty?.id === Number(facultyId))
+      );
+      if (!belongs) {
+        setSelectedStudyProgramId("");
+      }
     }
-  }, []);
+    setPage(1);
+  };
+
+  const handleStudyProgramFilterChange = (studyProgramId: string) => {
+    setSelectedStudyProgramId(studyProgramId);
+    if (studyProgramId) {
+      const found = studyPrograms.find((sp) => String(sp.id) === studyProgramId);
+      if (found && (!selectedFacultyId || Number(selectedFacultyId) !== found.facultyId)) {
+        setSelectedFacultyId(String(found.facultyId));
+      }
+    }
+    setPage(1);
+  };
+
+  const fetchData = useCallback(
+    async (
+      pageNum: number,
+      query?: string,
+      facultyId?: string,
+      studyProgramId?: string
+    ) => {
+      setLoading(true);
+      setError(null);
+      try {
+        const params: Record<string, string | number> = { page: pageNum, limit };
+        if (query) params.q = query;
+        if (facultyId) params.facultyId = Number(facultyId);
+        if (studyProgramId) params.studyProgramId = Number(studyProgramId);
+        const result = await bibliographyApi.list(params);
+        setData(result.data);
+      } catch (err: unknown) {
+        setError(err instanceof Error ? err.message : "Gagal memuat data");
+      } finally {
+        setLoading(false);
+      }
+    },
+    []
+  );
 
   useEffect(() => {
-    fetchData(page, searchTerm || undefined, selectedFacultyId || undefined);
-  }, [page, searchTerm, selectedFacultyId, fetchData]);
+    fetchData(
+      page,
+      searchTerm || undefined,
+      selectedFacultyId || undefined,
+      selectedStudyProgramId || undefined
+    );
+  }, [page, searchTerm, selectedFacultyId, selectedStudyProgramId, fetchData]);
 
   const handleSearch = () => {
     setPage(1);
@@ -92,6 +203,7 @@ export default function BibliographySection({
   const handleClearSearch = () => {
     setSearchInput("");
     setSelectedFacultyId("");
+    setSelectedStudyProgramId("");
     onSearchChange("");
     setPage(1);
   };
@@ -101,6 +213,7 @@ export default function BibliographySection({
     try {
       await exportApi.downloadBibliographies({
         facultyId: selectedFacultyId ? Number(selectedFacultyId) : undefined,
+        studyProgramId: selectedStudyProgramId ? Number(selectedStudyProgramId) : undefined,
       });
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Export gagal");
@@ -206,9 +319,9 @@ export default function BibliographySection({
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+    <div className="space-y-4">
+      {/* Header Row 1: Title + Primary Actions */}
+      <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h2 className="text-xl font-bold text-foreground">Bibliografi</h2>
           <p className="mt-1 text-sm text-muted-foreground">
@@ -220,70 +333,156 @@ export default function BibliographySection({
             )}
           </p>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <select
-            value={selectedFacultyId}
-            onChange={(e) => {
-              setSelectedFacultyId(e.target.value);
-              setPage(1);
-            }}
-            aria-label="Filter Fakultas"
-            className="rounded-lg border border-border bg-card px-3 py-2 text-sm text-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
-          >
-            <option value="">Semua Fakultas</option>
-            {faculties.map((f) => (
-              <option key={f.id} value={f.id}>
-                {f.name}
-              </option>
-            ))}
-          </select>
-
-          <div className="relative flex-1 sm:w-64">
-            <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-            <input
-              type="text"
-              placeholder="Cari bibliografi..."
-              value={searchInput}
-              onChange={(e) => setSearchInput(e.target.value)}
-              onKeyDown={handleKeyDown}
-              className="w-full rounded-lg border border-border bg-card py-2 pl-10 pr-4 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
-            />
-          </div>
-          <button
-            onClick={handleSearch}
-            className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary/90"
-          >
-            Cari
-          </button>
-          {(searchTerm || selectedFacultyId) && (
+        <div className="flex items-center gap-2">
+          {/* Column Picker */}
+          <div className="relative" ref={columnPickerRef}>
             <button
-              onClick={handleClearSearch}
-              className="rounded-lg border border-border bg-card px-4 py-2 text-sm font-medium text-muted-foreground hover:bg-surface-hover"
+              onClick={() => setShowColumnPicker((v) => !v)}
+              className="flex items-center gap-2 rounded-lg border border-border bg-card px-3 py-2 text-sm font-medium text-foreground hover:bg-surface-hover"
+              title="Pilih kolom yang ditampilkan"
+              aria-label="Pilih Kolom"
             >
-              Reset
+              <Columns3 className="size-4 text-primary" />
+              <span className="hidden sm:inline">Kolom</span>
+              <span className="ml-1 rounded-full bg-primary/10 px-1.5 py-0.5 text-[10px] font-semibold text-primary">
+                {visibleColumns.size}/{ALL_COLUMNS.length}
+              </span>
             </button>
-          )}
+            {showColumnPicker && (
+              <div className="absolute right-0 top-full z-50 mt-1 w-52 rounded-xl border border-border bg-card shadow-lg">
+                <div className="border-b border-border px-3 py-2">
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Tampilkan Kolom</p>
+                </div>
+                <div className="p-2 space-y-0.5">
+                  {ALL_COLUMNS.map((col) => {
+                    const isChecked = visibleColumns.has(col.key);
+                    const isDisabled = isChecked && visibleColumns.size === 1;
+                    return (
+                      <button
+                        key={col.key}
+                        onClick={() => toggleColumn(col.key)}
+                        disabled={isDisabled}
+                        className={`flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm transition-colors ${
+                          isChecked
+                            ? "text-foreground"
+                            : "text-muted-foreground"
+                        } hover:bg-muted disabled:opacity-40 disabled:cursor-not-allowed`}
+                      >
+                        <span
+                          className={`flex size-4 shrink-0 items-center justify-center rounded border transition-colors ${
+                            isChecked
+                              ? "border-primary bg-primary"
+                              : "border-border bg-card"
+                          }`}
+                        >
+                          {isChecked && <Check className="size-3 text-white" />}
+                        </span>
+                        {col.label}
+                      </button>
+                    );
+                  })}
+                </div>
+                <div className="border-t border-border px-3 py-2">
+                  <button
+                    onClick={() =>
+                      setVisibleColumns(
+                        new Set(ALL_COLUMNS.map((c) => c.key))
+                      )
+                    }
+                    className="text-xs text-primary hover:underline"
+                  >
+                    Tampilkan semua
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+
           <button
             onClick={handleExport}
             disabled={exporting}
             className="flex items-center gap-2 rounded-lg border border-border bg-card px-3 py-2 text-sm font-medium text-foreground hover:bg-surface-hover disabled:opacity-50"
-            title={selectedFacultyId ? "Export buku fakultas terpilih" : "Export semua buku"}
+            title={
+              selectedStudyProgramId
+                ? "Export buku program studi terpilih"
+                : selectedFacultyId
+                ? "Export buku fakultas terpilih"
+                : "Export semua buku"
+            }
           >
             {exporting ? (
               <Loader2 className="size-4 animate-spin" />
             ) : (
               <FileDown className="size-4 text-primary" />
             )}
-            Export
+            <span className="hidden sm:inline">Export</span>
           </button>
           <button
             onClick={handleCreate}
-            className="flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700"
+            className="flex items-center gap-2 rounded-lg bg-emerald-600 px-3 py-2 text-sm font-medium text-white hover:bg-emerald-700"
           >
             <Plus className="size-4" />
             Tambah
           </button>
         </div>
+      </div>
+
+      {/* Header Row 2: Filters */}
+      <div className="flex flex-wrap items-center gap-2">
+        <select
+          value={selectedFacultyId}
+          onChange={(e) => handleFacultyFilterChange(e.target.value)}
+          aria-label="Filter Fakultas"
+          className="min-w-0 rounded-lg border border-border bg-card px-3 py-2 text-sm text-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+        >
+          <option value="">Semua Fakultas</option>
+          {faculties.map((f) => (
+            <option key={f.id} value={String(f.id)}>
+              {f.name}
+            </option>
+          ))}
+        </select>
+
+        <select
+          value={selectedStudyProgramId}
+          onChange={(e) => handleStudyProgramFilterChange(e.target.value)}
+          aria-label="Filter Program Studi"
+          className="min-w-0 rounded-lg border border-border bg-card px-3 py-2 text-sm text-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+        >
+          <option value="">Semua Program Studi</option>
+          {availableStudyPrograms.map((sp) => (
+            <option key={sp.id} value={String(sp.id)}>
+              {sp.name}
+            </option>
+          ))}
+        </select>
+
+        <div className="relative flex-1 min-w-[160px]">
+          <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+          <input
+            type="text"
+            placeholder="Cari bibliografi..."
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
+            onKeyDown={handleKeyDown}
+            className="w-full rounded-lg border border-border bg-card py-2 pl-10 pr-4 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+          />
+        </div>
+        <button
+          onClick={handleSearch}
+          className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary/90"
+        >
+          Cari
+        </button>
+        {(searchTerm || selectedFacultyId || selectedStudyProgramId) && (
+          <button
+            onClick={handleClearSearch}
+            className="flex items-center gap-1.5 rounded-lg border border-border bg-card px-3 py-2 text-sm font-medium text-muted-foreground hover:bg-surface-hover"
+          >
+            <X className="size-3.5" />
+            Reset
+          </button>
+        )}
       </div>
 
       {/* Table */}
@@ -306,11 +505,24 @@ export default function BibliographySection({
               <thead>
                 <tr className="border-b border-border bg-muted">
                   <th className="px-4 py-3 text-left font-semibold text-muted-foreground">Judul</th>
-                  <th className="px-4 py-3 text-left font-semibold text-muted-foreground">Penulis</th>
-                  <th className="px-4 py-3 text-left font-semibold text-muted-foreground">Penerbit</th>
-                  <th className="px-4 py-3 text-left font-semibold text-muted-foreground">Tahun</th>
-                  <th className="px-4 py-3 text-left font-semibold text-muted-foreground">ISBN</th>
-                  <th className="px-4 py-3 text-center font-semibold text-muted-foreground">Stok</th>
+                  {visibleColumns.has("fakultasProdi") && (
+                    <th className="px-4 py-3 text-left font-semibold text-muted-foreground">Fakultas & Prodi</th>
+                  )}
+                  {visibleColumns.has("penulis") && (
+                    <th className="px-4 py-3 text-left font-semibold text-muted-foreground">Penulis</th>
+                  )}
+                  {visibleColumns.has("penerbit") && (
+                    <th className="px-4 py-3 text-left font-semibold text-muted-foreground">Penerbit</th>
+                  )}
+                  {visibleColumns.has("tahun") && (
+                    <th className="px-4 py-3 text-left font-semibold text-muted-foreground">Tahun</th>
+                  )}
+                  {visibleColumns.has("isbn") && (
+                    <th className="px-4 py-3 text-left font-semibold text-muted-foreground">ISBN</th>
+                  )}
+                  {visibleColumns.has("stok") && (
+                    <th className="px-4 py-3 text-center font-semibold text-muted-foreground">Stok</th>
+                  )}
                   <th className="px-4 py-3 text-center font-semibold text-muted-foreground">Aksi</th>
                 </tr>
               </thead>
@@ -322,31 +534,74 @@ export default function BibliographySection({
                         {bib.title}
                       </div>
                     </td>
-                    <td className="px-4 py-3">
-                      <div className="max-w-[200px] truncate text-muted-foreground">
-                        {bib.authors?.map((a) => a.name).join(", ") || "-"}
-                        {bib.unlistedAuthorsLabel && (
-                          <span className="ml-1 text-xs text-muted-foreground">
-                            +{bib.unlistedAuthorsLabel}
-                          </span>
-                        )}
-                      </div>
-                    </td>
-                    <td className="px-4 py-3 text-muted-foreground">
-                      {bib.publisher?.name || "-"}
-                    </td>
-                    <td className="px-4 py-3 text-muted-foreground">
-                      {bib.publishYear || "-"}
-                    </td>
-                    <td className="px-4 py-3 text-muted-foreground">
-                      {cleanIsbn(bib.isbnIssn) || "-"}
-                    </td>
-                    <td className="px-4 py-3 text-center">
-                      <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 dark:bg-emerald-950 px-2 py-0.5 text-xs font-medium text-emerald-700 dark:text-emerald-400">
-                        <Package className="size-3" />
-                        {bib.availableItems}/{bib.totalItems}
-                      </span>
-                    </td>
+                    {visibleColumns.has("fakultasProdi") && (
+                      <td className="px-4 py-3">
+                        <div className="max-w-[200px] space-y-1">
+                          {bib.faculties && bib.faculties.length > 0 ? (
+                            <div className="flex flex-wrap gap-1">
+                              {bib.faculties.map((f: any) => (
+                                <span
+                                  key={f.id}
+                                  className="inline-flex items-center rounded-md bg-blue-50 dark:bg-blue-950/60 px-2 py-0.5 text-[11px] font-medium text-blue-700 dark:text-blue-300 border border-blue-200/60 dark:border-blue-800/60"
+                                >
+                                  {f.name}
+                                </span>
+                              ))}
+                            </div>
+                          ) : null}
+                          {bib.studyPrograms && bib.studyPrograms.length > 0 ? (
+                            <div className="flex flex-wrap gap-1">
+                              {bib.studyPrograms.map((sp: any) => (
+                                <span
+                                  key={sp.id}
+                                  className="inline-flex items-center rounded-md bg-emerald-50 dark:bg-emerald-950/60 px-2 py-0.5 text-[11px] font-medium text-emerald-700 dark:text-emerald-300 border border-emerald-200/60 dark:border-emerald-800/60"
+                                >
+                                  {sp.name}
+                                </span>
+                              ))}
+                            </div>
+                          ) : null}
+                          {(!bib.faculties || bib.faculties.length === 0) && (!bib.studyPrograms || bib.studyPrograms.length === 0) && (
+                            <span className="text-xs text-muted-foreground/70 italic">-</span>
+                          )}
+                        </div>
+                      </td>
+                    )}
+                    {visibleColumns.has("penulis") && (
+                      <td className="px-4 py-3">
+                        <div className="max-w-[200px] truncate text-muted-foreground">
+                          {bib.authors?.map((a) => a.name).join(", ") || "-"}
+                          {bib.unlistedAuthorsLabel && (
+                            <span className="ml-1 text-xs text-muted-foreground">
+                              +{bib.unlistedAuthorsLabel}
+                            </span>
+                          )}
+                        </div>
+                      </td>
+                    )}
+                    {visibleColumns.has("penerbit") && (
+                      <td className="px-4 py-3 text-muted-foreground">
+                        {bib.publisher?.name || "-"}
+                      </td>
+                    )}
+                    {visibleColumns.has("tahun") && (
+                      <td className="px-4 py-3 text-muted-foreground">
+                        {bib.publishYear || "-"}
+                      </td>
+                    )}
+                    {visibleColumns.has("isbn") && (
+                      <td className="px-4 py-3 text-muted-foreground">
+                        {cleanIsbn(bib.isbnIssn) || "-"}
+                      </td>
+                    )}
+                    {visibleColumns.has("stok") && (
+                      <td className="px-4 py-3 text-center">
+                        <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 dark:bg-emerald-950 px-2 py-0.5 text-xs font-medium text-emerald-700 dark:text-emerald-400">
+                          <Package className="size-3" />
+                          {bib.availableItems}/{bib.totalItems}
+                        </span>
+                      </td>
+                    )}
                     <td className="px-4 py-3 text-center">
                       <div className="flex items-center justify-center gap-1">
                         <button
@@ -654,28 +909,47 @@ function BibliographyForm({ bib, onClose, onSuccess }: BibliographyFormProps) {
     const loadOptions = async () => {
       try {
         const [facRes, spRes] = await Promise.all([
-          fetch(`${API_BASE_URL}/api/faculties`),
-          fetch(`${API_BASE_URL}/api/study-programs`),
+          facultyApi.list(),
+          studyProgramApi.list(),
         ]);
-        const facJson = await facRes.json();
-        const spJson = await spRes.json();
-        if (facJson.success) setFacultyOptions(facJson.data);
-        if (spJson.success) setStudyProgramOptions(spJson.data);
+        if (facRes.data) setFacultyOptions(facRes.data);
+        if (spRes.data) setStudyProgramOptions(spRes.data);
       } catch {}
     };
     loadOptions();
   }, []);
 
   const toggleFaculty = (id: number) => {
-    setSelectedFacultyIds((prev) =>
-      prev.includes(id) ? prev.filter((fid) => fid !== id) : [...prev, id]
-    );
+    setSelectedFacultyIds((prev) => {
+      if (prev.includes(id)) {
+        // Also remove study programs of this faculty
+        setSelectedStudyProgramIds((spPrev) =>
+          spPrev.filter((spid) => {
+            const sp = studyProgramOptions.find((o) => o.id === spid);
+            return sp ? sp.facultyId !== id : true;
+          })
+        );
+        return prev.filter((fid) => fid !== id);
+      } else {
+        return [...prev, id];
+      }
+    });
   };
 
   const toggleStudyProgram = (id: number) => {
-    setSelectedStudyProgramIds((prev) =>
-      prev.includes(id) ? prev.filter((spid) => spid !== id) : [...prev, id]
-    );
+    setSelectedStudyProgramIds((prev) => {
+      if (prev.includes(id)) {
+        return prev.filter((spid) => spid !== id);
+      } else {
+        const sp = studyProgramOptions.find((o) => o.id === id);
+        if (sp && !selectedFacultyIds.includes(sp.facultyId)) {
+          setSelectedFacultyIds((facPrev) =>
+            facPrev.includes(sp.facultyId) ? facPrev : [...facPrev, sp.facultyId]
+          );
+        }
+        return [...prev, id];
+      }
+    });
   };
 
   const filteredStudyPrograms = selectedFacultyIds.length > 0
@@ -939,8 +1213,8 @@ function BibliographyForm({ bib, onClose, onSuccess }: BibliographyFormProps) {
         subjects: subjects.filter((s) => s.name.trim()),
         unlistedAuthorsLabel: unlistedAuthorsLabel || undefined,
         gmdId: formData.gmdId ? parseInt(formData.gmdId) : undefined,
-        facultyIds: selectedFacultyIds.length > 0 ? selectedFacultyIds : undefined,
-        studyProgramIds: selectedStudyProgramIds.length > 0 ? selectedStudyProgramIds : undefined,
+        facultyIds: selectedFacultyIds.length > 0 ? selectedFacultyIds : (bib ? [] : undefined),
+        studyProgramIds: selectedStudyProgramIds.length > 0 ? selectedStudyProgramIds : (bib ? [] : undefined),
       };
 
       if (bib) {
@@ -1377,51 +1651,184 @@ function BibliographyForm({ bib, onClose, onSuccess }: BibliographyFormProps) {
               </div>
             </div>
 
-            {/* Faculty / Study Program Multiselect */}
+            {/* Faculty / Study Program Selection */}
             <div className="border-t border-border pt-4 space-y-4">
-              <h4 className="text-xs font-bold text-foreground uppercase tracking-wider">Fakultas & Program Studi</h4>
+              <div>
+                <h4 className="text-xs font-bold text-foreground uppercase tracking-wider">
+                  Fakultas & Program Studi
+                </h4>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Tentukan fakultas dan program studi untuk buku ini agar terfilter dengan tepat
+                </p>
+              </div>
+
+              {/* Dropdowns for quick selection */}
               <div className="grid gap-4 md:grid-cols-2">
                 <div>
-                  <label className="mb-2 block text-xs font-medium text-muted-foreground">Fakultas</label>
-                  <div className="flex flex-wrap gap-2 max-h-32 overflow-y-auto p-2 border border-border rounded-lg">
-                    {facultyOptions.length === 0 && <span className="text-xs text-muted-foreground">Memuat...</span>}
+                  <label className="mb-1.5 block text-xs font-medium text-muted-foreground">
+                    Pilih Fakultas
+                  </label>
+                  <select
+                    value={selectedFacultyIds.length === 1 ? String(selectedFacultyIds[0]) : ""}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      if (val) {
+                        const id = Number(val);
+                        if (!selectedFacultyIds.includes(id)) {
+                          toggleFaculty(id);
+                        }
+                      }
+                    }}
+                    className="w-full rounded-lg border border-border px-3 py-2 text-sm bg-background focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                  >
+                    <option value="">-- Pilih Fakultas --</option>
                     {facultyOptions.map((f) => (
-                      <button
-                        key={f.id}
-                        type="button"
-                        onClick={() => toggleFaculty(f.id)}
-                        className={`px-3 py-1.5 text-xs rounded-full border font-medium transition-all ${
-                          selectedFacultyIds.includes(f.id)
-                            ? "bg-primary text-white border-primary"
-                            : "bg-muted text-muted-foreground border-border hover:border-primary"
-                        }`}
-                      >
+                      <option key={f.id} value={String(f.id)}>
                         {f.name}
-                      </button>
+                      </option>
                     ))}
+                  </select>
+
+                  {/* Interactive faculty chips / pills */}
+                  <div className="mt-2.5">
+                    <span className="mb-1.5 block text-[11px] font-medium text-muted-foreground">
+                      Daftar Fakultas (klik untuk memilih/membatalkan):
+                    </span>
+                    <div className="flex flex-wrap gap-1.5 max-h-28 overflow-y-auto p-2 border border-border rounded-lg bg-muted/20">
+                      {facultyOptions.length === 0 && (
+                        <span className="text-xs text-muted-foreground">Memuat fakultas...</span>
+                      )}
+                      {facultyOptions.map((f) => {
+                        const isSelected = selectedFacultyIds.includes(f.id);
+                        return (
+                          <button
+                            key={f.id}
+                            type="button"
+                            onClick={() => toggleFaculty(f.id)}
+                            className={`px-2.5 py-1 text-xs rounded-lg border font-medium transition-all flex items-center gap-1 ${
+                              isSelected
+                                ? "bg-primary text-white border-primary shadow-sm"
+                                : "bg-card text-muted-foreground border-border hover:border-primary/60 hover:text-foreground"
+                            }`}
+                          >
+                            <span>{f.name}</span>
+                            {isSelected && <Check className="size-3" />}
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
                 </div>
+
                 <div>
-                  <label className="mb-2 block text-xs font-medium text-muted-foreground">Program Studi</label>
-                  <div className="flex flex-wrap gap-2 max-h-32 overflow-y-auto p-2 border border-border rounded-lg">
-                    {filteredStudyPrograms.length === 0 && <span className="text-xs text-muted-foreground">Pilih fakultas terlebih dahulu</span>}
+                  <label className="mb-1.5 block text-xs font-medium text-muted-foreground">
+                    Pilih Program Studi
+                  </label>
+                  <select
+                    value={selectedStudyProgramIds.length === 1 ? String(selectedStudyProgramIds[0]) : ""}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      if (val) {
+                        const id = Number(val);
+                        if (!selectedStudyProgramIds.includes(id)) {
+                          toggleStudyProgram(id);
+                        }
+                      }
+                    }}
+                    className="w-full rounded-lg border border-border px-3 py-2 text-sm bg-background focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                  >
+                    <option value="">-- Pilih Program Studi --</option>
                     {filteredStudyPrograms.map((sp) => (
-                      <button
-                        key={sp.id}
-                        type="button"
-                        onClick={() => toggleStudyProgram(sp.id)}
-                        className={`px-3 py-1.5 text-xs rounded-full border font-medium transition-all ${
-                          selectedStudyProgramIds.includes(sp.id)
-                            ? "bg-primary text-white border-primary"
-                            : "bg-muted text-muted-foreground border-border hover:border-primary"
-                        }`}
-                      >
+                      <option key={sp.id} value={String(sp.id)}>
                         {sp.name}
-                      </button>
+                      </option>
                     ))}
+                  </select>
+
+                  {/* Interactive prodi chips / pills */}
+                  <div className="mt-2.5">
+                    <span className="mb-1.5 block text-[11px] font-medium text-muted-foreground">
+                      Daftar Program Studi (klik untuk memilih/membatalkan):
+                    </span>
+                    <div className="flex flex-wrap gap-1.5 max-h-28 overflow-y-auto p-2 border border-border rounded-lg bg-muted/20">
+                      {filteredStudyPrograms.length === 0 && (
+                        <span className="text-xs text-muted-foreground">
+                          {facultyOptions.length === 0 ? "Memuat prodi..." : "Pilih fakultas atau belum ada prodi"}
+                        </span>
+                      )}
+                      {filteredStudyPrograms.map((sp) => {
+                        const isSelected = selectedStudyProgramIds.includes(sp.id);
+                        return (
+                          <button
+                            key={sp.id}
+                            type="button"
+                            onClick={() => toggleStudyProgram(sp.id)}
+                            className={`px-2.5 py-1 text-xs rounded-lg border font-medium transition-all flex items-center gap-1 ${
+                              isSelected
+                                ? "bg-emerald-600 text-white border-emerald-600 shadow-sm"
+                                : "bg-card text-muted-foreground border-border hover:border-emerald-500/60 hover:text-foreground"
+                            }`}
+                          >
+                            <span>{sp.name}</span>
+                            {isSelected && <Check className="size-3" />}
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
                 </div>
               </div>
+
+              {/* Selected summary tags */}
+              {(selectedFacultyIds.length > 0 || selectedStudyProgramIds.length > 0) && (
+                <div className="p-3 bg-muted/30 border border-border rounded-xl space-y-2">
+                  <div className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
+                    Terpilih untuk buku ini:
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    {selectedFacultyIds.map((fid) => {
+                      const fac = facultyOptions.find((f) => f.id === fid);
+                      if (!fac) return null;
+                      return (
+                        <span
+                          key={`fac-${fid}`}
+                          className="inline-flex items-center gap-1 rounded-md bg-blue-50 dark:bg-blue-950/60 px-2.5 py-1 text-xs font-semibold text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800"
+                        >
+                          Fakultas: {fac.name}
+                          <button
+                            type="button"
+                            onClick={() => toggleFaculty(fid)}
+                            className="hover:text-red-600 ml-1"
+                            title="Hapus fakultas"
+                          >
+                            <X className="size-3" />
+                          </button>
+                        </span>
+                      );
+                    })}
+                    {selectedStudyProgramIds.map((spid) => {
+                      const sp = studyProgramOptions.find((p) => p.id === spid);
+                      if (!sp) return null;
+                      return (
+                        <span
+                          key={`sp-${spid}`}
+                          className="inline-flex items-center gap-1 rounded-md bg-emerald-50 dark:bg-emerald-950/60 px-2.5 py-1 text-xs font-semibold text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800"
+                        >
+                          Prodi: {sp.name}
+                          <button
+                            type="button"
+                            onClick={() => toggleStudyProgram(spid)}
+                            className="hover:text-red-600 ml-1"
+                            title="Hapus prodi"
+                          >
+                            <X className="size-3" />
+                          </button>
+                        </span>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className="grid gap-4 md:grid-cols-2 pt-4 border-t border-border">
@@ -1885,6 +2292,28 @@ function BibliographyForm({ bib, onClose, onSuccess }: BibliographyFormProps) {
                   <div>
                     <span className="text-muted-foreground font-semibold">Call Number:</span>
                     <p className="font-medium text-foreground mt-0.5">{formData.callNumber || "-"}</p>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground font-semibold">Fakultas:</span>
+                    <p className="font-medium text-foreground mt-0.5">
+                      {selectedFacultyIds.length > 0
+                        ? facultyOptions
+                            .filter((f) => selectedFacultyIds.includes(f.id))
+                            .map((f) => f.name)
+                            .join(", ")
+                        : "-"}
+                    </p>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground font-semibold">Program Studi:</span>
+                    <p className="font-medium text-foreground mt-0.5">
+                      {selectedStudyProgramIds.length > 0
+                        ? studyProgramOptions
+                            .filter((sp) => selectedStudyProgramIds.includes(sp.id))
+                            .map((sp) => sp.name)
+                            .join(", ")
+                        : "-"}
+                    </p>
                   </div>
                 </div>
 
