@@ -22,7 +22,7 @@ vi.mock("@/api/client", () => ({
   },
 }));
 
-import { bibliographyApi, exportApi, studyProgramApi } from "@/api/client";
+import { bibliographyApi, exportApi } from "@/api/client";
 
 const mockBibliographies = {
   items: [

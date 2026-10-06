@@ -26,7 +26,7 @@ import {
   FileDown,
   Columns3,
 } from "lucide-react";
-import { API_BASE_URL } from "@/utils/api-config";
+
 import { cleanIsbn } from "@/utils/format";
 import {
   bibliographyApi,
@@ -78,9 +78,22 @@ export default function BibliographySection({
     { key: "isbn", label: "ISBN" },
     { key: "stok", label: "Stok" },
   ];
-  const [visibleColumns, setVisibleColumns] = useState<Set<ColumnKey>>(
-    new Set(["fakultasProdi", "penulis", "penerbit", "tahun", "isbn", "stok"])
-  );
+
+  const STORAGE_KEY = "bibliography-visible-columns";
+  const defaultColumns: ColumnKey[] = ["fakultasProdi", "penulis", "penerbit", "tahun", "isbn", "stok"];
+
+  const [visibleColumns, setVisibleColumns] = useState<Set<ColumnKey>>(() => {
+    try {
+      const stored = localStorage.getItem(STORAGE_KEY);
+      if (stored) {
+        return new Set(JSON.parse(stored) as ColumnKey[]);
+      }
+    } catch {
+      // Fallback jika localStorage corrupt
+    }
+    return new Set(defaultColumns);
+  });
+
   const [showColumnPicker, setShowColumnPicker] = useState(false);
   const columnPickerRef = useRef<HTMLDivElement>(null);
 
@@ -103,8 +116,15 @@ export default function BibliographySection({
       } else {
         next.add(key);
       }
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(Array.from(next)));
       return next;
     });
+  };
+
+  const resetColumns = () => {
+    const next = new Set(defaultColumns);
+    setVisibleColumns(next);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(Array.from(next)));
   };
 
   useEffect(() => {
@@ -385,14 +405,10 @@ export default function BibliographySection({
                 </div>
                 <div className="border-t border-border px-3 py-2">
                   <button
-                    onClick={() =>
-                      setVisibleColumns(
-                        new Set(ALL_COLUMNS.map((c) => c.key))
-                      )
-                    }
+                    onClick={resetColumns}
                     className="text-xs text-primary hover:underline"
                   >
-                    Tampilkan semua
+                    Reset tampilan
                   </button>
                 </div>
               </div>
