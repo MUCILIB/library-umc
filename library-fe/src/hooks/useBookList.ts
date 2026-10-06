@@ -84,6 +84,7 @@ export function useBookList(
       items: item.items || [],
       subjects: item.subjects || [],
       faculties: item.faculties || [],
+      studyPrograms: item.studyPrograms || [],
     }));
 
     setBibliographies(mapped);

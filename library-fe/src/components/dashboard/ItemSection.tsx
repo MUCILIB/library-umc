@@ -97,7 +97,7 @@ export default function ItemSection() {
       await fetchData();
       if (selectedItem?.id === item.id) setSelectedItem(null);
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Gagal mengarsipkan");
+      setError(err instanceof Error ? err.message : "Gagal mengarsipkan");   
     }
   };
 
