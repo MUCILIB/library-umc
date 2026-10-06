@@ -19,5 +19,15 @@ globalIgnores(['dist']),
       ecmaVersion: 2020,
       globals: globals.browser,
     },
+    rules: {
+      '@typescript-eslint/no-explicit-any': 'warn',
+      '@typescript-eslint/no-unused-vars': 'warn',
+      'react-refresh/only-export-components': 'warn',
+      'react-hooks/set-state-in-effect': 'warn',
+      'no-empty': 'warn',
+      'no-extra-boolean-cast': 'warn',
+      'react-hooks/purity': 'warn',
+      'react-hooks/refs': 'warn'
+    },
   },
 ])

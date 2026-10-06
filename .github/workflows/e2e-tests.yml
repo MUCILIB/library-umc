@@ -1,0 +1,62 @@
+name: E2E Tests
+
+on:
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  e2e-test:
+    runs-on: ubuntu-latest
+    
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: mucilib_test
+          POSTGRES_PASSWORD: mucilib_test_password
+          POSTGRES_DB: mucilib_test
+        ports:
+          - 55432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: 20
+        
+    - name: Install Dependencies
+      run: |
+        npm ci --prefix library-be
+        npm ci --prefix library-fe
+        
+    - name: Run Drizzle Migration on test DB
+      working-directory: ./library-be
+      run: npm run db:test:migrate
+        
+    - name: Seed test data
+      working-directory: ./library-be
+      run: npm run db:test:seed
+        
+    - name: Install Playwright Browsers
+      working-directory: ./library-fe
+      run: npx playwright install chromium --with-deps
+      
+    - name: Run Playwright Tests
+      working-directory: ./library-fe
+      run: npx playwright test
+      env:
+        PLAYWRIGHT_CHROMIUM_PATH: ''
+        
+    - uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: playwright-report
+        path: library-fe/playwright-report/
+        retention-days: 7

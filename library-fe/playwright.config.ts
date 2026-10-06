@@ -3,7 +3,7 @@ import { defineConfig, devices } from "@playwright/test";
 const BACKEND_PORT = "4100";
 const FRONTEND_PORT = "5174";
 const TEST_DB = "postgresql://mucilib_test:mucilib_test_password@localhost:55432/mucilib_test";
-const CHROMIUM = "C:\\Users\\Admin\\AppData\\Local\\ms-playwright\\chromium-1200\\chrome-win64\\chrome.exe";
+const CHROMIUM = process.env.PLAYWRIGHT_CHROMIUM_PATH || "";
 
 export default defineConfig({
   testDir: "./e2e",
@@ -23,14 +23,14 @@ export default defineConfig({
     {
       name: "setup",
       testMatch: /auth\.setup\.ts/,
-      use: { launchOptions: { executablePath: CHROMIUM } },
+      use: { launchOptions: { ...(CHROMIUM ? { executablePath: CHROMIUM } : {}) } },
     },
     {
       name: "chromium",
       use: {
         ...devices["Desktop Chrome"],
         storageState: "playwright/.auth/admin.json",
-        launchOptions: { executablePath: CHROMIUM },
+        launchOptions: { ...(CHROMIUM ? { executablePath: CHROMIUM } : {}) },
       },
       dependencies: ["setup"],
       testIgnore: /unauthenticated\.spec\.ts/,
@@ -38,20 +38,34 @@ export default defineConfig({
     {
       name: "unauth",
       testMatch: /unauthenticated\.spec\.ts/,
-      use: { launchOptions: { executablePath: CHROMIUM } },
+      use: { launchOptions: { ...(CHROMIUM ? { executablePath: CHROMIUM } : {}) } },
     },
   ],
   webServer: [
     {
       name: "backend",
-      command: `cmd /c "set DATABASE_URL=${TEST_DB}&&set PORT=${BACKEND_PORT}&&set NODE_ENV=test&&set BETTER_AUTH_SECRET=test-secret&&set BETTER_AUTH_URL=http://localhost:${BACKEND_PORT}&&set FRONTEND_URL=http://localhost:${FRONTEND_PORT}&&cd /d ..\\library-be && npx tsx src/index.ts"`,
+      command: "npx tsx src/index.ts",
+      cwd: "../library-be",
+      env: {
+        DATABASE_URL: TEST_DB,
+        PORT: BACKEND_PORT,
+        NODE_ENV: "test",
+        BETTER_AUTH_SECRET: "test-secret",
+        BETTER_AUTH_URL: `http://localhost:${BACKEND_PORT}`,
+        FRONTEND_URL: `http://localhost:${FRONTEND_PORT}`
+      },
       url: `http://localhost:${BACKEND_PORT}/health`,
       timeout: 30000,
       reuseExistingServer: true,
     },
     {
       name: "frontend",
-      command: `cmd /c "set VITE_API_URL=http://localhost:${BACKEND_PORT}&&set VITE_BETTER_AUTH_URL=http://localhost:${BACKEND_PORT}&&set VITE_BASE_URL=http://localhost:${FRONTEND_PORT}&&npx vite --port ${FRONTEND_PORT} --strictPort"`,
+      command: `npx vite --port ${FRONTEND_PORT} --strictPort`,
+      env: {
+        VITE_API_URL: `http://localhost:${BACKEND_PORT}`,
+        VITE_BETTER_AUTH_URL: `http://localhost:${BACKEND_PORT}`,
+        VITE_BASE_URL: `http://localhost:${FRONTEND_PORT}`
+      },
       url: `http://localhost:${FRONTEND_PORT}`,
       timeout: 30000,
       reuseExistingServer: true,

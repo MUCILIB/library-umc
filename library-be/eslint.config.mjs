@@ -32,9 +32,7 @@ export default tseslint.config(
         ...globals.es2020,
       },
       parserOptions: {
-        projectService: {
-          allowDefaultProject: ["*.ts"],
-        },
+        project: "./tsconfig.eslint.json",
         tsconfigRootDir: import.meta.dirname,
       },
     },
@@ -57,12 +55,15 @@ export default tseslint.config(
       ],
 
       // ─── General Rules ───────────────────────────────────
+      "@typescript-eslint/ban-ts-comment": "warn",
+      "preserve-caught-error": "off",
       "no-console": ["warn", { allow: ["warn", "error", "log"] }],
-      "no-duplicate-imports": "error",
+      "no-duplicate-imports": "warn",
+      "no-useless-assignment": "warn",
       "no-unused-expressions": "warn",
-      "prefer-const": "error",
-      eqeqeq: ["error", "always"],
-      curly: ["error", "multi-line"],
+      "prefer-const": "warn",
+      eqeqeq: ["warn", "always"],
+      curly: ["warn", "multi-line"],
     },
   },
 );

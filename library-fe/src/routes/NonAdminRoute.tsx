@@ -1,4 +1,4 @@
-import { type ReactNode, useRef } from "react";
+import { type ReactNode, useState, useEffect } from "react";
 import { Navigate } from "react-router";
 import { authClient } from "@/utils/auth-client";
 
@@ -8,11 +8,15 @@ interface NonAdminRouteProps {
 
 export default function NonAdminRoute({ children }: NonAdminRouteProps) {
   const { data: session, isPending } = authClient.useSession();
-  const hasLoadedOnce = useRef(false);
+  const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
 
-  if (!isPending) hasLoadedOnce.current = true;
+  useEffect(() => {
+    if (!isPending) {
+      setHasLoadedOnce(true);
+    }
+  }, [isPending]);
 
-  if (isPending && !hasLoadedOnce.current) {
+  if (isPending && !hasLoadedOnce) {
     return null;
   }
 
