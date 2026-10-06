@@ -1,0 +1,507 @@
+
+> lint
+> eslint .
+
+
+D:\Documents\Learning\Project\library-umc\library-be\scratch\test-pay-fine.ts
+  0:0  error  Parsing error: "parserOptions.project" has been provided for @typescript-eslint/parser.
+The file was not found in any of the provided project(s): scratch\test-pay-fine.ts
+
+D:\Documents\Learning\Project\library-umc\library-be\scripts\e2e-roundtrip-test.ts
+   13:57  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   13:88  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   77:46  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   92:44  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  109:40  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  160:38  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  174:47  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  180:43  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  209:51  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  236:53  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+D:\Documents\Learning\Project\library-umc\library-be\scripts\seed-catalog-data.ts
+  42:9  warning  'gmdId' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  44:9  warning  'ctId' is assigned a value but never used. Allowed unused vars must match /^_/u   @typescript-eslint/no-unused-vars
+
+D:\Documents\Learning\Project\library-umc\library-be\scripts\seed-guest-stats.ts
+  3:10  warning  'sql' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+D:\Documents\Learning\Project\library-umc\library-be\src\check_db.ts
+  2:10  warning  'items' is defined but never used. Allowed unused vars must match /^_/u   @typescript-eslint/no-unused-vars
+  3:10  warning  'isNull' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+D:\Documents\Learning\Project\library-umc\library-be\src\config\mailer.ts
+  53:19  warning  Unexpected any. Specify a different type                        @typescript-eslint/no-explicit-any
+  65:5   error    There is no `cause` attached to the symptom error being thrown  preserve-caught-error
+
+D:\Documents\Learning\Project\library-umc\library-be\src\cron\__tests__\bookingCancelScheduler.test.ts
+   1:48  warning  'afterEach' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  60:33  warning  Unexpected any. Specify a different type                                     @typescript-eslint/no-explicit-any
+  89:33  warning  Unexpected any. Specify a different type                                     @typescript-eslint/no-explicit-any
+  92:24  warning  Unexpected any. Specify a different type                                     @typescript-eslint/no-explicit-any
+  92:63  warning  Unexpected any. Specify a different type                                     @typescript-eslint/no-explicit-any
+
+D:\Documents\Learning\Project\library-umc\library-be\src\cron\__tests__\fineScheduler.test.ts
+   17:26  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   74:19  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   95:19  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   99:19  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  113:26  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  142:19  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  171:19  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  186:19  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  214:19  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+D:\Documents\Learning\Project\library-umc\library-be\src\cron\fineScheduler.ts
+  74:44  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+D:\Documents\Learning\Project\library-umc\library-be\src\db\index.ts
+   9:1   error    Use "@ts-expect-error" instead of "@ts-ignore", as "@ts-ignore" will do nothing if the following line is error-free  @typescript-eslint/ban-ts-comment
+  10:34  warning  Unexpected any. Specify a different type                                                                             @typescript-eslint/no-explicit-any
+  10:48  warning  Unexpected any. Specify a different type                                                                             @typescript-eslint/no-explicit-any
+  10:63  warning  Unexpected any. Specify a different type                                                                             @typescript-eslint/no-explicit-any
+
+D:\Documents\Learning\Project\library-umc\library-be\src\lib\auth.ts
+  34:44  warning  'token' is defined but never used. Allowed unused args must match /^_/u  @typescript-eslint/no-unused-vars
+
+D:\Documents\Learning\Project\library-umc\library-be\src\modules\auth\__tests__\auth.audit.controller.test.ts
+  26:12  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+D:\Documents\Learning\Project\library-umc\library-be\src\modules\auth\__tests__\auth.controller.test.ts
+  54:46  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  91:46  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+D:\Documents\Learning\Project\library-umc\library-be\src\modules\auth\__tests__\auth.service.test.ts
+  43:36  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  53:36  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  55:32  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  72:32  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  80:32  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+D:\Documents\Learning\Project\library-umc\library-be\src\modules\auth\service\auth.service.ts
+   40:35  warning  Unexpected any. Specify a different type                                        @typescript-eslint/no-explicit-any
+   98:25  warning  Unexpected any. Specify a different type                                        @typescript-eslint/no-explicit-any
+  101:16  warning  'e' is defined but never used. Allowed unused caught errors must match /^_/u    @typescript-eslint/no-unused-vars
+  124:14  warning  'err' is defined but never used. Allowed unused caught errors must match /^_/u  @typescript-eslint/no-unused-vars
+  189:14  warning  'err' is defined but never used. Allowed unused caught errors must match /^_/u  @typescript-eslint/no-unused-vars
+
+D:\Documents\Learning\Project\library-umc\library-be\src\modules\bibliography\__tests__\bibliography.duplicate.test.ts
+  43:42  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  51:42  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  62:42  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  75:42  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+D:\Documents\Learning\Project\library-umc\library-be\src\modules\bibliography\controller\bibliography.controller.ts
+  42:25  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  61:25  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  87:25  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+D:\Documents\Learning\Project\library-umc\library-be\src\modules\bibliography\route\bibliography.route.ts
+  4:1  error  '../../../middlewares/auth.middleware' import is duplicated  no-duplicate-imports
+
+D:\Documents\Learning\Project\library-umc\library-be\src\modules\bibliography\service\bibliography.service.ts
+    9:10  warning  'syncCollectionAvailableStock' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+   23:43  warning  Unexpected any. Specify a different type                                                        @typescript-eslint/no-explicit-any
+   31:44  warning  Unexpected any. Specify a different type                                                        @typescript-eslint/no-explicit-any
+   39:46  warning  Unexpected any. Specify a different type                                                        @typescript-eslint/no-explicit-any
+   48:53  warning  Unexpected any. Specify a different type                                                        @typescript-eslint/no-explicit-any
+   57:33  warning  Unexpected any. Specify a different type                                                        @typescript-eslint/no-explicit-any
+   71:34  warning  Unexpected any. Specify a different type                                                        @typescript-eslint/no-explicit-any
+   79:35  warning  Unexpected any. Specify a different type                                                        @typescript-eslint/no-explicit-any
+   86:39  warning  Unexpected any. Specify a different type                                                        @typescript-eslint/no-explicit-any
+   96:20  warning  Unexpected any. Specify a different type                                                        @typescript-eslint/no-explicit-any
+   97:77  warning  Unexpected any. Specify a different type                                                        @typescript-eslint/no-explicit-any
+  101:20  warning  Unexpected any. Specify a different type                                                        @typescript-eslint/no-explicit-any
+  102:84  warning  Unexpected any. Specify a different type                                                        @typescript-eslint/no-explicit-any
+  105:25  warning  Unexpected any. Specify a different type                                                        @typescript-eslint/no-explicit-any
+  140:20  warning  Unexpected any. Specify a different type                                                        @typescript-eslint/no-explicit-any
+  141:37  warning  Unexpected any. Specify a different type                                                        @typescript-eslint/no-explicit-any
+  142:62  warning  Unexpected any. Specify a different type                                                        @typescript-eslint/no-explicit-any
+  147:20  warning  Unexpected any. Specify a different type                                                        @typescript-eslint/no-explicit-any
+  148:37  warning  Unexpected any. Specify a different type                                                        @typescript-eslint/no-explicit-any
+  149:69  warning  Unexpected any. Specify a different type                                                        @typescript-eslint/no-explicit-any
+  153:25  warning  Unexpected any. Specify a different type                                                        @typescript-eslint/no-explicit-any
+  199:49  warning  Unexpected any. Specify a different type                                                        @typescript-eslint/no-explicit-any
+  202:49  warning  Unexpected any. Specify a different type                                                        @typescript-eslint/no-explicit-any
+  203:51  warning  Unexpected any. Specify a different type                                                        @typescript-eslint/no-explicit-any
+  204:53  warning  Unexpected any. Specify a different type                                                        @typescript-eslint/no-explicit-any
+  205:62  warning  Unexpected any. Specify a different type                                                        @typescript-eslint/no-explicit-any
+  221:23  warning  Unexpected any. Specify a different type                                                        @typescript-eslint/no-explicit-any
+  244:41  warning  Unexpected any. Specify a different type                                                        @typescript-eslint/no-explicit-any
+  255:38  warning  Unexpected any. Specify a different type                                                        @typescript-eslint/no-explicit-any
+  263:39  warning  Unexpected any. Specify a different type                                                        @typescript-eslint/no-explicit-any
+  346:35  warning  Unexpected any. Specify a different type                                                        @typescript-eslint/no-explicit-any
+  348:49  warning  Unexpected any. Specify a different type                                                        @typescript-eslint/no-explicit-any
+  349:51  warning  Unexpected any. Specify a different type                                                        @typescript-eslint/no-explicit-any
+  350:53  warning  Unexpected any. Specify a different type                                                        @typescript-eslint/no-explicit-any
+  351:62  warning  Unexpected any. Specify a different type                                                        @typescript-eslint/no-explicit-any
+  358:44  warning  Unexpected any. Specify a different type                                                        @typescript-eslint/no-explicit-any
+  373:23  warning  Unexpected any. Specify a different type                                                        @typescript-eslint/no-explicit-any
+  387:55  warning  Unexpected any. Specify a different type                                                        @typescript-eslint/no-explicit-any
+  402:18  warning  Unexpected any. Specify a different type                                                        @typescript-eslint/no-explicit-any
+  411:55  warning  Unexpected any. Specify a different type                                                        @typescript-eslint/no-explicit-any
+
+D:\Documents\Learning\Project\library-umc\library-be\src\modules\category\__tests__\category.controller.test.ts
+  14:55  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  17:54  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  21:11  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  22:53  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  40:14  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  79:14  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+D:\Documents\Learning\Project\library-umc\library-be\src\modules\category\__tests__\category.service.test.ts
+   52:41  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   64:41  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   68:21  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  100:41  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  102:45  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+D:\Documents\Learning\Project\library-umc\library-be\src\modules\category\service\category.service.ts
+   21:53  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   50:30  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  131:30  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  226:30  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  304:62  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+D:\Documents\Learning\Project\library-umc\library-be\src\modules\collection\route\collection.route.ts
+  4:1  error  '../../../middlewares/auth.middleware' import is duplicated  no-duplicate-imports
+
+D:\Documents\Learning\Project\library-umc\library-be\src\modules\export\__tests__\export.service.test.ts
+  189:27  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+D:\Documents\Learning\Project\library-umc\library-be\src\modules\export\route\export.route.ts
+  3:1  error  '../../../middlewares/auth.middleware' import is duplicated  no-duplicate-imports
+
+D:\Documents\Learning\Project\library-umc\library-be\src\modules\export\service\export.service.ts
+    3:26  warning  'bibliographyAuthors' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+    5:3   warning  'authors' is defined but never used. Allowed unused vars must match /^_/u              @typescript-eslint/no-unused-vars
+    5:22  warning  'publishers' is defined but never used. Allowed unused vars must match /^_/u           @typescript-eslint/no-unused-vars
+    5:34  warning  'publicationPlaces' is defined but never used. Allowed unused vars must match /^_/u    @typescript-eslint/no-unused-vars
+    5:53  warning  'gmds' is defined but never used. Allowed unused vars must match /^_/u                 @typescript-eslint/no-unused-vars
+    6:3   warning  'languages' is defined but never used. Allowed unused vars must match /^_/u            @typescript-eslint/no-unused-vars
+    6:14  warning  'locations' is defined but never used. Allowed unused vars must match /^_/u            @typescript-eslint/no-unused-vars
+    6:25  warning  'vendors' is defined but never used. Allowed unused vars must match /^_/u              @typescript-eslint/no-unused-vars
+    6:34  warning  'collectionTypes' is defined but never used. Allowed unused vars must match /^_/u      @typescript-eslint/no-unused-vars
+    7:28  warning  'members' is defined but never used. Allowed unused vars must match /^_/u              @typescript-eslint/no-unused-vars
+  101:21  warning  Unexpected any. Specify a different type                                               @typescript-eslint/no-explicit-any
+  109:37  warning  Unexpected any. Specify a different type                                               @typescript-eslint/no-explicit-any
+  120:32  warning  Unexpected any. Specify a different type                                               @typescript-eslint/no-explicit-any
+  135:37  warning  Unexpected any. Specify a different type                                               @typescript-eslint/no-explicit-any
+  144:77  warning  Unexpected any. Specify a different type                                               @typescript-eslint/no-explicit-any
+  145:34  warning  Unexpected any. Specify a different type                                               @typescript-eslint/no-explicit-any
+  151:23  warning  Unexpected any. Specify a different type                                               @typescript-eslint/no-explicit-any
+  220:27  warning  Unexpected any. Specify a different type                                               @typescript-eslint/no-explicit-any
+  223:61  warning  Unexpected any. Specify a different type                                               @typescript-eslint/no-explicit-any
+  258:37  warning  Unexpected any. Specify a different type                                               @typescript-eslint/no-explicit-any
+  259:23  warning  Unexpected any. Specify a different type                                               @typescript-eslint/no-explicit-any
+  259:55  warning  Unexpected any. Specify a different type                                               @typescript-eslint/no-explicit-any
+  259:87  warning  Unexpected any. Specify a different type                                               @typescript-eslint/no-explicit-any
+  271:33  warning  Unexpected any. Specify a different type                                               @typescript-eslint/no-explicit-any
+  274:33  warning  Unexpected any. Specify a different type                                               @typescript-eslint/no-explicit-any
+  287:33  warning  Unexpected any. Specify a different type                                               @typescript-eslint/no-explicit-any
+  296:23  warning  Unexpected any. Specify a different type                                               @typescript-eslint/no-explicit-any
+  350:23  warning  Unexpected any. Specify a different type                                               @typescript-eslint/no-explicit-any
+  353:57  warning  Unexpected any. Specify a different type                                               @typescript-eslint/no-explicit-any
+  417:23  warning  Unexpected any. Specify a different type                                               @typescript-eslint/no-explicit-any
+
+D:\Documents\Learning\Project\library-umc\library-be\src\modules\faculty\__tests__\faculty.service.test.ts
+  49:40  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  51:21  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  66:40  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  76:40  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  77:44  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+D:\Documents\Learning\Project\library-umc\library-be\src\modules\faculty\service\faculty.service.ts
+  13:43   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  27:54   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  40:117  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  62:130  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  76:25   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  96:94   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+D:\Documents\Learning\Project\library-umc\library-be\src\modules\fines\__tests__\fines.controller.test.ts
+   27:11  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   32:11  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   37:11  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   42:11  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   47:11  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   82:28  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  143:27  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  185:27  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  233:77  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  256:77  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+D:\Documents\Learning\Project\library-umc\library-be\src\modules\fines\__tests__\fines.service.test.ts
+  30:20  warning  Unexpected any. Specify a different type   @typescript-eslint/no-explicit-any
+  72:36  warning  `import()` type annotations are forbidden  @typescript-eslint/consistent-type-imports
+
+D:\Documents\Learning\Project\library-umc\library-be\src\modules\guest\__tests__\feature.endpoints.test.ts
+    6:42  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+    7:16  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   15:21  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  191:12  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  193:73  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  222:12  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  228:12  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  237:76  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  238:74  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  297:35  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  297:41  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+D:\Documents\Learning\Project\library-umc\library-be\src\modules\guest\__tests__\guest.service.test.ts
+   97:76  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   98:74  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  119:77  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  124:12  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  125:73  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  166:77  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  167:80  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  191:12  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+D:\Documents\Learning\Project\library-umc\library-be\src\modules\guest\service\guest.service.ts
+    18:10  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+    27:71  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+    88:26  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   157:71  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   323:31  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   402:31  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   465:26  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   494:58  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   538:26  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   567:64  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   686:25  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   714:31  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   794:30  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   805:25  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   896:50  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   942:30  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  1005:61  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+D:\Documents\Learning\Project\library-umc\library-be\src\modules\import\__tests__\import.service.test.ts
+   44:29  warning  Unexpected any. Specify a different type                                       @typescript-eslint/no-explicit-any
+   89:13  warning  'db' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+   89:35  warning  Unexpected any. Specify a different type                                       @typescript-eslint/no-explicit-any
+   96:21  warning  Unexpected any. Specify a different type                                       @typescript-eslint/no-explicit-any
+  119:44  warning  Unexpected any. Specify a different type                                       @typescript-eslint/no-explicit-any
+  127:44  warning  Unexpected any. Specify a different type                                       @typescript-eslint/no-explicit-any
+  135:44  warning  Unexpected any. Specify a different type                                       @typescript-eslint/no-explicit-any
+  145:44  warning  Unexpected any. Specify a different type                                       @typescript-eslint/no-explicit-any
+  149:52  warning  Unexpected any. Specify a different type                                       @typescript-eslint/no-explicit-any
+  150:42  warning  Unexpected any. Specify a different type                                       @typescript-eslint/no-explicit-any
+  151:21  warning  Unexpected any. Specify a different type                                       @typescript-eslint/no-explicit-any
+  166:44  warning  Unexpected any. Specify a different type                                       @typescript-eslint/no-explicit-any
+  169:21  warning  Unexpected any. Specify a different type                                       @typescript-eslint/no-explicit-any
+  183:42  warning  Unexpected any. Specify a different type                                       @typescript-eslint/no-explicit-any
+  212:21  warning  Unexpected any. Specify a different type                                       @typescript-eslint/no-explicit-any
+  231:21  warning  Unexpected any. Specify a different type                                       @typescript-eslint/no-explicit-any
+  234:36  warning  Unexpected any. Specify a different type                                       @typescript-eslint/no-explicit-any
+  253:21  warning  Unexpected any. Specify a different type                                       @typescript-eslint/no-explicit-any
+  256:21  warning  Unexpected any. Specify a different type                                       @typescript-eslint/no-explicit-any
+  261:38  warning  Unexpected any. Specify a different type                                       @typescript-eslint/no-explicit-any
+  262:36  warning  Unexpected any. Specify a different type                                       @typescript-eslint/no-explicit-any
+
+D:\Documents\Learning\Project\library-umc\library-be\src\modules\import\controller\import.controller.ts
+  10:100  warning  Unexpected any. Specify a different type                                           @typescript-eslint/no-explicit-any
+  19:92   warning  Unexpected any. Specify a different type                                           @typescript-eslint/no-explicit-any
+  41:13   warning  'offset' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  49:93   warning  Unexpected any. Specify a different type                                           @typescript-eslint/no-explicit-any
+  72:38   warning  Unexpected any. Specify a different type                                           @typescript-eslint/no-explicit-any
+
+D:\Documents\Learning\Project\library-umc\library-be\src\modules\import\route\import.route.ts
+  3:1  error  '../../../middlewares/auth.middleware' import is duplicated  no-duplicate-imports
+
+D:\Documents\Learning\Project\library-umc\library-be\src\modules\import\service\import.service.ts
+     8:25  warning  'vendors' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+    11:32  warning  'asc' is defined but never used. Allowed unused vars must match /^_/u      @typescript-eslint/no-unused-vars
+    11:37  warning  'inArray' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+   203:44  warning  Unexpected any. Specify a different type                                   @typescript-eslint/no-explicit-any
+   233:19  warning  Unexpected any. Specify a different type                                   @typescript-eslint/no-explicit-any
+   486:9   error    This assigned value is not used in subsequent statements                   no-useless-assignment
+   486:15  warning  Unexpected any. Specify a different type                                   @typescript-eslint/no-explicit-any
+   487:9   error    This assigned value is not used in subsequent statements                   no-useless-assignment
+   572:44  warning  Unexpected any. Specify a different type                                   @typescript-eslint/no-explicit-any
+   573:11  error    This assigned value is not used in subsequent statements                   no-useless-assignment
+   727:21  warning  Unexpected any. Specify a different type                                   @typescript-eslint/no-explicit-any
+   781:44  warning  Unexpected any. Specify a different type                                   @typescript-eslint/no-explicit-any
+   792:72  warning  Unexpected any. Specify a different type                                   @typescript-eslint/no-explicit-any
+   848:37  warning  Unexpected any. Specify a different type                                   @typescript-eslint/no-explicit-any
+   870:21  warning  Unexpected any. Specify a different type                                   @typescript-eslint/no-explicit-any
+  1055:21  warning  Unexpected any. Specify a different type                                   @typescript-eslint/no-explicit-any
+  1157:21  warning  Unexpected any. Specify a different type                                   @typescript-eslint/no-explicit-any
+  1258:21  warning  Unexpected any. Specify a different type                                   @typescript-eslint/no-explicit-any
+
+D:\Documents\Learning\Project\library-umc\library-be\src\modules\item\__tests__\item.service.test.ts
+   38:31  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   90:36  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   91:45  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   94:40  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   99:26  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   99:61  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  114:45  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  118:36  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  136:36  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  137:45  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  151:36  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  152:45  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  155:40  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  171:36  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  178:26  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  178:61  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  187:36  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  201:36  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  212:36  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  230:26  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  230:61  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  247:36  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  271:40  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  273:26  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  273:61  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  284:36  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  295:36  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  314:26  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  314:61  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+D:\Documents\Learning\Project\library-umc\library-be\src\modules\item\controller\item.controller.ts
+   42:116  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  116:86   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  124:82   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+D:\Documents\Learning\Project\library-umc\library-be\src\modules\item\route\item.route.ts
+  4:1  error  '../../../middlewares/auth.middleware' import is duplicated  no-duplicate-imports
+
+D:\Documents\Learning\Project\library-umc\library-be\src\modules\item\service\item.service.ts
+    3:19  warning  'like' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+   12:22  warning  Unexpected any. Specify a different type                                @typescript-eslint/no-explicit-any
+  134:17  warning  Unexpected any. Specify a different type                                @typescript-eslint/no-explicit-any
+  137:27  warning  Unexpected any. Specify a different type                                @typescript-eslint/no-explicit-any
+  140:29  error    Expected '!==' and instead saw '!='                                     eqeqeq
+  149:19  warning  Unexpected any. Specify a different type                                @typescript-eslint/no-explicit-any
+  170:25  warning  Unexpected any. Specify a different type                                @typescript-eslint/no-explicit-any
+  224:25  warning  Unexpected any. Specify a different type                                @typescript-eslint/no-explicit-any
+  225:22  error    Expected '!==' and instead saw '!='                                     eqeqeq
+  244:72  warning  Unexpected any. Specify a different type                                @typescript-eslint/no-explicit-any
+
+D:\Documents\Learning\Project\library-umc\library-be\src\modules\loan\__tests__\loan.controller.test.ts
+   18:11  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   19:63  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   23:11  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   37:9   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   41:11  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   42:60  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   46:11  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   47:60  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   51:11  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   52:60  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   56:11  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   57:61  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   62:11  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   63:61  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  105:12  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  109:21  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  130:12  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  233:12  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  262:12  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+D:\Documents\Learning\Project\library-umc\library-be\src\modules\loan\__tests__\loan.service.test.ts
+   43:19  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  104:36  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  113:36  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  117:21  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  140:26  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  140:65  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  152:26  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  152:65  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  186:26  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  186:65  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  214:25  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  215:26  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  215:65  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  228:53  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  247:26  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  247:65  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  259:26  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  259:65  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  275:26  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  275:65  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  291:26  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  291:65  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+D:\Documents\Learning\Project\library-umc\library-be\src\modules\loan\controller\loan.controller.ts
+  213:27  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+D:\Documents\Learning\Project\library-umc\library-be\src\modules\loan\service\loan.service.ts
+    9:3   warning  'bibliographies' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  227:23  warning  Unexpected any. Specify a different type                                          @typescript-eslint/no-explicit-any
+  357:36  warning  'adminId' is defined but never used. Allowed unused args must match /^_/u         @typescript-eslint/no-unused-vars
+  620:31  warning  Unexpected any. Specify a different type                                          @typescript-eslint/no-explicit-any
+  625:48  warning  Unexpected any. Specify a different type                                          @typescript-eslint/no-explicit-any
+  629:48  warning  Unexpected any. Specify a different type                                          @typescript-eslint/no-explicit-any
+  828:41  warning  'adminId' is defined but never used. Allowed unused args must match /^_/u         @typescript-eslint/no-unused-vars
+
+D:\Documents\Learning\Project\library-umc\library-be\src\modules\location\controller\location.controller.ts
+  80:12  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+D:\Documents\Learning\Project\library-umc\library-be\src\modules\member\service\member.service.ts
+   36:68  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  172:68  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  210:68  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  271:30  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  321:30  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  361:69  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  389:61  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  421:30  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+D:\Documents\Learning\Project\library-umc\library-be\src\modules\notification\__tests__\notification.password.test.ts
+  35:46  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  42:26  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+D:\Documents\Learning\Project\library-umc\library-be\src\modules\notification\service\notification.service.ts
+   8:3  warning  'buildEmailTemplate' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+   9:3  warning  'escapeHtml' is defined but never used. Allowed unused vars must match /^_/u          @typescript-eslint/no-unused-vars
+  10:3  warning  'formatContent' is defined but never used. Allowed unused vars must match /^_/u       @typescript-eslint/no-unused-vars
+
+D:\Documents\Learning\Project\library-umc\library-be\src\modules\recommendation\controller\recommendation.controller.ts
+  24:28  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  45:28  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+D:\Documents\Learning\Project\library-umc\library-be\src\modules\reservation\service\reservation.service.ts
+  161:43  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  164:61  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  168:61  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+D:\Documents\Learning\Project\library-umc\library-be\src\modules\shared\__tests__\stock-sync.test.ts
+  14:15  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+D:\Documents\Learning\Project\library-umc\library-be\src\modules\study-program\__tests__\study-program.service.test.ts
+  42:44  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  43:40  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  45:21  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  58:44  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  65:44  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  66:40  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  75:43  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  82:43  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+D:\Documents\Learning\Project\library-umc\library-be\src\modules\study-program\service\study-program.service.ts
+   13:61   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   15:25   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   30:54   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   44:136  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   75:150  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  103:25   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  124:94   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+D:\Documents\Learning\Project\library-umc\library-be\src\test_api.ts
+  2:10  warning  'bibliographies' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+D:\Documents\Learning\Project\library-umc\library-be\src\tests\return-loan.test.ts
+   3:24  warning  'returnRequests' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  37:17  warning  Unexpected any. Specify a different type                                          @typescript-eslint/no-explicit-any
+  46:55  warning  Unexpected any. Specify a different type                                          @typescript-eslint/no-explicit-any
+  58:17  warning  Unexpected any. Specify a different type                                          @typescript-eslint/no-explicit-any
+
+D:\Documents\Learning\Project\library-umc\library-be\src\utils\auth-types.ts
+  55:26  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+✖ 385 problems (13 errors, 372 warnings)
+

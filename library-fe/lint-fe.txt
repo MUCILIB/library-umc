@@ -1,0 +1,347 @@
+
+> library-fe@0.0.0 lint
+> eslint .
+
+
+D:\Documents\Learning\Project\library-umc\library-fe\e2e\auth.setup.ts
+  1:25  error  'expect' is defined but never used  @typescript-eslint/no-unused-vars
+
+D:\Documents\Learning\Project\library-umc\library-fe\e2e\loan-roundtrip.spec.ts
+  71:16  error    'getLoanIdFromToken' is defined but never used  @typescript-eslint/no-unused-vars
+  94:37  warning  Unexpected any. Specify a different type        @typescript-eslint/no-explicit-any
+
+D:\Documents\Learning\Project\library-umc\library-fe\src\api\client.ts
+  590:14  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  612:21  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+D:\Documents\Learning\Project\library-umc\library-fe\src\components\BookList.tsx
+  37:5  error  Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+D:\Documents\Learning\Project\library-umc\library-fe\src\components\BookList.tsx:37:5
+  35 |   // Reset page when filters change
+  36 |   useEffect(() => {
+> 37 |     setCurrentPage(1);
+     |     ^^^^^^^^^^^^^^ Avoid calling setState() directly within an effect
+  38 |   }, [searchQuery, searchType, availabilityFilter, yearRange, activeTab]);
+  39 |
+  40 |   // Helper: Cek apakah user sedang meminjam buku ini  react-hooks/set-state-in-effect
+
+D:\Documents\Learning\Project\library-umc\library-fe\src\components\DialogUnauthorized.tsx
+  35:9  error  Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+D:\Documents\Learning\Project\library-umc\library-fe\src\components\DialogUnauthorized.tsx:35:9
+  33 |
+  34 |       if (user.role === "unauthorized") {
+> 35 |         setModalType("unauthorized");
+     |         ^^^^^^^^^^^^ Avoid calling setState() directly within an effect
+  36 |         setIsOpen(true);
+  37 |       } else {
+  38 |         // Check if we already showed the welcome modal  react-hooks/set-state-in-effect
+
+D:\Documents\Learning\Project\library-umc\library-fe\src\components\ProtectedRoute.tsx
+  29:41  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  51:37  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+D:\Documents\Learning\Project\library-umc\library-fe\src\components\RiwayatPeminjaman.tsx
+  72:6  warning  React Hook useEffect has a missing dependency: 'fetchLoans'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+D:\Documents\Learning\Project\library-umc\library-fe\src\components\dashboard\BibliographySection.tsx
+  494:70   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  497:80   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  631:98   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  632:113  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  665:15   error    Empty block statement                     no-empty
+
+D:\Documents\Learning\Project\library-umc\library-fe\src\components\dashboard\CardApprovalsSection.tsx
+  35:6  warning  React Hook useEffect has a missing dependency: 'loadRequests'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+D:\Documents\Learning\Project\library-umc\library-fe\src\components\dashboard\CirculationSection.tsx
+   15:15  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   88:21  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  128:54  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  129:61  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  139:22  error    '_e' is defined but never used            @typescript-eslint/no-unused-vars
+  253:12  error    '_e' is defined but never used            @typescript-eslint/no-unused-vars
+  255:17  error    '_title' is defined but never used        @typescript-eslint/no-unused-vars
+  255:33  error    '_desc' is defined but never used         @typescript-eslint/no-unused-vars
+  256:15  error    '_title' is defined but never used        @typescript-eslint/no-unused-vars
+  256:31  error    '_desc' is defined but never used         @typescript-eslint/no-unused-vars
+  257:17  error    '_title' is defined but never used        @typescript-eslint/no-unused-vars
+  257:33  error    '_desc' is defined but never used         @typescript-eslint/no-unused-vars
+  258:17  error    '_id' is defined but never used           @typescript-eslint/no-unused-vars
+  309:19  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  341:19  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  367:19  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+D:\Documents\Learning\Project\library-umc\library-fe\src\components\dashboard\FakultasSection.tsx
+  25:14  error    'err' is defined but never used                                                                               @typescript-eslint/no-unused-vars
+  32:37  warning  React Hook useEffect has a missing dependency: 'fetchData'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+  59:19  warning  Unexpected any. Specify a different type                                                                      @typescript-eslint/no-explicit-any
+  72:19  warning  Unexpected any. Specify a different type                                                                      @typescript-eslint/no-explicit-any
+
+D:\Documents\Learning\Project\library-umc\library-fe\src\components\dashboard\GuestsSection.tsx
+   45:12  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  213:56  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  669:35  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+D:\Documents\Learning\Project\library-umc\library-fe\src\components\dashboard\ItemSection.tsx
+  641:9  error  Redundant double negation  no-extra-boolean-cast
+
+D:\Documents\Learning\Project\library-umc\library-fe\src\components\dashboard\LoansSection.tsx
+  862:111  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+D:\Documents\Learning\Project\library-umc\library-fe\src\components\dashboard\ProdiSection.tsx
+  30:14  error    'err' is defined but never used                                                                               @typescript-eslint/no-unused-vars
+  37:37  warning  React Hook useEffect has a missing dependency: 'fetchData'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+  70:19  warning  Unexpected any. Specify a different type                                                                      @typescript-eslint/no-explicit-any
+  83:19  warning  Unexpected any. Specify a different type                                                                      @typescript-eslint/no-explicit-any
+
+D:\Documents\Learning\Project\library-umc\library-fe\src\components\dashboard\ReportsSection.tsx
+  144:41  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+D:\Documents\Learning\Project\library-umc\library-fe\src\components\dashboard\ReturnApprovalsSection.tsx
+   7:44   warning  Unexpected any. Specify a different type                                                                          @typescript-eslint/no-explicit-any
+  19:19   warning  Unexpected any. Specify a different type                                                                          @typescript-eslint/no-explicit-any
+  28:6    warning  React Hook useEffect has a missing dependency: 'fetchRequests'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+  38:19   warning  Unexpected any. Specify a different type                                                                          @typescript-eslint/no-explicit-any
+  90:180  warning  Unexpected any. Specify a different type                                                                          @typescript-eslint/no-explicit-any
+
+D:\Documents\Learning\Project\library-umc\library-fe\src\components\dashboard\__tests__\CirculationSection.test.tsx
+  39:10  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  62:10  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+D:\Documents\Learning\Project\library-umc\library-fe\src\components\data-table.tsx
+  107:14  error    Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       react-refresh/only-export-components
+  366:17  warning  Compilation Skipped: Use of incompatible library
+
+This API returns functions which cannot be memoized without leading to stale UI. To prevent this, by default React Compiler will skip memoizing this component/hook. However, you may see issues if values from this API are passed to other components/hooks that are memoized.
+
+D:\Documents\Learning\Project\library-umc\library-fe\src\components\data-table.tsx:366:17
+  364 |   )
+  365 |
+> 366 |   const table = useReactTable({
+      |                 ^^^^^^^^^^^^^ TanStack Table's `useReactTable()` API returns functions that cannot be memoized safely
+  367 |     data,
+  368 |     columns,
+  369 |     state: {  react-hooks/incompatible-library
+
+D:\Documents\Learning\Project\library-umc\library-fe\src\components\ui\badge.tsx
+  48:17  error  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+
+D:\Documents\Learning\Project\library-umc\library-fe\src\components\ui\button.tsx
+  64:18  error  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+
+D:\Documents\Learning\Project\library-umc\library-fe\src\components\ui\sidebar.tsx
+  611:26  error  Error: Cannot call impure function during render
+
+`Math.random` is an impure function. Calling an impure function can produce unstable results that update unpredictably when the component happens to re-render. (https://react.dev/reference/rules/components-and-hooks-must-be-pure#components-and-hooks-must-be-idempotent).
+
+D:\Documents\Learning\Project\library-umc\library-fe\src\components\ui\sidebar.tsx:611:26
+  609 |   // Random width between 50 to 90%.
+  610 |   const width = React.useMemo(() => {
+> 611 |     return `${Math.floor(Math.random() * 40) + 50}%`
+      |                          ^^^^^^^^^^^^^ Cannot call impure function
+  612 |   }, [])
+  613 |
+  614 |   return (  react-hooks/purity
+  725:3   error  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              react-refresh/only-export-components
+
+D:\Documents\Learning\Project\library-umc\library-fe\src\components\ui\tabs.tsx
+  91:52  error  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+
+D:\Documents\Learning\Project\library-umc\library-fe\src\components\ui\theme-toggle.tsx
+  10:8  error  Error: Cannot access refs during render
+
+React refs are values that are not needed for rendering. Refs should only be accessed outside of render, such as in event handlers or effects. Accessing a ref value (the `current` property) during render can cause your component not to update as expected (https://react.dev/reference/react/useRef).
+
+D:\Documents\Learning\Project\library-umc\library-fe\src\components\ui\theme-toggle.tsx:10:8
+   8 |   const initRef = useRef(false);
+   9 |
+> 10 |   if (!initRef.current) {
+     |        ^^^^^^^^^^^^^^^ Cannot access ref value during render
+  11 |     initRef.current = true;
+  12 |     // ponytail: schedule mount flag outside render via microtask
+  13 |     queueMicrotask(() => setMounted(true));
+
+To initialize a ref only once, check that the ref is null with the pattern `if (ref.current == null) { ref.current = ... }`  react-hooks/refs
+
+D:\Documents\Learning\Project\library-umc\library-fe\src\components\ui\toggle.tsx
+  47:18  error  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+
+D:\Documents\Learning\Project\library-umc\library-fe\src\context\ToastContext.tsx
+  127:17  error  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+
+D:\Documents\Learning\Project\library-umc\library-fe\src\hooks\dashboard\useGuestsData.ts
+  10:42  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+D:\Documents\Learning\Project\library-umc\library-fe\src\hooks\useBookList.ts
+  70:56  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  74:32  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+D:\Documents\Learning\Project\library-umc\library-fe\src\hooks\useKatalogDetail.ts
+  45:38  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+D:\Documents\Learning\Project\library-umc\library-fe\src\pages\EResoucePage.tsx
+  232:5   error    Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+D:\Documents\Learning\Project\library-umc\library-fe\src\pages\EResoucePage.tsx:232:5
+  230 |   // Reset page when filters change
+  231 |   useEffect(() => {
+> 232 |     setCurrentPage(1);
+      |     ^^^^^^^^^^^^^^ Avoid calling setState() directly within an effect
+  233 |   }, [
+  234 |     searchQuery,
+  235 |     selectedCategory,  react-hooks/set-state-in-effect
+  418:68  warning  Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             @typescript-eslint/no-explicit-any
+  619:66  warning  Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             @typescript-eslint/no-explicit-any
+
+D:\Documents\Learning\Project\library-umc\library-fe\src\pages\Home.tsx
+  25:37  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+D:\Documents\Learning\Project\library-umc\library-fe\src\pages\Katalog.tsx
+  27:29  warning  Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   @typescript-eslint/no-explicit-any
+  61:5   error    Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+D:\Documents\Learning\Project\library-umc\library-fe\src\pages\Katalog.tsx:61:5
+  59 |   // Update search query when URL changes
+  60 |   useEffect(() => {
+> 61 |     setSearchQuery(searchParams.get("search") || "");
+     |     ^^^^^^^^^^^^^^ Avoid calling setState() directly within an effect
+  62 |     setSearchType(searchParams.get("type") || "all");
+  63 |   }, [searchParams]);
+  64 |  react-hooks/set-state-in-effect
+
+D:\Documents\Learning\Project\library-umc\library-fe\src\pages\KatalogDetail.tsx
+   51:28  warning  Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       @typescript-eslint/no-explicit-any
+   51:76  warning  Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       @typescript-eslint/no-explicit-any
+  104:7   error    Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+D:\Documents\Learning\Project\library-umc\library-fe\src\pages\KatalogDetail.tsx:104:7
+  102 |     if (bibliography?.id) {
+  103 |       const savedIds = JSON.parse(localStorage.getItem("umc_library_bookmarks") || "[]");
+> 104 |       setIsSaved(savedIds.includes(bibliography.id));
+      |       ^^^^^^^^^^ Avoid calling setState() directly within an effect
+  105 |     }
+  106 |   }, [bibliography]);
+  107 |  react-hooks/set-state-in-effect
+  126:16  error    'err' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                @typescript-eslint/no-unused-vars
+  334:64  warning  Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       @typescript-eslint/no-explicit-any
+
+D:\Documents\Learning\Project\library-umc\library-fe\src\pages\LoginPage.tsx
+  77:36  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+D:\Documents\Learning\Project\library-umc\library-fe\src\pages\MyLoansPage.tsx
+  104:5    error    Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+D:\Documents\Learning\Project\library-umc\library-fe\src\pages\MyLoansPage.tsx:104:5
+  102 |
+  103 |   useEffect(() => {
+> 104 |     setRemaining(getRemainingSeconds());
+      |     ^^^^^^^^^^^^ Avoid calling setState() directly within an effect
+  105 |     const interval = setInterval(() => {
+  106 |       const sec = getRemainingSeconds();
+  107 |       setRemaining(sec);  react-hooks/set-state-in-effect
+  156:29   warning  Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     @typescript-eslint/no-explicit-any
+  159:42   warning  Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     @typescript-eslint/no-explicit-any
+  166:34   warning  Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     @typescript-eslint/no-explicit-any
+  166:66   warning  Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     @typescript-eslint/no-explicit-any
+  166:97   warning  Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     @typescript-eslint/no-explicit-any
+  166:126  warning  Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     @typescript-eslint/no-explicit-any
+  339:29   warning  Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     @typescript-eslint/no-explicit-any
+  342:42   warning  Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     @typescript-eslint/no-explicit-any
+  349:34   warning  Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     @typescript-eslint/no-explicit-any
+  349:66   warning  Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     @typescript-eslint/no-explicit-any
+  349:97   warning  Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     @typescript-eslint/no-explicit-any
+  349:126  warning  Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     @typescript-eslint/no-explicit-any
+  390:139  warning  Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     @typescript-eslint/no-explicit-any
+
+D:\Documents\Learning\Project\library-umc\library-fe\src\pages\__tests__\ForgotPasswordPage.test.tsx
+  23:37  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+D:\Documents\Learning\Project\library-umc\library-fe\src\pages\__tests__\ResetPasswordPage.test.tsx
+  27:30  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+D:\Documents\Learning\Project\library-umc\library-fe\src\routes\NonAdminRoute.tsx
+  15:7   error    Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+D:\Documents\Learning\Project\library-umc\library-fe\src\routes\NonAdminRoute.tsx:15:7
+  13 |   useEffect(() => {
+  14 |     if (!isPending) {
+> 15 |       setHasLoadedOnce(true);
+     |       ^^^^^^^^^^^^^^^^ Avoid calling setState() directly within an effect
+  16 |     }
+  17 |   }, [isPending]);
+  18 |  react-hooks/set-state-in-effect
+  23:38  warning  Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               @typescript-eslint/no-explicit-any
+
+D:\Documents\Learning\Project\library-umc\library-fe\src\routes\PublicRoute.tsx
+  11:7   error    Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+D:\Documents\Learning\Project\library-umc\library-fe\src\routes\PublicRoute.tsx:11:7
+   9 |   useEffect(() => {
+  10 |     if (!isPending) {
+> 11 |       setHasLoadedOnce(true);
+     |       ^^^^^^^^^^^^^^^^ Avoid calling setState() directly within an effect
+  12 |     }
+  13 |   }, [isPending]);
+  14 |  react-hooks/set-state-in-effect
+  19:35  warning  Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             @typescript-eslint/no-explicit-any
+
+D:\Documents\Learning\Project\library-umc\library-fe\src\services\dashboard\usersManagementService.ts
+  146:31  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+D:\Documents\Learning\Project\library-umc\library-fe\src\services\loanService.tsx
+  168:45  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  178:58  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+✖ 102 problems (33 errors, 69 warnings)
+  1 error and 0 warnings potentially fixable with the `--fix` option.
+

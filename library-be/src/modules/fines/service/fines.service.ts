@@ -406,7 +406,7 @@ class FinesService {
       };
     } catch (error) {
       if (error instanceof BadRequestError || error instanceof NotFoundError)
-        throw error;
+        {throw error;}
       console.error("FinesService.createFineManual Error:", error);
       throw new InternalServerError("Failed to create fine manual");
     }
@@ -463,7 +463,7 @@ class FinesService {
       });
     } catch (error: unknown) {
       if (error instanceof BadRequestError || error instanceof NotFoundError)
-        throw error;
+        {throw error;}
       console.error("FinesService.payFine Error:", error);
       throw new InternalServerError("Failed to process fine payment");
     }

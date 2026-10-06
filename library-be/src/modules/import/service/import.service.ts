@@ -386,7 +386,7 @@ export class ImportService {
     const referenceBatchId = batch?.referenceBatchId;
 
     // Build item-code → bibliography mapping
-    let itemCodeMap = new Map<string, string>();
+    const itemCodeMap = new Map<string, string>();
     if (referenceBatchId) {
       const mappings = await db.query.importBibliographyItemCodes.findMany({
         where: eq(importBibliographyItemCodes.batchId, referenceBatchId),
