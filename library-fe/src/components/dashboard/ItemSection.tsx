@@ -190,7 +190,7 @@ export default function ItemSection() {
       {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h2 className="text-xl font-bold text-foreground">Item / Eksemplar</h2>
+          <h2 className="text-3xl font-bold text-foreground">Item / Eksemplar</h2>
           <p className="mt-1 text-sm text-muted-foreground">
             Kelola item fisik dari bibliografi
           </p>
@@ -209,20 +209,20 @@ export default function ItemSection() {
           </div>
           <button
             onClick={handleSearch}
-            className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary/90"
+            className="rounded-lg bg-primary px-4 py-2 text-base font-bold text-white hover:bg-primary/90"
           >
             Cari
           </button>
           <button
             onClick={handleCreate}
-            className="flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700"
+            className="flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-base font-bold text-white hover:bg-emerald-700"
           >
             <Plus className="size-4" />
             Tambah
           </button>
           <button
             onClick={() => setShowBulkForm(true)}
-            className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+            className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-base font-bold text-white hover:bg-blue-700"
           >
             <Package className="size-4" />
             Bulk
@@ -713,7 +713,7 @@ function ItemForm({
 
       <form onSubmit={handleSubmit} className="space-y-6">
         <div className="rounded-2xl border border-border bg-card p-6">
-          <h3 className="mb-4 text-sm font-semibold text-muted-foreground">Informasi Item</h3>
+          <h3 className="mb-4 text-xl font-semibold text-muted-foreground">Informasi Item</h3>
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="sm:col-span-2 relative">
               <label className="mb-1 block text-xs font-medium text-muted-foreground">Bibliografi *</label>
@@ -841,7 +841,7 @@ function ItemForm({
         </div>
 
         <div className="rounded-2xl border border-border bg-card p-6">
-          <h3 className="mb-4 text-sm font-semibold text-muted-foreground">Akuisisi</h3>
+          <h3 className="mb-4 text-xl font-semibold text-muted-foreground">Akuisisi</h3>
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
               <label className="mb-1 block text-xs font-medium text-muted-foreground">Sumber</label>

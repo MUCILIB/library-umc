@@ -1,4 +1,4 @@
-import { db } from "../../../db";
+import { type db } from "../../../db";
 import { items, bibliographies } from "../../../db/schema";
 import { eq, and, sql, isNull } from "drizzle-orm";
 

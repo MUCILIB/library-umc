@@ -26,7 +26,13 @@ import {
   FileDown,
   Columns3,
 } from "lucide-react";
-
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { cleanIsbn } from "@/utils/format";
 import {
   bibliographyApi,
@@ -78,24 +84,31 @@ export default function BibliographySection({
     { key: "isbn", label: "ISBN" },
     { key: "stok", label: "Stok" },
   ];
-
-  const STORAGE_KEY = "bibliography-visible-columns";
-  const defaultColumns: ColumnKey[] = ["fakultasProdi", "penulis", "penerbit", "tahun", "isbn", "stok"];
-
+  const DEFAULT_COLUMNS: Set<ColumnKey> = new Set(["fakultasProdi", "penulis", "penerbit", "tahun", "isbn", "stok"]);
+  
   const [visibleColumns, setVisibleColumns] = useState<Set<ColumnKey>>(() => {
     try {
-      const stored = localStorage.getItem(STORAGE_KEY);
-      if (stored) {
-        return new Set(JSON.parse(stored) as ColumnKey[]);
+      const saved = localStorage.getItem("bibliography-visible-columns");
+      if (saved) {
+        const parsed = JSON.parse(saved) as string[];
+        return new Set(parsed as ColumnKey[]);
       }
-    } catch {
-      // Fallback jika localStorage corrupt
+    } catch (err) {
+      console.warn("Failed to load column visibility from localStorage:", err);
     }
-    return new Set(defaultColumns);
+    return DEFAULT_COLUMNS;
   });
-
   const [showColumnPicker, setShowColumnPicker] = useState(false);
   const columnPickerRef = useRef<HTMLDivElement>(null);
+
+  // Save column visibility to localStorage whenever it changes
+  useEffect(() => {
+    try {
+      localStorage.setItem("bibliography-visible-columns", JSON.stringify(Array.from(visibleColumns)));
+    } catch (err) {
+      console.warn("Failed to save column visibility to localStorage:", err);
+    }
+  }, [visibleColumns]);
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -116,15 +129,8 @@ export default function BibliographySection({
       } else {
         next.add(key);
       }
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(Array.from(next)));
       return next;
     });
-  };
-
-  const resetColumns = () => {
-    const next = new Set(defaultColumns);
-    setVisibleColumns(next);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(Array.from(next)));
   };
 
   useEffect(() => {
@@ -152,8 +158,8 @@ export default function BibliographySection({
     : studyPrograms;
 
   const handleFacultyFilterChange = (facultyId: string) => {
-    setSelectedFacultyId(facultyId);
-    if (facultyId && selectedStudyProgramId) {
+    setSelectedFacultyId(facultyId === "all" ? "" : facultyId);
+    if (facultyId !== "all" && selectedStudyProgramId) {
       const belongs = studyPrograms.some(
         (sp) =>
           String(sp.id) === selectedStudyProgramId &&
@@ -168,8 +174,8 @@ export default function BibliographySection({
   };
 
   const handleStudyProgramFilterChange = (studyProgramId: string) => {
-    setSelectedStudyProgramId(studyProgramId);
-    if (studyProgramId) {
+    setSelectedStudyProgramId(studyProgramId === "all" ? "" : studyProgramId);
+    if (studyProgramId !== "all") {
       const found = studyPrograms.find((sp) => String(sp.id) === studyProgramId);
       if (found && (!selectedFacultyId || Number(selectedFacultyId) !== found.facultyId)) {
         setSelectedFacultyId(String(found.facultyId));
@@ -193,6 +199,7 @@ export default function BibliographySection({
         if (facultyId) params.facultyId = Number(facultyId);
         if (studyProgramId) params.studyProgramId = Number(studyProgramId);
         const result = await bibliographyApi.list(params);
+        console.log("Bibliography data:", result);
         setData(result.data);
       } catch (err: unknown) {
         setError(err instanceof Error ? err.message : "Gagal memuat data");
@@ -405,7 +412,9 @@ export default function BibliographySection({
                 </div>
                 <div className="border-t border-border px-3 py-2">
                   <button
-                    onClick={resetColumns}
+                    onClick={() =>
+                      setVisibleColumns(DEFAULT_COLUMNS)
+                    }
                     className="text-xs text-primary hover:underline"
                   >
                     Reset tampilan
@@ -446,33 +455,33 @@ export default function BibliographySection({
 
       {/* Header Row 2: Filters */}
       <div className="flex flex-wrap items-center gap-2">
-        <select
-          value={selectedFacultyId}
-          onChange={(e) => handleFacultyFilterChange(e.target.value)}
-          aria-label="Filter Fakultas"
-          className="min-w-0 rounded-lg border border-border bg-card px-3 py-2 text-sm text-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
-        >
-          <option value="">Semua Fakultas</option>
-          {faculties.map((f) => (
-            <option key={f.id} value={String(f.id)}>
-              {f.name}
-            </option>
-          ))}
-        </select>
+        <Select value={selectedFacultyId === "" ? "all" : selectedFacultyId} onValueChange={handleFacultyFilterChange}>
+          <SelectTrigger className="w-[180px]">
+            <SelectValue placeholder="Semua Fakultas" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Semua Fakultas</SelectItem>
+            {faculties.map((f) => (
+              <SelectItem key={f.id} value={String(f.id)}>
+                {f.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
 
-        <select
-          value={selectedStudyProgramId}
-          onChange={(e) => handleStudyProgramFilterChange(e.target.value)}
-          aria-label="Filter Program Studi"
-          className="min-w-0 rounded-lg border border-border bg-card px-3 py-2 text-sm text-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
-        >
-          <option value="">Semua Program Studi</option>
-          {availableStudyPrograms.map((sp) => (
-            <option key={sp.id} value={String(sp.id)}>
-              {sp.name}
-            </option>
-          ))}
-        </select>
+        <Select value={selectedStudyProgramId === "" ? "all" : selectedStudyProgramId} onValueChange={handleStudyProgramFilterChange}>
+          <SelectTrigger className="w-[200px]">
+            <SelectValue placeholder="Semua Program Studi" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Semua Program Studi</SelectItem>
+            {availableStudyPrograms.map((sp) => (
+              <SelectItem key={sp.id} value={String(sp.id)}>
+                {sp.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
 
         <div className="relative flex-1 min-w-[160px]">
           <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
