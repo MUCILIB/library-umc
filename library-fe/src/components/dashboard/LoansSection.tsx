@@ -9,7 +9,6 @@ import {
   Search,
   User,
   Calendar,
-  ChevronDown,
   RefreshCw,
   RotateCcw,
   AlertTriangle,
@@ -18,6 +17,7 @@ import {
   Download,
   Loader2
 } from "lucide-react";
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { API_BASE_URL } from "@/utils/api-config";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/useToast";
@@ -408,21 +408,19 @@ export default function LoansSection({ searchTerm, onSearchChange }: LoansSectio
           
           <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
             {/* Filter Status */}
-            <div className="relative">
-              <select
-                value={filter}
-                onChange={(e) => setFilter(e.target.value as "all" | "pending" | "approved" | "returned" | "pending_extension")}
-                className="appearance-none bg-background border-none rounded-xl pl-4 pr-10 py-2.5 text-[13px] font-bold text-muted-foreground focus:ring-2 focus:ring-primary/10 cursor-pointer min-w-[200px]"
-              >
-                <option value="pending">Menunggu Persetujuan</option>
-                <option value="pending_extension">Menunggu Perpanjangan</option>
-                <option value="reservations">Antrean Reservasi</option>
-                <option value="approved">Sedang Dipinjam</option>
-                <option value="returned">Dikembalikan</option>
-                <option value="all">Semua</option>
-              </select>
-              <ChevronDown size={14} className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" strokeWidth={3} />
-            </div>
+            <Select value={filter} onValueChange={(value) => setFilter(value as "all" | "pending" | "approved" | "returned" | "pending_extension" | "reservations")}>
+              <SelectTrigger className="w-[220px] text-[13px] font-bold">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="pending">Menunggu Persetujuan</SelectItem>
+                <SelectItem value="pending_extension">Menunggu Perpanjangan</SelectItem>
+                <SelectItem value="reservations">Antrean Reservasi</SelectItem>
+                <SelectItem value="approved">Sedang Dipinjam</SelectItem>
+                <SelectItem value="returned">Dikembalikan</SelectItem>
+                <SelectItem value="all">Semua</SelectItem>
+              </SelectContent>
+            </Select>
             
             {/* Search */}
             <div className="relative flex-1 md:flex-initial">

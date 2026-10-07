@@ -871,7 +871,8 @@ function BibliographyForm({ bib, onClose, onSuccess }: BibliographyFormProps) {
   // Form states
   const [formData, setFormData] = useState({
     title: bib?.title || "",
-    isbnIssn: bib?.isbnIssn || "",
+    isbn: bib?.isbnIssn?.startsWith("ISBN") || bib?.isbnIssn?.length === 10 || bib?.isbnIssn?.length === 13 ? bib?.isbnIssn || "" : "",
+    issn: bib?.isbnIssn?.startsWith("ISSN") || bib?.isbnIssn?.length === 8 ? bib?.isbnIssn || "" : "",
     edition: bib?.edition || "",
     publishYear: bib?.publishYear?.toString() || "",
     collation: bib?.collation || "",
@@ -915,13 +916,15 @@ function BibliographyForm({ bib, onClose, onSuccess }: BibliographyFormProps) {
   useEffect(() => {
     if (bib) { setDuplicates([]); return; }
     const title = formData.title.trim();
-    const isbn = formData.isbnIssn.trim().replace(/[^0-9Xx]/g, "");
-    if (title.length < 3 && isbn.length < 3) { setDuplicates([]); return; }
+    const isbn = formData.isbn.trim().replace(/[^0-9Xx]/g, "");
+    const issn = formData.issn.trim().replace(/[^0-9]/g, "");
+    if (title.length < 3 && isbn.length < 3 && issn.length < 3) { setDuplicates([]); return; }
     const timer = setTimeout(async () => {
       setCheckingDup(true);
       try {
         const params: Record<string, string> = {};
         if (isbn.length >= 3) params.isbn = isbn;
+        if (issn.length >= 3) params.issn = issn;
         if (title.length >= 3) params.title = title;
         if (Object.keys(params).length === 0) { setDuplicates([]); return; }
         const res = await bibliographyApi.checkDuplicate(params);
@@ -929,7 +932,7 @@ function BibliographyForm({ bib, onClose, onSuccess }: BibliographyFormProps) {
       } catch { setDuplicates([]); } finally { setCheckingDup(false); }
     }, 800);
     return () => clearTimeout(timer);
-  }, [formData?.title, formData?.isbnIssn, bib]);
+  }, [formData?.title, formData?.isbn, formData?.issn, bib]);
 
   useEffect(() => {
     const loadOptions = async () => {
@@ -987,31 +990,37 @@ function BibliographyForm({ bib, onClose, onSuccess }: BibliographyFormProps) {
     let clean = val.replace(/^ISBN[:\s]*/i, "").replace(/[^0-9Xx]/g, "");
     let formatted = clean;
 
-    if (clean.startsWith("9")) {
-      // Limit to 13 digits for ISBN-13
-      clean = clean.substring(0, 13);
-      if (clean.length <= 3) {
-        formatted = clean;
-      } else if (clean.length <= 6) {
-        formatted = `${clean.substring(0, 3)}-${clean.substring(3)}`;
-      } else if (clean.length <= 9) {
-        formatted = `${clean.substring(0, 3)}-${clean.substring(3, 6)}-${clean.substring(6)}`;
-      } else if (clean.length <= 12) {
-        formatted = `${clean.substring(0, 3)}-${clean.substring(3, 6)}-${clean.substring(6, 9)}-${clean.substring(9)}`;
-      } else {
-        formatted = `${clean.substring(0, 3)}-${clean.substring(3, 6)}-${clean.substring(6, 9)}-${clean.substring(9, 12)}-${clean.substring(12)}`;
-      }
+    // ISBN-13 format (starts with 9)
+    clean = clean.substring(0, 13);
+    if (clean.length <= 3) {
+      formatted = clean;
+    } else if (clean.length <= 6) {
+      formatted = `${clean.substring(0, 3)}-${clean.substring(3)}`;
+    } else if (clean.length <= 9) {
+      formatted = `${clean.substring(0, 3)}-${clean.substring(3, 6)}-${clean.substring(6)}`;
+    } else if (clean.length <= 12) {
+      formatted = `${clean.substring(0, 3)}-${clean.substring(3, 6)}-${clean.substring(6, 9)}-${clean.substring(9)}`;
     } else {
-      // Limit to 8 characters for ISSN
-      clean = clean.substring(0, 8);
-      if (clean.length <= 4) {
-        formatted = clean;
-      } else {
-        formatted = `${clean.substring(0, 4)}-${clean.substring(4)}`;
-      }
+      formatted = `${clean.substring(0, 3)}-${clean.substring(3, 6)}-${clean.substring(6, 9)}-${clean.substring(9, 12)}-${clean.substring(12)}`;
     }
 
-    setFormData((prev) => ({ ...prev, isbnIssn: formatted }));
+    setFormData((prev) => ({ ...prev, isbn: formatted }));
+  };
+
+  const handleIssnChange = (val: string) => {
+    // Strip everything except digits
+    let clean = val.replace(/^ISSN[:\s]*/i, "").replace(/[^0-9]/g, "");
+    let formatted = clean;
+
+    // ISSN format (8 digits, XXXX-XXXX)
+    clean = clean.substring(0, 8);
+    if (clean.length <= 4) {
+      formatted = clean;
+    } else {
+      formatted = `${clean.substring(0, 4)}-${clean.substring(4)}`;
+    }
+
+    setFormData((prev) => ({ ...prev, issn: formatted }));
   };
 
   // Step 3: Copies & Inventory states
@@ -1187,21 +1196,42 @@ function BibliographyForm({ bib, onClose, onSuccess }: BibliographyFormProps) {
     }
   };
 
-  // Step 4 File Upload Handlers (read cover as Base64)
+  // Step 4 File Upload Handlers (resize + compress cover to avoid 413)
   const handleCoverUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (file.size > 1024 * 1024) {
-      alert("Ukuran gambar melebihi 1MB");
-      return;
-    }
+    const img = new Image();
+    const objectUrl = URL.createObjectURL(file);
+    img.onload = () => {
+      URL.revokeObjectURL(objectUrl);
+      const MAX_DIM = 800;
+      let { width, height } = img;
+      const scale = Math.min(1, MAX_DIM / Math.max(width, height));
+      width = Math.round(width * scale);
+      height = Math.round(height * scale);
 
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      setFormData((prev) => ({ ...prev, image: reader.result as string }));
+      const canvas = document.createElement("canvas");
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return;
+      ctx.drawImage(img, 0, 0, width, height);
+
+      // Compress to JPEG quality 0.7, keep under ~300KB
+      const dataUrl = canvas.toDataURL("image/jpeg", 0.7);
+      if (dataUrl.length > 400 * 1024) {
+        const smaller = canvas.toDataURL("image/jpeg", 0.5);
+        setFormData((prev) => ({ ...prev, image: smaller }));
+      } else {
+        setFormData((prev) => ({ ...prev, image: dataUrl }));
+      }
     };
-    reader.readAsDataURL(file);
+    img.onerror = () => {
+      URL.revokeObjectURL(objectUrl);
+      alert("Gagal membaca gambar");
+    };
+    img.src = objectUrl;
   };
 
   // PDF file mock upload
@@ -1220,19 +1250,23 @@ function BibliographyForm({ bib, onClose, onSuccess }: BibliographyFormProps) {
     setError(null);
 
     // Auto-format ISBN / ISSN — send clean digits only
-    let formattedIsbn = formData.isbnIssn.trim().replace(/^ISBN[:\s]*/i, "");
-    if (formattedIsbn) {
-      const clean = formattedIsbn.replace(/[^0-9Xx]/g, "");
-      if (clean.length === 10 || clean.length === 13) {
-        formattedIsbn = clean;
-      } else if (clean.length === 8) {
+    let formattedIsbn = "";
+    if (formData.isbn.trim()) {
+      const clean = formData.isbn.trim().replace(/[^0-9Xx]/g, "");
+      formattedIsbn = clean; // ISBN-10 or ISBN-13 digits
+    } else if (formData.issn.trim()) {
+      const clean = formData.issn.trim().replace(/[^0-9]/g, "");
+      if (clean.length === 8) {
         formattedIsbn = `ISSN ${clean.substring(0, 4)}-${clean.substring(4, 8).toUpperCase()}`;
+      } else {
+        formattedIsbn = formData.issn.trim();
       }
     }
 
     try {
+      const { isbn, issn, ...restFormData } = formData;
       const payload = {
-        ...formData,
+        ...restFormData,
         isbnIssn: formattedIsbn || undefined,
         publishYear: formData.publishYear ? parseInt(formData.publishYear) : undefined,
         authors: authors.filter((a) => a.name.trim()),
@@ -1567,18 +1601,35 @@ function BibliographyForm({ bib, onClose, onSuccess }: BibliographyFormProps) {
               Rincian Penerbitan & Klasifikasi
             </h3>
             <div className="grid gap-6 md:grid-cols-3">
-              <div>
-                <label className="mb-2 block text-xs font-bold text-foreground uppercase tracking-wider">
-                  ISBN / ISSN
-                </label>
-                <input
-                  type="text"
-                  placeholder="Contoh: 978-090-231-122-6"
-                  value={formData.isbnIssn}
-                  onChange={(e) => handleIsbnChange(e.target.value)}
-                  maxLength={17}
-                  className="w-full rounded-lg border border-border px-3 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary bg-background"
-                />
+              <div className="md:col-span-2">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="mb-2 block text-xs font-bold text-foreground uppercase tracking-wider">
+                      ISBN
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Contoh: 978-090-231-122-6"
+                      value={formData.isbn}
+                      onChange={(e) => handleIsbnChange(e.target.value)}
+                      maxLength={17}
+                      className="w-full rounded-lg border border-border px-3 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary bg-background"
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-2 block text-xs font-bold text-foreground uppercase tracking-wider">
+                      ISSN
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Contoh: 1234-5678"
+                      value={formData.issn}
+                      onChange={(e) => handleIssnChange(e.target.value)}
+                      maxLength={9}
+                      className="w-full rounded-lg border border-border px-3 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary bg-background"
+                    />
+                  </div>
+                </div>
               </div>
 
               <div>
@@ -2196,7 +2247,7 @@ function BibliographyForm({ bib, onClose, onSuccess }: BibliographyFormProps) {
                       {authors.filter((a) => a.name.trim()).map((a) => a.name).join(", ") || "Penulis"}
                     </p>
                     <p className="text-xs text-muted-foreground/80 font-mono line-clamp-1">
-                      {cleanIsbn(formData.isbnIssn) || "-"}
+                      {formData.isbn ? cleanIsbn(formData.isbn) : formData.issn ? cleanIsbn(formData.issn) : "-"}
                     </p>
                   </div>
                 </div>
@@ -2294,8 +2345,12 @@ function BibliographyForm({ bib, onClose, onSuccess }: BibliographyFormProps) {
 
                 <div className="grid grid-cols-2 gap-3 text-xs bg-muted/30 p-4 rounded-xl border border-border">
                   <div>
-                    <span className="text-muted-foreground font-semibold">ISBN / ISSN:</span>
-                    <p className="font-bold text-foreground font-mono mt-0.5">{cleanIsbn(formData.isbnIssn) || "-"}</p>
+                    <span className="text-muted-foreground font-semibold">ISBN:</span>
+                    <p className="font-bold text-foreground font-mono mt-0.5">{formData.isbn ? cleanIsbn(formData.isbn) : "-"}</p>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground font-semibold">ISSN:</span>
+                    <p className="font-bold text-foreground font-mono mt-0.5">{formData.issn ? cleanIsbn(formData.issn) : "-"}</p>
                   </div>
                   <div>
                     <span className="text-muted-foreground font-semibold">Edisi:</span>
