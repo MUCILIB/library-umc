@@ -316,16 +316,14 @@ export const locationApi = {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
     }),
-  update: (id: number, data: Partial<{ room: string; rack: string; shelf: string }>) =>
+  update: (id: number, data: { room: string; rack: string; shelf: string }) =>
     apiFetch<Location>(`/api/locations/${id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
     }),
   delete: (id: number) =>
-    apiFetch<{ success: boolean; message: string }>(`/api/locations/${id}`, {
-      method: "DELETE",
-    }),
+    apiFetch<void>(`/api/locations/${id}`, { method: "DELETE" }),
 };
 
 // ==========================================

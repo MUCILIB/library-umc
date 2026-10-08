@@ -18,6 +18,13 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { itemApi, bibliographyApi, locationApi, type Item, type Bibliography, type Location } from "@/api/client";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { API_BASE_URL } from "@/utils/api-config";
 
 export default function ItemSection() {
@@ -809,33 +816,39 @@ function ItemForm({
             </div>
             <div>
               <label className="mb-1 block text-xs font-medium text-muted-foreground">Status</label>
-              <select
+              <Select
                 value={formData.status}
-                onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-                className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                onValueChange={(val) => setFormData({ ...formData, status: val })}
               >
-                <option value="available">Tersedia</option>
-                <option value="loaned">Dipinjam</option>
-                <option value="reserved">Direservasi</option>
-                <option value="maintenance">Maintenance</option>
-                <option value="lost">Hilang</option>
-              </select>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Pilih status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="available">Tersedia</SelectItem>
+                  <SelectItem value="loaned">Dipinjam</SelectItem>
+                  <SelectItem value="reserved">Direservasi</SelectItem>
+                  <SelectItem value="maintenance">Maintenance</SelectItem>
+                  <SelectItem value="lost">Hilang</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
             <div>
               <label className="mb-1 block text-xs font-medium text-muted-foreground">Lokasi *</label>
-              <select
-                value={formData.locationId}
-                onChange={(e) => setFormData({ ...formData, locationId: e.target.value })}
-                required
-                className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+              <Select
+                value={formData.locationId ? String(formData.locationId) : ""}
+                onValueChange={(val) => setFormData({ ...formData, locationId: val })}
               >
-                <option value="">Pilih lokasi</option>
-                {locations.map((loc) => (
-                  <option key={loc.id} value={loc.id}>
-                    {loc.room} - {loc.rack} - {loc.shelf}
-                  </option>
-                ))}
-              </select>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Pilih lokasi" />
+                </SelectTrigger>
+                <SelectContent>
+                  {locations.map((loc) => (
+                    <SelectItem key={loc.id} value={String(loc.id)}>
+                      {loc.room} - {loc.rack} - {loc.shelf}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
         </div>

@@ -3,6 +3,13 @@ import {
   Plus, Edit, Trash2, Save, Loader, ChevronLeft, ChevronRight, GraduationCap
 } from "lucide-react";
 import Modal from "@/components/ui/modal";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { facultyApi, studyProgramApi, type Faculty, type StudyProgram } from "@/api/client";
 import { useToast } from "@/hooks/useToast";
 
@@ -153,12 +160,21 @@ export default function ProdiSection() {
           </div>
           <div>
             <label className="mb-1 block text-xs font-medium text-muted-foreground">Fakultas *</label>
-            <select value={formData.facultyId} onChange={(e) => setFormData({ ...formData, facultyId: Number(e.target.value) })} className="w-full rounded-lg border border-border px-3 py-2 text-sm bg-background">
-              <option value={0}>Pilih Fakultas</option>
-              {faculties.map((f) => (
-                <option key={f.id} value={f.id}>{f.name}</option>
-              ))}
-            </select>
+            <Select
+              value={formData.facultyId ? String(formData.facultyId) : ""}
+              onValueChange={(val) => setFormData({ ...formData, facultyId: Number(val) })}
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Pilih Fakultas" />
+              </SelectTrigger>
+              <SelectContent>
+                {faculties.map((f) => (
+                  <SelectItem key={f.id} value={String(f.id)}>
+                    {f.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           <button onClick={handleSave} disabled={isSubmitting} className="w-full rounded-lg bg-primary py-2 text-sm font-semibold text-white hover:bg-primary/95 transition-all disabled:opacity-50 flex items-center justify-center gap-2">
             {isSubmitting && <Loader className="size-4 animate-spin" />}

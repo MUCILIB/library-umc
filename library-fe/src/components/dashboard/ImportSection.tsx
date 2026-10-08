@@ -13,6 +13,13 @@ import {
   Eye,
 } from "lucide-react";
 import { importApi, type ImportBatch, type ImportPreviewResponse } from "@/api/client";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 export default function ImportSection() {
   const [batches, setBatches] = useState<ImportBatch[]>([]);
@@ -99,14 +106,18 @@ export default function ImportSection() {
         <div className="flex flex-col gap-4 sm:flex-row sm:items-end">
           <div>
             <label className="mb-1 block text-xs font-medium text-muted-foreground">Tipe Import</label>
-            <select
+            <Select
               value={uploadType}
-              onChange={(e) => setUploadType(e.target.value as "bibliography" | "item")}
-              className="rounded-lg border border-border px-3 py-2 text-sm"
+              onValueChange={(val) => setUploadType(val as "bibliography" | "item")}
             >
-              <option value="bibliography">Bibliografi</option>
-              <option value="item">Item / Eksemplar</option>
-            </select>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Tipe Import" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="bibliography">Bibliografi</SelectItem>
+                <SelectItem value="item">Item / Eksemplar</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
           <div className="flex-1">
             <label className="mb-1 block text-xs font-medium text-muted-foreground">File CSV</label>

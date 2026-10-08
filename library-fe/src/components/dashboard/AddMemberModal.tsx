@@ -1,5 +1,12 @@
 import { useState } from "react";
 import { X } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface AddMemberModalProps {
   isOpen: boolean;
@@ -102,16 +109,20 @@ export default function AddMemberModal({ isOpen, onClose }: AddMemberModalProps)
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
             <div>
               <label className={labelClass}>Tipe Akun</label>
-              <select 
-                value={formData.accountType} 
-                onChange={(e) => setFormData({ ...formData, accountType: e.target.value })} 
-                className={inputClass}
+              <Select
+                value={formData.accountType}
+                onValueChange={(val) => setFormData({ ...formData, accountType: val })}
               >
-                <option value="Mahasiswa">Mahasiswa</option>
-                <option value="Dosen">Dosen</option>
-                <option value="Pegawai">Pegawai</option>
-                <option value="Umum">Umum</option>
-              </select>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Pilih Tipe Akun" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Mahasiswa">Mahasiswa</SelectItem>
+                  <SelectItem value="Dosen">Dosen</SelectItem>
+                  <SelectItem value="Pegawai">Pegawai</SelectItem>
+                  <SelectItem value="Umum">Umum</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
             <div>
               <label className={labelClass}>No Telpon</label>

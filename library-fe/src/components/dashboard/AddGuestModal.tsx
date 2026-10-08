@@ -1,6 +1,13 @@
 import { useState, useEffect } from "react";
 import { X, Mail, Info, User, GraduationCap, Building2, FileText, Phone } from "lucide-react";
 import { API_BASE_URL } from "@/utils/api-config";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface AddGuestModalProps {
   isOpen: boolean;
@@ -239,45 +246,53 @@ export default function AddGuestModal({ isOpen, onClose, onRefresh }: AddGuestMo
                   <label className="block text-[12px] font-bold text-foreground mb-1.5">
                     Fakultas
                   </label>
-                  <div className="relative">
-                    <Building2 size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
-                    <select
-                      value={selectedFacultyId}
-                      onChange={(e) => {
-                        setSelectedFacultyId(e.target.value);
-                        setSelectedStudyProgramId("");
-                      }}
-                      className="w-full pl-10 pr-4 py-2.5 bg-background border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all font-medium text-foreground text-sm"
-                    >
-                      <option value="">-- Pilih Fakultas --</option>
+                  <Select
+                    value={selectedFacultyId || "none"}
+                    onValueChange={(val) => {
+                      setSelectedFacultyId(val === "none" ? "" : val);
+                      setSelectedStudyProgramId("");
+                    }}
+                  >
+                    <SelectTrigger className="w-full">
+                      <div className="flex items-center gap-2">
+                        <Building2 size={15} className="text-muted-foreground shrink-0" />
+                        <SelectValue placeholder="-- Pilih Fakultas --" />
+                      </div>
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">-- Pilih Fakultas --</SelectItem>
                       {faculties.map((f) => (
-                        <option key={f.id} value={f.id}>
+                        <SelectItem key={f.id} value={String(f.id)}>
                           {f.name}
-                        </option>
+                        </SelectItem>
                       ))}
-                    </select>
-                  </div>
+                    </SelectContent>
+                  </Select>
                 </div>
 
                 <div>
                   <label className="block text-[12px] font-bold text-foreground mb-1.5">
                     Program Studi
                   </label>
-                  <div className="relative">
-                    <GraduationCap size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
-                    <select
-                      value={selectedStudyProgramId}
-                      onChange={(e) => setSelectedStudyProgramId(e.target.value)}
-                      className="w-full pl-10 pr-4 py-2.5 bg-background border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all font-medium text-foreground text-sm"
-                    >
-                      <option value="">-- Pilih Prodi --</option>
+                  <Select
+                    value={selectedStudyProgramId || "none"}
+                    onValueChange={(val) => setSelectedStudyProgramId(val === "none" ? "" : val)}
+                  >
+                    <SelectTrigger className="w-full">
+                      <div className="flex items-center gap-2">
+                        <GraduationCap size={15} className="text-muted-foreground shrink-0" />
+                        <SelectValue placeholder="-- Pilih Prodi --" />
+                      </div>
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">-- Pilih Prodi --</SelectItem>
                       {filteredStudyPrograms.map((p) => (
-                        <option key={p.id} value={p.id}>
+                        <SelectItem key={p.id} value={String(p.id)}>
                           {p.name}
-                        </option>
+                        </SelectItem>
                       ))}
-                    </select>
-                  </div>
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
 

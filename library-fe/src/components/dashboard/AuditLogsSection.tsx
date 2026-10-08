@@ -1,6 +1,13 @@
 import { useMemo, useState, Fragment } from "react";
 import { RefreshCw, ShieldCheck, Search, ChevronLeft, ChevronRight } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useAuditLogs } from "@/hooks/dashboard/useAuditLogs";
 
 const ACTION_OPTIONS = [
@@ -105,29 +112,31 @@ export default function AuditLogsSection() {
             />
           </div>
 
-          <select
-            value={action}
-            onChange={(e) => setAction(e.target.value)}
-            className="px-3 py-2.5 rounded-xl border border-border text-sm font-semibold text-muted-foreground bg-card"
-          >
-            {ACTION_OPTIONS.map((value) => (
-              <option key={value} value={value}>
-                Action: {value}
-              </option>
-            ))}
-          </select>
+          <Select value={action} onValueChange={(val) => setAction(val)}>
+            <SelectTrigger className="w-full xl:w-[180px] rounded-xl text-sm font-semibold">
+              <SelectValue placeholder="Action" />
+            </SelectTrigger>
+            <SelectContent>
+              {ACTION_OPTIONS.map((value) => (
+                <SelectItem key={value} value={value}>
+                  Action: {value}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
 
-          <select
-            value={entity}
-            onChange={(e) => setEntity(e.target.value)}
-            className="px-3 py-2.5 rounded-xl border border-border text-sm font-semibold text-muted-foreground bg-card"
-          >
-            {ENTITY_OPTIONS.map((value) => (
-              <option key={value} value={value}>
-                Entity: {value}
-              </option>
-            ))}
-          </select>
+          <Select value={entity} onValueChange={(val) => setEntity(val)}>
+            <SelectTrigger className="w-full xl:w-[180px] rounded-xl text-sm font-semibold">
+              <SelectValue placeholder="Entity" />
+            </SelectTrigger>
+            <SelectContent>
+              {ENTITY_OPTIONS.map((value) => (
+                <SelectItem key={value} value={value}>
+                  Entity: {value}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
 
           <button
             onClick={() => void applyFilter()}

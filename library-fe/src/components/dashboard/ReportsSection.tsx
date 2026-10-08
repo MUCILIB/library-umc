@@ -28,6 +28,13 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useRef } from "react";
 
 interface ReportsSectionProps {
@@ -420,28 +427,37 @@ export default function ReportsSection({
         <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
           Periode Audit Pendapatan
         </p>
-        <select
-          value={selectedMonth}
-          onChange={(event) => setSelectedMonth(Number(event.target.value))}
-          className="px-3 py-2 rounded-xl border border-border bg-card text-sm font-semibold text-muted-foreground"
+        <Select
+          value={String(selectedMonth)}
+          onValueChange={(val) => setSelectedMonth(Number(val))}
         >
-          {monthOptions.map((month) => (
-            <option key={month.value} value={month.value}>
-              {month.label}
-            </option>
-          ))}
-        </select>
-        <select
-          value={selectedYear}
-          onChange={(event) => setSelectedYear(Number(event.target.value))}
-          className="px-3 py-2 rounded-xl border border-border bg-card text-sm font-semibold text-muted-foreground"
+          <SelectTrigger className="w-[140px] rounded-xl text-sm font-semibold">
+            <SelectValue placeholder="Pilih Bulan" />
+          </SelectTrigger>
+          <SelectContent>
+            {monthOptions.map((month) => (
+              <SelectItem key={month.value} value={String(month.value)}>
+                {month.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        <Select
+          value={String(selectedYear)}
+          onValueChange={(val) => setSelectedYear(Number(val))}
         >
-          {yearOptions.map((year) => (
-            <option key={year} value={year}>
-              {year}
-            </option>
-          ))}
-        </select>
+          <SelectTrigger className="w-[110px] rounded-xl text-sm font-semibold">
+            <SelectValue placeholder="Pilih Tahun" />
+          </SelectTrigger>
+          <SelectContent>
+            {yearOptions.map((year) => (
+              <SelectItem key={year} value={String(year)}>
+                {year}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       {/* Top Cards */}

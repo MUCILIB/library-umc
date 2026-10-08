@@ -15,6 +15,13 @@ import {
   type Faculty,
   type StudyProgram,
 } from "@/api/client";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 export default function ExportSection() {
   const [faculties, setFaculties] = useState<Faculty[]>([]);
@@ -119,23 +126,25 @@ export default function ExportSection() {
             >
               Fakultas
             </label>
-            <select
-              id="filter-faculty"
-              aria-label="Filter Fakultas"
-              value={selectedFacultyId}
-              onChange={(e) => {
-                setSelectedFacultyId(e.target.value);
+            <Select
+              value={selectedFacultyId || "all"}
+              onValueChange={(val) => {
+                setSelectedFacultyId(val === "all" ? "" : val);
                 setSelectedStudyProgramId("");
               }}
-              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
             >
-              <option value="">Semua Fakultas</option>
-              {faculties.map((f) => (
-                <option key={f.id} value={f.id}>
-                  {f.name}
-                </option>
-              ))}
-            </select>
+              <SelectTrigger id="filter-faculty" aria-label="Filter Fakultas" className="w-full">
+                <SelectValue placeholder="Semua Fakultas" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Semua Fakultas</SelectItem>
+                {faculties.map((f) => (
+                  <SelectItem key={f.id} value={String(f.id)}>
+                    {f.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           <div>
@@ -145,21 +154,23 @@ export default function ExportSection() {
             >
               Program Studi
             </label>
-            <select
-              id="filter-prodi"
-              aria-label="Filter Program Studi"
-              value={selectedStudyProgramId}
-              onChange={(e) => setSelectedStudyProgramId(e.target.value)}
+            <Select
+              value={selectedStudyProgramId || "all"}
+              onValueChange={(val) => setSelectedStudyProgramId(val === "all" ? "" : val)}
               disabled={!selectedFacultyId}
-              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary disabled:opacity-50"
             >
-              <option value="">Semua Program Studi</option>
-              {studyPrograms.map((sp) => (
-                <option key={sp.id} value={sp.id}>
-                  {sp.name}
-                </option>
-              ))}
-            </select>
+              <SelectTrigger id="filter-prodi" aria-label="Filter Program Studi" className="w-full">
+                <SelectValue placeholder="Semua Program Studi" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Semua Program Studi</SelectItem>
+                {studyPrograms.map((sp) => (
+                  <SelectItem key={sp.id} value={String(sp.id)}>
+                    {sp.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         </div>
         {(selectedFacultyId || selectedStudyProgramId) && (
