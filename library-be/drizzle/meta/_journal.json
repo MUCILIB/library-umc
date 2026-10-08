@@ -50,6 +50,13 @@
       "when": 1791255322624,
       "tag": "0006_add_loans_notes",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1791432683879,
+      "tag": "0007_mute_snowbird",
+      "breakpoints": true
     }
   ]
 }

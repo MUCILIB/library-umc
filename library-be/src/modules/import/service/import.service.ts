@@ -615,10 +615,28 @@ export class ImportService {
             languageId = lang?.id || null;
           }
 
+          // Parse & resolve ISBN / ISSN
+          let parsedIsbn: string | null = resolved.isbn ? resolved.isbn.replace(/^ISBN[:\s]*/i, "").trim() || null : null;
+          let parsedIssn: string | null = resolved.issn ? resolved.issn.replace(/^ISSN[:\s]*/i, "").trim() || null : null;
+          let parsedLegacy = resolved.isbn_issn ? resolved.isbn_issn.replace(/^ISBN[:\s]*/i, "").trim() || null : null;
+
+          if (!parsedIsbn && !parsedIssn && parsedLegacy) {
+            if (/^ISSN/i.test(parsedLegacy) || /^\d{4}-\d{3}[\dX]$/i.test(parsedLegacy)) {
+              parsedIssn = parsedLegacy.replace(/^ISSN[:\s]*/i, "").trim();
+            } else {
+              parsedIsbn = parsedLegacy;
+            }
+          }
+          if (!parsedLegacy) {
+            parsedLegacy = parsedIsbn || (parsedIssn ? `ISSN ${parsedIssn}` : null);
+          }
+
           // Create bibliography
           const [bib] = await tx.insert(bibliographies).values({
             title: resolved.title,
-            isbnIssn: resolved.isbn_issn ? resolved.isbn_issn.replace(/^ISBN[:\s]*/i, "").trim() || null : null,
+            isbn: parsedIsbn,
+            issn: parsedIssn,
+            isbnIssn: parsedLegacy,
             edition: resolved.edition || null,
             publishYear: resolved.publish_year ? parseInt(resolved.publish_year) : null,
             collation: resolved.collation || null,

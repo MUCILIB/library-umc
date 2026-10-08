@@ -9,7 +9,7 @@ import {
 import { eq, and, isNull, asc, desc, inArray, ilike, gte, lte, or } from "drizzle-orm";
 
 const BIBLIO_HEADERS = [
-  "title", "gmd_name", "edition", "isbn_issn", "publisher_name",
+  "title", "gmd_name", "edition", "isbn", "issn", "isbn_issn", "publisher_name",
   "publish_year", "collation", "series_title", "call_number",
   "language_name", "place_name", "classification", "notes", "image",
   "sor", "authors", "topics", "item_code",
@@ -192,6 +192,8 @@ export class ExportService {
         escapeCsvField(bib.title),
         escapeCsvField(bib.gmd?.name || ""),
         escapeCsvField(bib.edition || ""),
+        escapeCsvField(bib.isbn || ""),
+        escapeCsvField(bib.issn || ""),
         escapeCsvField(bib.isbnIssn || ""),
         escapeCsvField(bib.publisher?.name || ""),
         escapeCsvField(bib.publishYear?.toString() || ""),

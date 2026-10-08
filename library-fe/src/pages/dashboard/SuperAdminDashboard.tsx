@@ -17,7 +17,8 @@ import {
   FileDown,
   Package,
   Building2,
-  GraduationCap
+  GraduationCap,
+  MapPin
 } from "lucide-react";
 
 import Logo from "@/assets/logo_umc.png";
@@ -34,10 +35,11 @@ import GuestsSection from "@/components/dashboard/GuestsSection";
 import LoansSection from "@/components/dashboard/LoansSection";
 import ReportsSection from "@/components/dashboard/ReportsSection";
 import UsersSection from "@/components/dashboard/UsersSection";
-import RecommendationsSection from "@/components/dashboard/RecommendationsSection";
 import ReturnApprovalsSection from "@/components/dashboard/ReturnApprovalsSection";
+import RecommendationsSection from "@/components/dashboard/RecommendationsSection";
 import FakultasSection from "@/components/dashboard/FakultasSection";
 import ProdiSection from "@/components/dashboard/ProdiSection";
+import LocationSection from "@/components/dashboard/LocationSection";
 import {
   CommandDialog,
   CommandEmpty,
@@ -84,7 +86,8 @@ type ActiveMenu =
   | "reports"
   | "recommendations"
   | "fakultas"
-  | "prodi";
+  | "prodi"
+  | "locations";
 
 type MenuConfig = {
   key: ActiveMenu;
@@ -103,6 +106,7 @@ const MENU_CONFIG: MenuConfig[] = [
   { key: "exportData", label: "Export Data", icon: FileDown, group: "Manajemen Koleksi" },
   { key: "fakultas", label: "Fakultas", icon: Building2, group: "Master Data" },
   { key: "prodi", label: "Program Studi", icon: GraduationCap, group: "Master Data" },
+  { key: "locations", label: "Lokasi Rak", icon: MapPin, group: "Master Data" },
   { key: "guests", label: "Data Pengunjung", icon: Users },
   { key: "loans", label: "Peminjaman & Persetujuan", icon: BookOpen },
   { key: "returnApprovals", label: "Konfirmasi Pengembalian", icon: CheckCircle, superAdminOnly: true },
@@ -371,6 +375,8 @@ export default function SuperAdminDashboard() {
         return <FakultasSection />;
       case "prodi":
         return <ProdiSection />;
+      case "locations":
+        return <LocationSection />;
       case "returnApprovals":
         return <ReturnApprovalsSection />;
       case "recommendations":

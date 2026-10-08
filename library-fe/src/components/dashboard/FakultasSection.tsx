@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import {
-  Plus, Edit, Trash2, Save, Loader, ChevronLeft, ChevronRight, Building2
+  Plus, Edit, Trash2, Loader, ChevronLeft, ChevronRight
 } from "lucide-react";
 import Modal from "@/components/ui/modal";
 import { facultyApi, type Faculty } from "@/api/client";
@@ -79,12 +79,22 @@ export default function FakultasSection() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h2 className="text-xl font-bold text-foreground flex items-center gap-2">
-          <Building2 className="size-5 text-primary" /> Manajemen Fakultas
-        </h2>
-        <button onClick={openAdd} className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white hover:bg-primary/95 transition-all flex items-center gap-2">
-          <Plus className="size-4" /> Tambah Fakultas
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h2 className="text-xl font-bold tracking-tight text-foreground sm:text-2xl">
+            Manajemen Fakultas
+          </h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Daftar dan konfigurasi fakultas Universitas Muhammadiyah Cirebon
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={openAdd}
+          className="inline-flex h-9 items-center gap-2 rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground shadow-sm hover:bg-primary/90"
+        >
+          <Plus className="size-4" />
+          <span>Tambah Fakultas</span>
         </button>
       </div>
 
@@ -95,22 +105,38 @@ export default function FakultasSection() {
           <div className="border border-border rounded-xl overflow-hidden bg-card">
             <table className="w-full text-left text-sm border-collapse">
               <thead>
-                <tr className="bg-muted/70 text-muted-foreground text-xs uppercase font-bold border-b border-border">
-                  <th className="px-4 py-3">Kode</th>
-                  <th className="px-4 py-3">Nama Fakultas</th>
-                  <th className="px-4 py-3 text-right">Aksi</th>
+                <tr className="bg-muted/50 text-muted-foreground text-xs font-semibold border-b border-border">
+                  <th className="px-4 py-3 sm:px-6">Kode</th>
+                  <th className="px-4 py-3 sm:px-6">Nama Fakultas</th>
+                  <th className="px-4 py-3 text-right sm:px-6">Aksi</th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody className="divide-y divide-border">
                 {paginated.length === 0 ? (
-                  <tr><td colSpan={3} className="px-4 py-8 text-center text-muted-foreground">Belum ada data</td></tr>
+                  <tr><td colSpan={3} className="px-4 py-8 text-center text-muted-foreground">Belum ada data fakultas</td></tr>
                 ) : paginated.map((fac) => (
-                  <tr key={fac.id} className="border-b border-border hover:bg-muted/30">
-                    <td className="px-4 py-3 font-mono text-xs text-muted-foreground">{fac.code || "-"}</td>
-                    <td className="px-4 py-3 font-medium text-foreground">{fac.name}</td>
-                    <td className="px-4 py-3 text-right">
-                      <button onClick={() => openEdit(fac)} className="p-1.5 text-muted-foreground hover:text-primary transition-colors"><Edit className="size-4" /></button>
-                      <button onClick={() => handleDelete(fac.id, fac.name)} className="p-1.5 text-muted-foreground hover:text-destructive transition-colors"><Trash2 className="size-4" /></button>
+                  <tr key={fac.id} className="hover:bg-muted/40">
+                    <td className="px-4 py-3 font-mono text-xs text-muted-foreground sm:px-6">{fac.code || "-"}</td>
+                    <td className="px-4 py-3 font-medium text-foreground sm:px-6">{fac.name}</td>
+                    <td className="px-4 py-3 text-right sm:px-6">
+                      <div className="flex items-center justify-end gap-1">
+                        <button
+                          type="button"
+                          onClick={() => openEdit(fac)}
+                          className="inline-flex size-8 items-center justify-center rounded-lg border border-border text-muted-foreground hover:bg-muted hover:text-foreground"
+                          title="Edit fakultas"
+                        >
+                          <Edit className="size-3.5" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDelete(fac.id, fac.name)}
+                          className="inline-flex size-8 items-center justify-center rounded-lg border border-border text-destructive hover:bg-destructive/10"
+                          title="Hapus fakultas"
+                        >
+                          <Trash2 className="size-3.5" />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -131,17 +157,42 @@ export default function FakultasSection() {
       <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title={editing ? "Edit Fakultas" : "Tambah Fakultas"}>
         <div className="space-y-4 p-4">
           <div>
-            <label className="mb-1 block text-xs font-medium text-muted-foreground">Nama Fakultas *</label>
-            <input value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} className="w-full rounded-lg border border-border px-3 py-2 text-sm bg-background" />
+            <label className="mb-1 block text-xs font-semibold text-foreground">Nama Fakultas *</label>
+            <input
+              value={formData.name}
+              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              placeholder="Contoh: Fakultas Teknik"
+              className="w-full rounded-lg border border-border px-3 py-2 text-sm bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
+            />
           </div>
           <div>
-            <label className="mb-1 block text-xs font-medium text-muted-foreground">Kode</label>
-            <input value={formData.code} onChange={(e) => setFormData({ ...formData, code: e.target.value })} placeholder="Opsional" className="w-full rounded-lg border border-border px-3 py-2 text-sm bg-background" />
+            <label className="mb-1 block text-xs font-semibold text-foreground">Kode Fakultas</label>
+            <input
+              value={formData.code}
+              onChange={(e) => setFormData({ ...formData, code: e.target.value })}
+              placeholder="Contoh: FT (opsional)"
+              className="w-full rounded-lg border border-border px-3 py-2 text-sm bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
+            />
           </div>
-          <button onClick={handleSave} disabled={isSubmitting} className="w-full rounded-lg bg-primary py-2 text-sm font-semibold text-white hover:bg-primary/95 transition-all disabled:opacity-50 flex items-center justify-center gap-2">
-            {isSubmitting && <Loader className="size-4 animate-spin" />}
-            <Save className="size-4" /> {editing ? "Perbarui" : "Simpan"}
-          </button>
+          <div className="flex items-center justify-end gap-3 pt-2">
+            <button
+              type="button"
+              onClick={() => setIsModalOpen(false)}
+              disabled={isSubmitting}
+              className="h-9 rounded-lg border border-border px-4 text-sm font-medium text-muted-foreground hover:bg-muted"
+            >
+              Batal
+            </button>
+            <button
+              type="button"
+              onClick={handleSave}
+              disabled={isSubmitting}
+              className="inline-flex h-9 items-center gap-2 rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+            >
+              {isSubmitting && <Loader className="size-4 animate-spin" />}
+              <span>{editing ? "Perbarui" : "Simpan"}</span>
+            </button>
+          </div>
         </div>
       </Modal>
     </div>
