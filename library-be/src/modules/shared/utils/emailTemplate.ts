@@ -14,10 +14,12 @@ export function formatContent(content: string): string {
 function getLogoMarkup(): string {
   const logoUrl = process.env.EMAIL_LOGO_URL?.trim();
   if (logoUrl) {
-    return `<img src="${escapeHtml(logoUrl)}" alt="Perpustakaan UMC" width="42" height="42"
-      style="display:block;width:42px;height:42px;object-fit:contain;" />`;
+    return `<td style="vertical-align:middle;padding-right:12px;width:38px;">
+      <img src="${escapeHtml(logoUrl)}" alt="Logo UMC" width="38" height="38"
+        style="display:block;width:38px;height:38px;object-fit:contain;border:0;" />
+    </td>`;
   }
-  return `<span style="font-size:18px;font-weight:700;color:#1e3a5f;letter-spacing:0.04em;">MUCILIB</span>`;
+  return "";
 }
 
 type InfoRow = {
@@ -27,11 +29,11 @@ type InfoRow = {
 
 type EmailAction = {
   label: string;
-  url?: string;
+  url: string;
 };
 
 // ──────────────────────────────────────────────────────────────
-// Loan Confirmation Email
+// Loan Confirmation Email (Minimalist Editorial)
 // ──────────────────────────────────────────────────────────────
 export function buildLoanEmail(opts: {
   name: string;
@@ -40,28 +42,23 @@ export function buildLoanEmail(opts: {
   tanggalKembali: string;
 }): string {
   const { name, bookTitle, tanggalPinjam, tanggalKembali } = opts;
-  return buildBaseTemplate({
-    badgeText: "Konfirmasi Peminjaman",
-    badgeColor: "#1e3a5f",
-    title: `Peminjaman Berhasil, ${escapeHtml(name)}`,
-    summary: "Berikut adalah detail peminjaman buku Anda.",
+  return buildEditorialShell({
+    category: "Sirkulasi Buku",
+    headline: "Peminjaman Berhasil",
+    recipient: name,
+    lead: "Peminjaman eksemplar buku berikut telah dicatat ke akun anggota Anda:",
     rows: [
       { label: "Judul Buku", value: bookTitle },
       { label: "Tanggal Pinjam", value: tanggalPinjam },
       { label: "Batas Pengembalian", value: tanggalKembali },
     ],
-    infoBox: {
-      text: "Pastikan buku dikembalikan sebelum batas waktu agar tidak dikenakan denda.",
-      color: "#1e3a5f",
-      bg: "#f0f4fa",
-      border: "#c7d8ef",
-    },
-    footerNote: "Terima kasih telah menggunakan layanan Perpustakaan UMC.",
+    notice: "Pengembalian melewati batas waktu akan dikenakan denda sesuai ketentuan sirkulasi perpustakaan.",
+    footerInfo: "Simpan email ini sebagai bukti transaksi peminjaman mandiri.",
   });
 }
 
 // ──────────────────────────────────────────────────────────────
-// Fine Notification Email
+// Fine Notification Email (Minimalist Editorial)
 // ──────────────────────────────────────────────────────────────
 export function buildFineEmail(opts: {
   name: string;
@@ -73,38 +70,33 @@ export function buildFineEmail(opts: {
   const { name, bookTitle, amount, overdueDays, isBookReturned } = opts;
   const rows: InfoRow[] = [
     { label: "Judul Buku", value: bookTitle },
-    { label: "Jumlah Denda", value: `Rp ${amount.toLocaleString("id-ID")}` },
+    { label: "Total Denda", value: `Rp ${amount.toLocaleString("id-ID")}` },
   ];
   if (overdueDays !== undefined) {
     rows.push({ label: "Keterlambatan", value: `${overdueDays} hari` });
   }
 
-  const summary = isBookReturned
-    ? `Halo ${escapeHtml(name)}, buku sudah dikembalikan namun denda keterlambatan Anda masih belum dilunasi.`
-    : `Halo ${escapeHtml(name)}, sistem mendeteksi keterlambatan pengembalian buku.`;
+  const lead = isBookReturned
+    ? "Eksemplar telah diterima kembali oleh perpustakaan. Terdapat kewajiban denda keterlambatan yang belum diselesaikan:"
+    : "Masa pinjam buku telah melampaui batas waktu pengembalian yang ditentukan:";
 
-  const infoBoxText = isBookReturned
-    ? "Buku sudah kembali ke perpustakaan. Mohon segera lunasi denda di loket administrasi untuk mengaktifkan kembali hak pinjam Anda."
-    : "Segera kembalikan buku dan lunasi denda di loket perpustakaan untuk menghindari akumulasi denda lebih lanjut.";
+  const notice = isBookReturned
+    ? "Pembayaran dapat diselesaikan langsung di meja sirkulasi untuk memulihkan hak peminjaman akun."
+    : "Harap segera mengembalikan buku dan menyelesaikan denda di meja sirkulasi.";
 
-  return buildBaseTemplate({
-    badgeText: isBookReturned ? "Tagihan Denda" : "Notifikasi Denda",
-    badgeColor: "#9b1c1c",
-    title: isBookReturned ? `Tagihan Denda Belum Lunas` : `Terdapat Denda pada Akun Anda`,
-    summary,
+  return buildEditorialShell({
+    category: isBookReturned ? "Kewajiban Denda" : "Pemberitahuan Sirkulasi",
+    headline: isBookReturned ? "Tagihan Denda Keterlambatan" : "Keterlambatan Pengembalian",
+    recipient: name,
+    lead,
     rows,
-    infoBox: {
-      text: infoBoxText,
-      color: "#7f1d1d",
-      bg: "#fef2f2",
-      border: "#fca5a5",
-    },
-    footerNote: "Abaikan pesan ini jika denda sudah dibayarkan.",
+    notice,
+    footerInfo: "Abaikan pemberitahuan ini jika Anda telah menyelesaikan administrasi di meja sirkulasi.",
   });
 }
 
 // ──────────────────────────────────────────────────────────────
-// Reservation Ready Email
+// Reservation Ready Email (Minimalist Editorial)
 // ──────────────────────────────────────────────────────────────
 export function buildReservationEmail(opts: {
   name: string;
@@ -114,27 +106,22 @@ export function buildReservationEmail(opts: {
   const { name, bookTitle, deadline } = opts;
   const rows: InfoRow[] = [{ label: "Judul Buku", value: bookTitle }];
   if (deadline) {
-    rows.push({ label: "Tersedia Hingga", value: deadline });
+    rows.push({ label: "Batas Waktu Pengambilan", value: deadline });
   }
 
-  return buildBaseTemplate({
-    badgeText: "Reservasi Tersedia",
-    badgeColor: "#14532d",
-    title: `Buku Reservasi Anda Sudah Bisa Diambil`,
-    summary: `Halo ${escapeHtml(name)}, buku yang Anda reservasi kini sudah tersedia.`,
+  return buildEditorialShell({
+    category: "Layanan Reservasi",
+    headline: "Buku Siap Diambil",
+    recipient: name,
+    lead: "Buku yang Anda reservasi telah tersedia dan siap diambil di meja sirkulasi:",
     rows,
-    infoBox: {
-      text: "Jika tidak diambil dalam 3 hari, reservasi akan dibatalkan secara otomatis.",
-      color: "#14532d",
-      bg: "#f0fdf4",
-      border: "#86efac",
-    },
-    footerNote: "Terima kasih telah menggunakan layanan reservasi Perpustakaan UMC.",
+    notice: "Eksemplar disimpan hingga batas waktu yang tertera. Setelah batas waktu berakhir, reservasi dibatalkan otomatis dan dialihkan ke pemustaka berikutnya.",
+    footerInfo: "Tunjukkan kartu tanda mahasiswa atau identitas anggota saat pengambilan.",
   });
 }
 
 // ──────────────────────────────────────────────────────────────
-// Booking Canceled Email (Auto-Cancel 20 Menit / Manual Cancel)
+// Booking Canceled Email (Minimalist Editorial)
 // ──────────────────────────────────────────────────────────────
 export function buildBookingCanceledEmail(opts: {
   name: string;
@@ -144,104 +131,43 @@ export function buildBookingCanceledEmail(opts: {
   const { name, bookTitle, reason } = opts;
   const rows: InfoRow[] = [
     { label: "Judul Buku", value: bookTitle },
-    { label: "Status", value: "Dibatalkan" },
+    { label: "Status Reservasi", value: "Dibatalkan" },
   ];
   if (reason) {
     rows.push({ label: "Keterangan", value: reason });
   }
 
-  return buildBaseTemplate({
-    badgeText: "Pemesanan Dibatalkan",
-    badgeColor: "#991b1b",
-    title: "Pemesanan Buku Dibatalkan",
-    summary: `Halo ${escapeHtml(name)}, pemesanan buku Anda telah dibatalkan.`,
+  return buildEditorialShell({
+    category: "Pembaruan Status",
+    headline: "Reservasi Dibatalkan",
+    recipient: name,
+    lead: "Reservasi buku berikut telah dibatalkan oleh sistem perpustakaan:",
     rows,
-    infoBox: {
-      text: "Buku telah dikembalikan ke status tersedia untuk peminjam lain. Anda dapat melakukan pemesanan ulang jika masih membutuhkan buku tersebut.",
-      color: "#7f1d1d",
-      bg: "#fef2f2",
-      border: "#fca5a5",
-    },
-    footerNote: "Perpustakaan Universitas Muhammadiyah Cirebon",
+    notice: "Eksemplar telah dikembalikan ke status tersedia di katalog. Anda dapat melakukan pemesanan ulang melalui portal katalog bila masih membutuhkan.",
+    footerInfo: "Layanan sirkulasi mandiri Perpustakaan UMC.",
   });
 }
 
 // ──────────────────────────────────────────────────────────────
-// Reset Password Email
+// Reset Password Email (Minimalist Editorial)
 // ──────────────────────────────────────────────────────────────
 export function buildResetPasswordEmail(opts: {
   name: string;
   resetUrl: string;
 }): string {
   const { name, resetUrl } = opts;
-  const safeUrl = escapeHtml(resetUrl);
-  const safeName = escapeHtml(name);
-
-  return buildShell(`
-    <tr>
-      <td style="padding:0 0 12px;">
-        <span style="display:inline-block;background:#7c3aed;color:#ffffff;
-          font-size:11px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;
-          padding:3px 10px;border-radius:4px;">Reset Password</span>
-      </td>
-    </tr>
-    <tr>
-      <td style="padding:0 0 6px;font-size:20px;font-weight:700;color:#111827;line-height:1.3;">
-        Permintaan Reset Password
-      </td>
-    </tr>
-    <tr>
-      <td style="padding:0 0 20px;font-size:14px;color:#6b7280;line-height:1.6;">
-        Halo <strong>${safeName}</strong>, kami menerima permintaan untuk mereset password akun Anda
-        di Perpustakaan UMC.
-      </td>
-    </tr>
-    <tr>
-      <td style="padding:0 0 20px;text-align:center;">
-        <a href="${safeUrl}"
-          style="display:inline-block;background:#7c3aed;color:#ffffff;text-decoration:none;
-          font-weight:700;padding:14px 32px;border-radius:8px;font-size:15px;
-          letter-spacing:0.02em;">
-          Reset Password Saya
-        </a>
-      </td>
-    </tr>
-    <tr>
-      <td style="padding:0 0 20px;">
-        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0"
-          style="border-collapse:collapse;background:#faf5ff;
-          border:1px solid #ddd6fe;border-radius:8px;">
-          <tr>
-            <td style="padding:14px 16px;font-size:13px;color:#5b21b6;line-height:1.6;">
-              ⏱️ <strong>Link ini hanya berlaku selama 1 jam</strong> sejak email ini dikirim.
-              Setelah itu, Anda perlu mengajukan permintaan reset password baru.
-            </td>
-          </tr>
-        </table>
-      </td>
-    </tr>
-    <tr>
-      <td style="padding:0 0 20px;">
-        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0"
-          style="border-collapse:collapse;background:#fef2f2;
-          border:1px solid #fca5a5;border-radius:8px;">
-          <tr>
-            <td style="padding:14px 16px;font-size:13px;color:#7f1d1d;line-height:1.6;">
-              🔒 Jika Anda <strong>tidak merasa meminta reset password</strong>, abaikan email ini.
-              Password Anda tidak akan berubah dan akun Anda tetap aman.
-            </td>
-          </tr>
-        </table>
-      </td>
-    </tr>
-    <tr>
-      <td style="padding:0 0 16px;font-size:12px;color:#9ca3af;line-height:1.6;">
-        Atau salin link berikut ke browser Anda:<br/>
-        <span style="color:#7c3aed;word-break:break-all;">${safeUrl}</span>
-      </td>
-    </tr>
-    ${buildFooter("Jika Anda tidak meminta reset password, hubungi administrator perpustakaan.")}
-  `);
+  return buildEditorialShell({
+    category: "Keamanan Akun",
+    headline: "Atur Ulang Kata Sandi",
+    recipient: name,
+    lead: "Permintaan pengaturan ulang kata sandi telah diajukan untuk akun Perpustakaan UMC Anda.",
+    action: {
+      label: "Atur Ulang Kata Sandi",
+      url: resetUrl,
+    },
+    notice: "Tautan keamanan ini berlaku selama 60 menit. Jika Anda tidak mengajukan permintaan ini, tidak ada tindakan yang diperlukan dan akun tetap terlindungi.",
+    footerInfo: "Demi keamanan akun, jangan bagikan tautan ini kepada pihak lain.",
+  });
 }
 
 // ──────────────────────────────────────────────────────────────
@@ -256,185 +182,214 @@ export function buildEmailTemplate(opts: {
   accent?: string;
   action?: EmailAction;
 }): string {
-  const {
-    title,
-    intro,
-    content,
-    footerNote,
-    accent = "#1e3a5f",
-    action,
-  } = opts;
+  const { title, headline, intro, content, footerNote, action } = opts;
 
-  const actionHtml = action?.url
-    ? `<tr><td style="padding-top:24px;">
-        <a href="${escapeHtml(action.url)}"
-          style="display:inline-block;background:${accent};color:#ffffff;text-decoration:none;
-          font-weight:600;padding:12px 24px;border-radius:6px;font-size:14px;">
-          ${escapeHtml(action.label)}
-        </a>
-      </td></tr>`
+  return buildEditorialShell({
+    category: title,
+    headline,
+    lead: intro || "",
+    freeformHtml: content,
+    action,
+    footerInfo: footerNote,
+  });
+}
+
+// ──────────────────────────────────────────────────────────────
+// Core Shell: High-End Warm Monochrome Editorial
+// ──────────────────────────────────────────────────────────────
+
+interface EditorialShellOpts {
+  category: string;
+  headline: string;
+  recipient?: string;
+  lead: string;
+  rows?: InfoRow[];
+  notice?: string;
+  action?: EmailAction;
+  freeformHtml?: string;
+  footerInfo?: string;
+}
+
+function buildEditorialShell(opts: EditorialShellOpts): string {
+  const year = new Date().getFullYear();
+  const safeCategory = escapeHtml(opts.category);
+  const safeHeadline = escapeHtml(opts.headline);
+  const safeLead = escapeHtml(opts.lead);
+
+  // Rows as clean editorial key-value list with thin crisp hairpins
+  let dataTableHtml = "";
+  if (opts.rows && opts.rows.length > 0) {
+    const rowItems = opts.rows
+      .map(
+        (r, idx) => `
+        <tr>
+          <td style="padding:14px 0;${idx < (opts.rows?.length ?? 1) - 1 ? "border-bottom:1px solid #EDEDEC;" : ""}">
+            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="border-collapse:collapse;">
+              <tr>
+                <td style="font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:12px;font-weight:500;color:#787774;text-transform:uppercase;letter-spacing:0.04em;width:34%;vertical-align:top;padding-right:12px;">
+                  ${escapeHtml(r.label)}
+                </td>
+                <td style="font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:14px;font-weight:600;color:#191919;line-height:1.5;vertical-align:top;">
+                  ${escapeHtml(r.value)}
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>`
+      )
+      .join("");
+
+    dataTableHtml = `
+      <tr>
+        <td style="padding:20px 0 24px;">
+          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="border-collapse:collapse;border-top:1px solid #191919;border-bottom:1px solid #191919;">
+            ${rowItems}
+          </table>
+        </td>
+      </tr>`;
+  }
+
+  // Clean, sharp action button (editorial black on white)
+  let actionHtml = "";
+  if (opts.action) {
+    const safeUrl = escapeHtml(opts.action.url);
+    const safeLabel = escapeHtml(opts.action.label);
+    actionHtml = `
+      <tr>
+        <td style="padding:16px 0 28px;">
+          <table role="presentation" cellspacing="0" cellpadding="0" border="0" style="border-collapse:collapse;">
+            <tr>
+              <td align="left" style="background:#191919;border-radius:4px;">
+                <a href="${safeUrl}" target="_blank" rel="noopener noreferrer"
+                  style="display:inline-block;padding:12px 24px;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:13px;font-weight:600;letter-spacing:0.02em;color:#FFFFFF;text-decoration:none;border-radius:4px;">
+                  ${safeLabel}
+                </a>
+              </td>
+            </tr>
+          </table>
+          <p style="margin:16px 0 0;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:11px;color:#9B9A97;line-height:1.5;word-break:break-all;">
+            Jika tombol tidak dapat diklik, gunakan tautan ini:<br>
+            <span style="color:#5A5A58;">${safeUrl}</span>
+          </p>
+        </td>
+      </tr>`;
+  }
+
+  // Notice block with muted natural tone (no neon, no heavy rounded pills)
+  let noticeHtml = "";
+  if (opts.notice) {
+    noticeHtml = `
+      <tr>
+        <td style="padding:0 0 24px;">
+          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0"
+            style="border-collapse:collapse;background:#F7F6F3;border-left:2px solid #2F3437;padding:14px 16px;">
+            <tr>
+              <td style="padding:12px 14px;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:12px;color:#37352F;line-height:1.6;">
+                ${escapeHtml(opts.notice)}
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>`;
+  }
+
+  const freeform = opts.freeformHtml
+    ? `<tr><td style="padding:12px 0 24px;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:14px;color:#37352F;line-height:1.7;">${opts.freeformHtml}</td></tr>`
     : "";
 
-  return buildShell(`
-    <tr>
-      <td style="padding:0 0 10px;">
-        <span style="display:inline-block;background:${accent};color:#ffffff;
-          font-size:11px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;
-          padding:3px 10px;border-radius:4px;">${escapeHtml(title)}</span>
-      </td>
-    </tr>
-    ${intro ? `<tr><td style="padding:0 0 18px;font-size:15px;color:#374151;line-height:1.7;">${escapeHtml(intro)}</td></tr>` : ""}
-    <tr>
-      <td style="font-size:14px;color:#4b5563;line-height:1.8;">${content}</td>
-    </tr>
-    ${actionHtml}
-    ${buildFooter(footerNote)}
-  `);
-}
+  const greeting = opts.recipient
+    ? `<p style="margin:0 0 10px;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:14px;font-weight:500;color:#191919;">Yth. ${escapeHtml(opts.recipient)},</p>`
+    : "";
 
-// ──────────────────────────────────────────────────────────────
-// Internal helpers
-// ──────────────────────────────────────────────────────────────
-
-function buildBaseTemplate(opts: {
-  badgeText: string;
-  badgeColor: string;
-  title: string;
-  summary: string;
-  rows: InfoRow[];
-  infoBox: { text: string; color: string; bg: string; border: string };
-  footerNote: string;
-}): string {
-  const { badgeText, badgeColor, title, summary, rows, infoBox, footerNote } = opts;
-
-  const rowsHtml = rows
-    .map(
-      (r) => `
-    <tr>
-      <td style="padding:12px 0;border-bottom:1px solid #f3f4f6;">
-        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0"
-          style="border-collapse:collapse;">
-          <tr>
-            <td style="font-size:11px;font-weight:700;color:#9ca3af;text-transform:uppercase;
-              letter-spacing:0.06em;width:40%;vertical-align:top;padding-right:8px;">
-              ${escapeHtml(r.label)}
-            </td>
-            <td style="font-size:15px;font-weight:600;color:#111827;vertical-align:top;">
-              ${escapeHtml(r.value)}
-            </td>
-          </tr>
-        </table>
-      </td>
-    </tr>`
-    )
-    .join("");
-
-  return buildShell(`
-    <tr>
-      <td style="padding:0 0 12px;">
-        <span style="display:inline-block;background:${badgeColor};color:#ffffff;
-          font-size:11px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;
-          padding:3px 10px;border-radius:4px;">${escapeHtml(badgeText)}</span>
-      </td>
-    </tr>
-    <tr>
-      <td style="padding:0 0 6px;font-size:20px;font-weight:700;color:#111827;line-height:1.3;">
-        ${escapeHtml(title)}
-      </td>
-    </tr>
-    <tr>
-      <td style="padding:0 0 20px;font-size:14px;color:#6b7280;line-height:1.6;">
-        ${escapeHtml(summary)}
-      </td>
-    </tr>
-    <tr>
-      <td style="padding:0 0 20px;">
-        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0"
-          style="border-collapse:collapse;border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;">
-          <tr>
-            <td style="padding:0 16px;">
-              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0"
-                style="border-collapse:collapse;">
-                ${rowsHtml}
-                <tr><td style="height:4px;"></td></tr>
-              </table>
-            </td>
-          </tr>
-        </table>
-      </td>
-    </tr>
-    <tr>
-      <td style="padding:0 0 4px;">
-        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0"
-          style="border-collapse:collapse;background:${infoBox.bg};
-          border:1px solid ${infoBox.border};border-radius:8px;">
-          <tr>
-            <td style="padding:14px 16px;font-size:13px;color:${infoBox.color};line-height:1.6;">
-              ${escapeHtml(infoBox.text)}
-            </td>
-          </tr>
-        </table>
-      </td>
-    </tr>
-    ${buildFooter(footerNote)}
-  `);
-}
-
-function buildShell(bodyRows: string): string {
-  const year = new Date().getFullYear();
+  const footerText = opts.footerInfo
+    ? `<p style="margin:0 0 10px;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:12px;color:#787774;line-height:1.5;">${escapeHtml(opts.footerInfo)}</p>`
+    : "";
 
   return `<!DOCTYPE html>
 <html lang="id">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${safeHeadline}</title>
 </head>
-<body style="margin:0;padding:0;background:#f9fafb;font-family:Arial,Helvetica,sans-serif;-webkit-font-smoothing:antialiased;">
-  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0"
-    style="background:#f9fafb;border-collapse:collapse;">
+<body style="margin:0;padding:0;background-color:#F7F6F3;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;-webkit-font-smoothing:antialiased;color:#191919;">
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color:#F7F6F3;border-collapse:collapse;">
     <tr>
-      <td align="center" style="padding:32px 16px;">
-        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0"
-          style="max-width:600px;width:100%;border-collapse:collapse;">
-
-          <!-- HEADER -->
+      <td align="center" style="padding:48px 16px;">
+        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="max-width:540px;width:100%;border-collapse:collapse;text-align:left;">
+          
+          <!-- BRAND IDENTIFIER (Subtle, Document Style) -->
           <tr>
-            <td style="padding:0 0 12px;">
-              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0"
-                style="border-collapse:collapse;">
+            <td style="padding:0 0 28px;">
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="border-collapse:collapse;">
                 <tr>
-                  <td style="vertical-align:middle;">${getLogoMarkup()}</td>
-                  <td style="vertical-align:middle;padding-left:12px;">
-                    <div style="font-size:13px;font-weight:700;color:#1e3a5f;letter-spacing:0.04em;">
+                  ${getLogoMarkup()}
+                  <td style="vertical-align:middle;">
+                    <div style="font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:13px;font-weight:700;letter-spacing:0.08em;color:#191919;text-transform:uppercase;">
                       Perpustakaan UMC
                     </div>
-                    <div style="font-size:11px;color:#9ca3af;margin-top:1px;">
+                    <div style="font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:11px;color:#787774;margin-top:2px;">
                       Universitas Muhammadiyah Cirebon
                     </div>
+                  </td>
+                  <td align="right" style="vertical-align:middle;">
+                    <span style="font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:11px;letter-spacing:0.06em;color:#787774;text-transform:uppercase;">
+                      ${safeCategory}
+                    </span>
                   </td>
                 </tr>
               </table>
             </td>
           </tr>
 
-          <!-- CARD -->
+          <!-- MAIN EDITORIAL CARD -->
           <tr>
-            <td style="background:#ffffff;border:1px solid #e5e7eb;border-radius:12px;padding:28px 28px 24px;">
-              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0"
-                style="border-collapse:collapse;">
-                ${bodyRows}
+            <td style="background-color:#FFFFFF;border:1px solid #EAEAEA;border-radius:6px;padding:36px 36px 32px;">
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="border-collapse:collapse;">
+                
+                <!-- HEADLINE (Refined, High Contrast) -->
+                <tr>
+                  <td style="padding:0 0 18px;">
+                    <h1 style="margin:0;font-family:'Playfair Display',Georgia,serif;font-size:24px;font-weight:600;letter-spacing:-0.02em;line-height:1.25;color:#191919;">
+                      ${safeHeadline}
+                    </h1>
+                  </td>
+                </tr>
+
+                <!-- RECIPIENT & LEAD PROSE -->
+                <tr>
+                  <td style="padding:0 0 8px;">
+                    ${greeting}
+                    <p style="margin:0;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:14px;line-height:1.65;color:#4A4946;">
+                      ${safeLead}
+                    </p>
+                  </td>
+                </tr>
+
+                <!-- DATA TABLE -->
+                ${dataTableHtml}
+
+                <!-- ACTION BUTTON (IF APPLICABLE) -->
+                ${actionHtml}
+
+                <!-- NOTICE / ADVISORY -->
+                ${noticeHtml}
+
+                <!-- FREEFORM -->
+                ${freeform}
+
               </table>
             </td>
           </tr>
 
-          <!-- BOTTOM SPACER -->
-          <tr><td style="height:24px;"></td></tr>
-
-          <!-- DISCLAIMER -->
+          <!-- FOOTER / IMPRINT -->
           <tr>
-            <td align="center" style="font-size:11px;color:#d1d5db;line-height:1.6;">
-              Pesan ini dikirim secara otomatis. Mohon jangan balas email ini.<br/>
-              &copy; ${year} Perpustakaan Universitas Muhammadiyah Cirebon
+            <td style="padding:28px 12px 0;text-align:left;">
+              ${footerText}
+              <div style="font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:11px;color:#9B9A97;line-height:1.6;">
+                Pemberitahuan resmi sistem sirkulasi mandiri.<br>
+                &copy; ${year} Perpustakaan Universitas Muhammadiyah Cirebon.
+              </div>
             </td>
           </tr>
 
@@ -444,16 +399,4 @@ function buildShell(bodyRows: string): string {
   </table>
 </body>
 </html>`;
-}
-
-function buildFooter(footerNote?: string): string {
-  if (!footerNote) return "";
-  return `
-  <tr>
-    <td style="padding-top:20px;border-top:1px solid #f3f4f6;margin-top:20px;">
-      <p style="margin:0;font-size:12px;color:#9ca3af;line-height:1.6;">
-        ${escapeHtml(footerNote)}
-      </p>
-    </td>
-  </tr>`;
 }
