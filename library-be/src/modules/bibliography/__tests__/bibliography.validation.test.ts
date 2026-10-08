@@ -58,4 +58,36 @@ describe("Bibliography Validation Schema", () => {
     });
     expect(result.success).toBe(true);
   });
+
+  it("menerima isbn dan issn bersamaan pada create dan update", () => {
+    const createResult = createBibliographySchema.safeParse({
+      title: "Jurnal Ilmiah Teknik & Buku Panduan",
+      isbn: "978-602-123-001-1",
+      issn: "1234-5678",
+      publishYear: 2024,
+    });
+    expect(createResult.success).toBe(true);
+    expect(createResult.data?.isbn).toBe("978-602-123-001-1");
+    expect(createResult.data?.issn).toBe("1234-5678");
+
+    const updateResult = updateBibliographySchema.safeParse({
+      isbn: "978-602-123-001-1",
+      issn: "1234-5678",
+    });
+    expect(updateResult.success).toBe(true);
+
+    const nullResult = updateBibliographySchema.safeParse({
+      isbn: null,
+      issn: null,
+    });
+    expect(nullResult.success).toBe(true);
+
+    // Test 10, 11, 12, 13 digits and "-"
+    expect(updateBibliographySchema.safeParse({ isbn: "0123456789" }).success).toBe(true);
+    expect(updateBibliographySchema.safeParse({ isbn: "01234567891" }).success).toBe(true);
+    expect(updateBibliographySchema.safeParse({ isbn: "012345678912" }).success).toBe(true);
+    expect(updateBibliographySchema.safeParse({ isbn: "9786021230011" }).success).toBe(true);
+    expect(updateBibliographySchema.safeParse({ isbn: "-" }).success).toBe(true);
+    expect(updateBibliographySchema.safeParse({ isbn: "0-19-852663-X" }).success).toBe(true);
+  });
 });

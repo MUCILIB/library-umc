@@ -76,8 +76,9 @@ export function useBookList(
       publisher: typeof item.publisher === "object"
         ? item.publisher?.name || ""
         : item.publisher || "",
-      publicationYear: String(item.publishYear ?? ""),
-      isbn: cleanIsbn(item.isbnIssn || item.isbn || ""),
+      isbn: cleanIsbn(item.isbn || item.isbnIssn || ""),
+      issn: item.issn || (item.isbnIssn?.startsWith("ISSN") ? item.isbnIssn.replace(/^ISSN[:\s]*/i, "") : undefined),
+      isbnIssn: item.isbnIssn || undefined,
       type: item.type || "physical_book",
       image: item.image || null,
       stock: item.stock ?? item.totalItems ?? 0,
