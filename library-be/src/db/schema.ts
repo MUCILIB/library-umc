@@ -285,6 +285,8 @@ export const members = pgTable("members", {
 export const bibliographies = pgTable("bibliographies", {
   id: uuid("id").primaryKey().defaultRandom(),
   title: varchar("title", { length: 500 }).notNull(),
+  isbn: varchar("isbn", { length: 50 }),
+  issn: varchar("issn", { length: 20 }),
   isbnIssn: varchar("isbn_issn", { length: 255 }),
   edition: varchar("edition", { length: 100 }),
   publisherId: integer("publisher_id").references(() => publishers.id),
@@ -311,7 +313,9 @@ export const bibliographies = pgTable("bibliographies", {
   isPopular: boolean("is_popular").default(false).notNull()
 }, (table) => ({
   titleIdx: index("bibliography_title_idx").on(table.title),
-  isbnIdx: index("bibliography_isbn_idx").on(table.isbnIssn),
+  isbnIdx: index("bibliography_isbn_idx").on(table.isbn),
+  issnIdx: index("bibliography_issn_idx").on(table.issn),
+  isbnIssnLegacyIdx: index("bibliography_isbn_issn_legacy_idx").on(table.isbnIssn),
   callNumberIdx: index("bibliography_call_number_idx").on(table.callNumber),
   publishYearIdx: index("bibliography_publish_year_idx").on(table.publishYear),
   deletedAtIdx: index("bibliography_deleted_at_idx").on(table.deletedAt)

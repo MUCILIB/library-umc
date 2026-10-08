@@ -74,6 +74,8 @@ const swaggerDefinition = {
         type: "object",
         properties: {
           id: { type: "string", format: "uuid" },
+          isbn: { type: "string", nullable: true, example: "978-602-1234-56-7" },
+          issn: { type: "string", nullable: true, example: "2085-4552" },
           isbnIssn: { type: "string", nullable: true },
           title: { type: "string" },
           sor: { type: "string", nullable: true },
