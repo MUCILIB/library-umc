@@ -1,0 +1,1 @@
+ALTER TABLE "loans" ADD COLUMN "extension_status" varchar(50) DEFAULT 'none';

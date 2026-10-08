@@ -503,10 +503,14 @@ const KatalogDetail = () => {
             <div className="grid grid-cols-3 gap-3 sm:gap-4 mb-5 sm:mb-8 border-b border-slate-100 dark:border-border/50 pb-5 sm:pb-8">
               <div>
                 <p className="text-[8px] sm:text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1">
-                  ISBN
+                  {bibliography?.isbn && bibliography?.issn ? "ISBN / ISSN" : bibliography?.issn ? "ISSN" : "ISBN"}
                 </p>
                 <p className="text-[11px] sm:text-xs font-bold text-slate-700 dark:text-slate-200">
-                  {cleanIsbn(bibliography?.isbn) || "-"}
+                  {bibliography?.isbn && bibliography?.issn
+                    ? `${cleanIsbn(bibliography.isbn)} / ${bibliography.issn}`
+                    : bibliography?.isbn
+                    ? cleanIsbn(bibliography.isbn)
+                    : bibliography?.issn || "-"}
                 </p>
               </div>
               <div>

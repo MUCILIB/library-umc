@@ -103,7 +103,7 @@ export class BibliographyService {
         if (resolvedId) publicationPlaceId = resolvedId;
       }
       let resolvedIsbn = data.isbn ? cleanIsbn(data.isbn) : null;
-      let resolvedIssn = data.issn ? data.issn.replace(/^ISSN\s*/i, "").trim() : null;
+      let resolvedIssn = data.issn ? data.issn.replace(/^ISSN[:\s]*/i, "").trim() : null;
       let resolvedLegacyIsbnIssn = cleanIsbn(data.isbnIssn);
 
       if (!resolvedIsbn && !resolvedIssn && resolvedLegacyIsbnIssn) {
@@ -190,7 +190,7 @@ export class BibliographyService {
         updateData.isbn = updateData.isbn ? cleanIsbn(updateData.isbn) : null;
       }
       if (updateData.issn !== undefined) {
-        updateData.issn = updateData.issn ? updateData.issn.replace(/^ISSN\s*/i, "").trim() : null;
+        updateData.issn = updateData.issn ? updateData.issn.replace(/^ISSN[:\s]*/i, "").trim() : null;
       }
       if (updateData.isbnIssn !== undefined) {
         updateData.isbnIssn = cleanIsbn(updateData.isbnIssn);

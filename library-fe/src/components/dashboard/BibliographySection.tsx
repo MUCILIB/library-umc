@@ -82,7 +82,7 @@ export default function BibliographySection({
     { key: "penulis", label: "Penulis" },
     { key: "penerbit", label: "Penerbit" },
     { key: "tahun", label: "Tahun" },
-    { key: "isbn", label: "ISBN" },
+    { key: "isbn", label: "ISBN / ISSN" },
     { key: "stok", label: "Stok" },
   ];
   const DEFAULT_COLUMNS: Set<ColumnKey> = new Set(["fakultasProdi", "penulis", "penerbit", "tahun", "isbn", "stok"]);
@@ -545,7 +545,7 @@ export default function BibliographySection({
                     <th className="px-4 py-3 text-left font-semibold text-muted-foreground">Tahun</th>
                   )}
                   {visibleColumns.has("isbn") && (
-                    <th className="px-4 py-3 text-left font-semibold text-muted-foreground">ISBN</th>
+                    <th className="px-4 py-3 text-left font-semibold text-muted-foreground">ISBN / ISSN</th>
                   )}
                   {visibleColumns.has("stok") && (
                     <th className="px-4 py-3 text-center font-semibold text-muted-foreground">Stok</th>
@@ -617,8 +617,19 @@ export default function BibliographySection({
                       </td>
                     )}
                     {visibleColumns.has("isbn") && (
-                      <td className="px-4 py-3 text-muted-foreground">
-                        {cleanIsbn(bib.isbnIssn) || "-"}
+                      <td className="px-4 py-3 text-muted-foreground text-xs font-mono">
+                        {bib.isbn && bib.issn ? (
+                          <div className="space-y-0.5">
+                            <div><span className="text-[10px] text-muted-foreground/70 font-sans">ISBN: </span>{cleanIsbn(bib.isbn)}</div>
+                            <div><span className="text-[10px] text-muted-foreground/70 font-sans">ISSN: </span>{bib.issn}</div>
+                          </div>
+                        ) : bib.isbn ? (
+                          cleanIsbn(bib.isbn)
+                        ) : bib.issn ? (
+                          <span><span className="text-[10px] text-muted-foreground/70 font-sans">ISSN: </span>{bib.issn}</span>
+                        ) : (
+                          cleanIsbn(bib.isbnIssn) || "-"
+                        )}
                       </td>
                     )}
                     {visibleColumns.has("stok") && (
@@ -761,7 +772,11 @@ function BibliographyDetail({
 
         {/* Metadata Grid */}
         <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          <MetaField label="ISBN/ISSN" value={cleanIsbn(bib.isbnIssn)} />
+          {bib.isbn && <MetaField label="ISBN" value={cleanIsbn(bib.isbn)} />}
+          {bib.issn && <MetaField label="ISSN" value={bib.issn} />}
+          {!bib.isbn && !bib.issn && (
+            <MetaField label="ISBN/ISSN" value={cleanIsbn(bib.isbnIssn) || "-"} />
+          )}
           <MetaField label="Edisi" value={bib.edition} />
           <MetaField label="Penerbit" value={bib.publisher?.name} />
           <MetaField label="Tahun Terbit" value={bib.publishYear?.toString()} />
@@ -872,8 +887,8 @@ function BibliographyForm({ bib, onClose, onSuccess }: BibliographyFormProps) {
   // Form states
   const [formData, setFormData] = useState({
     title: bib?.title || "",
-    isbn: bib?.isbnIssn?.startsWith("ISBN") || bib?.isbnIssn?.length === 10 || bib?.isbnIssn?.length === 13 ? bib?.isbnIssn || "" : "",
-    issn: bib?.isbnIssn?.startsWith("ISSN") || bib?.isbnIssn?.length === 8 ? bib?.isbnIssn || "" : "",
+    isbn: bib?.isbn ? cleanIsbn(bib.isbn) : (bib?.isbnIssn && !bib.isbnIssn.startsWith("ISSN") ? cleanIsbn(bib.isbnIssn) : ""),
+    issn: bib?.issn ? bib.issn.replace(/^ISSN[:\s]*/i, "").trim() : (bib?.isbnIssn && bib.isbnIssn.startsWith("ISSN") ? bib.isbnIssn.replace(/^ISSN[:\s]*/i, "").trim() : ""),
     edition: bib?.edition || "",
     publishYear: bib?.publishYear?.toString() || "",
     collation: bib?.collation || "",
@@ -904,7 +919,7 @@ function BibliographyForm({ bib, onClose, onSuccess }: BibliographyFormProps) {
   const [subjectInput, setSubjectInput] = useState("");
 
   // Duplicate detection
-  const [duplicates, setDuplicates] = useState<Array<{ id: string; title: string; isbnIssn?: string; authors: Array<{ name: string }>; similarity: string }>>([]);
+  const [duplicates, setDuplicates] = useState<Array<{ id: string; title: string; isbn?: string; issn?: string; isbnIssn?: string; authors: Array<{ name: string }>; similarity: string }>>([]);
   const [checkingDup, setCheckingDup] = useState(false);
 
   // Faculty / Study Program
@@ -1313,25 +1328,16 @@ function BibliographyForm({ bib, onClose, onSuccess }: BibliographyFormProps) {
     setLoading(true);
     setError(null);
 
-    // Auto-format ISBN / ISSN — send clean digits only
-    let formattedIsbn = "";
-    if (formData.isbn.trim()) {
-      const clean = formData.isbn.trim().replace(/[^0-9Xx]/g, "");
-      formattedIsbn = clean; // ISBN-10 or ISBN-13 digits
-    } else if (formData.issn.trim()) {
-      const clean = formData.issn.trim().replace(/[^0-9]/g, "");
-      if (clean.length === 8) {
-        formattedIsbn = `ISSN ${clean.substring(0, 4)}-${clean.substring(4, 8).toUpperCase()}`;
-      } else {
-        formattedIsbn = formData.issn.trim();
-      }
-    }
+    const cleanIsbnVal = formData.isbn.trim();
+    const cleanIssnVal = formData.issn.trim();
 
     try {
       const { isbn, issn, ...restFormData } = formData;
-      const payload = {
+      const payload: Record<string, any> = {
         ...restFormData,
-        isbnIssn: formattedIsbn || undefined,
+        isbn: cleanIsbnVal ? cleanIsbn(cleanIsbnVal) : (bib ? "" : undefined),
+        issn: cleanIssnVal ? cleanIssnVal.replace(/^ISSN[:\s]*/i, "").trim() : (bib ? "" : undefined),
+        isbnIssn: cleanIsbnVal ? cleanIsbn(cleanIsbnVal) : (cleanIssnVal ? `ISSN ${cleanIssnVal.replace(/^ISSN[:\s]*/i, "").trim()}` : (bib ? "" : undefined)),
         publishYear: formData.publishYear ? parseInt(formData.publishYear) : undefined,
         authors: authors.filter((a) => a.name.trim()),
         subjects: subjects.filter((s) => s.name.trim()),
@@ -1481,7 +1487,13 @@ function BibliographyForm({ bib, onClose, onSuccess }: BibliographyFormProps) {
         <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
           <div className="flex items-center gap-2 mb-3">
             <AlertCircle className="size-5 text-amber-600" />
-            <span className="text-sm font-semibold text-amber-800">{duplicates.some((d) => d.similarity === "isbn") ? "ISBN sudah terdaftar" : "Judul serupa ditemukan"}</span>
+            <span className="text-sm font-semibold text-amber-800">
+              {duplicates.some((d) => d.similarity === "isbn")
+                ? "ISBN sudah terdaftar"
+                : duplicates.some((d) => d.similarity === "issn")
+                ? "ISSN sudah terdaftar"
+                : "Judul serupa ditemukan"}
+            </span>
             {checkingDup && <Loader2 className="size-4 animate-spin text-amber-600" />}
           </div>
           <div className="space-y-2">
@@ -1489,7 +1501,10 @@ function BibliographyForm({ bib, onClose, onSuccess }: BibliographyFormProps) {
               <div key={d.id} className="flex items-center justify-between bg-white rounded-lg p-3 border border-amber-100">
                 <div className="min-w-0">
                   <p className="text-sm font-medium text-amber-900 truncate">{d.title}</p>
-                  <p className="text-xs text-amber-700">{d.authors.map((a) => a.name).join(", ")}{d.isbnIssn ? ` — ${cleanIsbn(d.isbnIssn)}` : ""}</p>
+                  <p className="text-xs text-amber-700">
+                    {d.authors.map((a) => a.name).join(", ")}
+                    {d.isbn ? ` — ISBN: ${cleanIsbn(d.isbn)}` : d.issn ? ` — ISSN: ${d.issn}` : d.isbnIssn ? ` — ${cleanIsbn(d.isbnIssn)}` : ""}
+                  </p>
                 </div>
                 <button
                   type="button"
@@ -2346,7 +2361,13 @@ function BibliographyForm({ bib, onClose, onSuccess }: BibliographyFormProps) {
                       {authors.filter((a) => a.name.trim()).map((a) => a.name).join(", ") || "Penulis"}
                     </p>
                     <p className="text-xs text-muted-foreground/80 font-mono line-clamp-1">
-                      {formData.isbn ? cleanIsbn(formData.isbn) : formData.issn ? cleanIsbn(formData.issn) : "-"}
+                      {formData.isbn && formData.issn
+                        ? `ISBN: ${cleanIsbn(formData.isbn)} | ISSN: ${cleanIsbn(formData.issn)}`
+                        : formData.isbn
+                        ? `ISBN: ${cleanIsbn(formData.isbn)}`
+                        : formData.issn
+                        ? `ISSN: ${cleanIsbn(formData.issn)}`
+                        : "-"}
                     </p>
                   </div>
                 </div>

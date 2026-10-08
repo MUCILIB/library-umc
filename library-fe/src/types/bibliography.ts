@@ -16,6 +16,8 @@ export interface Bibliography {
   /** Tahun terbit — backend mengembalikan sebagai string (varchar) */
   publicationYear: string;
   isbn?: string;
+  issn?: string;
+  isbnIssn?: string;
   type: BibliographyType;
   description?: string;
   /** URL gambar cover (Cloudinary) */
