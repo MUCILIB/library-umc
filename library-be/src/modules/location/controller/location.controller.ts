@@ -100,6 +100,9 @@ class LocationController {
       }
       const result = await locationService.deleteLocation(numericId);
       if (!result.success) {
+        if ((result as any).conflict) {
+          return res.status(409).json(result);
+        }
         return res.status(404).json(result);
       }
       res.status(200).json(result);

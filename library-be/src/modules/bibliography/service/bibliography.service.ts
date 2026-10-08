@@ -102,12 +102,29 @@ export class BibliographyService {
         const resolvedId = await this.resolveOrCreatePublicationPlace(tx, (data as any).publishPlace);
         if (resolvedId) publicationPlaceId = resolvedId;
       }
+      let resolvedIsbn = data.isbn ? cleanIsbn(data.isbn) : null;
+      let resolvedIssn = data.issn ? data.issn.replace(/^ISSN\s*/i, "").trim() : null;
+      let resolvedLegacyIsbnIssn = cleanIsbn(data.isbnIssn);
+
+      if (!resolvedIsbn && !resolvedIssn && resolvedLegacyIsbnIssn) {
+        if (/^ISSN\s/i.test(resolvedLegacyIsbnIssn) || /^\d{4}-\d{3}[\dX]$/i.test(resolvedLegacyIsbnIssn)) {
+          resolvedIssn = resolvedLegacyIsbnIssn.replace(/^ISSN\s*/i, "").trim();
+        } else {
+          resolvedIsbn = resolvedLegacyIsbnIssn;
+        }
+      }
+      if (!resolvedLegacyIsbnIssn) {
+        resolvedLegacyIsbnIssn = resolvedIsbn || (resolvedIssn ? `ISSN ${resolvedIssn}` : null);
+      }
+
       const insertData: any = {
         title: data.title,
         description: data.description || null,
         image: data.image || null,
         type: data.type || null,
-        isbnIssn: cleanIsbn(data.isbnIssn),
+        isbn: resolvedIsbn,
+        issn: resolvedIssn,
+        isbnIssn: resolvedLegacyIsbnIssn,
         edition: data.edition || null,
         publishYear: data.publishYear || null,
         collation: data.collation || null,
@@ -169,8 +186,24 @@ export class BibliographyService {
           updateData[key] = data[key as keyof UpdateBibliographyData];
         }
       }
+      if (updateData.isbn !== undefined) {
+        updateData.isbn = updateData.isbn ? cleanIsbn(updateData.isbn) : null;
+      }
+      if (updateData.issn !== undefined) {
+        updateData.issn = updateData.issn ? updateData.issn.replace(/^ISSN\s*/i, "").trim() : null;
+      }
       if (updateData.isbnIssn !== undefined) {
         updateData.isbnIssn = cleanIsbn(updateData.isbnIssn);
+        if (!updateData.isbn && !updateData.issn && updateData.isbnIssn) {
+          if (/^ISSN\s/i.test(updateData.isbnIssn) || /^\d{4}-\d{3}[\dX]$/i.test(updateData.isbnIssn)) {
+            updateData.issn = updateData.isbnIssn.replace(/^ISSN\s*/i, "").trim();
+          } else {
+            updateData.isbn = updateData.isbnIssn;
+          }
+        }
+      }
+      if ((updateData.isbn !== undefined || updateData.issn !== undefined) && updateData.isbnIssn === undefined) {
+        updateData.isbnIssn = updateData.isbn || (updateData.issn ? `ISSN ${updateData.issn}` : null);
       }
       if (publisherId !== undefined) {
         updateData.publisherId = publisherId;
@@ -258,13 +291,23 @@ export class BibliographyService {
       const term = `%${query.q}%`;
       conditions.push(or(
         ilike(bibliographies.title, term),
+        ilike(bibliographies.isbn, term),
+        ilike(bibliographies.issn, term),
         ilike(bibliographies.isbnIssn, term),
         ilike(bibliographies.callNumber, term),
         ilike(bibliographies.sor, term),
       ));
     }
     if (query.title) conditions.push(ilike(bibliographies.title, `%${query.title}%`));
-    if (query.isbnIssn) conditions.push(ilike(bibliographies.isbnIssn, `%${query.isbnIssn}%`));
+    if (query.isbn) conditions.push(ilike(bibliographies.isbn, `%${query.isbn}%`));
+    if (query.issn) conditions.push(ilike(bibliographies.issn, `%${query.issn}%`));
+    if (query.isbnIssn) {
+      conditions.push(or(
+        ilike(bibliographies.isbn, `%${query.isbnIssn}%`),
+        ilike(bibliographies.issn, `%${query.isbnIssn}%`),
+        ilike(bibliographies.isbnIssn, `%${query.isbnIssn}%`)
+      ));
+    }
     if (query.callNumber) conditions.push(ilike(bibliographies.callNumber, `%${query.callNumber}%`));
     if (query.gmdId) conditions.push(eq(bibliographies.gmdId, query.gmdId));
     if (query.languageId) conditions.push(eq(bibliographies.languageId, query.languageId));
@@ -368,24 +411,62 @@ export class BibliographyService {
     await db.update(bibliographies).set({ deletedAt: new Date(), updatedAt: new Date() }).where(eq(bibliographies.id, id));
   }
 
-  async checkDuplicate(params: { isbn?: string; title?: string; author?: string }) {
+  async checkDuplicate(params: { isbn?: string; issn?: string; title?: string; author?: string }) {
     const duplicates: any[] = [];
     const seen = new Set<string>();
 
     if (params.isbn) {
-      const exact = await db.query.bibliographies.findMany({
-        where: and(eq(bibliographies.isbnIssn, params.isbn), isNull(bibliographies.deletedAt)),
-        with: { bibliographyAuthors: { with: { author: true } } },
-      });
-      for (const bib of exact) {
-        if (!seen.has(bib.id)) {
-          seen.add(bib.id);
-          duplicates.push({
-            id: bib.id, title: bib.title, isbnIssn: bib.isbnIssn,
-            classification: bib.classification, callNumber: bib.callNumber,
-            authors: bib.bibliographyAuthors.map((ba: any) => ({ name: ba.author.name })),
-            similarity: "isbn",
-          });
+      const cleanTargetIsbn = cleanIsbn(params.isbn);
+      if (cleanTargetIsbn) {
+        const exact = await db.query.bibliographies.findMany({
+          where: and(
+            or(
+              eq(bibliographies.isbn, cleanTargetIsbn),
+              eq(bibliographies.isbnIssn, cleanTargetIsbn),
+              eq(bibliographies.isbnIssn, params.isbn)
+            ),
+            isNull(bibliographies.deletedAt)
+          ),
+          with: { bibliographyAuthors: { with: { author: true } } },
+        });
+        for (const bib of exact) {
+          if (!seen.has(bib.id)) {
+            seen.add(bib.id);
+            duplicates.push({
+              id: bib.id, title: bib.title, isbn: bib.isbn, issn: bib.issn, isbnIssn: bib.isbnIssn,
+              classification: bib.classification, callNumber: bib.callNumber,
+              authors: bib.bibliographyAuthors.map((ba: any) => ({ name: ba.author.name })),
+              similarity: "isbn",
+            });
+          }
+        }
+      }
+    }
+
+    if (params.issn) {
+      const cleanTargetIssn = params.issn.replace(/^ISSN\s*/i, "").trim();
+      if (cleanTargetIssn) {
+        const exactIssn = await db.query.bibliographies.findMany({
+          where: and(
+            or(
+              eq(bibliographies.issn, cleanTargetIssn),
+              eq(bibliographies.isbnIssn, `ISSN ${cleanTargetIssn}`),
+              eq(bibliographies.isbnIssn, cleanTargetIssn)
+            ),
+            isNull(bibliographies.deletedAt)
+          ),
+          with: { bibliographyAuthors: { with: { author: true } } },
+        });
+        for (const bib of exactIssn) {
+          if (!seen.has(bib.id)) {
+            seen.add(bib.id);
+            duplicates.push({
+              id: bib.id, title: bib.title, isbn: bib.isbn, issn: bib.issn, isbnIssn: bib.isbnIssn,
+              classification: bib.classification, callNumber: bib.callNumber,
+              authors: bib.bibliographyAuthors.map((ba: any) => ({ name: ba.author.name })),
+              similarity: "issn",
+            });
+          }
         }
       }
     }

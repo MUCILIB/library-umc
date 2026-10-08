@@ -262,6 +262,54 @@ router.patch(
 /**
  * @swagger
  * /locations/{id}:
+ *   patch:
+ *     summary: Update parsial lokasi
+ *     description: >
+ *       Memperbarui sebagian atribut data lokasi (room, rack, atau shelf).
+ *       Hanya dapat diakses oleh super_admin atau staff.
+ *     tags: [Locations]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: ID numerik lokasi yang akan diupdate
+ *         example: 1
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               room:
+ *                 type: string
+ *               rack:
+ *                 type: string
+ *               shelf:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Lokasi berhasil diupdate
+ *       400:
+ *         description: Validasi gagal
+ *       404:
+ *         description: Lokasi tidak ditemukan
+ */
+router.patch(
+  "/locations/:id",
+  publicApiLimiter,
+  isAuthenticated,
+  requireRole(["super_admin", "staff"]),
+  locationController.updateLocation,
+);
+
+/**
+ * @swagger
+ * /locations/{id}:
  *   delete:
  *     summary: Hapus lokasi (soft delete)
  *     description: >

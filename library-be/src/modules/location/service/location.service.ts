@@ -1,6 +1,6 @@
 import { db } from "../../../db";
-import { locations } from "../../../db/schema";
-import { and, eq, desc, isNull } from "drizzle-orm";
+import { locations, items } from "../../../db/schema";
+import { and, eq, desc, isNull, count } from "drizzle-orm";
 
 type LocationData = {
   room: string;
@@ -104,7 +104,7 @@ class LocationService {
     }
   }
 
-  async updateLocation(id: number, data: LocationData) {
+  async updateLocation(id: number, data: Partial<LocationData>) {
     try {
       const existingLocation = await db.query.locations.findFirst({
         where: and(eq(locations.id, id), isNull(locations.deletedAt)),
@@ -114,6 +114,28 @@ class LocationService {
         return {
           success: false,
           message: "Location not found",
+          data: null,
+        };
+      }
+
+      // Check unique constraint if room, rack, or shelf updated
+      const nextRoom = data.room ?? existingLocation.room;
+      const nextRack = data.rack ?? existingLocation.rack;
+      const nextShelf = data.shelf ?? existingLocation.shelf;
+
+      const duplicate = await db.query.locations.findFirst({
+        where: and(
+          eq(locations.room, nextRoom),
+          eq(locations.rack, nextRack),
+          eq(locations.shelf, nextShelf),
+          isNull(locations.deletedAt)
+        ),
+      });
+
+      if (duplicate && duplicate.id !== id) {
+        return {
+          success: false,
+          message: "Location with the same room, rack, and shelf already exists",
           data: null,
         };
       }
@@ -157,6 +179,22 @@ class LocationService {
         return {
           success: false,
           message: "Location not found",
+          data: null,
+        };
+      }
+
+      // Check if location still has active items
+      const [itemCountResult] = await db
+        .select({ value: count() })
+        .from(items)
+        .where(and(eq(items.locationId, id), isNull(items.deletedAt)));
+
+      const activeItems = Number(itemCountResult?.value || 0);
+      if (activeItems > 0) {
+        return {
+          success: false,
+          conflict: true,
+          message: `Lokasi tidak dapat dihapus karena masih digunakan oleh ${activeItems} eksemplar buku aktif`,
           data: null,
         };
       }
