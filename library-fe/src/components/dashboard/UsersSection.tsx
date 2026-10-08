@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, Fragment } from "react";
+import { useEffect, useMemo, useState, Fragment, useRef } from "react";
 import {
   Search,
   RefreshCw,
@@ -15,9 +15,12 @@ import {
   Loader2,
   AlertCircle,
   CheckCircle,
-  X
+  X,
+  Columns3,
+  Check
 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { authClient } from "@/utils/auth-client";
 import { useToast } from "@/hooks/useToast";
 import { useUsersManagement } from "@/hooks/dashboard/useUsersManagement";
@@ -37,12 +40,70 @@ export default function UsersSection() {
     refetch
   } = useUsersManagement(true);
 
-  const [search, setSearch] = useState("");
+  // Column visibility
+  type ColumnKey = "user" | "role" | "status" | "kartu" | "terdaftar" | "aksi";
+  const ALL_COLUMNS: { key: ColumnKey; label: string }[] = [
+    { key: "user", label: "User" },
+    { key: "role", label: "Role" },
+    { key: "status", label: "Status" },
+    { key: "kartu", label: "Kartu" },
+    { key: "terdaftar", label: "Terdaftar" },
+    { key: "aksi", label: "Aksi" },
+  ];
+  const DEFAULT_COLUMNS: Set<ColumnKey> = new Set(["user", "role", "status", "kartu", "terdaftar", "aksi"]);
+
+  const [visibleColumns, setVisibleColumns] = useState<Set<ColumnKey>>(() => {
+    try {
+      const saved = localStorage.getItem("users-visible-columns");
+      if (saved) {
+        const parsed = JSON.parse(saved) as string[];
+        return new Set(parsed as ColumnKey[]);
+      }
+    } catch (err) {
+      console.warn("Failed to load column visibility from localStorage:", err);
+    }
+    return DEFAULT_COLUMNS;
+  });
+  const [showColumnPicker, setShowColumnPicker] = useState(false);
+  const columnPickerRef = useRef<HTMLDivElement>(null);
+
+  // Save column visibility to localStorage whenever it changes
+  useEffect(() => {
+    try {
+      localStorage.setItem("users-visible-columns", JSON.stringify(Array.from(visibleColumns)));
+    } catch (err) {
+      console.warn("Failed to save column visibility to localStorage:", err);
+    }
+  }, [visibleColumns]);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (columnPickerRef.current && !columnPickerRef.current.contains(e.target as Node)) {
+        setShowColumnPicker(false);
+      }
+    };
+    if (showColumnPicker) document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [showColumnPicker]);
+
+  const toggleColumn = (key: ColumnKey) => {
+    setVisibleColumns((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) {
+        // Always keep at least 1 column visible
+        if (next.size > 1) next.delete(key);
+      } else {
+        next.add(key);
+      }
+      return next;
+    });
+  };
   const [pageError, setPageError] = useState<string | null>(null);
   const [savingId, setSavingId] = useState<string | null>(null);
   const [banSavingId, setBanSavingId] = useState<string | null>(null);
   const [syncSavingId, setSyncSavingId] = useState<string | null>(null);
   const [issueSavingId, setIssueSavingId] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
   const [recordSavingId, setRecordSavingId] = useState<string | null>(null);
   const [showOnlyUnsynced, setShowOnlyUnsynced] = useState(false);
   const [roleDraft, setRoleDraft] = useState<Record<string, string>>({});
@@ -354,12 +415,76 @@ export default function UsersSection() {
             />
           </div>
 
-          <button
-            onClick={() => void refetch()}
-            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold text-muted-foreground hover:text-primary hover:bg-warning-bg border border-border transition-colors"
-          >
-            <RefreshCw size={14} /> Refresh
-          </button>
+          <div className="flex items-center gap-2">
+            {/* Column Picker */}
+            <div className="relative" ref={columnPickerRef}>
+              <button
+                onClick={() => setShowColumnPicker((v) => !v)}
+                className="flex items-center gap-2 rounded-xl border border-border bg-card px-3 py-2.5 text-sm font-medium text-foreground hover:bg-surface-hover"
+                title="Pilih kolom yang ditampilkan"
+                aria-label="Pilih Kolom"
+              >
+                <Columns3 className="size-4 text-primary" />
+                <span className="hidden sm:inline">Kolom</span>
+                <span className="ml-1 rounded-full bg-primary/10 px-1.5 py-0.5 text-[10px] font-semibold text-primary">
+                  {visibleColumns.size}/{ALL_COLUMNS.length}
+                </span>
+              </button>
+              {showColumnPicker && (
+                <div className="absolute right-0 top-full z-50 mt-1 w-52 rounded-xl border border-border bg-card shadow-lg">
+                  <div className="border-b border-border px-3 py-2">
+                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Tampilkan Kolom</p>
+                  </div>
+                  <div className="p-2 space-y-0.5">
+                    {ALL_COLUMNS.map((col) => {
+                      const isChecked = visibleColumns.has(col.key);
+                      const isDisabled = isChecked && visibleColumns.size === 1;
+                      return (
+                        <button
+                          key={col.key}
+                          onClick={() => toggleColumn(col.key)}
+                          disabled={isDisabled}
+                          className={`flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm transition-colors ${
+                            isChecked
+                              ? "text-foreground"
+                              : "text-muted-foreground"
+                          } hover:bg-muted disabled:opacity-40 disabled:cursor-not-allowed`}
+                        >
+                          <span
+                            className={`flex size-4 shrink-0 items-center justify-center rounded border transition-colors ${
+                              isChecked
+                                ? "border-primary bg-primary"
+                                : "border-border bg-card"
+                            }`}
+                          >
+                            {isChecked && <Check className="size-3 text-white" />}
+                          </span>
+                          {col.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <div className="border-t border-border px-3 py-2">
+                    <button
+                      onClick={() =>
+                        setVisibleColumns(DEFAULT_COLUMNS)
+                      }
+                      className="text-xs text-primary hover:underline"
+                    >
+                      Reset tampilan
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <button
+              onClick={() => void refetch()}
+              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold text-muted-foreground hover:text-primary hover:bg-warning-bg border border-border transition-colors"
+            >
+              <RefreshCw size={14} /> Refresh
+            </button>
+          </div>
 
           <label className="inline-flex items-center gap-2 text-xs font-semibold text-muted-foreground">
             <input
@@ -395,24 +520,48 @@ export default function UsersSection() {
               <table className="w-full text-left border-collapse">
                 <thead>
                   <tr className="bg-muted/50 border-b border-border">
-                    <th className="px-6 py-4 text-[11px] font-bold text-muted-foreground uppercase tracking-widest">
-                      User
-                    </th>
-                    <th className="px-6 py-4 text-[11px] font-bold text-muted-foreground uppercase tracking-widest">
-                      Role
-                    </th>
-                    <th className="px-6 py-4 text-[11px] font-bold text-muted-foreground uppercase tracking-widest">
-                      Status
-                    </th>
-                    <th className="px-6 py-4 text-[11px] font-bold text-muted-foreground uppercase tracking-widest">
-                      Kartu
-                    </th>
-                    <th className="px-6 py-4 text-[11px] font-bold text-muted-foreground uppercase tracking-widest">
-                      Terdaftar
-                    </th>
-                    <th className="px-6 py-4 text-[11px] font-bold text-muted-foreground uppercase tracking-widest text-right">
-                      Aksi
-                    </th>
+                    {
+                      visibleColumns.has("user") && (
+                        <th className="px-6 py-4 text-[11px] font-bold text-muted-foreground uppercase tracking-widest">
+                          User
+                        </th>
+                      )
+                    }
+                    {
+                      visibleColumns.has("role") && (
+                        <th className="px-6 py-4 text-[11px] font-bold text-muted-foreground uppercase tracking-widest">
+                          Role
+                        </th>
+                      )
+                    }
+                    {
+                      visibleColumns.has("status") && (
+                        <th className="px-6 py-4 text-[11px] font-bold text-muted-foreground uppercase tracking-widest">
+                          Status
+                        </th>
+                      )
+                    }
+                    {
+                      visibleColumns.has("kartu") && (
+                        <th className="px-6 py-4 text-[11px] font-bold text-muted-foreground uppercase tracking-widest">
+                          Kartu
+                        </th>
+                      )
+                    }
+                    {
+                      visibleColumns.has("terdaftar") && (
+                        <th className="px-6 py-4 text-[11px] font-bold text-muted-foreground uppercase tracking-widest">
+                          Terdaftar
+                        </th>
+                      )
+                    }
+                    {
+                      visibleColumns.has("aksi") && (
+                        <th className="px-6 py-4 text-[11px] font-bold text-muted-foreground uppercase tracking-widest text-right">
+                          Aksi
+                        </th>
+                      )
+                    }
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-50">
@@ -421,79 +570,90 @@ export default function UsersSection() {
                       key={user.id}
                       className="hover:bg-surface-hover/40 transition-colors"
                     >
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-3">
-                          <div className="w-9 h-9 rounded-full bg-muted overflow-hidden flex items-center justify-center text-muted-foreground text-xs font-bold">
-                            {user.image ? (
-                              <img
-                                src={user.image}
-                                alt={user.name}
-                                className="w-full h-full object-cover"
-                              />
-                            ) : (
-                              user.name?.charAt(0)?.toUpperCase() || "U"
-                            )}
+                      {visibleColumns.has("user") && (
+                        <td className="px-6 py-4">
+                          <div className="flex items-center gap-3">
+                            <div className="w-9 h-9 rounded-full bg-muted overflow-hidden flex items-center justify-center text-muted-foreground text-xs font-bold">
+                              {user.image ? (
+                                <img
+                                  src={user.image}
+                                  alt={user.name}
+                                  className="w-full h-full object-cover"
+                                />
+                              ) : (
+                                user.name?.charAt(0)?.toUpperCase() || "U"
+                              )}
+                            </div>
+                            <div>
+                              <p className="text-sm font-bold text-foreground">
+                                {user.name || "-"}
+                              </p>
+                              <p className="text-xs font-medium text-muted-foreground">
+                                {user.email}
+                              </p>
+                            </div>
                           </div>
-                          <div>
-                            <p className="text-sm font-bold text-foreground">
-                              {user.name || "-"}
-                            </p>
-                            <p className="text-xs font-medium text-muted-foreground">
-                              {user.email}
-                            </p>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <span
-                          className={`inline-flex items-center px-3 py-1 rounded-full text-[11px] font-bold border ${roleBadgeClass(user.role)}`}
-                        >
-                          {user.role === "super_admin" ? (
-                            <ShieldCheck size={12} className="mr-1.5" />
-                          ) : null}
-                          {user.role}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4">
-                        {user.banned ? (
-                          <span className="inline-flex items-center px-3 py-1 rounded-full text-[11px] font-bold border bg-orange-50 text-orange-700 border-orange-200">
-                            <UserX size={12} className="mr-1.5" /> Banned
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center px-3 py-1 rounded-full text-[11px] font-bold border bg-green-50 dark:bg-green-950 text-green-700 dark:text-green-400 border-green-200 dark:border-green-800">
-                            Aktif
-                          </span>
-                        )}
-                      </td>
-                      <td className="px-6 py-4 space-y-2">
-                        <div className="flex flex-wrap items-center gap-2">
+                        </td>
+                      )}
+                      {visibleColumns.has("role") && (
+                        <td className="px-6 py-4">
                           <span
-                            className={`inline-flex items-center px-3 py-1 rounded-full text-[11px] font-bold border ${cardStatusClass(user.cardStatus)}`}
+                            className={`inline-flex items-center px-3 py-1 rounded-full text-[11px] font-bold border ${roleBadgeClass(user.role)}`}
                           >
-                            {cardStatusLabel(user.cardStatus)}
+                            {user.role === "super_admin" ? (
+                              <ShieldCheck size={12} className="mr-1.5" />
+                            ) : null}
+                            {user.role}
                           </span>
-                          {user.cardNumber ? (
-                            <span className="text-[11px] font-mono font-bold text-muted-foreground">
-                              {user.cardNumber}
+                        </td>
+                      )}
+                      {visibleColumns.has("status") && (
+                        <td className="px-6 py-4">
+                          {user.banned ? (
+                            <span className="inline-flex items-center px-3 py-1 rounded-full text-[11px] font-bold border bg-orange-50 text-orange-700 border-orange-200">
+                              <UserX size={12} className="mr-1.5" /> Banned
                             </span>
+                          ) : (
+                            <span className="inline-flex items-center px-3 py-1 rounded-full text-[11px] font-bold border bg-green-50 dark:bg-green-950 text-green-700 dark:text-green-400 border-green-200 dark:border-green-800">
+                              Aktif
+                            </span>
+                          )}
+                        </td>
+                      )}
+                      {visibleColumns.has("kartu") && (
+                        <td className="px-6 py-4 space-y-2">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span
+                              className={`inline-flex items-center px-3 py-1 rounded-full text-[11px] font-bold border ${cardStatusClass(user.cardStatus)}`}
+                            >
+                              {cardStatusLabel(user.cardStatus)}
+                            </span>
+                            {user.cardNumber ? (
+                              <span className="text-[11px] font-mono font-bold text-muted-foreground">
+                                {user.cardNumber}
+                              </span>
+                            ) : null}
+                          </div>
+                          {user.cardRejectedReason ? (
+                            <p className="max-w-[220px] text-[11px] text-rose-600">
+                              {user.cardRejectedReason}
+                            </p>
                           ) : null}
-                        </div>
-                        {user.cardRejectedReason ? (
-                          <p className="max-w-[220px] text-[11px] text-rose-600">
-                            {user.cardRejectedReason}
-                          </p>
-                        ) : null}
-                      </td>
-                      <td className="px-6 py-4 text-sm font-medium text-muted-foreground">
-                        {user.createdAt
-                          ? new Date(user.createdAt).toLocaleDateString("id-ID", {
-                              day: "2-digit",
-                              month: "short",
-                              year: "numeric"
-                            })
-                          : "-"}
-                      </td>
-                      <td className="px-6 py-4 text-right">
+                        </td>
+                      )}
+                      {visibleColumns.has("terdaftar") && (
+                        <td className="px-6 py-4 text-sm font-medium text-muted-foreground">
+                          {user.createdAt
+                            ? new Date(user.createdAt).toLocaleDateString("id-ID", {
+                                day: "2-digit",
+                                month: "short",
+                                year: "numeric"
+                              })
+                            : "-"}
+                        </td>
+                      )}
+                      {visibleColumns.has("aksi") && (
+                        <td className="px-6 py-4 text-right">
                         <div className="inline-flex items-center gap-2">
                           <button
                             onClick={() => void handleRecordVisit(user)}
@@ -505,24 +665,28 @@ export default function UsersSection() {
                             {recordSavingId === user.id ? "..." : "Catat Kunjungan"}
                           </button>
 
-                          <select
+                          <Select
                             value={roleDraft[user.id] || user.role}
-                            onChange={(e) =>
+                            onValueChange={(value) =>
                               setRoleDraft((prev) => ({
                                 ...prev,
-                                [user.id]: e.target.value
+                                [user.id]: value
                               }))
                             }
                             disabled={
                               user.id === currentUserId || savingId === user.id
                             }
-                            className="px-3 py-2 rounded-lg border border-border text-xs font-bold text-muted-foreground bg-card disabled:bg-muted disabled:text-muted-foreground"
                           >
-                            <option value="student">student</option>
-                            <option value="lecturer">lecturer</option>
-                            <option value="staff">staff</option>
-                            <option value="super_admin">super_admin</option>
-                          </select>
+                            <SelectTrigger className="w-[120px] h-8 text-xs font-bold">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="student">student</SelectItem>
+                              <SelectItem value="lecturer">lecturer</SelectItem>
+                              <SelectItem value="staff">staff</SelectItem>
+                              <SelectItem value="super_admin">super_admin</SelectItem>
+                            </SelectContent>
+                          </Select>
 
                           <button
                             onClick={() => void handleUpdateRole(user)}
@@ -587,7 +751,8 @@ export default function UsersSection() {
                             </>
                           )}
                         </div>
-                      </td>
+                        </td>
+                      )}
                     </tr>
                   ))}
                 </tbody>

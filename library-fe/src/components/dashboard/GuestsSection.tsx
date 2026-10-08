@@ -17,6 +17,7 @@ import {
   Loader2,
   ExternalLink
 } from "lucide-react";
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { dashboardDataService } from "@/services/dashboard/dashboardDataService";
 import { useToast } from "@/hooks/useToast";
 import { exportApi, importApi, facultyApi, studyProgramApi, type Faculty, type StudyProgram } from "@/api/client";
@@ -463,50 +464,53 @@ export default function GuestsSection({
             {/* Filter Fakultas */}
             <div className="flex items-center gap-1.5">
               <span className="text-xs font-bold text-muted-foreground whitespace-nowrap">Fakultas:</span>
-              <select
-                value={selectedFaculty}
-                onChange={(e) => handleFacultyChange(e.target.value)}
-                className="px-3 py-2 bg-muted text-foreground border border-border rounded-xl text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-primary/20"
-              >
-                <option value="all">Semua Fakultas</option>
-                {faculties.map((f) => (
-                  <option key={f.id} value={f.id}>
-                    {f.name}
-                  </option>
-                ))}
-              </select>
+              <Select value={selectedFaculty} onValueChange={handleFacultyChange}>
+                <SelectTrigger className="w-[200px] text-xs font-semibold">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Semua Fakultas</SelectItem>
+                  {faculties.map((f) => (
+                    <SelectItem key={f.id} value={String(f.id)}>
+                      {f.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             {/* Filter Program Studi */}
             <div className="flex items-center gap-1.5">
               <span className="text-xs font-bold text-muted-foreground whitespace-nowrap">Prodi:</span>
-              <select
-                value={selectedStudyProgram}
-                onChange={(e) => handleStudyProgramChange(e.target.value)}
-                className="px-3 py-2 bg-muted text-foreground border border-border rounded-xl text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-primary/20 max-w-[200px] truncate"
-              >
-                <option value="all">Semua Prodi</option>
-                {availableStudyPrograms.map((sp) => (
-                  <option key={sp.id} value={sp.id}>
-                    {sp.name}
-                  </option>
-                ))}
-              </select>
+              <Select value={selectedStudyProgram} onValueChange={handleStudyProgramChange}>
+                <SelectTrigger className="w-[200px] text-xs font-semibold">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Semua Prodi</SelectItem>
+                  {availableStudyPrograms.map((sp) => (
+                    <SelectItem key={sp.id} value={String(sp.id)}>
+                      {sp.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             {/* Filter Tipe on Buku Tamu */}
             {activeTab === "tamu" && (
               <div className="flex items-center gap-1.5">
                 <span className="text-xs font-bold text-muted-foreground whitespace-nowrap">Tipe:</span>
-                <select
-                  value={selectedType}
-                  onChange={(e) => handleTypeChange(e.target.value)}
-                  className="px-3 py-2 bg-muted text-foreground border border-border rounded-xl text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-primary/20"
-                >
-                  <option value="all">Semua Tipe</option>
-                  <option value="member">Member UMC</option>
-                  <option value="non-member">Tamu Non-Member</option>
-                </select>
+                <Select value={selectedType} onValueChange={handleTypeChange}>
+                  <SelectTrigger className="w-[180px] text-xs font-semibold">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Semua Tipe</SelectItem>
+                    <SelectItem value="member">Member UMC</SelectItem>
+                    <SelectItem value="non-member">Tamu Non-Member</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             )}
 

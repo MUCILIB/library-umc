@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Loader2, AlertCircle, QrCode, CheckCircle, ArrowLeft, X, Search } from "lucide-react";
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import jsQR from "jsqr";
 import { API_BASE_URL } from "@/utils/api-config";
 import { useToast } from "@/hooks/useToast";
@@ -161,85 +162,83 @@ function CameraScannerModal({ isOpen, onClose, onScanSuccess }: CameraScannerMod
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 overflow-hidden bg-slate-900/40 dark:bg-slate-950/60 backdrop-blur-2xl flex flex-col items-center justify-between p-4 sm:p-6 text-foreground animate-in fade-in duration-200">
-      {/* Top Floating Glassmorphic Header */}
-      <div className="w-full max-w-4xl flex items-center justify-between z-10 pt-2 px-2">
-        <div className="flex items-center gap-3 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl px-5 py-2.5 rounded-full border border-white/40 dark:border-slate-700/50 shadow-xl">
-          <QrCode className="size-5 text-primary" />
-          <h3 className="font-extrabold text-sm sm:text-base tracking-wide text-foreground">Pemindaian QR & Barcode</h3>
-        </div>
+    <div className="fixed inset-0 z-50 bg-black flex flex-col overflow-hidden">
+      {/* Fullscreen video */}
+      <video
+        ref={videoRef}
+        playsInline
+        muted
+        className="absolute inset-0 w-full h-full object-cover"
+      />
+      <canvas ref={canvasRef} className="hidden" />
 
-        {/* Big Exit X Button */}
-        <button
-          onClick={handleClose}
-          aria-label="Batal"
-          className="w-11 h-11 sm:w-12 sm:h-12 rounded-full bg-white/80 dark:bg-slate-900/80 hover:bg-red-500 hover:text-white border border-white/40 dark:border-slate-700/50 text-foreground flex items-center justify-center transition-all duration-200 shadow-xl cursor-pointer active:scale-95"
-          title="Batal & Tutup Kamera"
-        >
-          <X className="size-6 sm:size-7" />
-        </button>
+      {/* Top gradient + header */}
+      <div className="absolute top-0 left-0 right-0 z-10 bg-gradient-to-b from-black/80 via-black/40 to-transparent px-4 sm:px-6 pt-4 pb-10">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2.5 bg-black/60 backdrop-blur-md px-4 py-2 rounded-full border border-white/20">
+            <QrCode className="size-5 text-white" />
+            <h3 className="font-bold text-sm sm:text-base text-white whitespace-nowrap">Pemindaian QR &amp; Barcode</h3>
+          </div>
+          <button
+            onClick={handleClose}
+            aria-label="Batal"
+            className="w-11 h-11 rounded-full bg-black/60 hover:bg-red-500 border border-white/30 text-white flex items-center justify-center transition-all active:scale-95"
+            title="Batal & Tutup Kamera"
+          >
+            <X className="size-6" />
+          </button>
+        </div>
       </div>
 
-      {/* Center Camera Frame Viewport - Well-Proportioned Aspect 4:3 */}
-      <div className="relative w-full max-w-lg aspect-4/3 my-auto rounded-3xl overflow-hidden border-2 border-white/50 dark:border-slate-700/60 bg-black shadow-[0_20px_50px_rgba(0,0,0,0.3)] flex items-center justify-center">
-        <video
-          ref={videoRef}
-          playsInline
-          muted
-          className="w-full h-full object-cover"
-        />
-        <canvas ref={canvasRef} className="hidden" />
-
-        {/* Scanning Target Reticle & Laser */}
-        {isScanning && !errorMsg && (
-          <div className="absolute inset-0 pointer-events-none flex flex-col items-center justify-center p-4 bg-black/15">
-            {/* Center Reticle Box */}
-            <div className="w-56 h-56 sm:w-64 sm:h-64 border-2 border-primary/90 rounded-3xl relative shadow-[0_0_35px_rgba(37,99,235,0.4)] flex items-center justify-center">
-              {/* Corner Markers */}
-              <div className="absolute top-0 left-0 w-7 h-7 border-t-4 border-l-4 border-primary rounded-tl-2xl -mt-1 -ml-1" />
-              <div className="absolute top-0 right-0 w-7 h-7 border-t-4 border-r-4 border-primary rounded-tr-2xl -mt-1 -mr-1" />
-              <div className="absolute bottom-0 left-0 w-7 h-7 border-b-4 border-l-4 border-primary rounded-bl-2xl -mb-1 -ml-1" />
-              <div className="absolute bottom-0 right-0 w-7 h-7 border-b-4 border-r-4 border-primary rounded-br-2xl -mb-1 -mr-1" />
-
-              {/* Animated Laser Line */}
-              <div className="w-full h-0.5 bg-linear-to-r from-transparent via-primary to-transparent animate-pulse shadow-[0_0_12px_rgba(37,99,235,0.8)]" />
-            </div>
-
-            <p className="mt-5 text-xs sm:text-sm font-bold text-white bg-slate-900/80 backdrop-blur-md px-5 py-2 rounded-full border border-white/20 text-center shadow-lg">
-              Arahkan kamera ke QR Code atau Barcode Buku
-            </p>
+      {/* Center reticle */}
+      {isScanning && !errorMsg && (
+        <div className="absolute inset-0 z-10 pointer-events-none flex items-center justify-center">
+          <div className="w-[min(68vw,46vh)] aspect-square border-2 border-white/90 rounded-3xl relative shadow-[0_0_40px_rgba(0,0,0,0.6)] flex items-center justify-center">
+            <div className="absolute top-0 left-0 w-10 h-10 border-t-4 border-l-4 border-red-500 rounded-tl-3xl" />
+            <div className="absolute top-0 right-0 w-10 h-10 border-t-4 border-r-4 border-red-500 rounded-tr-3xl" />
+            <div className="absolute bottom-0 left-0 w-10 h-10 border-b-4 border-l-4 border-red-500 rounded-bl-3xl" />
+            <div className="absolute bottom-0 right-0 w-10 h-10 border-b-4 border-r-4 border-red-500 rounded-br-3xl" />
+            <div className="w-[85%] h-0.5 bg-red-500 animate-pulse shadow-[0_0_12px_rgba(239,68,68,0.9)]" />
           </div>
-        )}
-
-        {/* Error State */}
-        {errorMsg && (
-          <div className="p-6 text-center text-white space-y-4 max-w-sm">
-            <AlertCircle className="size-12 text-red-400 mx-auto" />
-            <p className="text-sm font-semibold text-red-200 leading-relaxed">{errorMsg}</p>
-            <button
-              onClick={handleClose}
-              className="px-6 py-2.5 bg-red-600 hover:bg-red-700 rounded-xl text-xs font-bold text-white transition-all shadow-lg cursor-pointer"
-            >
-              Tutup & Kembali
-            </button>
-          </div>
-        )}
-      </div>
-
-      {/* Bottom Floating Glass Control Bar */}
-      <div className="w-full max-w-md flex flex-col items-center gap-3 z-10 pb-4">
-        <div className="flex items-center gap-2 text-xs font-bold text-primary bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl px-4 py-1.5 rounded-full border border-white/40 dark:border-slate-700/50 shadow-md">
-          <span className="w-2.5 h-2.5 rounded-full bg-primary animate-ping" />
-          <span>Kamera Memindai...</span>
         </div>
+      )}
 
-        <button
-          onClick={handleClose}
-          className="w-full sm:w-auto px-8 py-3 bg-white/90 dark:bg-slate-900/90 hover:bg-red-500 hover:text-white dark:hover:bg-red-600 text-foreground rounded-2xl font-extrabold text-sm backdrop-blur-xl border border-white/50 dark:border-slate-700/50 transition-all flex items-center justify-center gap-2 shadow-xl active:scale-95 cursor-pointer"
-        >
-          <X className="size-5" />
-          <span>Batal Pemindaian</span>
-        </button>
+      {/* Error state */}
+      {errorMsg && (
+        <div className="absolute inset-0 z-20 bg-black/90 flex flex-col items-center justify-center p-6 space-y-4 text-center">
+          <AlertCircle className="size-14 text-red-400" />
+          <p className="text-sm font-semibold text-red-200 leading-relaxed max-w-sm">{errorMsg}</p>
+          <button
+            onClick={handleClose}
+            className="px-8 py-2.5 bg-red-600 hover:bg-red-700 rounded-xl text-sm font-bold text-white transition-all cursor-pointer"
+          >
+            Tutup &amp; Kembali
+          </button>
+        </div>
+      )}
+
+      {/* Bottom gradient + controls */}
+      <div className="absolute bottom-0 left-0 right-0 z-10 bg-gradient-to-t from-black/85 via-black/50 to-transparent px-4 sm:px-6 pt-12 pb-5">
+        <div className="flex flex-col items-center gap-3 max-w-md mx-auto">
+          {isScanning && !errorMsg && (
+            <>
+              <div className="flex items-center gap-2 text-xs font-bold text-white bg-black/60 backdrop-blur px-4 py-1.5 rounded-full border border-white/20">
+                <span className="w-2 h-2 rounded-full bg-red-500 animate-ping" />
+                <span>Kamera Memindai...</span>
+              </div>
+              <p className="text-xs sm:text-sm font-bold text-white text-center">
+                Arahkan kamera ke QR Code atau Barcode Buku
+              </p>
+            </>
+          )}
+          <button
+            onClick={handleClose}
+            className="w-full px-6 py-3 bg-white text-slate-900 rounded-2xl font-bold text-sm transition-all active:scale-95 cursor-pointer flex items-center justify-center gap-2"
+          >
+            <X className="size-4" />
+            <span>Batal Pemindaian</span>
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -403,26 +402,28 @@ export default function CirculationSection() {
             <div className="flex flex-wrap gap-3">
               <div className="flex flex-col gap-1 flex-1 min-w-[140px]">
                 <label className="text-xs font-bold text-muted-foreground">Tipe Scan</label>
-                <select
-                  value={scanType}
-                  onChange={(e) => setScanType(e.target.value as "qr" | "code")}
-                  className="rounded-xl border border-border px-3 py-2 text-sm bg-background font-bold text-foreground"
-                >
-                  <option value="code">Item Code / Barcode</option>
-                  <option value="qr">QR Token</option>
-                </select>
+                <Select value={scanType} onValueChange={(val) => setScanType(val as "qr" | "code")}>
+                  <SelectTrigger className="w-full text-sm font-bold">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="code">Item Code / Barcode</SelectItem>
+                    <SelectItem value="qr">QR Token</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
               <div className="flex flex-col gap-1 flex-1 min-w-[140px]">
                 <label className="text-xs font-bold text-muted-foreground">Tujuan (Intent)</label>
-                <select
-                  value={intent}
-                  onChange={(e) => setIntent(e.target.value as "inspect" | "loan" | "return")}
-                  className="rounded-xl border border-border px-3 py-2 text-sm bg-background font-bold text-foreground"
-                >
-                  <option value="inspect">Periksa (Inspect)</option>
-                  <option value="loan">Pinjam (Loan)</option>
-                  <option value="return">Kembali (Return)</option>
-                </select>
+                <Select value={intent} onValueChange={(val) => setIntent(val as "inspect" | "loan" | "return")}>
+                  <SelectTrigger className="w-full text-sm font-bold">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="inspect">Periksa (Inspect)</SelectItem>
+                    <SelectItem value="loan">Pinjam (Loan)</SelectItem>
+                    <SelectItem value="return">Kembali (Return)</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </div>
 
