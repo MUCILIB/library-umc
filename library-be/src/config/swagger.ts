@@ -13,7 +13,7 @@ const swaggerDefinition = {
   },
   servers: [
     {
-      url: "https://be-library-umc-842800936285.asia-southeast1.run.app/api",
+      url: "https://api-library.abyte.my.id/api",
       description: "Production Server",
     },
     {
@@ -283,6 +283,187 @@ const swaggerDefinition = {
     { name: "Study Programs", description: "Study program management (Super Admin)" },
   ],
   paths: {
+    "/auth/sign-in/email": {
+      post: {
+        summary: "Sign In dengan Email & Password (Better-Auth)",
+        description: "Autentikasi menggunakan email dan password via Better-Auth. Mengembalikan cookie session dan session token.",
+        tags: ["Auth"],
+        security: [],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                required: ["email", "password"],
+                properties: {
+                  email: { type: "string", format: "email", example: "admin@umc.ac.id" },
+                  password: { type: "string", example: "admin123" },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          200: {
+            description: "Login berhasil, session dibuat",
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    user: { $ref: "#/components/schemas/User" },
+                    session: {
+                      type: "object",
+                      properties: {
+                        token: { type: "string" },
+                        userId: { type: "string" },
+                        expiresAt: { type: "string", format: "date-time" },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+          401: { description: "Email atau password salah" },
+        },
+      },
+    },
+    "/auth/sign-up/email": {
+      post: {
+        summary: "Sign Up dengan Email & Password (Better-Auth)",
+        description: "Registrasi user baru via Better-Auth.",
+        tags: ["Auth"],
+        security: [],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                required: ["name", "email", "password"],
+                properties: {
+                  name: { type: "string", example: "Fauzan Noor" },
+                  email: { type: "string", format: "email", example: "user@umc.ac.id" },
+                  password: { type: "string", example: "SecurePass123!" },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          200: { description: "Registrasi berhasil" },
+          400: { description: "Email sudah terdaftar atau input tidak valid" },
+        },
+      },
+    },
+    "/auth/sign-out": {
+      post: {
+        summary: "Sign Out / Logout (Better-Auth)",
+        description: "Menghapus session aktif dan membersihkan cookie.",
+        tags: ["Auth"],
+        security: [{ bearerAuth: [] }],
+        responses: {
+          200: { description: "Logout berhasil" },
+        },
+      },
+    },
+    "/auth/get-session": {
+      get: {
+        summary: "Get Current Session (Better-Auth)",
+        description: "Mengambil data session dan user yang sedang login.",
+        tags: ["Auth"],
+        security: [{ bearerAuth: [] }],
+        responses: {
+          200: { description: "Session aktif ditemukan" },
+          401: { description: "Tidak ada session aktif" },
+        },
+      },
+    },
+    "/users/all": {
+      get: {
+        summary: "Get All Users (Super Admin Only)",
+        tags: ["Auth"],
+        security: [{ bearerAuth: [] }],
+        responses: {
+          200: {
+            description: "List of all users",
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/ApiResponse",
+                },
+              },
+            },
+          },
+          401: { description: "Unauthorized" },
+          403: { description: "Forbidden - Super Admin only" },
+        },
+      },
+    },
+    "/users/{id}/role": {
+      patch: {
+        summary: "Update User Role (Super Admin)",
+        tags: ["Auth"],
+        security: [{ bearerAuth: [] }],
+        parameters: [{ in: "path", name: "id", required: true, schema: { type: "string" } }],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                required: ["role"],
+                properties: {
+                  role: { type: "string", enum: ["user", "staff", "super_admin"] },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          200: { description: "Role updated" },
+        },
+      },
+    },
+    "/users/{id}/ban": {
+      patch: {
+        summary: "Ban / Unban User (Super Admin)",
+        tags: ["Auth"],
+        security: [{ bearerAuth: [] }],
+        parameters: [{ in: "path", name: "id", required: true, schema: { type: "string" } }],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                required: ["banned"],
+                properties: {
+                  banned: { type: "boolean" },
+                  banReason: { type: "string" },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          200: { description: "Ban status updated" },
+        },
+      },
+    },
+    "/users/{id}/sync-member": {
+      post: {
+        summary: "Sync User ke Member (Super Admin)",
+        tags: ["Auth"],
+        security: [{ bearerAuth: [] }],
+        parameters: [{ in: "path", name: "id", required: true, schema: { type: "string" } }],
+        responses: {
+          200: { description: "Member synced" },
+        },
+      },
+    },
     "/auth/users": {
       get: {
         summary: "Get All Users (Super Admin Only)",
@@ -358,6 +539,95 @@ const swaggerDefinition = {
               },
             },
           },
+        },
+      },
+    },
+    "/members": {
+      get: {
+        summary: "Get All Members",
+        description: "Melihat daftar semua member (Staff / Super Admin only).",
+        tags: ["Members"],
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { in: "query", name: "page", schema: { type: "integer", default: 1 } },
+          { in: "query", name: "limit", schema: { type: "integer", default: 10 } },
+          { in: "query", name: "search", schema: { type: "string" } },
+        ],
+        responses: {
+          200: { description: "Daftar member berhasil diambil" },
+          401: { description: "Unauthorized" },
+          403: { description: "Forbidden" },
+        },
+      },
+    },
+    "/members/me/card": {
+      get: {
+        summary: "Get My Member Card",
+        description: "Mengambil data kartu anggota milik user yang sedang login.",
+        tags: ["Members"],
+        security: [{ bearerAuth: [] }],
+        responses: {
+          200: { description: "Data kartu anggota" },
+          404: { description: "Belum memiliki kartu anggota" },
+        },
+      },
+    },
+    "/members/me/card/request": {
+      post: {
+        summary: "Request Member Card",
+        description: "Mengajukan pembuatan kartu anggota fisik / digital.",
+        tags: ["Members"],
+        security: [{ bearerAuth: [] }],
+        responses: {
+          201: { description: "Pengajuan kartu anggota berhasil diajukan" },
+          400: { description: "Pengajuan sudah ada atau profil belum lengkap" },
+        },
+      },
+    },
+    "/members/cards/pending": {
+      get: {
+        summary: "Get Pending Member Card Requests",
+        description: "Melihat antrean pengajuan kartu anggota (Staff / Super Admin).",
+        tags: ["Members"],
+        security: [{ bearerAuth: [] }],
+        responses: {
+          200: { description: "Daftar antrean pengajuan kartu" },
+          401: { description: "Unauthorized" },
+          403: { description: "Forbidden" },
+        },
+      },
+    },
+    "/members/{id}/card/approve": {
+      patch: {
+        summary: "Approve Member Card Request",
+        tags: ["Members"],
+        security: [{ bearerAuth: [] }],
+        parameters: [{ in: "path", name: "id", required: true, schema: { type: "string" } }],
+        responses: {
+          200: { description: "Pengajuan disetujui" },
+          404: { description: "Permintaan tidak ditemukan" },
+        },
+      },
+    },
+    "/members/{id}/card/issue": {
+      post: {
+        summary: "Issue / Terbitkan Member Card",
+        tags: ["Members"],
+        security: [{ bearerAuth: [] }],
+        parameters: [{ in: "path", name: "id", required: true, schema: { type: "string" } }],
+        responses: {
+          200: { description: "Kartu anggota berhasil diterbitkan" },
+        },
+      },
+    },
+    "/members/{id}/card/reject": {
+      patch: {
+        summary: "Reject Member Card Request",
+        tags: ["Members"],
+        security: [{ bearerAuth: [] }],
+        parameters: [{ in: "path", name: "id", required: true, schema: { type: "string" } }],
+        responses: {
+          200: { description: "Pengajuan ditolak" },
         },
       },
     },
@@ -998,8 +1268,16 @@ const swaggerDefinition = {
         ],
         responses: {
           200: { description: "Label data retrieved" },
-          400: { description: "No IDs provided" },
         },
+      },
+    },
+    "/items/generate-code/{bibliographyId}": {
+      get: {
+        summary: "Generate Next Item Code",
+        tags: ["Items"],
+        security: [{ bearerAuth: [] }],
+        parameters: [{ in: "path", name: "bibliographyId", required: true, schema: { type: "string" } }],
+        responses: { 200: { description: "Item code generated" } },
       },
     },
     "/loans": {
@@ -1162,6 +1440,24 @@ const swaggerDefinition = {
           200: { description: "Loan extended" },
           400: { description: "Cannot extend (overdue, reserved, or already extended)" },
         },
+      },
+    },
+    "/loans/{loanId}/approve-extension": {
+      patch: {
+        summary: "Approve Loan Extension (Staff / Admin)",
+        tags: ["Loans"],
+        security: [{ bearerAuth: [] }],
+        parameters: [{ name: "loanId", in: "path", required: true, schema: { type: "string" } }],
+        responses: { 200: { description: "Extension approved" } },
+      },
+    },
+    "/loans/{loanId}/reject-extension": {
+      patch: {
+        summary: "Reject Loan Extension (Staff / Admin)",
+        tags: ["Loans"],
+        security: [{ bearerAuth: [] }],
+        parameters: [{ name: "loanId", in: "path", required: true, schema: { type: "string" } }],
+        responses: { 200: { description: "Extension rejected" } },
       },
     },
     "/reservations": {
@@ -1381,9 +1677,9 @@ const swaggerDefinition = {
     },
     "/import/items/upload": {
       post: {
-        summary: "Upload item CSV",
-        description: "Upload a semicolon-delimited CSV file for staged item import.",
-        operationId: "uploadItem",
+        summary: "Upload items CSV",
+        description: "Uploads an items CSV file. System analyzes columns, detects delimiters, validates structure, and stores as a staged batch.",
+        operationId: "uploadItems",
         tags: ["Import"],
         security: [{ bearerAuth: [] }],
         requestBody: {
@@ -1394,18 +1690,68 @@ const swaggerDefinition = {
                 type: "object",
                 required: ["file"],
                 properties: {
-                  file: { type: "string", format: "binary" }
+                  file: { type: "string", format: "binary", description: "CSV file to import" }
                 }
               }
             }
           }
         },
         responses: {
-          "201": { description: "File uploaded" },
-          "400": { description: "No file uploaded" },
+          "200": { description: "File uploaded and staged", content: { "application/json": { schema: { $ref: "#/components/schemas/ImportBatch" } } } },
+          "400": { description: "Invalid file or structure" },
           "401": { description: "Unauthorized" },
-          "403": { description: "Forbidden" }
+          "403": { description: "Forbidden - super_admin role required" }
         }
+      }
+    },
+    "/import/template/{module}": {
+      get: {
+        summary: "Download Import Template CSV",
+        description: "Mengunduh contoh file template CSV untuk import bibliographies, items, guests, users, atau loans.",
+        tags: ["Import"],
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { in: "path", name: "module", required: true, schema: { type: "string", enum: ["bibliographies", "items", "guests", "users", "loans"] } }
+        ],
+        responses: {
+          200: { description: "CSV template file", content: { "text/csv": { schema: { type: "string" } } } }
+        }
+      }
+    },
+    "/import/guests": {
+      post: {
+        summary: "Import guests directly via CSV",
+        tags: ["Import"],
+        security: [{ bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: { "multipart/form-data": { schema: { type: "object", properties: { file: { type: "string", format: "binary" } } } } }
+        },
+        responses: { 200: { description: "Guests imported" } }
+      }
+    },
+    "/import/users": {
+      post: {
+        summary: "Import users directly via CSV",
+        tags: ["Import"],
+        security: [{ bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: { "multipart/form-data": { schema: { type: "object", properties: { file: { type: "string", format: "binary" } } } } }
+        },
+        responses: { 200: { description: "Users imported" } }
+      }
+    },
+    "/import/loans": {
+      post: {
+        summary: "Import loans directly via CSV",
+        tags: ["Import"],
+        security: [{ bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: { "multipart/form-data": { schema: { type: "object", properties: { file: { type: "string", format: "binary" } } } } }
+        },
+        responses: { 200: { description: "Loans imported" } }
       }
     },
     "/import/batches": {
@@ -1540,6 +1886,98 @@ const swaggerDefinition = {
           }
         }
       }
+    },
+    "/export/guests": {
+      get: {
+        summary: "Export guests as CSV",
+        description: "Exports all guest visit records in CSV format.",
+        tags: ["Export"],
+        security: [{ bearerAuth: [] }],
+        responses: {
+          "200": {
+            description: "CSV file",
+            content: { "text/csv": { schema: { type: "string" } } }
+          }
+        }
+      }
+    },
+    "/export/loans": {
+      get: {
+        summary: "Export loans as CSV",
+        description: "Exports all loan history and active records in CSV format.",
+        tags: ["Export"],
+        security: [{ bearerAuth: [] }],
+        responses: {
+          "200": {
+            description: "CSV file",
+            content: { "text/csv": { schema: { type: "string" } } }
+          }
+        }
+      }
+    },
+    "/export/users": {
+      get: {
+        summary: "Export users as CSV",
+        description: "Exports all user accounts in CSV format.",
+        tags: ["Export"],
+        security: [{ bearerAuth: [] }],
+        responses: {
+          "200": {
+            description: "CSV file",
+            content: { "text/csv": { schema: { type: "string" } } }
+          }
+        }
+      }
+    },
+    "/collections": {
+      get: {
+        summary: "Get All Collections",
+        description: "Alias / sub-koleksi bibliografi.",
+        tags: ["Bibliographies"],
+        parameters: [
+          { in: "query", name: "page", schema: { type: "integer", default: 1 } },
+          { in: "query", name: "limit", schema: { type: "integer", default: 10 } },
+          { in: "query", name: "search", schema: { type: "string" } },
+        ],
+        responses: { 200: { description: "List of collections" } },
+      },
+      post: {
+        summary: "Create Collection",
+        tags: ["Bibliographies"],
+        security: [{ bearerAuth: [] }],
+        requestBody: { required: true, content: { "application/json": { schema: { type: "object" } } } },
+        responses: { 201: { description: "Collection created" } },
+      },
+    },
+    "/collections/{id}": {
+      get: {
+        summary: "Get Collection by ID",
+        tags: ["Bibliographies"],
+        parameters: [{ in: "path", name: "id", required: true, schema: { type: "string" } }],
+        responses: { 200: { description: "Collection details" } },
+      },
+      patch: {
+        summary: "Update Collection",
+        tags: ["Bibliographies"],
+        security: [{ bearerAuth: [] }],
+        parameters: [{ in: "path", name: "id", required: true, schema: { type: "string" } }],
+        responses: { 200: { description: "Collection updated" } },
+      },
+      delete: {
+        summary: "Delete Collection",
+        tags: ["Bibliographies"],
+        security: [{ bearerAuth: [] }],
+        parameters: [{ in: "path", name: "id", required: true, schema: { type: "string" } }],
+        responses: { 200: { description: "Collection deleted" } },
+      },
+    },
+    "/collections/{id}/items": {
+      get: {
+        summary: "Get Items in Collection",
+        tags: ["Bibliographies"],
+        parameters: [{ in: "path", name: "id", required: true, schema: { type: "string" } }],
+        responses: { 200: { description: "List of items in collection" } },
+      },
     },
     "/faculties": {
       get: {

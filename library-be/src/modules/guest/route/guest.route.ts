@@ -298,12 +298,16 @@ router.post("/guests/non-member", guestController.createNonMember);
 
 /**
  * @swagger
- * /guest/absensi:
+ * /guests/absensi:
  *   post:
  *     summary: Create absensi log
- *
+ *     tags: [Guests]
  */
 
+router.post(
+  "/guests/absensi",
+  guestController.createAbsensi
+);
 router.post(
   "/guest/absensi",
   guestController.createAbsensi

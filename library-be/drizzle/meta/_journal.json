@@ -43,6 +43,13 @@
       "when": 1790864437109,
       "tag": "0005_legal_hiroim",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1791255322624,
+      "tag": "0006_add_loans_notes",
+      "breakpoints": true
     }
   ]
 }
