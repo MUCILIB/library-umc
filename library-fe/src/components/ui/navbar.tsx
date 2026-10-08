@@ -287,7 +287,7 @@ const Navbar = () => {
           ) : (
             <button
               onClick={() => navigate("/login")}
-              className="bg-gradient-to-r from-primary to-primary/90 text-white px-5 py-2.5 rounded-full text-sm font-medium flex items-center space-x-2 hover:from-primary/90 hover:to-primary transition-all duration-200 shadow-md hover:shadow-lg"
+              className="bg-linear-to-r from-primary to-primary/90 text-white px-5 py-2.5 rounded-full text-sm font-medium flex items-center space-x-2 hover:from-primary/90 hover:to-primary transition-all duration-200 shadow-md hover:shadow-lg"
             >
               <span>Login</span>
               <svg

@@ -1,0 +1,5670 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "MUCILIB - UMC API",
+    "version": "1.0.0",
+    "description": "API Documentation for Library Management System Backend",
+    "contact": {
+      "name": "Developer Team",
+      "email": "rizqinoorf@gmail.com"
+    }
+  },
+  "servers": [
+    {
+      "url": "https://api-dummy-oauth.vercel.app/api",
+      "description": "Production Server"
+    },
+    {
+      "url": "http://localhost:4000/api",
+      "description": "Development Server"
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "Masukkan token session penuh Anda di sini (tanpa prefix 'Bearer ', sistem akan menambahkannya otomatis). Token ini didapat dari field 'token' pada object session."
+      }
+    },
+    "schemas": {
+      "User": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "role": {
+            "type": "string"
+          },
+          "image": {
+            "type": "string",
+            "nullable": true
+          },
+          "emailVerified": {
+            "type": "boolean"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "Member": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "userId": {
+            "type": "string"
+          },
+          "memberType": {
+            "type": "string",
+            "enum": [
+              "student",
+              "lecturer",
+              "staff",
+              "super_admin"
+            ]
+          },
+          "nimNidn": {
+            "type": "string",
+            "nullable": true
+          },
+          "faculty": {
+            "type": "string",
+            "nullable": true
+          },
+          "phone": {
+            "type": "string",
+            "nullable": true
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "user": {
+            "$ref": "#/components/schemas/User"
+          }
+        }
+      },
+      "Category": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string",
+            "nullable": true
+          }
+        }
+      },
+      "Bibliography": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "isbnIssn": {
+            "type": "string",
+            "nullable": true
+          },
+          "title": {
+            "type": "string"
+          },
+          "sor": {
+            "type": "string",
+            "nullable": true
+          },
+          "edition": {
+            "type": "string",
+            "nullable": true
+          },
+          "publisher": {
+            "type": "object",
+            "nullable": true
+          },
+          "publishYear": {
+            "type": "integer",
+            "nullable": true
+          },
+          "collation": {
+            "type": "string",
+            "nullable": true
+          },
+          "seriesTitle": {
+            "type": "string",
+            "nullable": true
+          },
+          "callNumber": {
+            "type": "string",
+            "nullable": true
+          },
+          "classification": {
+            "type": "string",
+            "nullable": true
+          },
+          "notes": {
+            "type": "string",
+            "nullable": true
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "physical_book",
+              "ebook",
+              "journal",
+              "thesis"
+            ]
+          },
+          "categoryId": {
+            "type": "integer"
+          },
+          "description": {
+            "type": "string",
+            "nullable": true
+          },
+          "image": {
+            "type": "string",
+            "nullable": true
+          },
+          "stock": {
+            "type": "integer"
+          },
+          "authors": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "subjects": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "totalItems": {
+            "type": "integer"
+          },
+          "availableItems": {
+            "type": "integer"
+          },
+          "faculties": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "integer"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "code": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "studyPrograms": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "integer"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "code": {
+                  "type": "string"
+                },
+                "faculty": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "category": {
+            "$ref": "#/components/schemas/Category"
+          }
+        }
+      },
+      "Faculty": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "name": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string",
+            "nullable": true
+          }
+        }
+      },
+      "StudyProgram": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "name": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string",
+            "nullable": true
+          },
+          "facultyId": {
+            "type": "integer"
+          },
+          "faculty": {
+            "$ref": "#/components/schemas/Faculty"
+          }
+        }
+      },
+      "GuestLog": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "email": {
+            "type": "string",
+            "nullable": true
+          },
+          "name": {
+            "type": "string"
+          },
+          "identifier": {
+            "type": "string",
+            "description": "NIM/NIDN/KTP"
+          },
+          "faculty": {
+            "type": "string",
+            "nullable": true
+          },
+          "major": {
+            "type": "string",
+            "nullable": true
+          },
+          "visitDate": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "Location": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "example": 1
+          },
+          "room": {
+            "type": "string",
+            "example": "Ruang A"
+          },
+          "rack": {
+            "type": "string",
+            "example": "Rak 1"
+          },
+          "shelf": {
+            "type": "string",
+            "example": "Lantai 2"
+          },
+          "deletedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          }
+        }
+      },
+      "Item": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "bibliographyId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "barcode": {
+            "type": "string",
+            "nullable": true
+          },
+          "uniqueCode": {
+            "type": "string",
+            "nullable": true
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "available",
+              "loaned",
+              "damaged",
+              "lost"
+            ]
+          },
+          "locationId": {
+            "type": "integer"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "bibliography": {
+            "$ref": "#/components/schemas/Bibliography"
+          },
+          "location": {
+            "$ref": "#/components/schemas/Location"
+          }
+        }
+      },
+      "Loan": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "memberId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "itemId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "loanDate": {
+            "type": "string",
+            "format": "date"
+          },
+          "dueDate": {
+            "type": "string",
+            "format": "date"
+          },
+          "returnDate": {
+            "type": "string",
+            "format": "date",
+            "nullable": true
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "approved",
+              "returned",
+              "extended"
+            ]
+          },
+          "approvedBy": {
+            "type": "string",
+            "nullable": true
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "member": {
+            "$ref": "#/components/schemas/Member"
+          },
+          "item": {
+            "$ref": "#/components/schemas/Item"
+          }
+        }
+      },
+      "Reservation": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "memberId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "bibliographyId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "waiting",
+              "fulfilled",
+              "canceled"
+            ]
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "member": {
+            "$ref": "#/components/schemas/Member"
+          },
+          "bibliography": {
+            "$ref": "#/components/schemas/Bibliography"
+          }
+        }
+      },
+      "Fine": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "loanId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "amount": {
+            "type": "number",
+            "format": "decimal"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "paid",
+              "unpaid"
+            ]
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "loan": {
+            "$ref": "#/components/schemas/Loan"
+          }
+        }
+      },
+      "Recommendation": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "dosenId": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "author": {
+            "type": "string"
+          },
+          "publisher": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string",
+            "nullable": true
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "approved",
+              "rejected"
+            ]
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "dosen": {
+            "$ref": "#/components/schemas/User"
+          }
+        }
+      },
+      "ApiResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean"
+          },
+          "message": {
+            "type": "string"
+          },
+          "data": {
+            "type": "object",
+            "nullable": true
+          }
+        }
+      },
+      "PaginatedResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean"
+          },
+          "message": {
+            "type": "string"
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "pagination": {
+            "type": "object",
+            "properties": {
+              "page": {
+                "type": "integer"
+              },
+              "limit": {
+                "type": "integer"
+              },
+              "total": {
+                "type": "integer"
+              },
+              "totalPages": {
+                "type": "integer"
+              }
+            }
+          }
+        }
+      },
+      "LocationInput": {
+        "type": "object",
+        "required": [
+          "room",
+          "rack",
+          "shelf"
+        ],
+        "properties": {
+          "room": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200,
+            "example": "Ruang A"
+          },
+          "rack": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200,
+            "example": "Rak 1"
+          },
+          "shelf": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200,
+            "example": "Lantai 2"
+          }
+        }
+      }
+    }
+  },
+  "security": [
+    {
+      "bearerAuth": []
+    }
+  ],
+  "tags": [
+    {
+      "name": "Auth",
+      "description": "Authentication endpoints"
+    },
+    {
+      "name": "Members",
+      "description": "Member profile management"
+    },
+    {
+      "name": "Categories",
+      "description": "Book category management"
+    },
+    {
+      "name": "Guests",
+      "description": "Guest/Visitor log management (Admin only)"
+    },
+    {
+      "name": "Bibliographies",
+      "description": "Book & Bibliography management"
+    },
+    {
+      "name": "Items",
+      "description": "Physical copy management"
+    },
+    {
+      "name": "Loans",
+      "description": "Loan management"
+    },
+    {
+      "name": "Reservations",
+      "description": "Reservation management"
+    },
+    {
+      "name": "Fines",
+      "description": "Fine management"
+    },
+    {
+      "name": "Locations",
+      "description": "Location/room/rack management"
+    },
+    {
+      "name": "Recommendations",
+      "description": "Book recommendation from lecturers"
+    },
+    {
+      "name": "Import",
+      "description": "CSV import (bibliographies & items)"
+    },
+    {
+      "name": "Export",
+      "description": "CSV export (bibliographies & items)"
+    },
+    {
+      "name": "Faculties",
+      "description": "Faculty management (Super Admin)"
+    },
+    {
+      "name": "Study Programs",
+      "description": "Study program management (Super Admin)"
+    },
+    {
+      "name": "Reports",
+      "description": "Dashboard statistics and export endpoints (Admin/Staff only)"
+    },
+    {
+      "name": "Audit Logs",
+      "description": "System-wide audit logging API"
+    }
+  ],
+  "paths": {
+    "/auth/users": {
+      "get": {
+        "summary": "Get All Users (Super Admin Only)",
+        "tags": [
+          "Auth"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of all users",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden - Super Admin only"
+          }
+        }
+      }
+    },
+    "/members/me": {
+      "get": {
+        "summary": "Get Current Member Profile",
+        "tags": [
+          "Members"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Member profile data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/ApiResponse"
+                    },
+                    {
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/Member"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Member profile not found"
+          }
+        }
+      },
+      "patch": {
+        "summary": "Update Current Member Profile",
+        "tags": [
+          "Members"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "nimNidn": {
+                    "type": "string"
+                  },
+                  "faculty": {
+                    "type": "string"
+                  },
+                  "phone": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Profile updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Member"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/bibliographies": {
+      "get": {
+        "summary": "Get All Bibliographies",
+        "description": "Retrieve a list of all bibliographies (books, etc).",
+        "tags": [
+          "Bibliographies"
+        ],
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "List of bibliographies",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Create New Bibliography",
+        "description": "Add a new collection (book) with cover image upload.",
+        "tags": [
+          "Bibliographies"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "title": {
+                    "type": "string",
+                    "description": "Title of the collection"
+                  },
+                  "author": {
+                    "type": "string",
+                    "description": "Author name"
+                  },
+                  "publisher": {
+                    "type": "string",
+                    "description": "Publisher name"
+                  },
+                  "publicationYear": {
+                    "type": "string",
+                    "format": "year",
+                    "description": "Year of publication (YYYY)"
+                  },
+                  "isbn": {
+                    "type": "string",
+                    "description": "ISBN number"
+                  },
+                  "type": {
+                    "type": "string",
+                    "enum": [
+                      "physical_book",
+                      "ebook",
+                      "journal",
+                      "thesis"
+                    ],
+                    "description": "Type of collection"
+                  },
+                  "categoryId": {
+                    "type": "integer",
+                    "description": "Category ID"
+                  },
+                  "description": {
+                    "type": "string",
+                    "description": "Description or synopsis"
+                  },
+                  "quantity": {
+                    "type": "integer",
+                    "default": 1,
+                    "description": "Number of copies (for physical books)"
+                  },
+                  "cover": {
+                    "type": "string",
+                    "format": "binary",
+                    "description": "Cover image file"
+                  }
+                },
+                "required": [
+                  "title",
+                  "author",
+                  "publisher",
+                  "publicationYear",
+                  "type",
+                  "categoryId"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Bibliography created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation Error"
+          },
+          "500": {
+            "description": "Server Error"
+          }
+        }
+      }
+    },
+    "/categories": {
+      "get": {
+        "summary": "Get all categories",
+        "description": "Retrieve list of all book categories (Public endpoint)",
+        "tags": [
+          "Categories"
+        ],
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Categories retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse",
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "Categories retrieved successfully"
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "integer"
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "description": {
+                            "type": "string"
+                          },
+                          "createdAt": {
+                            "type": "string",
+                            "format": "date-time"
+                          },
+                          "updatedAt": {
+                            "type": "string",
+                            "format": "date-time"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      },
+      "post": {
+        "summary": "Create new category",
+        "description": "Add a new book category (Super Admin only)",
+        "tags": [
+          "Categories"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "description": "Category name (must be unique)",
+                    "example": "Fiction"
+                  },
+                  "description": {
+                    "type": "string",
+                    "description": "Category description",
+                    "example": "Fictional books and novels"
+                  }
+                },
+                "required": [
+                  "name",
+                  "description"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Category created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse",
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "type": "object"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden - Super Admin only"
+          },
+          "409": {
+            "description": "Category with this name already exists"
+          },
+          "500": {
+            "description": "Server Error"
+          }
+        }
+      }
+    },
+    "/guests": {
+      "get": {
+        "summary": "Get all guest logs",
+        "description": "Retrieve paginated list of guest logs (Admin/Staff only)",
+        "tags": [
+          "Guests"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "page",
+            "schema": {
+              "type": "integer",
+              "default": 1
+            },
+            "description": "Page number"
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "type": "integer",
+              "default": 50
+            },
+            "description": "Number of items per page"
+          },
+          {
+            "in": "query",
+            "name": "studyProgramId",
+            "schema": {
+              "type": "integer"
+            },
+            "description": "Filter by Program Studi ID"
+          },
+          {
+            "in": "query",
+            "name": "facultyId",
+            "schema": {
+              "type": "integer"
+            },
+            "description": "Filter by Fakultas ID"
+          },
+          {
+            "in": "query",
+            "name": "type",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "member",
+                "non-member"
+              ]
+            },
+            "description": "Filter by tipe pengunjung (member/non-member)"
+          },
+          {
+            "in": "query",
+            "name": "search",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Search by nama, NIM, email, atau institusi"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Guest logs retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
+        }
+      },
+      "post": {
+        "summary": "Create guest log",
+        "description": "Register a guest visit to the library (Admin/Staff only)",
+        "tags": [
+          "Guests"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "email": {
+                    "type": "string",
+                    "format": "email",
+                    "description": "Email of the guest (will fetch data from Campus API)"
+                  },
+                  "identifier": {
+                    "type": "string",
+                    "description": "NIM or KTP"
+                  },
+                  "institution": {
+                    "type": "string",
+                    "default": "UMC"
+                  },
+                  "faculty": {
+                    "type": "string"
+                  },
+                  "major": {
+                    "type": "string"
+                  },
+                  "purpose": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "email",
+                  "identifier"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Guest log created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error or user already logged today"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "404": {
+            "description": "User not found in Campus API"
+          }
+        }
+      }
+    },
+    "/guests/stats": {
+      "get": {
+        "summary": "Get guest statistics",
+        "description": "Get statistics grouped by faculty and major (Admin/Staff only)",
+        "tags": [
+          "Guests"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Statistics retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
+        }
+      }
+    },
+    "/bibliographies/{id}": {
+      "get": {
+        "summary": "Get Bibliography By ID",
+        "description": "Retrieve a specific bibliography by its ID.",
+        "tags": [
+          "Bibliographies"
+        ],
+        "security": [],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Bibliography details",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found"
+          }
+        }
+      },
+      "patch": {
+        "summary": "Update Bibliography",
+        "description": "Update bibliography data (Admin/Staff only).",
+        "tags": [
+          "Bibliographies"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "title": {
+                    "type": "string"
+                  },
+                  "author": {
+                    "type": "string"
+                  },
+                  "publisher": {
+                    "type": "string"
+                  },
+                  "publicationYear": {
+                    "type": "string"
+                  },
+                  "isbn": {
+                    "type": "string"
+                  },
+                  "type": {
+                    "type": "string",
+                    "enum": [
+                      "physical_book",
+                      "ebook",
+                      "journal",
+                      "thesis"
+                    ]
+                  },
+                  "categoryId": {
+                    "type": "integer"
+                  },
+                  "description": {
+                    "type": "string"
+                  },
+                  "cover": {
+                    "type": "string",
+                    "format": "binary"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Bibliography updated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation Error"
+          },
+          "404": {
+            "description": "Not found"
+          }
+        }
+      },
+      "delete": {
+        "summary": "Soft Delete Bibliography",
+        "description": "Soft delete a bibliography (Super Admin only).",
+        "tags": [
+          "Bibliographies"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Bibliography deleted"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "Not found"
+          }
+        }
+      }
+    },
+    "/bibliographies/{id}/items": {
+      "get": {
+        "summary": "Get Items Under Bibliography",
+        "description": "Retrieve all items (copies) for a specific bibliography.",
+        "tags": [
+          "Bibliographies"
+        ],
+        "security": [],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of items",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Bibliography not found"
+          }
+        }
+      }
+    },
+    "/bibliographies/{bibliographyId}/items/bulk": {
+      "post": {
+        "summary": "Bulk Create Items",
+        "description": "Create up to 1000 items (copies) at once under a bibliography. Use `defaults` to set shared values for all items.",
+        "tags": [
+          "Items"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "bibliographyId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "items"
+                ],
+                "properties": {
+                  "items": {
+                    "type": "array",
+                    "minItems": 1,
+                    "maxItems": 1000,
+                    "items": {
+                      "type": "object",
+                      "required": [
+                        "itemCode"
+                      ],
+                      "properties": {
+                        "itemCode": {
+                          "type": "string",
+                          "maxLength": 50,
+                          "description": "Unique item code"
+                        },
+                        "barcode": {
+                          "type": "string",
+                          "maxLength": 50
+                        },
+                        "locationId": {
+                          "type": "integer"
+                        },
+                        "callNumber": {
+                          "type": "string",
+                          "maxLength": 100
+                        },
+                        "inventoryCode": {
+                          "type": "string",
+                          "maxLength": 50
+                        }
+                      }
+                    }
+                  },
+                  "defaults": {
+                    "type": "object",
+                    "description": "Default values applied when item-level field is empty",
+                    "properties": {
+                      "locationId": {
+                        "type": "integer"
+                      },
+                      "source": {
+                        "type": "string"
+                      },
+                      "priceCurrency": {
+                        "type": "string"
+                      },
+                      "collectionTypeId": {
+                        "type": "integer"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Items created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation Error"
+          }
+        }
+      }
+    },
+    "/items": {
+      "get": {
+        "summary": "Get All Items",
+        "description": "Retrieve a list of all items. Filter by ?bibliographyId=uuid.",
+        "tags": [
+          "Items"
+        ],
+        "security": [],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "bibliographyId",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Filter by bibliography"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of items",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Create New Item",
+        "description": "Create a single item (physical copy) under a bibliography (Admin/Staff only).",
+        "tags": [
+          "Items"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "bibliographyId",
+                  "locationId",
+                  "itemCode"
+                ],
+                "properties": {
+                  "bibliographyId": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "locationId": {
+                    "type": "integer"
+                  },
+                  "itemCode": {
+                    "type": "string",
+                    "maxLength": 50
+                  },
+                  "barcode": {
+                    "type": "string",
+                    "maxLength": 50
+                  },
+                  "uniqueCode": {
+                    "type": "string",
+                    "maxLength": 30
+                  },
+                  "inventoryCode": {
+                    "type": "string",
+                    "maxLength": 50
+                  },
+                  "callNumber": {
+                    "type": "string",
+                    "maxLength": 100
+                  },
+                  "collectionTypeId": {
+                    "type": "integer"
+                  },
+                  "vendorId": {
+                    "type": "integer"
+                  },
+                  "receivedDate": {
+                    "type": "string",
+                    "format": "date"
+                  },
+                  "orderNo": {
+                    "type": "string"
+                  },
+                  "orderDate": {
+                    "type": "string",
+                    "format": "date"
+                  },
+                  "source": {
+                    "type": "string"
+                  },
+                  "invoice": {
+                    "type": "string"
+                  },
+                  "price": {
+                    "type": "number"
+                  },
+                  "priceCurrency": {
+                    "type": "string",
+                    "default": "IDR"
+                  },
+                  "invoiceDate": {
+                    "type": "string",
+                    "format": "date"
+                  },
+                  "site": {
+                    "type": "string"
+                  },
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "available",
+                      "loaned",
+                      "damaged",
+                      "lost"
+                    ],
+                    "default": "available"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Item created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation Error"
+          }
+        }
+      }
+    },
+    "/items/{id}": {
+      "get": {
+        "summary": "Get Item By ID",
+        "description": "Retrieve a specific item by its ID.",
+        "tags": [
+          "Items"
+        ],
+        "security": [],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Item ID",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Item details",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found"
+          }
+        }
+      },
+      "patch": {
+        "summary": "Update Item",
+        "description": "Update item fields (Admin/Staff only).",
+        "tags": [
+          "Items"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "locationId": {
+                    "type": "integer"
+                  },
+                  "barcode": {
+                    "type": "string"
+                  },
+                  "uniqueCode": {
+                    "type": "string"
+                  },
+                  "inventoryCode": {
+                    "type": "string"
+                  },
+                  "callNumber": {
+                    "type": "string"
+                  },
+                  "collectionTypeId": {
+                    "type": "integer"
+                  },
+                  "vendorId": {
+                    "type": "integer"
+                  },
+                  "receivedDate": {
+                    "type": "string"
+                  },
+                  "orderNo": {
+                    "type": "string"
+                  },
+                  "orderDate": {
+                    "type": "string"
+                  },
+                  "source": {
+                    "type": "string"
+                  },
+                  "invoice": {
+                    "type": "string"
+                  },
+                  "price": {
+                    "type": "number"
+                  },
+                  "priceCurrency": {
+                    "type": "string"
+                  },
+                  "invoiceDate": {
+                    "type": "string"
+                  },
+                  "site": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Item updated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation Error"
+          },
+          "404": {
+            "description": "Not found"
+          }
+        }
+      },
+      "delete": {
+        "summary": "Soft Delete Item",
+        "description": "Soft delete an item (Admin/Staff only).",
+        "tags": [
+          "Items"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Item deleted"
+          },
+          "400": {
+            "description": "Cannot delete"
+          }
+        }
+      }
+    },
+    "/items/{id}/status": {
+      "patch": {
+        "summary": "Update Item Status",
+        "description": "Change item status: available, loaned, damaged, lost (Admin/Staff only).",
+        "tags": [
+          "Items"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "status"
+                ],
+                "properties": {
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "available",
+                      "loaned",
+                      "damaged",
+                      "lost"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Status updated"
+          },
+          "400": {
+            "description": "Invalid status"
+          }
+        }
+      }
+    },
+    "/items/{id}/location": {
+      "patch": {
+        "summary": "Update Item Location",
+        "description": "Move item to a different location (Admin/Staff only).",
+        "tags": [
+          "Items"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "locationId"
+                ],
+                "properties": {
+                  "locationId": {
+                    "type": "integer",
+                    "description": "Target location ID"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Location updated"
+          },
+          "400": {
+            "description": "Invalid location"
+          }
+        }
+      }
+    },
+    "/items/{id}/qr": {
+      "get": {
+        "summary": "Get Item QR Code",
+        "description": "Get QR code for an item. ?format=svg (default) or ?format=png.",
+        "tags": [
+          "Items"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "format",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "svg",
+                "png"
+              ],
+              "default": "svg"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "QR code image (SVG or PNG)"
+          },
+          "404": {
+            "description": "Item not found"
+          }
+        }
+      }
+    },
+    "/items/{id}/qr/regenerate": {
+      "post": {
+        "summary": "Regenerate Item QR",
+        "description": "Generate new QR token for item (Super Admin only).",
+        "tags": [
+          "Items"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "QR regenerated"
+          }
+        }
+      }
+    },
+    "/items/{id}/qr/revoke": {
+      "post": {
+        "summary": "Revoke Item QR",
+        "description": "Revoke/disable QR token for item (Super Admin only).",
+        "tags": [
+          "Items"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "QR revoked"
+          }
+        }
+      }
+    },
+    "/qr/resolve/{token}": {
+      "get": {
+        "summary": "Resolve QR Token to Item",
+        "description": "Lookup item by QR token (Admin/Staff only).",
+        "tags": [
+          "Items"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "token",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Item found"
+          },
+          "404": {
+            "description": "QR not found or revoked"
+          }
+        }
+      }
+    },
+    "/items/bulk-labels": {
+      "get": {
+        "summary": "Get Bulk Label Data",
+        "description": "Get label data for multiple items. ?ids=uuid1,uuid2,uuid3.",
+        "tags": [
+          "Items"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "ids",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Comma-separated item UUIDs"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Label data retrieved"
+          },
+          "400": {
+            "description": "No IDs provided"
+          }
+        }
+      }
+    },
+    "/loans": {
+      "get": {
+        "summary": "Get all loans",
+        "description": "Admin gets all loans. Staff gets all loans.",
+        "tags": [
+          "Loans"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "status",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "pending",
+                "approved",
+                "returned",
+                "extended",
+                "rejected"
+              ]
+            },
+            "description": "Filter by loan status"
+          },
+          {
+            "in": "query",
+            "name": "memberId",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Filter by member ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of loans",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        }
+      }
+    },
+    "/loans/request": {
+      "post": {
+        "summary": "Request a book loan",
+        "description": "Member requests to borrow a book. System generates a defined token.",
+        "tags": [
+          "Loans"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "bibliographyId"
+                ],
+                "properties": {
+                  "bibliographyId": {
+                    "type": "string",
+                    "format": "uuid",
+                    "description": "ID of the bibliography (book) to borrow"
+                  },
+                  "loanDate": {
+                    "type": "string",
+                    "format": "date"
+                  },
+                  "dueDate": {
+                    "type": "string",
+                    "format": "date"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Loan requested successfully"
+          },
+          "400": {
+            "description": "Item not available or validation error"
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
+        }
+      }
+    },
+    "/loans/history": {
+      "get": {
+        "summary": "Get my loan history",
+        "description": "Member view their own loan history.",
+        "tags": [
+          "Loans"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "My loan history"
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
+        }
+      }
+    },
+    "/loans/verify/{token}": {
+      "get": {
+        "summary": "Verify loan token",
+        "description": "Admin scans qr code/token to verify loan request validity.",
+        "tags": [
+          "Loans"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "token",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Verification token"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Token verified, returns loan data"
+          },
+          "400": {
+            "description": "Invalid or expired token"
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
+        }
+      }
+    },
+    "/loans/{requestId}/approve": {
+      "post": {
+        "summary": "Approve loan",
+        "description": "Admin approves the loan request after verification. item status becomes 'loaned'.",
+        "tags": [
+          "Loans"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "requestId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Loan Request ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Loan approved"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden - Admin/Staff only"
+          },
+          "404": {
+            "description": "Loan request not found"
+          }
+        }
+      }
+    },
+    "/loans/{requestId}/reject": {
+      "post": {
+        "summary": "Reject loan",
+        "description": "Admin rejects the loan request. item status becomes 'available' again.",
+        "tags": [
+          "Loans"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "requestId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Loan Request ID"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "reason": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Loan rejected"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden - Admin/Staff only"
+          },
+          "404": {
+            "description": "Loan request not found"
+          }
+        }
+      }
+    },
+    "/loans/{loanId}/return-request": {
+      "post": {
+        "summary": "Create Return Request",
+        "description": "Member creates a return request for a loan.",
+        "tags": [
+          "Loans"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "loanId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Return request created"
+          },
+          "400": {
+            "description": "Cannot create return request"
+          }
+        }
+      }
+    },
+    "/loans/return-requests/pending": {
+      "get": {
+        "summary": "Get Pending Return Requests",
+        "description": "Admin gets all pending return requests (Super Admin only).",
+        "tags": [
+          "Loans"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Pending return requests"
+          }
+        }
+      }
+    },
+    "/loans/return-requests/{requestId}/approve": {
+      "post": {
+        "summary": "Approve Return Request",
+        "description": "Admin approves a return request (Super Admin only).",
+        "tags": [
+          "Loans"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "requestId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Return approved"
+          }
+        }
+      }
+    },
+    "/loans/{loanId}/extend": {
+      "post": {
+        "summary": "Extend a book loan",
+        "description": "Member extends their current loan by 7 days. Limit 1x, only if not overdue and no reservations.",
+        "tags": [
+          "Loans"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "loanId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Loan ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Loan extended"
+          },
+          "400": {
+            "description": "Cannot extend (overdue, reserved, or already extended)"
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
+        }
+      }
+    },
+    "/reservations": {
+      "get": {
+        "summary": "Lihat semua reservasi (Admin/Staff)",
+        "description": "**Catatan:** Fulfill reservasi terjadi OTOMATIS saat admin proses pengembalian buku\n(`POST /loans/:id/return`). Tidak ada endpoint manual untuk fulfill.\n",
+        "tags": [
+          "Reservations"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "status",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "waiting",
+                "fulfilled",
+                "canceled"
+              ]
+            }
+          },
+          {
+            "in": "query",
+            "name": "memberId",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "bibliographyId",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Daftar semua reservasi"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden (butuh role admin/staff)"
+          }
+        }
+      },
+      "post": {
+        "summary": "Buat reservasi buku (Member)",
+        "description": "Member dapat reservasi buku hanya jika **semua eksemplar sedang dipinjam**.\nJika masih ada item berstatus `available`, request akan ditolak dengan pesan\n\"Masih ada eksemplar yang tersedia, silakan pinjam langsung.\"\nLimit maksimal 3 reservasi aktif per member.\n",
+        "tags": [
+          "Reservations"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "bibliographyId"
+                ],
+                "properties": {
+                  "bibliographyId": {
+                    "type": "string",
+                    "format": "uuid",
+                    "description": "ID bibliografi (judul buku) yang ingin direservasi"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Reservasi berhasil dibuat, status = waiting"
+          },
+          "400": {
+            "description": "Bad request (masih ada item available / sudah reservasi / limit tercapai)"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "404": {
+            "description": "Koleksi tidak ditemukan"
+          }
+        }
+      }
+    },
+    "/reservations/my": {
+      "get": {
+        "summary": "Lihat riwayat reservasi saya (Member)",
+        "description": "Member views their own reservations.",
+        "tags": [
+          "Reservations"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Daftar reservasi member (semua status)"
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
+        }
+      }
+    },
+    "/reservations/{id}/cancel": {
+      "patch": {
+        "summary": "Batalkan reservasi (Member)",
+        "description": "Member dapat membatalkan reservasisnya sendiri selama statusnya masih `waiting`.\nReservasi yang sudah `fulfilled` atau `canceled` tidak bisa dibatalkan lagi.\n",
+        "tags": [
+          "Reservations"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Reservation ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Reservasi berhasil dibatalkan, status = canceled"
+          },
+          "400": {
+            "description": "Reservasi tidak bisa dibatalkan (sudah fulfilled/canceled)"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "404": {
+            "description": "Reservasi tidak ditemukan"
+          }
+        }
+      }
+    },
+    "/fines": {
+      "get": {
+        "summary": "Get all fines",
+        "tags": [
+          "Fines"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "status",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "paid",
+                "unpaid"
+              ]
+            },
+            "description": "Filter fines by status"
+          },
+          {
+            "in": "query",
+            "name": "loanId",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Filter fines by loan ID"
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "type": "integer"
+            },
+            "description": "Number of records to return"
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "schema": {
+              "type": "integer"
+            },
+            "description": "Number of records to skip"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of fines retrieved successfully"
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
+        }
+      },
+      "post": {
+        "summary": "Create a manual fine",
+        "tags": [
+          "Fines"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "loanId",
+                  "amount"
+                ],
+                "properties": {
+                  "loanId": {
+                    "type": "string"
+                  },
+                  "amount": {
+                    "type": "number"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Fine created successfully"
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
+        }
+      }
+    },
+    "/fines/my": {
+      "get": {
+        "summary": "Get My Fines",
+        "tags": [
+          "Fines"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "My fines"
+          }
+        }
+      }
+    },
+    "/fines/audit/paid-active-loans": {
+      "get": {
+        "summary": "Audit paid fines whose loans are not returned",
+        "tags": [
+          "Fines"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Audit data retrieved successfully"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden - Admin/Staff only"
+          }
+        },
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "type": "integer"
+            },
+            "description": "Number of records to return"
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "schema": {
+              "type": "integer"
+            },
+            "description": "Number of records to skip"
+          }
+        ]
+      }
+    },
+    "/fines/{id}": {
+      "get": {
+        "summary": "Get fine by ID",
+        "tags": [
+          "Fines"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Fine ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Fine retrieved successfully"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "404": {
+            "description": "Fine not found"
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete a fine",
+        "tags": [
+          "Fines"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Fine ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Fine deleted successfully"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "404": {
+            "description": "Fine not found"
+          }
+        }
+      }
+    },
+    "/fines/{id}/pay": {
+      "post": {
+        "summary": "Pay a fine",
+        "tags": [
+          "Fines"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Fine ID"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "paymentMethod"
+                ],
+                "properties": {
+                  "paymentMethod": {
+                    "type": "string",
+                    "default": "cash"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Fine paid successfully"
+          },
+          "400": {
+            "description": "Bad request or fine already paid"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "404": {
+            "description": "Fine not found"
+          }
+        }
+      }
+    },
+    "/locations": {
+      "get": {
+        "summary": "Ambil semua lokasi",
+        "tags": [
+          "Locations"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Daftar lokasi berhasil diambil",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "Locations retrieved successfully"
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Location"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - Token tidak valid atau tidak ada"
+          },
+          "429": {
+            "description": "Too Many Requests"
+          }
+        },
+        "description": "Mengembalikan daftar semua lokasi penyimpanan item yang aktif (belum dihapus). Dapat diakses oleh semua user yang sudah login.\n"
+      },
+      "post": {
+        "summary": "Tambah lokasi baru",
+        "tags": [
+          "Locations"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "room",
+                  "rack",
+                  "shelf"
+                ],
+                "properties": {
+                  "room": {
+                    "type": "string"
+                  },
+                  "rack": {
+                    "type": "string"
+                  },
+                  "shelf": {
+                    "type": "string"
+                  }
+                },
+                "$ref": "#/components/schemas/LocationInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Lokasi berhasil dibuat",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "Location created successfully"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/Location"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validasi gagal atau lokasi sudah ada"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden - Hanya Admin/Staff"
+          }
+        },
+        "description": "Membuat lokasi penyimpanan baru. Kombinasi room + rack + shelf harus unik. Hanya dapat diakses oleh super_admin atau staff.\n"
+      }
+    },
+    "/locations/{id}": {
+      "get": {
+        "summary": "Ambil lokasi berdasarkan ID",
+        "tags": [
+          "Locations"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            },
+            "description": "ID numerik lokasi",
+            "example": 1
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Lokasi ditemukan",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "Location retrieved successfully"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/Location"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "ID tidak valid (bukan angka)"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "404": {
+            "description": "Lokasi tidak ditemukan"
+          }
+        },
+        "description": "Mengembalikan detail satu lokasi berdasarkan ID numerik."
+      },
+      "put": {
+        "summary": "Update lokasi",
+        "tags": [
+          "Locations"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            },
+            "description": "ID numerik lokasi yang akan diupdate",
+            "example": 1
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "room",
+                  "rack",
+                  "shelf"
+                ],
+                "properties": {
+                  "room": {
+                    "type": "string"
+                  },
+                  "rack": {
+                    "type": "string"
+                  },
+                  "shelf": {
+                    "type": "string"
+                  }
+                },
+                "$ref": "#/components/schemas/LocationInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Lokasi berhasil diupdate",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "Location updated successfully"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/Location"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "ID tidak valid atau validasi body gagal"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden - Hanya Admin/Staff"
+          },
+          "404": {
+            "description": "Lokasi tidak ditemukan"
+          }
+        },
+        "description": "Memperbarui data lokasi yang sudah ada berdasarkan ID. Hanya dapat diakses oleh super_admin atau staff.\n"
+      },
+      "delete": {
+        "summary": "Hapus lokasi (soft delete)",
+        "tags": [
+          "Locations"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            },
+            "description": "ID numerik lokasi yang akan dihapus",
+            "example": 1
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Lokasi berhasil dihapus",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "Location deleted successfully"
+                    },
+                    "data": {
+                      "nullable": true,
+                      "example": null
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "ID tidak valid (bukan angka)"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden - Hanya Super Admin"
+          },
+          "404": {
+            "description": "Lokasi tidak ditemukan"
+          },
+          "429": {
+            "description": "Too Many Requests (rate limited)"
+          }
+        },
+        "description": "Menghapus lokasi secara soft delete (mengisi deletedAt). Hanya dapat diakses oleh super_admin. Perhatian: jika masih ada item yang menggunakan lokasi ini, penghapusan bisa berdampak.\n"
+      }
+    },
+    "/import/bibliographies/upload": {
+      "post": {
+        "summary": "Upload bibliography CSV",
+        "description": "Upload a semicolon-delimited CSV file for staged bibliography import. Supports UTF-8 with optional BOM. Max 50MB.",
+        "operationId": "uploadBibliography",
+        "tags": [
+          "Import"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "file"
+                ],
+                "properties": {
+                  "file": {
+                    "type": "string",
+                    "format": "binary"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "File uploaded successfully"
+          },
+          "400": {
+            "description": "No file uploaded"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        }
+      }
+    },
+    "/import/items/upload": {
+      "post": {
+        "summary": "Upload item CSV",
+        "description": "Upload a semicolon-delimited CSV file for staged item import.",
+        "operationId": "uploadItem",
+        "tags": [
+          "Import"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "file"
+                ],
+                "properties": {
+                  "file": {
+                    "type": "string",
+                    "format": "binary"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "File uploaded"
+          },
+          "400": {
+            "description": "No file uploaded"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        }
+      }
+    },
+    "/import/batches": {
+      "get": {
+        "summary": "List import batches",
+        "description": "Returns all import batches ordered by creation date.",
+        "operationId": "listBatches",
+        "tags": [
+          "Import"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Batches retrieved"
+          }
+        }
+      }
+    },
+    "/import/batches/{batchId}": {
+      "get": {
+        "summary": "Get batch details",
+        "operationId": "getBatch",
+        "tags": [
+          "Import"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "batchId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Batch retrieved"
+          },
+          "404": {
+            "description": "Not found"
+          }
+        }
+      }
+    },
+    "/import/batches/{batchId}/parse": {
+      "post": {
+        "summary": "Parse uploaded CSV into staging",
+        "description": "Reads CSV, parses rows, inserts into staging tables, validates.",
+        "operationId": "parseBatch",
+        "tags": [
+          "Import"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "batchId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Batch parsed"
+          },
+          "400": {
+            "description": "Invalid state"
+          }
+        }
+      }
+    },
+    "/import/batches/{batchId}/preview": {
+      "get": {
+        "summary": "Preview staging rows",
+        "operationId": "previewBatch",
+        "tags": [
+          "Import"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "batchId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "default": 20
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Preview retrieved"
+          }
+        }
+      }
+    },
+    "/import/batches/{batchId}/approve": {
+      "post": {
+        "summary": "Approve and commit staging rows",
+        "description": "Commits valid rows in chunks. Idempotent. Returns progress with hasMore flag.",
+        "operationId": "approveBatch",
+        "tags": [
+          "Import"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "batchId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Chunk committed"
+          },
+          "400": {
+            "description": "Invalid state"
+          }
+        }
+      }
+    },
+    "/import/batches/{batchId}/cancel": {
+      "post": {
+        "summary": "Cancel import batch",
+        "operationId": "cancelBatch",
+        "tags": [
+          "Import"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "batchId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Batch cancelled"
+          },
+          "400": {
+            "description": "Cannot cancel committed batch"
+          }
+        }
+      }
+    },
+    "/import/batches/{batchId}/errors": {
+      "get": {
+        "summary": "Get import errors",
+        "operationId": "getErrors",
+        "tags": [
+          "Import"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "batchId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Errors retrieved"
+          }
+        }
+      }
+    },
+    "/export/bibliographies": {
+      "get": {
+        "summary": "Export bibliographies as Senayan CSV",
+        "description": "Exports all bibliographies in exact Senayan format. Semicolon-delimited, UTF-8 with BOM.",
+        "operationId": "exportBibliographies",
+        "tags": [
+          "Export"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "CSV file",
+            "content": {
+              "text/csv": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/export/items": {
+      "get": {
+        "summary": "Export items as Senayan CSV",
+        "description": "Exports all items in exact Senayan format. Semicolon-delimited, UTF-8 with BOM.",
+        "operationId": "exportItems",
+        "tags": [
+          "Export"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "CSV file",
+            "content": {
+              "text/csv": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/faculties": {
+      "get": {
+        "summary": "Get all faculties",
+        "tags": [
+          "Faculties"
+        ],
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Faculties retrieved successfully"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "description": "Retrieve list of all faculties (Public endpoint)"
+      },
+      "post": {
+        "summary": "Create new faculty",
+        "tags": [
+          "Faculties"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "example": "Fakultas Teknik"
+                  },
+                  "code": {
+                    "type": "string",
+                    "example": "FT"
+                  }
+                },
+                "required": [
+                  "name"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Faculty created"
+          },
+          "400": {
+            "description": "Validation error"
+          },
+          "409": {
+            "description": "Faculty with this name already exists"
+          }
+        },
+        "description": "Add a new faculty (Super Admin only)"
+      }
+    },
+    "/faculties/{id}": {
+      "get": {
+        "summary": "Get faculty by ID",
+        "tags": [
+          "Faculties"
+        ],
+        "security": [],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Faculty retrieved successfully"
+          },
+          "404": {
+            "description": "Faculty not found"
+          }
+        },
+        "description": "Retrieve a single faculty by its ID"
+      },
+      "patch": {
+        "summary": "Update faculty",
+        "tags": [
+          "Faculties"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "code": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Faculty updated"
+          },
+          "400": {
+            "description": "Validation error"
+          },
+          "404": {
+            "description": "Faculty not found"
+          },
+          "409": {
+            "description": "Faculty with this name already exists"
+          }
+        },
+        "description": "Update an existing faculty (Super Admin only)"
+      },
+      "delete": {
+        "summary": "Delete faculty",
+        "tags": [
+          "Faculties"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Faculty deleted"
+          },
+          "404": {
+            "description": "Faculty not found"
+          },
+          "409": {
+            "description": "Cannot delete - faculty is in use"
+          }
+        },
+        "description": "Soft delete a faculty (Super Admin only). Cannot delete if used by study programs or bibliographies."
+      }
+    },
+    "/study-programs": {
+      "get": {
+        "summary": "Get all study programs",
+        "tags": [
+          "Study Programs"
+        ],
+        "security": [],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "facultyId",
+            "schema": {
+              "type": "integer"
+            },
+            "description": "Filter by faculty ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Study programs retrieved successfully"
+          }
+        },
+        "description": "Retrieve list of all study programs. Optional ?facultyId filter."
+      },
+      "post": {
+        "summary": "Create new study program",
+        "tags": [
+          "Study Programs"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "code": {
+                    "type": "string"
+                  },
+                  "facultyId": {
+                    "type": "integer"
+                  }
+                },
+                "required": [
+                  "name",
+                  "facultyId"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Study program created"
+          },
+          "400": {
+            "description": "Validation error"
+          },
+          "409": {
+            "description": "Duplicate name in faculty"
+          }
+        }
+      }
+    },
+    "/study-programs/{id}": {
+      "get": {
+        "summary": "Get study program by ID",
+        "tags": [
+          "Study Programs"
+        ],
+        "security": [],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Study program retrieved"
+          },
+          "404": {
+            "description": "Not found"
+          }
+        }
+      },
+      "patch": {
+        "summary": "Update study program",
+        "tags": [
+          "Study Programs"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "code": {
+                    "type": "string"
+                  },
+                  "facultyId": {
+                    "type": "integer"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Study program updated"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "409": {
+            "description": "Duplicate name in faculty"
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete study program",
+        "tags": [
+          "Study Programs"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Study program deleted"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "409": {
+            "description": "Cannot delete - in use"
+          }
+        }
+      }
+    },
+    "/bibliographies/check-duplicate": {
+      "get": {
+        "summary": "Check for duplicate bibliographies",
+        "description": "Check for existing bibliographies by ISBN exact match or title+author fuzzy match. Returns suggestions for redirecting to existing records.",
+        "tags": [
+          "Bibliographies"
+        ],
+        "security": [],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "isbn",
+            "schema": {
+              "type": "string"
+            },
+            "description": "ISBN/ISSN to match exactly"
+          },
+          {
+            "in": "query",
+            "name": "title",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Title for fuzzy matching"
+          },
+          {
+            "in": "query",
+            "name": "author",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Author name for fuzzy matching"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Duplicate check result with hasExactMatch and duplicates array"
+          },
+          "400": {
+            "description": "At least one param required"
+          }
+        }
+      }
+    },
+    "/reports/dashboard": {
+      "get": {
+        "summary": "Get dashboard statistics",
+        "tags": [
+          "Reports"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Dashboard stats including totalCollections, totalItems, activeLoans, overdueLoans, totalMembers, unpaidFinesTotal, waitingReservations"
+          }
+        }
+      }
+    },
+    "/reports/popular-books": {
+      "get": {
+        "summary": "Get top most borrowed books",
+        "tags": [
+          "Reports"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "type": "integer",
+              "default": 10
+            },
+            "description": "Number of books to return"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of popular books with loan count"
+          }
+        }
+      }
+    },
+    "/reports/guest-stats": {
+      "get": {
+        "summary": "Get guest visit statistics for last 7 days",
+        "tags": [
+          "Reports"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Daily visitor counts for the last 7 days"
+          }
+        }
+      }
+    },
+    "/reports/loans/export": {
+      "get": {
+        "summary": "Export loan report as CSV or PDF",
+        "tags": [
+          "Reports"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "format",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "csv",
+                "pdf"
+              ],
+              "default": "csv"
+            },
+            "description": "Export format"
+          },
+          {
+            "in": "query",
+            "name": "status",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "approved",
+                "pending",
+                "returned",
+                "rejected"
+              ]
+            },
+            "description": "Filter by loan status"
+          },
+          {
+            "in": "query",
+            "name": "from",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            },
+            "description": "Start date filter (YYYY-MM-DD)"
+          },
+          {
+            "in": "query",
+            "name": "to",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            },
+            "description": "End date filter (YYYY-MM-DD)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "File download (CSV or PDF)"
+          }
+        }
+      }
+    },
+    "/reports/fines/export": {
+      "get": {
+        "summary": "Export fines report as CSV or PDF",
+        "tags": [
+          "Reports"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "format",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "csv",
+                "pdf"
+              ],
+              "default": "csv"
+            },
+            "description": "Export format"
+          },
+          {
+            "in": "query",
+            "name": "status",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "paid",
+                "unpaid"
+              ]
+            },
+            "description": "Filter by fine status"
+          },
+          {
+            "in": "query",
+            "name": "month",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 12
+            },
+            "description": "Filter month of payment (recommended with status=paid)"
+          },
+          {
+            "in": "query",
+            "name": "year",
+            "schema": {
+              "type": "integer"
+            },
+            "description": "Filter year of payment (recommended with status=paid)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "File download (CSV or PDF)"
+          }
+        }
+      }
+    },
+    "/reports/fines/revenue": {
+      "get": {
+        "summary": "Get fine revenue summary for monthly audit",
+        "tags": [
+          "Reports"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "month",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 12
+            },
+            "description": "Target month (default current month)"
+          },
+          {
+            "in": "query",
+            "name": "year",
+            "schema": {
+              "type": "integer"
+            },
+            "description": "Target year (default current year)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Revenue totals and monthly breakdown"
+          }
+        }
+      }
+    },
+    "/reports/visitor-analytics": {
+      "get": {
+        "summary": "Get comparative visitor analytics (physical vs web)",
+        "tags": [
+          "Reports"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "range",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "day",
+                "week",
+                "month",
+                "custom"
+              ]
+            }
+          },
+          {
+            "in": "query",
+            "name": "startDate",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "endDate",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Visitor analytics data"
+          }
+        }
+      }
+    },
+    "/reports/web-traffic": {
+      "get": {
+        "summary": "Get web traffic summary aggregated by day",
+        "tags": [
+          "Reports"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "days",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 90,
+              "default": 30
+            },
+            "description": "Number of days to include in daily aggregation"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Aggregated web traffic metrics"
+          }
+        }
+      }
+    },
+    "/reports/web-traffic/track": {
+      "post": {
+        "summary": "Track web visit event",
+        "tags": [
+          "Reports"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "path"
+                ],
+                "properties": {
+                  "path": {
+                    "type": "string",
+                    "example": "/katalog/123"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Traffic successfully tracked"
+          }
+        }
+      }
+    },
+    "/recommendations": {
+      "post": {
+        "summary": "Request a book recommendation (Lecturer only logically)",
+        "tags": [
+          "Recommendations"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "title"
+                ],
+                "properties": {
+                  "title": {
+                    "type": "string"
+                  },
+                  "author": {
+                    "type": "string"
+                  },
+                  "publisher": {
+                    "type": "string"
+                  },
+                  "reason": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Recommendation created successfully"
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
+        }
+      },
+      "get": {
+        "summary": "Get all recommendations (Admin only)",
+        "tags": [
+          "Recommendations"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "status",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "pending",
+                "approved",
+                "rejected"
+              ]
+            },
+            "description": "Filter reservations by status"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "All recommendations retrieved successfully"
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
+        }
+      }
+    },
+    "/recommendations/history": {
+      "get": {
+        "summary": "Get my recommendations",
+        "tags": [
+          "Recommendations"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "My recommendations retrieved successfully"
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
+        }
+      }
+    },
+    "/recommendations/{id}/status": {
+      "patch": {
+        "summary": "Update recommendation status",
+        "tags": [
+          "Recommendations"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Recommendation ID"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "status"
+                ],
+                "properties": {
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "approved",
+                      "rejected"
+                    ],
+                    "description": "Status to update to"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Status updated successfully"
+          },
+          "400": {
+            "description": "Cannot update to invalid status"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "404": {
+            "description": "Recommendation not found"
+          }
+        }
+      }
+    },
+    "/notification/send-fines": {
+      "post": {
+        "summary": "Send fine notification email",
+        "description": "Send an email to member about their fines (Staff/Admin only)",
+        "tags": [
+          "Notifications"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "email",
+                  "name",
+                  "amount",
+                  "bookTitle"
+                ],
+                "properties": {
+                  "email": {
+                    "type": "string"
+                  },
+                  "name": {
+                    "type": "string"
+                  },
+                  "amount": {
+                    "type": "number"
+                  },
+                  "bookTitle": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Fine notification sent successfully"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden - Staff/Admin only"
+          }
+        }
+      }
+    },
+    "/notification/send-loans": {
+      "post": {
+        "summary": "Send loan notification email",
+        "description": "Send an email to member about their loans/reminders (Staff/Admin only)",
+        "tags": [
+          "Notifications"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "email",
+                  "name",
+                  "bookTitle",
+                  "tanggalPengembalian"
+                ],
+                "properties": {
+                  "email": {
+                    "type": "string"
+                  },
+                  "name": {
+                    "type": "string"
+                  },
+                  "bookTitle": {
+                    "type": "string"
+                  },
+                  "tanggalPengembalian": {
+                    "type": "string",
+                    "format": "date"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Loan notification sent successfully"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden - Staff/Admin only"
+          }
+        }
+      }
+    },
+    "/loans/{id}/cancel": {
+      "post": {
+        "summary": "Cancel pending loan booking",
+        "description": "Member cancels their own pending loan booking.",
+        "tags": [
+          "Loans"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Loan ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Loan canceled successfully"
+          },
+          "400": {
+            "description": "Cannot cancel loan"
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
+        }
+      }
+    },
+    "/loans/{loanId}/return": {
+      "post": {
+        "summary": "Return a book",
+        "description": "Admin/Staff marks a loan as returned. Item status becomes 'available' again.",
+        "tags": [
+          "Loans"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "loanId",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Loan ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Book returned successfully"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden - Admin/Staff only"
+          },
+          "404": {
+            "description": "Loan not found or not in 'approved' status"
+          }
+        }
+      }
+    },
+    "/guests/search": {
+      "get": {
+        "summary": "Search users from Campus API",
+        "description": "Search for users by name, faculty, major, or email from external Campus API",
+        "tags": [
+          "Guests"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "name",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Search by user name"
+          },
+          {
+            "in": "query",
+            "name": "faculty",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Search by faculty"
+          },
+          {
+            "in": "query",
+            "name": "major",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Search by major/prodi"
+          },
+          {
+            "in": "query",
+            "name": "email",
+            "schema": {
+              "type": "string",
+              "format": "email"
+            },
+            "description": "Search by email"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Users found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "name": {
+                            "type": "string"
+                          },
+                          "email": {
+                            "type": "string"
+                          },
+                          "nim": {
+                            "type": "string"
+                          },
+                          "faculty": {
+                            "type": "string"
+                          },
+                          "prodi": {
+                            "type": "string"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "At least one search parameter is required"
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
+        }
+      }
+    },
+    "/guests/campus": {
+      "get": {
+        "summary": "Get all users from Campus API",
+        "description": "Fetch all users from external Campus API for admin browsing and check-in",
+        "tags": [
+          "Guests"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "All users fetched successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "name": {
+                            "type": "string"
+                          },
+                          "email": {
+                            "type": "string"
+                          },
+                          "nim": {
+                            "type": "string"
+                          },
+                          "faculty": {
+                            "type": "string"
+                          },
+                          "prodi": {
+                            "type": "string"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
+        }
+      }
+    },
+    "/guests/campus/{email}": {
+      "get": {
+        "summary": "Get user data from Campus API by email",
+        "description": "Fetch specific user information from external Campus API",
+        "tags": [
+          "Guests"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "email",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "email"
+            },
+            "description": "User email to search in Campus API"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "User found in Campus API"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "404": {
+            "description": "User not found in Campus API"
+          }
+        }
+      }
+    },
+    "/guests/direct": {
+      "post": {
+        "summary": "Create guest log directly (no Campus API lookup)",
+        "description": "Register a guest visit using provided member data directly. Used by admin dropdown where member data is already available.",
+        "tags": [
+          "Guests"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "name",
+                  "email"
+                ],
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "description": "Guest name"
+                  },
+                  "email": {
+                    "type": "string",
+                    "format": "email",
+                    "description": "Guest email"
+                  },
+                  "identifier": {
+                    "type": "string",
+                    "description": "NIM/NIDN"
+                  },
+                  "faculty": {
+                    "type": "string",
+                    "description": "Faculty name"
+                  },
+                  "major": {
+                    "type": "string",
+                    "description": "Major/Prodi name"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Guest log created successfully"
+          },
+          "400": {
+            "description": "Validation error or user already logged today"
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
+        }
+      }
+    },
+    "/guests/scan": {
+      "post": {
+        "summary": "Kiosk scan presensi member",
+        "description": "Scan QR/Barcode KTM atau masukkan NIM/Email member untuk absensi cepat",
+        "tags": [
+          "Guests"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "memberIdentifier"
+                ],
+                "properties": {
+                  "memberIdentifier": {
+                    "type": "string",
+                    "description": "NIM, Card Number / Barcode, atau Email member"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Member found and attendance recorded"
+          },
+          "400": {
+            "description": "Validation error"
+          },
+          "404": {
+            "description": "Member not found (redirect to non-member form)"
+          }
+        }
+      }
+    },
+    "/guests/non-member": {
+      "post": {
+        "summary": "Presensi pengunjung non-member (tamu umum)",
+        "description": "Catat kehadiran tamu umum non-member",
+        "tags": [
+          "Guests"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "fullName",
+                  "institution",
+                  "purpose",
+                  "phone"
+                ],
+                "properties": {
+                  "fullName": {
+                    "type": "string"
+                  },
+                  "institution": {
+                    "type": "string"
+                  },
+                  "purpose": {
+                    "type": "string"
+                  },
+                  "phone": {
+                    "type": "string"
+                  },
+                  "studyProgramId": {
+                    "type": "integer"
+                  },
+                  "facultyId": {
+                    "type": "integer"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Guest attendance registered successfully"
+          },
+          "400": {
+            "description": "Validation error"
+          }
+        }
+      }
+    },
+    "/guest/absensi": {
+      "post": {
+        "summary": "Create absensi log"
+      }
+    },
+    "/guests/{id}": {
+      "delete": {
+        "summary": "Delete guest log",
+        "description": "Remove a guest log entry (Admin/Staff only). Use this if wrong user was selected.",
+        "tags": [
+          "Guests"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Guest log ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Guest log deleted successfully"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "404": {
+            "description": "Guest log not found"
+          }
+        }
+      }
+    },
+    "/categories/{id}": {
+      "get": {
+        "summary": "Get category by ID",
+        "description": "Retrieve a single category by its ID",
+        "tags": [
+          "Categories"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            },
+            "description": "Category ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Category retrieved successfully"
+          },
+          "400": {
+            "description": "Invalid ID"
+          },
+          "404": {
+            "description": "Category not found"
+          }
+        }
+      },
+      "patch": {
+        "summary": "Update category (partial)",
+        "description": "Partially update an existing category (Super Admin only). Only send fields you want to update.",
+        "tags": [
+          "Categories"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            },
+            "description": "Category ID"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "example": "Science Fiction"
+                  },
+                  "description": {
+                    "type": "string",
+                    "example": "Science fiction and fantasy books"
+                  }
+                }
+              },
+              "examples": {
+                "updateName": {
+                  "summary": "Update only name",
+                  "value": {
+                    "name": "New Category Name"
+                  }
+                },
+                "updateDescription": {
+                  "summary": "Update only description",
+                  "value": {
+                    "description": "New description"
+                  }
+                },
+                "updateBoth": {
+                  "summary": "Update both fields",
+                  "value": {
+                    "name": "Science Fiction",
+                    "description": "Science fiction and fantasy books"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Category updated successfully"
+          },
+          "400": {
+            "description": "Validation error or invalid ID"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden - Super Admin only"
+          },
+          "404": {
+            "description": "Category not found"
+          },
+          "409": {
+            "description": "Category with this name already exists"
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete category",
+        "description": "Remove a category (Super Admin only). Cannot delete if category is used by collections.",
+        "tags": [
+          "Categories"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            },
+            "description": "Category ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Category deleted successfully"
+          },
+          "400": {
+            "description": "Invalid ID"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden - Super Admin only"
+          },
+          "404": {
+            "description": "Category not found"
+          },
+          "409": {
+            "description": "Cannot delete - category is being used by collections"
+          }
+        }
+      }
+    },
+    "/auth/forget-password": {
+      "post": {
+        "summary": "Request link reset password (di-handle oleh better-auth)",
+        "description": "Mengirimkan link reset password ke email pengguna jika email terdaftar. Response selalu sukses terlepas dari apakah email ada atau tidak, untuk mencegah enumerasi pengguna.",
+        "tags": [
+          "Auth"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "email",
+                  "redirectTo"
+                ],
+                "properties": {
+                  "email": {
+                    "type": "string",
+                    "format": "email",
+                    "example": "user@umc.ac.id"
+                  },
+                  "redirectTo": {
+                    "type": "string",
+                    "example": "http://localhost:5173/reset-password"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Berhasil mengirim permintaan",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "boolean",
+                      "example": true
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation Error"
+          }
+        }
+      }
+    },
+    "/auth/reset-password": {
+      "post": {
+        "summary": "Reset password dengan token (di-handle oleh better-auth)",
+        "description": "Mengganti password lama dengan password baru menggunakan token yang dikirim via email.",
+        "tags": [
+          "Auth"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "token",
+                  "newPassword"
+                ],
+                "properties": {
+                  "newPassword": {
+                    "type": "string",
+                    "example": "PasswordBaru123!",
+                    "description": "Password baru (minimal 8 karakter)"
+                  },
+                  "token": {
+                    "type": "string",
+                    "example": "a3f9b2c1d...",
+                    "description": "Token unik yang diterima dari URL email"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Password berhasil di-reset",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "user": {
+                      "type": "object"
+                    },
+                    "session": {
+                      "type": "object"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Token tidak valid atau sudah kadaluarsa"
+          }
+        }
+      }
+    },
+    "/campus/verify": {
+      "post": {
+        "summary": "Verifikasi email via API Kampus UMC",
+        "description": "Mengecek apakah email terdaftar di sistem kampus UMC.\nDipisahkan dari prefix `/auth/*` agar tidak di-intercept\noleh better-auth wildcard handler `app.all(\"/api/auth/*path\")`.\n",
+        "tags": [
+          "Auth"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "email"
+                ],
+                "properties": {
+                  "email": {
+                    "type": "string",
+                    "format": "email",
+                    "example": "user@umc.ac.id"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Verifikasi berhasil",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "Verifikasi kampus berhasil"
+                    },
+                    "data": {
+                      "type": "object"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation Error"
+          },
+          "404": {
+            "description": "Email tidak ditemukan di sistem kampus"
+          },
+          "500": {
+            "description": "Server Error"
+          }
+        }
+      }
+    },
+    "/users/all": {
+      "get": {
+        "summary": "Get All Users (Super Admin Only)",
+        "description": "Dipindahkan dari `/auth/users` agar tidak di-intercept\noleh better-auth wildcard handler `app.all(\"/api/auth/*path\")`.\n",
+        "tags": [
+          "Auth"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of all users",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "type": "array"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden - Super Admin only"
+          }
+        }
+      }
+    },
+    "/logs": {
+      "get": {
+        "summary": "Get all audit logs (Admin only)",
+        "tags": [
+          "Audit Logs"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "action",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Action filter (create, update, delete, approve, blacklist)"
+          },
+          {
+            "in": "query",
+            "name": "entity",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Entity filter (loan, item, fine, Users, category, collection, reservation)"
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "type": "integer",
+              "default": 100
+            },
+            "description": "Jumlah log yang dikembalikan"
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "schema": {
+              "type": "integer",
+              "default": 0
+            },
+            "description": "Offset untuk paginasi"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Logs retrieved successfully"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden - bukan super_admin atau staff"
+          }
+        }
+      }
+    }
+  }
+}
