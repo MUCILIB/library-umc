@@ -251,7 +251,7 @@ router.post(
  *       404:
  *         description: Lokasi tidak ditemukan
  */
-router.put(
+router.patch(
   "/locations/:id",
   publicApiLimiter,
   isAuthenticated,

@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Loader2, AlertCircle, QrCode, CheckCircle, ArrowLeft, X, Search } from "lucide-react";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
+import Modal from "@/components/ui/modal";
 import jsQR from "jsqr";
 import { API_BASE_URL } from "@/utils/api-config";
 import { useToast } from "@/hooks/useToast";
@@ -58,10 +59,16 @@ function CameraScannerModal({ isOpen, onClose, onScanSuccess }: CameraScannerMod
   const [isScanning, setIsScanning] = useState(false);
 
   const handleClose = useCallback(() => {
-    if (animFrameId.current) cancelAnimationFrame(animFrameId.current);
+    if (animFrameId.current) {
+      cancelAnimationFrame(animFrameId.current);
+      animFrameId.current = null;
+    }
     if (streamRef.current) {
       streamRef.current.getTracks().forEach((track) => track.stop());
       streamRef.current = null;
+    }
+    if (videoRef.current) {
+      videoRef.current.srcObject = null;
     }
     setIsScanning(false);
     onClose();
@@ -83,7 +90,11 @@ function CameraScannerModal({ isOpen, onClose, onScanSuccess }: CameraScannerMod
 
         if (videoRef.current && isActive) {
           videoRef.current.srcObject = stream;
-          await videoRef.current.play();
+          try {
+            await videoRef.current.play();
+          } catch (_e) {
+            // video playback was interrupted or blocked
+          }
           requestScanFrame();
         }
       } catch (err: any) {
@@ -119,6 +130,9 @@ function CameraScannerModal({ isOpen, onClose, onScanSuccess }: CameraScannerMod
               streamRef.current.getTracks().forEach((track) => track.stop());
               streamRef.current = null;
             }
+            if (videoRef.current) {
+              videoRef.current.srcObject = null;
+            }
             onScanSuccess(code.data.trim());
             return;
           }
@@ -133,6 +147,9 @@ function CameraScannerModal({ isOpen, onClose, onScanSuccess }: CameraScannerMod
                   if (streamRef.current) {
                     streamRef.current.getTracks().forEach((track) => track.stop());
                     streamRef.current = null;
+                  }
+                  if (videoRef.current) {
+                    videoRef.current.srcObject = null;
                   }
                   onScanSuccess(barcodes[0].rawValue.trim());
                 }
@@ -151,96 +168,93 @@ function CameraScannerModal({ isOpen, onClose, onScanSuccess }: CameraScannerMod
 
     return () => {
       isActive = false;
-      if (animFrameId.current) cancelAnimationFrame(animFrameId.current);
+      if (animFrameId.current) {
+        cancelAnimationFrame(animFrameId.current);
+        animFrameId.current = null;
+      }
       if (streamRef.current) {
         streamRef.current.getTracks().forEach((track) => track.stop());
         streamRef.current = null;
       }
+      if (videoRef.current) {
+        videoRef.current.srcObject = null;
+      }
     };
   }, [isOpen, onScanSuccess]);
 
-  if (!isOpen) return null;
-
   return (
-    <div className="fixed inset-0 z-50 bg-black flex flex-col overflow-hidden">
-      {/* Fullscreen video */}
-      <video
-        ref={videoRef}
-        playsInline
-        muted
-        className="absolute inset-0 w-full h-full object-cover"
-      />
-      <canvas ref={canvasRef} className="hidden" />
+    <Modal
+      isOpen={isOpen}
+      onClose={handleClose}
+      title="Pemindaian QR & Barcode"
+      size="md"
+    >
+      <div className="space-y-4">
+        {/* Viewfinder Kamera */}
+        <div className="relative aspect-4/3 w-full rounded-xl overflow-hidden bg-slate-950 border border-border flex items-center justify-center shadow-inner">
+          <video
+            ref={videoRef}
+            playsInline
+            muted
+            className="w-full h-full object-cover"
+          />
+          <canvas ref={canvasRef} className="hidden" />
 
-      {/* Top gradient + header */}
-      <div className="absolute top-0 left-0 right-0 z-10 bg-gradient-to-b from-black/80 via-black/40 to-transparent px-4 sm:px-6 pt-4 pb-10">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2.5 bg-black/60 backdrop-blur-md px-4 py-2 rounded-full border border-white/20">
-            <QrCode className="size-5 text-white" />
-            <h3 className="font-bold text-sm sm:text-base text-white whitespace-nowrap">Pemindaian QR &amp; Barcode</h3>
-          </div>
-          <button
-            onClick={handleClose}
-            aria-label="Batal"
-            className="w-11 h-11 rounded-full bg-black/60 hover:bg-red-500 border border-white/30 text-white flex items-center justify-center transition-all active:scale-95"
-            title="Batal & Tutup Kamera"
-          >
-            <X className="size-6" />
-          </button>
-        </div>
-      </div>
-
-      {/* Center reticle */}
-      {isScanning && !errorMsg && (
-        <div className="absolute inset-0 z-10 pointer-events-none flex items-center justify-center">
-          <div className="w-[min(68vw,46vh)] aspect-square border-2 border-white/90 rounded-3xl relative shadow-[0_0_40px_rgba(0,0,0,0.6)] flex items-center justify-center">
-            <div className="absolute top-0 left-0 w-10 h-10 border-t-4 border-l-4 border-red-500 rounded-tl-3xl" />
-            <div className="absolute top-0 right-0 w-10 h-10 border-t-4 border-r-4 border-red-500 rounded-tr-3xl" />
-            <div className="absolute bottom-0 left-0 w-10 h-10 border-b-4 border-l-4 border-red-500 rounded-bl-3xl" />
-            <div className="absolute bottom-0 right-0 w-10 h-10 border-b-4 border-r-4 border-red-500 rounded-br-3xl" />
-            <div className="w-[85%] h-0.5 bg-red-500 animate-pulse shadow-[0_0_12px_rgba(239,68,68,0.9)]" />
-          </div>
-        </div>
-      )}
-
-      {/* Error state */}
-      {errorMsg && (
-        <div className="absolute inset-0 z-20 bg-black/90 flex flex-col items-center justify-center p-6 space-y-4 text-center">
-          <AlertCircle className="size-14 text-red-400" />
-          <p className="text-sm font-semibold text-red-200 leading-relaxed max-w-sm">{errorMsg}</p>
-          <button
-            onClick={handleClose}
-            className="px-8 py-2.5 bg-red-600 hover:bg-red-700 rounded-xl text-sm font-bold text-white transition-all cursor-pointer"
-          >
-            Tutup &amp; Kembali
-          </button>
-        </div>
-      )}
-
-      {/* Bottom gradient + controls */}
-      <div className="absolute bottom-0 left-0 right-0 z-10 bg-gradient-to-t from-black/85 via-black/50 to-transparent px-4 sm:px-6 pt-12 pb-5">
-        <div className="flex flex-col items-center gap-3 max-w-md mx-auto">
+          {/* Status Indicator */}
           {isScanning && !errorMsg && (
-            <>
-              <div className="flex items-center gap-2 text-xs font-bold text-white bg-black/60 backdrop-blur px-4 py-1.5 rounded-full border border-white/20">
-                <span className="w-2 h-2 rounded-full bg-red-500 animate-ping" />
-                <span>Kamera Memindai...</span>
-              </div>
-              <p className="text-xs sm:text-sm font-bold text-white text-center">
-                Arahkan kamera ke QR Code atau Barcode Buku
-              </p>
-            </>
+            <div className="absolute top-3 left-3 flex items-center gap-2 text-[11px] font-bold text-white bg-black/70 backdrop-blur-md px-3 py-1 rounded-full border border-white/20">
+              <span className="w-2 h-2 rounded-full bg-red-500 animate-ping" />
+              <span>Memindai...</span>
+            </div>
           )}
+
+          {/* Reticle / Kotak Bidik QR */}
+          {isScanning && !errorMsg && (
+            <div className="absolute inset-0 pointer-events-none flex items-center justify-center p-4">
+              <div className="w-48 h-48 sm:w-56 sm:h-56 border-2 border-white/90 rounded-2xl relative shadow-[0_0_30px_rgba(0,0,0,0.6)] flex items-center justify-center">
+                <div className="absolute top-0 left-0 w-7 h-7 border-t-4 border-l-4 border-red-500 rounded-tl-xl" />
+                <div className="absolute top-0 right-0 w-7 h-7 border-t-4 border-r-4 border-red-500 rounded-tr-xl" />
+                <div className="absolute bottom-0 left-0 w-7 h-7 border-b-4 border-l-4 border-red-500 rounded-bl-xl" />
+                <div className="absolute bottom-0 right-0 w-7 h-7 border-b-4 border-r-4 border-red-500 rounded-br-xl" />
+                <div className="w-[85%] h-0.5 bg-red-500 animate-pulse shadow-[0_0_12px_rgba(239,68,68,0.9)]" />
+              </div>
+            </div>
+          )}
+
+          {/* Error State */}
+          {errorMsg && (
+            <div className="absolute inset-0 bg-black/85 flex flex-col items-center justify-center p-6 text-center space-y-3">
+              <AlertCircle className="size-10 text-red-400" />
+              <p className="text-xs font-semibold text-red-200 leading-relaxed max-w-xs">
+                {errorMsg}
+              </p>
+              <button
+                type="button"
+                onClick={handleClose}
+                className="px-4 py-2 bg-red-600 hover:bg-red-700 rounded-xl text-xs font-bold text-white transition-all cursor-pointer"
+              >
+                Tutup Kamera
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* Footer Info & Batal */}
+        <div className="flex flex-col items-center gap-2.5 pt-1">
+          <p className="text-xs text-muted-foreground text-center font-medium">
+            Arahkan kamera ke QR Code atau Barcode Buku / Kartu Anggota
+          </p>
           <button
+            type="button"
             onClick={handleClose}
-            className="w-full px-6 py-3 bg-white text-slate-900 rounded-2xl font-bold text-sm transition-all active:scale-95 cursor-pointer flex items-center justify-center gap-2"
+            className="w-full py-2.5 bg-muted hover:bg-muted/80 text-foreground rounded-lg text-xs font-bold transition-all active:scale-[0.98] cursor-pointer flex items-center justify-center gap-2 border border-border"
           >
             <X className="size-4" />
             <span>Batal Pemindaian</span>
           </button>
         </div>
       </div>
-    </div>
+    </Modal>
   );
 }
 

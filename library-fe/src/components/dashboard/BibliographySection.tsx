@@ -33,6 +33,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import Modal from "@/components/ui/modal";
 import { cleanIsbn } from "@/utils/format";
 import {
   bibliographyApi,
@@ -1038,6 +1039,80 @@ function BibliographyForm({ bib, onClose, onSuccess }: BibliographyFormProps) {
   const [step3Error, setStep3Error] = useState<string | null>(null);
   const [generatingCode, setGeneratingCode] = useState(false);
 
+  // Location modal states
+  const [showLocationModal, setShowLocationModal] = useState(false);
+  const [locationForm, setLocationForm] = useState({ room: "", rack: "", shelf: "" });
+  const [locationSaving, setLocationSaving] = useState(false);
+  const [locationError, setLocationError] = useState<string | null>(null);
+  const [editingLocationId, setEditingLocationId] = useState<number | null>(null);
+
+  const loadLocationsList = async () => {
+    try {
+      const result = await locationApi.list();
+      const list = result.data || [];
+      setLocations(list);
+      if (list.length > 0) {
+        setSelectedLocationId((prev) =>
+          prev && list.some((l) => l.id.toString() === prev) ? prev : list[0].id.toString()
+        );
+      } else {
+        setSelectedLocationId("");
+      }
+    } catch (err) {
+      console.error("Gagal memuat lokasi", err);
+    }
+  };
+
+  const handleSaveLocation = async () => {
+    if (!locationForm.room.trim() || !locationForm.rack.trim() || !locationForm.shelf.trim()) {
+      setLocationError("Ruang, Rak, dan Shelf wajib diisi");
+      return;
+    }
+    setLocationSaving(true);
+    setLocationError(null);
+    try {
+      if (editingLocationId) {
+        await locationApi.update(editingLocationId, {
+          room: locationForm.room.trim(),
+          rack: locationForm.rack.trim(),
+          shelf: locationForm.shelf.trim(),
+        });
+      } else {
+        const res = await locationApi.create({
+          room: locationForm.room.trim(),
+          rack: locationForm.rack.trim(),
+          shelf: locationForm.shelf.trim(),
+        });
+        if (res.data?.id) setSelectedLocationId(res.data.id.toString());
+      }
+      await loadLocationsList();
+      setLocationForm({ room: "", rack: "", shelf: "" });
+      setEditingLocationId(null);
+      setShowLocationModal(false);
+    } catch (err) {
+      setLocationError(err instanceof Error ? err.message : "Gagal menyimpan lokasi");
+    } finally {
+      setLocationSaving(false);
+    }
+  };
+
+  const handleEditLocation = (loc: Location) => {
+    setEditingLocationId(loc.id);
+    setLocationForm({ room: loc.room, rack: loc.rack, shelf: loc.shelf });
+    setLocationError(null);
+    setShowLocationModal(true);
+  };
+
+  const handleDeleteLocation = async (id: number) => {
+    if (!confirm("Hapus lokasi ini?")) return;
+    try {
+      await locationApi.delete(id);
+      await loadLocationsList();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Gagal menghapus lokasi");
+    }
+  };
+
   const handleGenerateCode = async () => {
     if (!bib && localNewItems.length === 0) {
       setStep3Error("Simpan bibliografi terlebih dahulu, atau tambahkan item manual");
@@ -1060,20 +1135,9 @@ function BibliographyForm({ bib, onClose, onSuccess }: BibliographyFormProps) {
     }
   };
 
-  // Load locations
+  // Load locations on mount
   useEffect(() => {
-    const loadLocations = async () => {
-      try {
-        const result = await locationApi.list();
-        setLocations(result.data || []);
-        if (result.data && result.data.length > 0) {
-          setSelectedLocationId(result.data[0].id.toString());
-        }
-      } catch (err) {
-        console.error("Gagal memuat lokasi", err);
-      }
-    };
-    loadLocations();
+    loadLocationsList();
   }, []);
 
   // Load existing items if editing
@@ -1496,35 +1560,43 @@ function BibliographyForm({ bib, onClose, onSuccess }: BibliographyFormProps) {
                 <label className="mb-2 block text-xs font-bold text-foreground uppercase tracking-wider">
                   General Material Designation (GMD)
                 </label>
-                <select
+                <Select
                   value={formData.gmdId}
-                  onChange={(e) => setFormData({ ...formData, gmdId: e.target.value })}
-                  className="w-full rounded-lg border border-border px-3 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary bg-background"
+                  onValueChange={(val) => setFormData({ ...formData, gmdId: val })}
                 >
-                  <option value="1">Text</option>
-                  <option value="2">Electronic</option>
-                  <option value="3">Audio</option>
-                  <option value="4">Video</option>
-                  <option value="5">Image</option>
-                  <option value="6">Map</option>
-                  <option value="7">Mixed</option>
-                </select>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Pilih GMD" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="1">Text</SelectItem>
+                    <SelectItem value="2">Electronic</SelectItem>
+                    <SelectItem value="3">Audio</SelectItem>
+                    <SelectItem value="4">Video</SelectItem>
+                    <SelectItem value="5">Image</SelectItem>
+                    <SelectItem value="6">Map</SelectItem>
+                    <SelectItem value="7">Mixed</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
 
               <div>
                 <label className="mb-2 block text-xs font-bold text-foreground uppercase tracking-wider">
                   Tipe Koleksi
                 </label>
-                <select
+                <Select
                   value={formData.type}
-                  onChange={(e) => setFormData({ ...formData, type: e.target.value })}
-                  className="w-full rounded-lg border border-border px-3 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary bg-background"
+                  onValueChange={(val) => setFormData({ ...formData, type: val })}
                 >
-                  <option value="physical_book">Buku Fisik</option>
-                  <option value="ebook">E-Book</option>
-                  <option value="journal">Jurnal</option>
-                  <option value="thesis">Skripsi</option>
-                </select>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Pilih Tipe Koleksi" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="physical_book">Buku Fisik</SelectItem>
+                    <SelectItem value="ebook">E-Book</SelectItem>
+                    <SelectItem value="journal">Jurnal</SelectItem>
+                    <SelectItem value="thesis">Skripsi</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </div>
 
@@ -1547,16 +1619,20 @@ function BibliographyForm({ bib, onClose, onSuccess }: BibliographyFormProps) {
               <div className="space-y-3">
                 {authors.map((author, idx) => (
                   <div key={idx} className="flex items-center gap-3">
-                    <select
+                    <Select
                       value={author.role}
-                      onChange={(e) => updateAuthor(idx, "role", e.target.value)}
-                      className="w-1/4 rounded-lg border border-border px-3 py-2.5 text-sm bg-background focus:outline-none focus:ring-1 focus:ring-primary"
+                      onValueChange={(val) => updateAuthor(idx, "role", val)}
                     >
-                      <option value="primary">Utama</option>
-                      <option value="secondary">Tambahan</option>
-                      <option value="editor">Penyunting</option>
-                      <option value="translator">Penerjemah</option>
-                    </select>
+                      <SelectTrigger className="w-1/3 min-w-[130px]">
+                        <SelectValue placeholder="Peran" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="primary">Utama</SelectItem>
+                        <SelectItem value="secondary">Tambahan</SelectItem>
+                        <SelectItem value="editor">Penyunting</SelectItem>
+                        <SelectItem value="translator">Penerjemah</SelectItem>
+                      </SelectContent>
+                    </Select>
                     <input
                       type="text"
                       value={author.name}
@@ -1745,10 +1821,9 @@ function BibliographyForm({ bib, onClose, onSuccess }: BibliographyFormProps) {
                   <label className="mb-1.5 block text-xs font-medium text-muted-foreground">
                     Pilih Fakultas
                   </label>
-                  <select
+                  <Select
                     value={selectedFacultyIds.length === 1 ? String(selectedFacultyIds[0]) : ""}
-                    onChange={(e) => {
-                      const val = e.target.value;
+                    onValueChange={(val) => {
                       if (val) {
                         const id = Number(val);
                         if (!selectedFacultyIds.includes(id)) {
@@ -1756,15 +1831,18 @@ function BibliographyForm({ bib, onClose, onSuccess }: BibliographyFormProps) {
                         }
                       }
                     }}
-                    className="w-full rounded-lg border border-border px-3 py-2 text-sm bg-background focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
                   >
-                    <option value="">-- Pilih Fakultas --</option>
-                    {facultyOptions.map((f) => (
-                      <option key={f.id} value={String(f.id)}>
-                        {f.name}
-                      </option>
-                    ))}
-                  </select>
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="-- Pilih Fakultas --" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {facultyOptions.map((f) => (
+                        <SelectItem key={f.id} value={String(f.id)}>
+                          {f.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
 
                   {/* Interactive faculty chips / pills */}
                   <div className="mt-2.5">
@@ -1801,10 +1879,9 @@ function BibliographyForm({ bib, onClose, onSuccess }: BibliographyFormProps) {
                   <label className="mb-1.5 block text-xs font-medium text-muted-foreground">
                     Pilih Program Studi
                   </label>
-                  <select
+                  <Select
                     value={selectedStudyProgramIds.length === 1 ? String(selectedStudyProgramIds[0]) : ""}
-                    onChange={(e) => {
-                      const val = e.target.value;
+                    onValueChange={(val) => {
                       if (val) {
                         const id = Number(val);
                         if (!selectedStudyProgramIds.includes(id)) {
@@ -1812,15 +1889,18 @@ function BibliographyForm({ bib, onClose, onSuccess }: BibliographyFormProps) {
                         }
                       }
                     }}
-                    className="w-full rounded-lg border border-border px-3 py-2 text-sm bg-background focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
                   >
-                    <option value="">-- Pilih Program Studi --</option>
-                    {filteredStudyPrograms.map((sp) => (
-                      <option key={sp.id} value={String(sp.id)}>
-                        {sp.name}
-                      </option>
-                    ))}
-                  </select>
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="-- Pilih Program Studi --" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {filteredStudyPrograms.map((sp) => (
+                        <SelectItem key={sp.id} value={String(sp.id)}>
+                          {sp.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
 
                   {/* Interactive prodi chips / pills */}
                   <div className="mt-2.5">
@@ -1986,20 +2066,39 @@ function BibliographyForm({ bib, onClose, onSuccess }: BibliographyFormProps) {
                 </div>
 
                 <div>
-                  <label className="mb-2 block text-xs font-medium text-muted-foreground uppercase">
-                    Tipe Koleksi / Lokasi
-                  </label>
-                  <select
+                  <div className="mb-2 flex items-center justify-between">
+                    <label className="block text-xs font-medium text-muted-foreground uppercase">
+                      Tipe Koleksi / Lokasi
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => setShowLocationModal(true)}
+                      className="text-xs font-bold text-primary hover:underline"
+                    >
+                      + Kelola Lokasi
+                    </button>
+                  </div>
+                  <Select
                     value={selectedLocationId}
-                    onChange={(e) => setSelectedLocationId(e.target.value)}
-                    className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary bg-background"
+                    onValueChange={(val) => setSelectedLocationId(val)}
                   >
-                    {locations.map((loc) => (
-                      <option key={loc.id} value={loc.id}>
-                        {loc.room} - Rak {loc.rack} (Shelf {loc.shelf})
-                      </option>
-                    ))}
-                  </select>
+                    <SelectTrigger className="w-full">
+                      <SelectValue
+                        placeholder={
+                          locations.length === 0
+                            ? "Belum ada lokasi — klik Kelola Lokasi"
+                            : "Pilih lokasi"
+                        }
+                      />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {locations.map((loc) => (
+                        <SelectItem key={loc.id} value={String(loc.id)}>
+                          {loc.room} - Rak {loc.rack} (Shelf {loc.shelf})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
 
                 <div>
@@ -2473,6 +2572,151 @@ function BibliographyForm({ bib, onClose, onSuccess }: BibliographyFormProps) {
           </div>
         </div>
       </form>
+
+      {/* Location Management Modal */}
+      <Modal
+        isOpen={showLocationModal}
+        onClose={() => {
+          setShowLocationModal(false);
+          setEditingLocationId(null);
+          setLocationForm({ room: "", rack: "", shelf: "" });
+          setLocationError(null);
+        }}
+        title={editingLocationId ? "Edit Lokasi Buku" : "Kelola Lokasi Buku"}
+        size="lg"
+      >
+        <div className="space-y-4">
+          {locationError && (
+            <div className="rounded-lg bg-red-50 dark:bg-red-950/30 p-3 text-sm font-medium text-red-600 dark:text-red-400">
+              {locationError}
+            </div>
+          )}
+
+          <div className="grid gap-4 sm:grid-cols-3">
+            <div>
+              <label className="mb-2 block text-xs font-bold text-foreground uppercase">
+                Ruang / Lokasi *
+              </label>
+              <input
+                type="text"
+                placeholder="Contoh: Perpustakaan Pusat"
+                value={locationForm.room}
+                onChange={(e) => setLocationForm({ ...locationForm, room: e.target.value })}
+                className="w-full rounded-lg border border-border px-3 py-2.5 text-sm bg-background focus:outline-none focus:ring-1 focus:ring-primary"
+              />
+            </div>
+            <div>
+              <label className="mb-2 block text-xs font-bold text-foreground uppercase">
+                Rak *
+              </label>
+              <input
+                type="text"
+                placeholder="Contoh: Rak A1"
+                value={locationForm.rack}
+                onChange={(e) => setLocationForm({ ...locationForm, rack: e.target.value })}
+                className="w-full rounded-lg border border-border px-3 py-2.5 text-sm bg-background focus:outline-none focus:ring-1 focus:ring-primary"
+              />
+            </div>
+            <div>
+              <label className="mb-2 block text-xs font-bold text-foreground uppercase">
+                Shelf / Rak Kecil *
+              </label>
+              <input
+                type="text"
+                placeholder="Contoh: Baris 1"
+                value={locationForm.shelf}
+                onChange={(e) => setLocationForm({ ...locationForm, shelf: e.target.value })}
+                className="w-full rounded-lg border border-border px-3 py-2.5 text-sm bg-background focus:outline-none focus:ring-1 focus:ring-primary"
+              />
+            </div>
+          </div>
+
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={handleSaveLocation}
+              disabled={locationSaving}
+              className="flex-1 rounded-lg bg-primary px-4 py-2.5 text-sm font-bold text-white hover:bg-primary/95 disabled:opacity-50 transition-all cursor-pointer flex items-center justify-center gap-2"
+            >
+              {locationSaving && <Loader2 className="size-4 animate-spin" />}
+              {locationSaving ? "Menyimpan..." : editingLocationId ? "Perbarui Lokasi" : "Simpan Lokasi"}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setShowLocationModal(false);
+                setEditingLocationId(null);
+                setLocationForm({ room: "", rack: "", shelf: "" });
+                setLocationError(null);
+              }}
+              className="flex-1 rounded-lg border border-border bg-card px-4 py-2.5 text-sm font-bold text-muted-foreground hover:bg-muted transition-all cursor-pointer"
+            >
+              Batal
+            </button>
+          </div>
+
+          {/* List Lokasi Existing */}
+          <div className="border-t border-border pt-4 space-y-2">
+            <div className="flex items-center justify-between">
+              <h4 className="text-xs font-bold text-muted-foreground uppercase">
+                Daftar Lokasi Tersedia ({locations.length})
+              </h4>
+              {editingLocationId && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEditingLocationId(null);
+                    setLocationForm({ room: "", rack: "", shelf: "" });
+                    setLocationError(null);
+                  }}
+                  className="text-xs font-semibold text-primary hover:underline cursor-pointer"
+                >
+                  + Tambah Lokasi Baru
+                </button>
+              )}
+            </div>
+            <div className="max-h-48 overflow-y-auto space-y-1.5 pr-1">
+              {locations.length === 0 ? (
+                <p className="text-xs text-muted-foreground py-2 text-center">Belum ada lokasi tersimpan</p>
+              ) : (
+                locations.map((loc) => (
+                  <div
+                    key={loc.id}
+                    className={`flex items-center justify-between rounded-lg border p-2.5 text-xs transition-colors ${
+                      editingLocationId === loc.id
+                        ? "border-primary bg-primary/5"
+                        : "border-border bg-card hover:bg-muted/30"
+                    }`}
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className="font-semibold text-foreground">
+                        {loc.room}
+                      </span>
+                      <span className="text-muted-foreground">• Rak {loc.rack} • {loc.shelf}</span>
+                    </div>
+                    <div className="flex gap-1">
+                      <button
+                        type="button"
+                        onClick={() => handleEditLocation(loc)}
+                        className="px-2.5 py-1 text-primary hover:bg-primary/10 rounded font-medium transition-all cursor-pointer"
+                      >
+                        Edit
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteLocation(loc.id)}
+                        className="px-2.5 py-1 text-destructive hover:bg-destructive/10 rounded font-medium transition-all cursor-pointer"
+                      >
+                        Hapus
+                      </button>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }

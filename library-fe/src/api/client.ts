@@ -309,6 +309,21 @@ export interface Location {
 
 export const locationApi = {
   list: () => apiFetch<Location[]>("/api/locations"),
+  getById: (id: number) => apiFetch<Location>(`/api/locations/${id}`),
+  create: (data: { room: string; rack: string; shelf: string }) =>
+    apiFetch<Location>("/api/locations", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    }),
+  update: (id: number, data: { room: string; rack: string; shelf: string }) =>
+    apiFetch<Location>(`/api/locations/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    }),
+  delete: (id: number) =>
+    apiFetch<void>(`/api/locations/${id}`, { method: "DELETE" }),
 };
 
 // ==========================================
