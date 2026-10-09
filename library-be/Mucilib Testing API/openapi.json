@@ -5190,7 +5190,15 @@
     },
     "/guest/absensi": {
       "post": {
-        "summary": "Create absensi log"
+        "summary": "Create absensi log",
+        "responses": {
+          "201": {
+            "description": "Absensi log created successfully"
+          },
+          "400": {
+            "description": "Validation error"
+          }
+        }
       }
     },
     "/guests/{id}": {
