@@ -38,3 +38,8 @@ Thumbs.db
 *.sqlite
 
 ignore
+
+.hermes
+ANALISIS_PROYEK.md
+
+senayan_biblio_export (2).csv
