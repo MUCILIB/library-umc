@@ -114,8 +114,9 @@ app.get("/health", (req, res) => {
 // Error Middleware (MuST be at the end)
 app.use(errorMiddleware);
 
-const PORT = process.env.PORT || 4000;
-app.listen(PORT, () => {
+const PORT = Number(process.env.PORT) || 4000;
+// ponytail: explicit 0.0.0.0 bind required for Docker container bridge networking (Coolify/Traefik)
+app.listen(PORT, "0.0.0.0", () => {
   console.log(`SERVER RUNNING ON PORT ${PORT}`);
   initCronJobs();
   initBookingCancelScheduler();
