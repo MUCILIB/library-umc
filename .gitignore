@@ -5,11 +5,8 @@
 .env.development
 *.env
 
-/docs
-
-.agent-screenshots
-.hermes/plans
-/docs/superpowers
+# Documentation
+# (specs and plans tracked in git)
 
 # Dependencies
 node_modules/
