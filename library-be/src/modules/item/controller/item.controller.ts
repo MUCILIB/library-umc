@@ -152,6 +152,26 @@ export class ItemController {
       sendSuccess(res, "Generated item code", { itemCode: code });
     } catch (error) { next(error); }
   }
+
+  async lookup(req: Request, res: Response, next: NextFunction) {
+    try {
+      const itemCode = (req.body?.itemCode || req.query?.itemCode || req.body?.code || req.query?.code) as string;
+      const intent = (req.body?.intent || req.query?.intent) as string;
+      const result = await itemService.lookupItem({ itemCode, intent });
+      if (!result.success) return sendError(res, result.message, 404);
+      sendSuccess(res, result.message, result.data);
+    } catch (error) { next(error); }
+  }
+
+  async scan(req: Request, res: Response, next: NextFunction) {
+    try {
+      const token = (req.body?.token || req.query?.token || req.body?.itemCode || req.query?.itemCode) as string;
+      const intent = (req.body?.intent || req.query?.intent) as string;
+      const result = await itemService.lookupItem({ token, intent });
+      if (!result.success) return sendError(res, result.message, 404);
+      sendSuccess(res, result.message, result.data);
+    } catch (error) { next(error); }
+  }
 }
 
 export const itemController = new ItemController();

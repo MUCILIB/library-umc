@@ -311,7 +311,15 @@ export default function CirculationSection() {
         credentials: "include",
         body: JSON.stringify(body),
       });
-      const data = await res.json();
+
+      let data: any;
+      try {
+        data = await res.json();
+      } catch (_jsonErr) {
+        const text = typeof res.text === "function" ? await res.text().catch(() => "") : "";
+        setError(res.ok ? "Format data respons tidak valid" : `Kesalahan server (${res.status}): ${text.substring(0, 100)}`);
+        return;
+      }
 
       if (!data.success) {
         setError(data.message || "Item tidak ditemukan");
@@ -342,9 +350,22 @@ export default function CirculationSection() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ memberId: "current-user", bibliographyId: itemResult.item.id }),
+        body: JSON.stringify({
+          memberId: "current-user",
+          bibliographyId: (itemResult.item as any).bibliographyId || itemResult.item.id,
+          itemId: itemResult.item.id,
+        }),
       });
-      const data = await res.json();
+
+      let data: any;
+      try {
+        data = await res.json();
+      } catch (_jsonErr) {
+        const text = typeof res.text === "function" ? await res.text().catch(() => "") : "";
+        setError(`Kesalahan server (${res.status}): ${text.substring(0, 100)}`);
+        return;
+      }
+
       if (!data.success) {
         setError(data.message || "Peminjaman gagal");
         return;
@@ -370,12 +391,22 @@ export default function CirculationSection() {
         credentials: "include",
         body: JSON.stringify({ condition }),
       });
-      const data = await res.json();
+
+      let data: any;
+      try {
+        data = await res.json();
+      } catch (_jsonErr) {
+        const text = typeof res.text === "function" ? await res.text().catch(() => "") : "";
+        setError(`Kesalahan server (${res.status}): ${text.substring(0, 100)}`);
+        return;
+      }
+
       if (!data.success) {
         setError(data.message || "Pengembalian gagal");
         return;
       }
-      setReturnResult(data);
+      const returnData = data.data && typeof data.data === "object" ? { ...data, ...data.data } : data;
+      setReturnResult(returnData);
       setMode("fine");
     } catch (err: any) {
       setError(err.message || "Kesalahan jaringan");

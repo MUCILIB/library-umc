@@ -10,6 +10,9 @@ import {
   sendValidationError
 } from "../../../utils/api-utils";
 import { MemberService } from "../../member/service/member.service";
+import { db } from "../../../db";
+import { members } from "../../../db/schema";
+import { eq, and, isNull } from "drizzle-orm";
 
 const loanService = new LoanService();
 const memberService = new MemberService();
@@ -29,16 +32,36 @@ export class LoanController {
         return sendError(res, "Tidak terautentikasi", 401);
       }
 
-      const eligibility = await memberService.getBorrowEligibilityByUserId(
-        req.user.id
-      );
-      if (!eligibility.success || !eligibility.data?.memberId) {
-        return sendError(res, eligibility.message, 400);
+      let memberIdToUse: string | undefined;
+      const requestedMemberId = validation.data.memberId || (req.body as any)?.memberId;
+      if (
+        (req.user.role === "super_admin" || req.user.role === "staff") &&
+        requestedMemberId &&
+        requestedMemberId !== "current-user"
+      ) {
+        const targetMember = await db.query.members.findFirst({
+          where: and(eq(members.id, requestedMemberId), isNull(members.deletedAt)),
+        });
+        if (targetMember) {
+          memberIdToUse = targetMember.id;
+        }
       }
 
+      if (!memberIdToUse) {
+        const eligibility = await memberService.getBorrowEligibilityByUserId(
+          req.user.id
+        );
+        if (!eligibility.success || !eligibility.data?.memberId) {
+          return sendError(res, eligibility.message, 400);
+        }
+        memberIdToUse = eligibility.data.memberId;
+      }
+
+      const targetBibId = (validation.data.bibliographyId || validation.data.collectionId || validation.data.itemId)!;
+
       const result = await loanService.requestLoan(
-        eligibility.data.memberId,
-        validation.data.bibliographyId,
+        memberIdToUse,
+        targetBibId,
         validation.data.loanDate,
         validation.data.dueDate,
         validation.data.notes
@@ -158,7 +181,8 @@ export class LoanController {
 
       const result = await loanService.returnLoan(
         String(req.params.loanId),
-        user.id
+        user.id,
+        req.body?.condition
       );
       sendSuccess(res, "Buku berhasil dikembalikan", result);
     } catch (error) {

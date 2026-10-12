@@ -32,6 +32,7 @@ vi.mock("../../../db", () => {
         items: { findFirst: vi.fn(), findMany: vi.fn() },
         bibliographies: { findFirst: vi.fn() },
         locations: { findFirst: vi.fn() },
+        loans: { findFirst: vi.fn() },
       },
       insert: vi.fn(),
       update: vi.fn(),
@@ -42,8 +43,9 @@ vi.mock("../../../db", () => {
 
 vi.mock("../../../db/schema", () => ({
   items: Symbol("items"),
-      bibliographies: Symbol("bibliographies"),
+  bibliographies: Symbol("bibliographies"),
   locations: Symbol("locations"),
+  loans: Symbol("loans"),
 }));
 
 vi.mock("../../shared/utils/stock-sync", () => ({
@@ -319,6 +321,62 @@ describe("ItemService Unit Tests", () => {
 
       expect(result.success).toBe(true);
       expect(result.message).toBe("Item updated");
+    });
+  });
+
+  describe("lookupItem", () => {
+    it("should reject when empty code or token is provided", async () => {
+      const result = await itemService.lookupItem({});
+      expect(result.success).toBe(false);
+      expect(result.message).toContain("wajib diisi");
+    });
+
+    it("should return item details and allowedActions for available item", async () => {
+      (db.query.items.findFirst as any).mockResolvedValueOnce({
+        id: "item-1",
+        itemCode: "ITEM-001",
+        status: "available",
+        bibliographyId: "bib-1",
+        bibliography: { title: "Buku Pemrograman Web" },
+        location: { room: "Lantai 2", rack: "01", shelf: "A" },
+      });
+      (db.query.loans.findFirst as any).mockResolvedValueOnce(null);
+
+      const result = await itemService.lookupItem({ itemCode: "ITEM-001" });
+      expect(result.success).toBe(true);
+      expect(result.data.item.itemCode).toBe("ITEM-001");
+      expect(result.data.item.title).toBe("Buku Pemrograman Web");
+      expect(result.data.item.status).toBe("available");
+      expect(result.data.item.location).toBe("Lantai 2 - Rak 01 - Baris A");
+      expect(result.data.allowedActions).toContain("loan");
+    });
+
+    it("should return return action for loaned item with active loan", async () => {
+      (db.query.items.findFirst as any).mockResolvedValueOnce({
+        id: "item-2",
+        itemCode: "ITEM-002",
+        status: "loaned",
+        bibliographyId: "bib-2",
+        bibliography: { title: "Struktur Data" },
+        location: null,
+        callNumber: "005.1 STR",
+      });
+      (db.query.loans.findFirst as any).mockResolvedValueOnce({
+        id: "loan-1",
+        memberId: "mem-1",
+        itemId: "item-2",
+        status: "approved",
+        loanDate: "2026-10-01",
+        dueDate: "2026-10-08",
+        member: { user: { name: "Budi Santoso" } },
+      });
+
+      const result = await itemService.lookupItem({ itemCode: "ITEM-002" });
+      expect(result.success).toBe(true);
+      expect(result.data.item.status).toBe("loaned");
+      expect(result.data.activeLoan).not.toBeNull();
+      expect(result.data.activeLoan.memberName).toBe("Budi Santoso");
+      expect(result.data.allowedActions).toContain("return");
     });
   });
 });
