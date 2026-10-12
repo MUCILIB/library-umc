@@ -316,8 +316,10 @@ export class ProposalService {
       requester.role === "super_admin" ||
       requester.role === "staff" ||
       requester.role === "admin";
+    const isCivitasMahasiswa =
+      requester.role === "mahasiswa" || requester.role === "student";
 
-    if (isStaffOrAdmin || isOwner) {
+    if (isStaffOrAdmin || isOwner || isCivitasMahasiswa) {
       // Full access
       return {
         buffer: masterBuffer,

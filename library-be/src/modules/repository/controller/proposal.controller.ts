@@ -146,7 +146,10 @@ export class ProposalController {
       const { id } = req.params;
 
       // Cek apakah requester memiliki sesi login (optional auth)
-      const session = await getSession(req);
+      const session = req.user
+        ? { user: req.user }
+        : await getSession(req).catch(() => null);
+
       const requester = {
         userId: session?.user?.id,
         role: (session?.user as any)?.role || "public"
