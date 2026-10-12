@@ -751,3 +751,78 @@ export const bibliographyStudyProgramRelations = relations(bibliographyStudyProg
   bibliography: one(bibliographies, { fields: [bibliographyStudyPrograms.bibliographyId], references: [bibliographies.id] }),
   studyProgram: one(studyPrograms, { fields: [bibliographyStudyPrograms.studyProgramId], references: [studyPrograms.id] })
 }));
+
+// ==========================================
+// 10. DIGITAL REPOSITORY & PAGE-LEVEL PDF ACL
+// ==========================================
+
+export const repositoryProposals = pgTable("repository_proposals", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  proposalNumber: varchar("proposal_number", { length: 50 }).notNull().unique(),
+  title: text("title").notNull(),
+  abstract: text("abstract"),
+  keywords: text("keywords").array(),
+  authorUserId: text("author_user_id").notNull().references(() => Users.id),
+  authorNim: varchar("author_nim", { length: 30 }).notNull(),
+  authorName: varchar("author_name", { length: 150 }).notNull(),
+  studyProgramId: integer("study_program_id").references(() => studyPrograms.id),
+  advisorName1: varchar("advisor_name_1", { length: 150 }).notNull(),
+  advisorName2: varchar("advisor_name_2", { length: 150 }),
+  documentCategory: varchar("document_category", { length: 50 }).default("PROPOSAL"),
+  status: varchar("status", { length: 30 }).notNull().default("SUBMITTED"), // SUBMITTED, UNDER_REVIEW, REVISION_REQUIRED, APPROVED, ARCHIVED
+  storagePath: text("storage_path").notNull(),
+  fileSize: integer("file_size").notNull(),
+  pageCount: integer("page_count").notNull().default(0),
+  fileHashSha256: varchar("file_hash_sha256", { length: 64 }).notNull(),
+  reviewerUserId: text("reviewer_user_id").references(() => Users.id),
+  reviewNotes: text("review_notes"),
+  reviewedAt: timestamp("reviewed_at"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow()
+}, (table) => ({
+  authorIdx: index("repo_prop_author_idx").on(table.authorUserId),
+  statusIdx: index("repo_prop_status_idx").on(table.status),
+  programIdx: index("repo_prop_program_idx").on(table.studyProgramId)
+}));
+
+export const repositoryDocumentPageRules = pgTable("repository_document_page_rules", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  proposalId: uuid("proposal_id").notNull().references(() => repositoryProposals.id, { onDelete: "cascade" }),
+  roleScope: varchar("role_scope", { length: 30 }).notNull().default("PUBLIC"), // PUBLIC, STUDENT, MEMBER, ALL
+  allowedStartPage: integer("allowed_start_page").notNull().default(1),
+  allowedEndPage: integer("allowed_end_page").notNull().default(10),
+  allowDownloadFull: boolean("allow_download_full").notNull().default(false),
+  configuredBy: text("configured_by").notNull().references(() => Users.id),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow()
+}, (table) => ({
+  propRoleIdx: unique("repo_rule_prop_role_unique").on(table.proposalId, table.roleScope)
+}));
+
+export const proposalReviewLogs = pgTable("proposal_review_logs", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  proposalId: uuid("proposal_id").notNull().references(() => repositoryProposals.id, { onDelete: "cascade" }),
+  reviewerUserId: text("reviewer_user_id").notNull().references(() => Users.id),
+  action: varchar("action", { length: 30 }).notNull(), // SUBMIT, UNDER_REVIEW, APPROVE, REVISION_REQUEST, RESUBMIT
+  notes: text("notes"),
+  createdAt: timestamp("created_at").notNull().defaultNow()
+});
+
+export const repositoryProposalRelations = relations(repositoryProposals, ({ one, many }) => ({
+  authorUser: one(Users, { fields: [repositoryProposals.authorUserId], references: [Users.id] }),
+  reviewerUser: one(Users, { fields: [repositoryProposals.reviewerUserId], references: [Users.id] }),
+  studyProgram: one(studyPrograms, { fields: [repositoryProposals.studyProgramId], references: [studyPrograms.id] }),
+  pageRules: many(repositoryDocumentPageRules),
+  reviewLogs: many(proposalReviewLogs)
+}));
+
+export const repositoryDocumentPageRuleRelations = relations(repositoryDocumentPageRules, ({ one }) => ({
+  proposal: one(repositoryProposals, { fields: [repositoryDocumentPageRules.proposalId], references: [repositoryProposals.id] }),
+  configuredByUser: one(Users, { fields: [repositoryDocumentPageRules.configuredBy], references: [Users.id] })
+}));
+
+export const proposalReviewLogRelations = relations(proposalReviewLogs, ({ one }) => ({
+  proposal: one(repositoryProposals, { fields: [proposalReviewLogs.proposalId], references: [repositoryProposals.id] }),
+  reviewerUser: one(Users, { fields: [proposalReviewLogs.reviewerUserId], references: [Users.id] })
+}));
+
