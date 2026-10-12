@@ -42,33 +42,42 @@ export interface CreateProposalPayload {
 class RepositoryService {
   private baseUrl = API_BASE_URL;
 
+  private async parseJsonResponse(response: Response, defaultErrorMessage: string) {
+    const text = await response.text();
+    let result: any;
+    try {
+      result = JSON.parse(text);
+    } catch (e) {
+      throw new Error(
+        `Server mengembalikan response non-JSON (Status ${response.status}). Pastikan backend telah aktif dan terdeploy.`
+      );
+    }
+    if (!result.success) {
+      throw new Error(result.message || defaultErrorMessage);
+    }
+    return result.data;
+  }
+
   async getMyProposals(): Promise<RepositoryProposal[]> {
     const response = await fetch(`${this.baseUrl}/api/repository/proposals`, {
       method: "GET",
       credentials: "include",
       headers: { "Content-Type": "application/json" }
     });
-    const result = await response.json();
-    if (!result.success) {
-      throw new Error(result.message || "Gagal memuat proposal");
-    }
-    return result.data;
+    return this.parseJsonResponse(response, "Gagal memuat proposal");
   }
 
   async getAllProposals(status?: string): Promise<RepositoryProposal[]> {
     const url = status
       ? `${this.baseUrl}/api/repository/proposals?status=${status}`
       : `${this.baseUrl}/api/repository/proposals`;
+
     const response = await fetch(url, {
       method: "GET",
       credentials: "include",
       headers: { "Content-Type": "application/json" }
     });
-    const result = await response.json();
-    if (!result.success) {
-      throw new Error(result.message || "Gagal memuat daftar proposal");
-    }
-    return result.data;
+    return this.parseJsonResponse(response, "Gagal memuat daftar proposal");
   }
 
   async getProposalById(id: string): Promise<RepositoryProposal> {
@@ -77,11 +86,7 @@ class RepositoryService {
       credentials: "include",
       headers: { "Content-Type": "application/json" }
     });
-    const result = await response.json();
-    if (!result.success) {
-      throw new Error(result.message || "Gagal memuat detail proposal");
-    }
-    return result.data;
+    return this.parseJsonResponse(response, "Gagal memuat detail proposal");
   }
 
   async submitProposal(
@@ -103,11 +108,7 @@ class RepositoryService {
       body: formData
     });
 
-    const result = await response.json();
-    if (!result.success) {
-      throw new Error(result.message || "Gagal mengajukan proposal");
-    }
-    return result.data;
+    return this.parseJsonResponse(response, "Gagal mengajukan proposal");
   }
 
   async reviewProposal(
@@ -121,11 +122,7 @@ class RepositoryService {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ action, reviewNotes })
     });
-    const result = await response.json();
-    if (!result.success) {
-      throw new Error(result.message || "Gagal memperbarui review proposal");
-    }
-    return result.data;
+    return this.parseJsonResponse(response, "Gagal memperbarui review proposal");
   }
 
   async configurePageRule(
@@ -143,11 +140,7 @@ class RepositoryService {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(rule)
     });
-    const result = await response.json();
-    if (!result.success) {
-      throw new Error(result.message || "Gagal menyimpan batasan halaman");
-    }
-    return result.data;
+    return this.parseJsonResponse(response, "Gagal menyimpan batasan halaman");
   }
 }
 
