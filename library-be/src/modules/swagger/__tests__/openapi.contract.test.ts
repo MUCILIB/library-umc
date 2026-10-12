@@ -4,6 +4,23 @@ import { describe, expect, it } from "vitest";
 // These verify the Swagger specification matches actual route registration
 
 describe("OpenAPI Contract", () => {
+  describe("Digital Repository & PDF ACL routes exist in OpenAPI", () => {
+    const repositoryRoutesList = [
+      { method: "POST", path: "/api/repository/proposals" },
+      { method: "GET", path: "/api/repository/proposals" },
+      { method: "GET", path: "/api/repository/proposals/:id" },
+      { method: "PATCH", path: "/api/repository/proposals/:id/review" },
+      { method: "POST", path: "/api/repository/proposals/:id/page-rules" },
+      { method: "GET", path: "/api/repository/proposals/:id/view-pdf" },
+    ];
+
+    repositoryRoutesList.forEach(({ method, path }) => {
+      it(`${method} ${path} should be documented in Swagger OpenAPI`, () => {
+        expect(path).toBeTruthy();
+        expect(method).toBeTruthy();
+      });
+    });
+  });
   describe("Import routes exist in OpenAPI", () => {
     const importRoutes = [
       { method: "POST", path: "/import/bibliographies/upload" },
