@@ -49,6 +49,15 @@ export class LoanService {
       );
     }
 
+    // Resolusi apakah bibliographyId yang dikirim adalah ID item langsung
+    let targetBibId = bibliographyId;
+    const directItem = await db.query.items.findFirst({
+      where: and(eq(items.id, bibliographyId), isNull(items.deletedAt))
+    });
+    if (directItem) {
+      targetBibId = directItem.bibliographyId;
+    }
+
     // Validasi antrian reservasi untuk koleksi ini
     // Jangan izinkan pinjam jika ada antrian menunggu (FIFO)
     const [waitingResCount] = await db
@@ -56,7 +65,7 @@ export class LoanService {
       .from(reservations)
       .where(
         and(
-          eq(reservations.bibliographyId, bibliographyId),
+          eq(reservations.bibliographyId, targetBibId),
           eq(reservations.status, "waiting"),
           isNull(reservations.deletedAt)
         )
@@ -68,7 +77,7 @@ export class LoanService {
       .from(items)
       .where(
         and(
-          eq(items.bibliographyId, bibliographyId),
+          eq(items.bibliographyId, targetBibId),
           eq(items.status, "available"),
           isNull(items.deletedAt)
         )
@@ -82,14 +91,16 @@ export class LoanService {
       );
     }
 
-    // Validasi item: Cari salinan pertama yang tersedia untuk bibliographyId ini
-    const item = await db.query.items.findFirst({
-      where: and(
-        eq(items.bibliographyId, bibliographyId),
-        eq(items.status, "available"),
-        isNull(items.deletedAt)
-      )
-    });
+    // Validasi item: Gunakan directItem jika available, atau cari salinan pertama yang tersedia
+    const item = directItem && directItem.status === "available"
+      ? directItem
+      : await db.query.items.findFirst({
+          where: and(
+            eq(items.bibliographyId, targetBibId),
+            eq(items.status, "available"),
+            isNull(items.deletedAt)
+          )
+        });
 
     if (!item) {
       throw new Error("Buku ini sedang tidak tersedia untuk dipinjam");
@@ -354,7 +365,7 @@ export class LoanService {
   /**
    * Return Loan (Pengembalian Buku secara langsung oleh Admin/Staff)
    */
-  async returnLoan(loanId: string, adminId: string) {
+  async returnLoan(loanId: string, adminId: string, condition?: string) {
     return await db.transaction(async (tx) => {
       // Find the loan
       const loan = await tx.query.loans.findFirst({
@@ -373,8 +384,9 @@ export class LoanService {
         updatedAt: new Date()
       }).where(eq(loans.id, loan.id));
 
-      // Update item status to available
-      await tx.update(items).set({ status: "available", updatedAt: new Date() }).where(eq(items.id, loan.itemId));
+      // Update item status based on condition
+      const itemStatus = condition === "damaged" ? "damaged" : condition === "lost" ? "lost" : "available";
+      await tx.update(items).set({ status: itemStatus as any, updatedAt: new Date() }).where(eq(items.id, loan.itemId));
 
       // Sync collection stock if needed
       const loanItem = await tx.query.items.findFirst({ where: and(eq(items.id, loan.itemId), isNull(items.deletedAt)) });
@@ -382,8 +394,8 @@ export class LoanService {
         await syncCollectionAvailableStock(tx, loanItem.bibliographyId);
       }
 
-      // Auto-fulfill next reservation if any
-      if (loanItem?.bibliographyId) {
+      // Auto-fulfill next reservation if any (only if returned as available)
+      if (itemStatus === "available" && loanItem?.bibliographyId) {
         void reservationService.fulfillNextReservation(loanItem.bibliographyId);
       }
 
@@ -412,10 +424,20 @@ export class LoanService {
         } else {
           await tx.insert(fines).values({ loanId: loan.id, amount: fineAmount.toString(), status: "unpaid" });
         }
-        return { success: true, message: `Buku dikembalikan, namun terlambat ${diffDays} hari. Dikenakan denda sebesar Rp ${fineAmount.toLocaleString("id-ID")}.` };
+        const fineId = existingUnpaidFine?.id || "fine-" + loan.id;
+        return {
+          success: true,
+          message: `Buku dikembalikan, namun terlambat ${diffDays} hari. Dikenakan denda sebesar Rp ${fineAmount.toLocaleString("id-ID")}.`,
+          fine: {
+            id: fineId || "fine-" + loan.id,
+            overdueDays: diffDays,
+            assessedAmount: fineAmount.toString(),
+            status: "unpaid",
+          }
+        };
       }
 
-      return { success: true, message: "Buku telah berhasil dikembalikan tepat waktu." };
+      return { success: true, message: "Buku telah berhasil dikembalikan tepat waktu.", fine: null };
     });
   }
 

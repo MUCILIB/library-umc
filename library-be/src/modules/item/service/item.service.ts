@@ -1,5 +1,5 @@
 import { db } from "../../../db";
-import { items, bibliographies, locations, logs } from "../../../db/schema";
+import { items, bibliographies, locations, logs, loans } from "../../../db/schema";
 import { eq, and, like, ilike, or, isNull, sql } from "drizzle-orm";
 import type { CreateItemData, BulkCreateItemData, UpdateItemData } from "../validation/item.validation";
 import { syncCollectionAvailableStock } from "../../shared/utils/stock-sync";
@@ -82,6 +82,164 @@ export class ItemService {
     });
     if (!item) return null;
     return item;
+  }
+
+  async lookupItem(param: { itemCode?: string; token?: string; intent?: string }) {
+    const rawVal = (param.itemCode || param.token || "").trim();
+    if (!rawVal) {
+      return { success: false, message: "Kode item atau QR token wajib diisi", data: null };
+    }
+
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(rawVal);
+
+    // 1. Cari item berdasarkan itemCode, inventoryCode, qrToken, atau id
+    let item = await db.query.items.findFirst({
+      where: and(
+        isNull(items.deletedAt),
+        or(
+          eq(items.itemCode, rawVal),
+          eq(items.inventoryCode, rawVal),
+          eq(items.qrToken, rawVal),
+          isUuid ? eq(items.id, rawVal) : undefined
+        )
+      ),
+      with: {
+        bibliography: true,
+        location: true,
+      },
+    });
+
+    // 2. Jika belum ditemukan dan berupa UUID, mungkin ini bibliographyId
+    if (!item && isUuid) {
+      item = await db.query.items.findFirst({
+        where: and(
+          eq(items.bibliographyId, rawVal),
+          isNull(items.deletedAt)
+        ),
+        with: {
+          bibliography: true,
+          location: true,
+        },
+      });
+    }
+
+    // 3. Jika belum ditemukan, periksa apakah rawVal adalah verificationToken di tabel loans
+    let activeLoanData: any = null;
+    if (!item) {
+      const loanByToken = await db.query.loans.findFirst({
+        where: and(
+          eq(loans.verificationToken, rawVal),
+          isNull(loans.deletedAt)
+        ),
+        with: {
+          item: {
+            with: {
+              bibliography: true,
+              location: true,
+            }
+          },
+          member: {
+            with: {
+              user: true,
+            }
+          }
+        }
+      });
+
+      if (loanByToken?.item) {
+        item = loanByToken.item as any;
+        activeLoanData = {
+          id: loanByToken.id,
+          loanCode: loanByToken.id.slice(0, 8).toUpperCase(),
+          memberId: loanByToken.memberId,
+          memberName: loanByToken.member?.user?.name || "-",
+          itemId: loanByToken.itemId,
+          status: loanByToken.status,
+          loanDate: loanByToken.loanDate,
+          dueDate: loanByToken.dueDate,
+          returnDate: loanByToken.returnDate,
+        };
+      }
+    }
+
+    if (!item) {
+      return { success: false, message: `Item dengan kode/token "${rawVal}" tidak ditemukan`, data: null };
+    }
+
+    // 4. Cari active loan jika belum ditemukan
+    if (!activeLoanData) {
+      const activeLoan = await db.query.loans.findFirst({
+        where: and(
+          eq(loans.itemId, item.id),
+          sql`${loans.status} IN ('approved', 'extended', 'pending')`,
+          isNull(loans.deletedAt)
+        ),
+        with: {
+          member: {
+            with: {
+              user: true,
+            }
+          }
+        },
+        orderBy: (loans, { desc }) => [desc(loans.createdAt)],
+      });
+
+      if (activeLoan) {
+        activeLoanData = {
+          id: activeLoan.id,
+          loanCode: activeLoan.id.slice(0, 8).toUpperCase(),
+          memberId: activeLoan.memberId,
+          memberName: activeLoan.member?.user?.name || "-",
+          itemId: activeLoan.itemId,
+          status: activeLoan.status,
+          loanDate: activeLoan.loanDate,
+          dueDate: activeLoan.dueDate,
+          returnDate: activeLoan.returnDate,
+        };
+      }
+    }
+
+    // 5. Tentukan allowedActions
+    const allowedActions: string[] = [];
+    const isLoaned = item.status === "loaned" || (activeLoanData && ["approved", "extended"].includes(activeLoanData.status));
+
+    if (item.status === "available" && !isLoaned) {
+      allowedActions.push("loan");
+    } else if (isLoaned) {
+      allowedActions.push("return");
+    }
+
+    // Format location string
+    let locationStr = "-";
+    if (item.location) {
+      const parts = [
+        item.location.room,
+        item.location.rack ? `Rak ${item.location.rack}` : null,
+        item.location.shelf ? `Baris ${item.location.shelf}` : null
+      ].filter(Boolean);
+      locationStr = parts.join(" - ") || "-";
+    } else if (item.callNumber) {
+      locationStr = item.callNumber;
+    }
+
+    const responsePayload = {
+      item: {
+        id: item.id,
+        itemCode: item.itemCode,
+        title: item.bibliography?.title || "Tanpa Judul",
+        status: item.status,
+        location: locationStr,
+        bibliographyId: item.bibliographyId,
+      },
+      activeLoan: activeLoanData,
+      allowedActions,
+    };
+
+    return {
+      success: true,
+      message: "Item ditemukan",
+      data: responsePayload,
+    };
   }
 
   private generateQrToken(): string {
