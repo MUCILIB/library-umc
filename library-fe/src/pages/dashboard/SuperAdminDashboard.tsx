@@ -37,6 +37,7 @@ import ReportsSection from "@/components/dashboard/ReportsSection";
 import UsersSection from "@/components/dashboard/UsersSection";
 import ReturnApprovalsSection from "@/components/dashboard/ReturnApprovalsSection";
 import RecommendationsSection from "@/components/dashboard/RecommendationsSection";
+import RepositorySection from "@/components/dashboard/RepositorySection";
 import FakultasSection from "@/components/dashboard/FakultasSection";
 import ProdiSection from "@/components/dashboard/ProdiSection";
 import LocationSection from "@/components/dashboard/LocationSection";
@@ -74,6 +75,7 @@ type ActiveMenu =
   | "circulation"
   | "bibliographies"
   | "items"
+  | "repository"
   | "importData"
   | "exportData"
   | "guests"
@@ -101,7 +103,8 @@ const MENU_CONFIG: MenuConfig[] = [
   { key: "dashboard", label: "Dashboard", icon: Home },
   { key: "circulation", label: "Sirkulasi & Scan", icon: ScanLine },
   { key: "bibliographies", label: "Bibliografi", icon: Book, group: "Manajemen Koleksi" },
-  { key: "items", label: "Item / Eksemplar", icon: Package, group: "Manajemen Koleksi" },
+  { key: "items", label: "Item Buku", icon: Package, group: "Manajemen Koleksi" },
+  { key: "repository", label: "Repositori Skripsi", icon: GraduationCap, group: "Manajemen Koleksi" },
   { key: "importData", label: "Import Data", icon: FileUp, group: "Manajemen Koleksi" },
   { key: "exportData", label: "Export Data", icon: FileDown, group: "Manajemen Koleksi" },
   { key: "fakultas", label: "Fakultas", icon: Building2, group: "Master Data" },
@@ -316,6 +319,8 @@ export default function SuperAdminDashboard() {
         );
       case "items":
         return <ItemSection />;
+      case "repository":
+        return <RepositorySection />;
       case "importData":
         return <ImportSection />;
       case "exportData":
