@@ -208,8 +208,10 @@ describe("LoanService Unit Tests", () => {
     });
 
     it("sukses return terlambat dan membuat denda", async () => {
-      const fiveDaysAgo = new Date();
-      fiveDaysAgo.setDate(fiveDaysAgo.getDate() - 5);
+      // Menggunakan selisih tepat 5 hari berdasarkan batas UTC/lokal
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const fiveDaysAgo = new Date(today.getTime() - 5 * 24 * 60 * 60 * 1000);
 
       let insertedFine: any = null;
       (db.transaction as any).mockImplementationOnce(async (cb: any) => {
@@ -218,7 +220,7 @@ describe("LoanService Unit Tests", () => {
           id: "loan-1",
           itemId: "item-1",
           status: "approved",
-          dueDate: fiveDaysAgo.toISOString().split("T")[0],
+          dueDate: `${fiveDaysAgo.getFullYear()}-${String(fiveDaysAgo.getMonth() + 1).padStart(2, "0")}-${String(fiveDaysAgo.getDate()).padStart(2, "0")}`,
         });
         tx.query.items.findFirst = vi.fn().mockResolvedValueOnce({
           id: "item-1",

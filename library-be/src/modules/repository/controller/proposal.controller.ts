@@ -74,7 +74,7 @@ export class ProposalController {
    */
   async getById(req: Request, res: Response, next: NextFunction) {
     try {
-      const { id } = req.params;
+      const id = String(req.params.id);
       const proposal = await proposalService.getProposalById(id);
       sendSuccess(res, "Detail proposal berhasil diambil", proposal);
     } catch (error) {
@@ -97,7 +97,7 @@ export class ProposalController {
         return sendValidationError(res, validation.error.flatten());
       }
 
-      const { id } = req.params;
+      const id = String(req.params.id);
       const updated = await proposalService.reviewProposal(
         id,
         user.id,
@@ -125,7 +125,7 @@ export class ProposalController {
         return sendValidationError(res, validation.error.flatten());
       }
 
-      const { id } = req.params;
+      const id = String(req.params.id);
       const rule = await proposalService.configurePageRule(
         id,
         user.id,
@@ -143,7 +143,7 @@ export class ProposalController {
    */
   async viewPdf(req: Request, res: Response, next: NextFunction) {
     try {
-      const { id } = req.params;
+      const id = String(req.params.id);
 
       // Cek apakah requester memiliki sesi login (optional auth)
       const session = req.user
