@@ -18,6 +18,7 @@ import bibliographyRoutes from "../modules/bibliography/route/bibliography.route
 import { collectionRoutes } from "../modules/collection/route/collection.route";
 import importRoutes from "../modules/import/route/import.route";
 import exportRoutes from "../modules/export/route/export.route";
+import { repositoryRoutes } from "../modules/repository/route/proposal.route";
 
 const router = Router();
 
@@ -44,6 +45,9 @@ router.use(importRoutes);
 
 // Export
 router.use(exportRoutes);
+
+// Digital Repository & Page-Level PDF ACL
+router.use(repositoryRoutes);
 
 // Guests
 router.use(guestRoutes);

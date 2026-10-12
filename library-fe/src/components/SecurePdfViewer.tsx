@@ -1,0 +1,127 @@
+import { useState } from "react";
+import { Link } from "react-router";
+import { authClient } from "@/utils/auth-client";
+import { API_BASE_URL } from "@/utils/api-config";
+import {
+  Lock,
+  LogIn,
+  FileText,
+  ShieldAlert,
+  Maximize2
+} from "lucide-react";
+
+interface SecurePdfViewerProps {
+  proposalId: string;
+  title: string;
+  authorName: string;
+  authorNim: string;
+  totalPhysicalPages: number;
+  allowedPublicPages?: number; // Default 10
+}
+
+export default function SecurePdfViewer({
+  proposalId,
+  title,
+  authorName,
+  authorNim,
+  totalPhysicalPages,
+  allowedPublicPages = 10
+}: SecurePdfViewerProps) {
+  const { data: session } = authClient.useSession();
+  const [fullscreen, setFullscreen] = useState(false);
+
+  // Jika user sudah login (mahasiswa/admin), seluruh halaman dapat diakses
+  const isAuthenticated = Boolean(session?.user);
+
+  // Endpoint streaming dynamic sliced PDF dari backend
+  const pdfStreamUrl = `${API_BASE_URL}/api/repository/proposals/${proposalId}/view-pdf#toolbar=0&navpanes=0&scrollbar=1`;
+
+  const visiblePagesCount = isAuthenticated
+    ? totalPhysicalPages
+    : Math.min(allowedPublicPages, totalPhysicalPages);
+
+  return (
+    <div className={`space-y-6 ${fullscreen ? "fixed inset-0 z-50 bg-background p-6 overflow-y-auto" : ""}`}>
+      {/* Header Info Dokumen */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 p-5 rounded-2xl bg-card border border-border">
+        <div>
+          <div className="flex items-center gap-2">
+            <span className="text-xs px-2.5 py-0.5 rounded-full font-semibold bg-red-100 text-red-800 dark:bg-red-950/60 dark:text-red-300">
+              {isAuthenticated ? "Akses Civitas Lengkap" : "Pratinjau Publik Terbatas"}
+            </span>
+            <span className="text-xs text-muted-foreground font-mono">
+              Halaman 1 s/d {visiblePagesCount} dari total {totalPhysicalPages} Halaman
+            </span>
+          </div>
+          <h2 className="text-lg font-bold text-foreground mt-1.5 line-clamp-1">{title}</h2>
+          <p className="text-xs text-muted-foreground">
+            Penulis: {authorName} ({authorNim})
+          </p>
+        </div>
+
+        <button
+          onClick={() => setFullscreen(!fullscreen)}
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border text-xs font-semibold text-foreground hover:bg-muted transition-colors shrink-0"
+        >
+          <Maximize2 className="w-3.5 h-3.5 text-muted-foreground" />
+          {fullscreen ? "Tutup Layar Penuh" : "Layar Penuh"}
+        </button>
+      </div>
+
+      {/* PDF Frame Container */}
+      <div className="relative rounded-2xl border border-border bg-muted/20 overflow-hidden shadow-sm">
+        {/* Iframe yang memanggil potongan PDF dari backend */}
+        <div className="w-full h-[620px] md:h-[750px] bg-slate-100 dark:bg-slate-900">
+          <iframe
+            src={pdfStreamUrl}
+            title={title}
+            className="w-full h-full border-0 select-none"
+          />
+        </div>
+
+        {/* Card Info Pembatas & Efek Blur untuk Pengguna Non-Login (Public Guest) */}
+        {!isAuthenticated && totalPhysicalPages > allowedPublicPages && (
+          <div className="relative border-t border-border bg-gradient-to-b from-card/80 to-card backdrop-blur-md p-8 md:p-12 text-center">
+            {/* Soft decorative background fade */}
+            <div className="max-w-xl mx-auto space-y-4">
+              <div className="w-12 h-12 rounded-2xl bg-amber-100 dark:bg-amber-950/70 text-amber-700 dark:text-amber-300 mx-auto flex items-center justify-center shadow-inner">
+                <Lock className="w-6 h-6" />
+              </div>
+
+              <div>
+                <h3 className="text-lg font-bold text-foreground">
+                  Akses Terkunci Mulai Halaman {allowedPublicPages + 1} s/d {totalPhysicalPages}
+                </h3>
+                <p className="text-sm text-muted-foreground mt-2 leading-relaxed">
+                  Pratinjau publik hanya menampilkan halaman awal (Cover, Abstrak, dan Daftar Isi). Sesuai kebijakan repositori kampus, naskah bab pembahasan lengkap hanya dapat diakses oleh dosen dan mahasiswa civitas akademika.
+                </p>
+              </div>
+
+              <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-3">
+                <Link
+                  to="/login"
+                  className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl font-semibold text-sm text-white bg-red-700 hover:bg-red-800 transition-colors shadow-sm"
+                >
+                  <LogIn className="w-4 h-4" />
+                  Masuk dengan Akun Kampus
+                </Link>
+                <Link
+                  to="/katalog"
+                  className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl font-medium text-sm border border-border hover:bg-muted text-foreground transition-colors"
+                >
+                  <FileText className="w-4 h-4 text-muted-foreground" />
+                  Eksplorasi Koleksi Lain
+                </Link>
+              </div>
+
+              <div className="flex items-center justify-center gap-1.5 text-[11px] text-muted-foreground pt-3">
+                <ShieldAlert className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
+                <span>Dokumen dilindungi hak cipta & Page-Level Digital ACL UMC</span>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}

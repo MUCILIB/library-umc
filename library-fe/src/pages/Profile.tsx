@@ -13,6 +13,7 @@ import RiwayatPeminjaman from "@/components/RiwayatPeminjaman";
 import FinesList from "@/components/FinesList";
 import MemberCard from "@/components/MemberCard";
 import SavedBooksTab from "@/components/SavedBooksTab";
+import StudentRepositoryTab from "@/components/StudentRepositoryTab";
 import { useToast } from "@/hooks/useToast";
 import { API_BASE_URL } from "@/utils/api-config";
 import { Settings, Mail, BookMarked, Send, Loader2, Info } from "lucide-react";
@@ -285,6 +286,7 @@ const Profile = () => {
       count: savedCount > 0 ? savedCount : null
     },
     { id: "kartu-member", label: "Kartu Member", count: null },
+    { id: "repositori-skripsi", label: "Unggah Skripsi / Proposal", count: null },
     ...(isLecturerOnly
       ? [{ id: "usulan-koleksi", label: "Usulan Koleksi", count: null }]
       : []),
@@ -395,6 +397,7 @@ const Profile = () => {
               />
             </div>
           )}
+          {activeTab === "repositori-skripsi" && <StudentRepositoryTab />}
           {activeTab === "usulan-koleksi" && isLecturerOnly && (
             <section className="bg-card border border-red-100 rounded-[28px] p-6 md:p-8 shadow-sm">
               <div className="flex items-start gap-4 mb-6">

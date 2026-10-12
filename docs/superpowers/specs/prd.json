@@ -1,0 +1,130 @@
+{
+  "project": "library-umc",
+  "branchName": "ralph/prd-features",
+  "description": "PRD Features: Duplicate Detection (FR-12) & Faculty/Study Program Filter (FR-14)",
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "Add schema tables for faculties, study_programs, and M:N junctions",
+      "description": "As a developer, I need database tables for faculties, study_programs, bibliography_faculties, and bibliography_study_programs to support M:N relationships with ALL concept.",
+      "acceptanceCriteria": [
+        "Add `faculties` table (id, name, code, createdAt, deletedAt)",
+        "Add `studyPrograms` table (id, facultyId FK, name, code, createdAt, deletedAt) with facultyId index",
+        "Add `bibliographyFaculties` junction table (id, bibliographyId FK, facultyId FK, createdAt) with unique constraint on (bibliographyId, facultyId)",
+        "Add `bibliographyStudyPrograms` junction table (id, bibliographyId FK, studyProgramId FK, createdAt) with unique constraint on (bibliographyId, studyProgramId)",
+        "Add relations for all new tables",
+        "Update bibliographyRelations to include bibliographyFaculties and bibliographyStudyPrograms",
+        "Generate and apply migration successfully",
+        "Typecheck passes"
+      ],
+      "priority": 1,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-002",
+      "title": "Create faculties CRUD module with tests",
+      "description": "As a super admin, I want to manage faculties so that bibliographies can be categorized by faculty.",
+      "acceptanceCriteria": [
+        "Create validation schemas: createFacultySchema (name min 3), updateFacultySchema (partial)",
+        "Create faculty service: getAll, getById, create (duplicate name check), update, softDelete",
+        "Usage check before delete: reject if study_programs or bibliography_faculties reference this faculty",
+        "Create faculty controller with Zod safeParse + sendSuccess/sendError/sendValidationError",
+        "Create faculty route with GET (public), POST/PATCH/DELETE (super_admin) + JSDoc swagger",
+        "Register route in routes/index.ts",
+        "Create unit tests for faculty service covering: create success, duplicate reject, delete with usage check",
+        "Typecheck passes"
+      ],
+      "priority": 2,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-003",
+      "title": "Create study programs CRUD module with tests",
+      "description": "As a super admin, I want to manage study programs under faculties so that bibliographies can be categorized by study program.",
+      "acceptanceCriteria": [
+        "Create validation schemas: createStudyProgramSchema (name min 3, facultyId required), updateStudyProgramSchema (partial)",
+        "Create study program service: getAll (with optional facultyId filter), getById, create (duplicate name check within faculty), update, softDelete",
+        "Usage check before delete: reject if bibliography_study_programs reference this study program",
+        "Create study program controller with Zod safeParse + sendSuccess/sendError/sendValidationError",
+        "Create study program route with GET (public), POST/PATCH/DELETE (super_admin) + JSDoc swagger",
+        "Register route in routes/index.ts",
+        "Create unit tests for study program service covering: create success, duplicate reject within faculty, list with facultyId filter",
+        "Typecheck passes"
+      ],
+      "priority": 3,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-004",
+      "title": "Update bibliography module with faculty/prodi M:N sync and ALL-aware filter",
+      "description": "As a librarian, I want to assign faculties and study programs to bibliographies and filter the catalog by them, with ALL concept support.",
+      "acceptanceCriteria": [
+        "Add `facultyIds` and `studyProgramIds` arrays to createBibliographySchema and updateBibliographySchema",
+        "Add `facultyId` and `studyProgramId` query params to bibliographyQuerySchema",
+        "Update bibliography service create(): sync bibliography_faculties and bibliography_studyPrograms after insert",
+        "Update bibliography service update(): sync junction tables (delete old, insert new)",
+        "Update bibliography service getById(): include faculties and studyPrograms in response with nested faculty",
+        "Update bibliography service list(): add ALL-aware filter logic for facultyId and studyProgramId",
+        "Update bibliography service list(): include faculties and studyPrograms in response mapping",
+        "Update validation tests for new schema fields",
+        "Typecheck passes"
+      ],
+      "priority": 4,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-005",
+      "title": "Add duplicate detection endpoint for bibliographies",
+      "description": "As a librarian creating a bibliography, I want the system to detect duplicates via ISBN exact match and title+author fuzzy match, with suggestions to redirect to existing records.",
+      "acceptanceCriteria": [
+        "Add `checkDuplicate` method to bibliography service: ISBN exact match + title ILIKE match + author ILIKE via bibliography_authors JOIN",
+        "Set `hasExactMatch` flag true if any ISBN exact match found",
+        "Return combined unique results with id, title, isbnIssn, classification, callNumber, authors, similarity",
+        "Add Zod validation: at least one of isbn/title/author required",
+        "Add checkDuplicate handler to bibliography controller",
+        "Add route GET /bibliographies/check-duplicate (public, before /:id)",
+        "Create unit tests for checkDuplicate: ISBN match, title+author fuzzy match, empty result, at least one param required",
+        "Update validation tests",
+        "Typecheck passes"
+      ],
+      "priority": 5,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-006",
+      "title": "Add seed data for UMC faculties and study programs",
+      "description": "As a developer, I want seed data for UMC faculties and study programs so that the system works out of the box.",
+      "acceptanceCriteria": [
+        "Create or update seed.ts with faculties data (Fakultas Teknik, FEB, FIK, FKIP, FH, etc.)",
+        "Create or update seed.ts with study programs data linked to faculties",
+        "Seed runs successfully with npm run db:seed",
+        "Typecheck passes"
+      ],
+      "priority": 6,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-007",
+      "title": "Add swagger documentation for all new endpoints",
+      "description": "As a developer, I want all new endpoints documented in Swagger for easy API reference.",
+      "acceptanceCriteria": [
+        "Add Faculty and StudyProgram schemas to swagger.ts components.schemas",
+        "Add all faculty CRUD paths to swagger.ts paths",
+        "Add all study program CRUD paths to swagger.ts paths",
+        "Add Faculties and Study Programs tags to swagger.ts tags",
+        "Update Bibliography schema with faculties[] and studyPrograms[] fields",
+        "Add check-duplicate endpoint to swagger paths",
+        "Typecheck passes"
+      ],
+      "priority": 7,
+      "passes": false,
+      "notes": ""
+    }
+  ]
+}
