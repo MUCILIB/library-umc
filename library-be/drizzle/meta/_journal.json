@@ -57,6 +57,13 @@
       "when": 1791432683879,
       "tag": "0007_mute_snowbird",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1791817093220,
+      "tag": "0008_whole_nick_fury",
+      "breakpoints": true
     }
   ]
 }
