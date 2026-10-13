@@ -287,4 +287,73 @@ describe("E2E Simulation: PDF Generation, Student Upload, and Public vs Mahasisw
     const mhsDoc = await PDFDocument.load(sentBuffer!);
     expect(mhsDoc.getPageCount()).toBe(40);
   });
+
+  it("simulates STUDENT role (role: 'student') accessing the PDF -> gets full 40 pages", async () => {
+    const { db } = await import("../../../db");
+
+    let selectCallCount = 0;
+    (db.select as any).mockImplementation(() => {
+      selectCallCount++;
+      if (selectCallCount === 1) {
+        return createSelectChain([
+          {
+            id: tempProposalId,
+            title: "Sistem Rekomendasi Skripsi Berbasis Graf",
+            storagePath: tempFilePath,
+            pageCount: 40,
+            status: "APPROVED"
+          }
+        ]);
+      } else if (selectCallCount === 2) {
+        return createSelectChain([
+          {
+            id: "rule-1",
+            proposalId: tempProposalId,
+            roleScope: "PUBLIC",
+            allowedStartPage: 1,
+            allowedEndPage: 10,
+            allowDownloadFull: false
+          }
+        ]);
+      } else {
+        return createSelectChain([]);
+      }
+    });
+
+    let sentBuffer: Buffer | null = null;
+    let contentTypeHeader = "";
+
+    const req = {
+      params: { id: tempProposalId },
+      headers: {},
+      user: {
+        id: "user-student-002",
+        name: "Siti Student",
+        role: "student" // Authenticated with DB default role 'student'
+      }
+    } as unknown as Request;
+
+    const res = {
+      setHeader: vi.fn((key: string, val: string) => {
+        if (key.toLowerCase() === "content-type") contentTypeHeader = val;
+      }),
+      status: vi.fn().mockReturnThis(),
+      send: vi.fn((data: Buffer) => {
+        sentBuffer = data;
+      })
+    } as unknown as Response;
+
+    const next = vi.fn((err) => {
+      if (err) console.error("STUDENT viewPdf error:", err);
+    });
+
+    await proposalController.viewPdf(req, res, next);
+
+    expect(contentTypeHeader).toBe("application/pdf");
+    expect(sentBuffer).not.toBeNull();
+
+    // Authenticated student gets the complete 40 pages
+    const studentDoc = await PDFDocument.load(sentBuffer!);
+    expect(studentDoc.getPageCount()).toBe(40);
+  });
 });
