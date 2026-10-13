@@ -14,9 +14,10 @@ import FinesList from "@/components/FinesList";
 import MemberCard from "@/components/MemberCard";
 import SavedBooksTab from "@/components/SavedBooksTab";
 import StudentRepositoryTab from "@/components/StudentRepositoryTab";
+import { repositoryService } from "@/services/repositoryService";
 import { useToast } from "@/hooks/useToast";
 import { API_BASE_URL } from "@/utils/api-config";
-import { Settings, Mail, BookMarked, Send, Loader2, Info } from "lucide-react";
+import { Settings, Mail, BookMarked, Send, Loader2, Info, GraduationCap, BookOpen } from "lucide-react";
 import type { AuthUser } from "@/types/auth";
 
 const Profile = () => {
@@ -36,6 +37,7 @@ const Profile = () => {
   const [activeLoanCount, setActiveLoanCount] = useState(0);
   const [unpaidFineCount, setUnpaidFineCount] = useState(0);
   const [savedCount, setSavedCount] = useState(0);
+  const [proposalCount, setProposalCount] = useState(0);
   const { success, error } = useToast();
   const currentUserId = session?.user?.id;
 
@@ -126,12 +128,14 @@ const Profile = () => {
         if (!currentUserId) {
           setActiveLoanCount(0);
           setUnpaidFineCount(0);
+          setProposalCount(0);
           return;
         }
 
-        const [loans, fines] = await Promise.all([
+        const [loans, fines, myProposals] = await Promise.all([
           loanService.getMyLoanHistory(),
-          fineService.getMyFines()
+          fineService.getMyFines(),
+          repositoryService.getMyProposals().catch(() => [])
         ]);
 
         const activeLoans = loans.filter((loan) =>
@@ -143,10 +147,12 @@ const Profile = () => {
 
         setActiveLoanCount(activeLoans);
         setUnpaidFineCount(unpaidFines);
+        setProposalCount(myProposals.length);
       } catch (err) {
         console.error("Failed to fetch profile counters:", err);
         setActiveLoanCount(0);
         setUnpaidFineCount(0);
+        setProposalCount(0);
       }
     };
 
@@ -272,6 +278,7 @@ const Profile = () => {
     {
       id: "peminjaman-aktif",
       label: "Peminjaman Aktif",
+      icon: <BookOpen size={14} className="shrink-0" />,
       count: activeLoanCount > 0 ? activeLoanCount : null
     },
     { id: "riwayat-peminjaman", label: "Riwayat Peminjaman", count: null },
@@ -285,8 +292,14 @@ const Profile = () => {
       label: "Buku Disimpan",
       count: savedCount > 0 ? savedCount : null
     },
+    {
+      id: "repositori-skripsi",
+      label: "Repositori Skripsi",
+      icon: <GraduationCap size={15} className="shrink-0 text-red-600 dark:text-red-400" />,
+      count: proposalCount > 0 ? proposalCount : null,
+      highlight: true
+    },
     { id: "kartu-member", label: "Kartu Member", count: null },
-    { id: "repositori-skripsi", label: "Unggah Skripsi / Proposal", count: null },
     ...(isLecturerOnly
       ? [{ id: "usulan-koleksi", label: "Usulan Koleksi", count: null }]
       : []),
@@ -358,15 +371,18 @@ const Profile = () => {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`relative pb-5 text-xs font-black uppercase tracking-[0.15em] transition-all ${
+                className={`relative pb-5 text-xs font-black uppercase tracking-[0.15em] transition-all flex items-center gap-1.5 ${
                   activeTab === tab.id
                     ? "text-primary scale-105"
+                    : tab.highlight
+                    ? "text-red-700 dark:text-red-400 hover:text-red-800 font-black"
                     : "text-slate-400 hover:text-slate-600"
                 }`}
               >
-                {tab.label}
+                {tab.icon}
+                <span>{tab.label}</span>
                 {tab.count !== null && (
-                  <sup className="ml-1 text-[8px] font-black text-primary">
+                  <sup className="ml-0.5 text-[8px] font-black px-1.5 py-0.5 rounded-full bg-red-100 text-primary dark:bg-red-950 dark:text-red-300">
                     {tab.count}
                   </sup>
                 )}

@@ -14,6 +14,7 @@ import {
 import { repositoryService, type RepositoryProposal } from "@/services/repositoryService";
 import { API_BASE_URL } from "@/utils/api-config";
 import { useToast } from "@/hooks/useToast";
+import Modal from "@/components/ui/modal";
 
 export default function RepositorySection() {
   const { success, error } = useToast();
@@ -315,184 +316,166 @@ export default function RepositorySection() {
       </div>
 
       {/* Modal Review */}
-      {reviewModalItem && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-          <div className="w-full max-w-lg bg-card border border-border rounded-2xl shadow-xl overflow-hidden">
-            <div className="p-6 border-b border-border flex items-center justify-between">
-              <h3 className="text-base font-bold text-foreground">
-                Tinjau Berkas: {reviewModalItem.proposalNumber}
-              </h3>
-              <button
-                onClick={() => setReviewModalItem(null)}
-                className="text-muted-foreground hover:text-foreground text-sm font-semibold"
-              >
-                ✕
-              </button>
+      <Modal
+        isOpen={!!reviewModalItem}
+        onClose={() => setReviewModalItem(null)}
+        title={reviewModalItem ? `Tinjau Berkas: ${reviewModalItem.proposalNumber}` : "Tinjau Berkas"}
+        size="md"
+      >
+        {reviewModalItem && (
+          <form onSubmit={handleReviewSubmit} className="space-y-4 p-2">
+            <div>
+              <p className="text-xs text-muted-foreground">Judul Karya Ilmiah:</p>
+              <p className="text-sm font-bold text-foreground mt-0.5">{reviewModalItem.title}</p>
+              <p className="text-xs text-muted-foreground mt-1">
+                Penulis: {reviewModalItem.authorName} ({reviewModalItem.authorNim})
+              </p>
             </div>
 
-            <form onSubmit={handleReviewSubmit} className="p-6 space-y-4">
-              <div>
-                <p className="text-xs text-muted-foreground">Judul Karya Ilmiah:</p>
-                <p className="text-sm font-bold text-foreground mt-0.5">{reviewModalItem.title}</p>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Penulis: {reviewModalItem.authorName} ({reviewModalItem.authorNim})
-                </p>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-foreground mb-1">
-                  Keputusan Verifikasi *
-                </label>
-                <div className="grid grid-cols-2 gap-3">
-                  <button
-                    type="button"
-                    onClick={() => setReviewAction("APPROVE")}
-                    className={`p-3 rounded-xl border text-xs font-bold flex items-center justify-center gap-2 transition-colors ${
-                      reviewAction === "APPROVE"
-                        ? "border-emerald-600 bg-emerald-50 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300"
-                        : "border-border text-muted-foreground hover:bg-muted"
-                    }`}
-                  >
-                    <CheckCircle className="w-4 h-4" />
-                    Setujui (Publish)
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setReviewAction("REVISION_REQUIRED")}
-                    className={`p-3 rounded-xl border text-xs font-bold flex items-center justify-center gap-2 transition-colors ${
-                      reviewAction === "REVISION_REQUIRED"
-                        ? "border-amber-600 bg-amber-50 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300"
-                        : "border-border text-muted-foreground hover:bg-muted"
-                    }`}
-                  >
-                    <AlertCircle className="w-4 h-4" />
-                    Minta Revisi
-                  </button>
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-foreground mb-1">
-                  Catatan Review / Instruksi Revisi
-                </label>
-                <textarea
-                  rows={4}
-                  placeholder={
-                    reviewAction === "REVISION_REQUIRED"
-                      ? "Jelaskan bab atau lembar pengesahan apa yang perlu diperbaiki..."
-                      : "Catatan opsional apresiasi kelayakan berkas..."
-                  }
-                  value={reviewNotes}
-                  onChange={(e) => setReviewNotes(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl border border-border bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-red-600"
-                />
-              </div>
-
-              <div className="pt-4 border-t border-border flex justify-end gap-3">
+            <div>
+              <label className="block text-xs font-semibold text-foreground mb-1.5">
+                Keputusan Verifikasi *
+              </label>
+              <div className="grid grid-cols-2 gap-3">
                 <button
                   type="button"
-                  onClick={() => setReviewModalItem(null)}
-                  className="px-4 py-2 rounded-xl text-sm font-medium border border-border hover:bg-muted text-foreground transition-colors"
+                  onClick={() => setReviewAction("APPROVE")}
+                  className={`p-3 rounded-xl border text-xs font-bold flex items-center justify-center gap-2 transition-colors cursor-pointer ${
+                    reviewAction === "APPROVE"
+                      ? "border-emerald-600 bg-emerald-50 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 ring-2 ring-emerald-500/20"
+                      : "border-border text-muted-foreground hover:bg-muted"
+                  }`}
                 >
-                  Batal
+                  <CheckCircle className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                  Setujui (Publish)
                 </button>
+
                 <button
-                  type="submit"
-                  disabled={submittingReview}
-                  className="inline-flex items-center gap-2 px-5 py-2 rounded-xl text-sm font-medium text-white bg-red-700 hover:bg-red-800 transition-colors disabled:opacity-50"
+                  type="button"
+                  onClick={() => setReviewAction("REVISION_REQUIRED")}
+                  className={`p-3 rounded-xl border text-xs font-bold flex items-center justify-center gap-2 transition-colors cursor-pointer ${
+                    reviewAction === "REVISION_REQUIRED"
+                      ? "border-amber-600 bg-amber-50 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 ring-2 ring-amber-500/20"
+                      : "border-border text-muted-foreground hover:bg-muted"
+                  }`}
                 >
-                  {submittingReview && <Loader2 className="w-4 h-4 animate-spin" />}
-                  Simpan Keputusan
+                  <AlertCircle className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+                  Minta Revisi
                 </button>
               </div>
-            </form>
-          </div>
-        </div>
-      )}
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-foreground mb-1">
+                Catatan Review / Instruksi Revisi
+              </label>
+              <textarea
+                rows={4}
+                placeholder={
+                  reviewAction === "REVISION_REQUIRED"
+                    ? "Jelaskan bab atau lembar pengesahan apa yang perlu diperbaiki..."
+                    : "Catatan opsional apresiasi kelayakan berkas..."
+                }
+                value={reviewNotes}
+                onChange={(e) => setReviewNotes(e.target.value)}
+                className="w-full px-3 py-2 rounded-xl border border-border bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
+              />
+            </div>
+
+            <div className="pt-4 border-t border-border flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setReviewModalItem(null)}
+                className="px-4 py-2 rounded-xl text-sm font-medium border border-border hover:bg-muted text-foreground transition-colors cursor-pointer"
+              >
+                Batal
+              </button>
+              <button
+                type="submit"
+                disabled={submittingReview}
+                className="inline-flex items-center gap-2 px-5 py-2 rounded-xl text-sm font-medium text-primary-foreground bg-primary hover:bg-primary/90 transition-colors disabled:opacity-50 cursor-pointer shadow-sm"
+              >
+                {submittingReview && <Loader2 className="w-4 h-4 animate-spin" />}
+                Simpan Keputusan
+              </button>
+            </div>
+          </form>
+        )}
+      </Modal>
 
       {/* Modal Page ACL Configurator */}
-      {aclModalItem && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-          <div className="w-full max-w-md bg-card border border-border rounded-2xl shadow-xl overflow-hidden">
-            <div className="p-6 border-b border-border flex items-center justify-between">
-              <h3 className="text-base font-bold text-foreground">
-                Atur Batas Halaman PDF (ACL Publik)
-              </h3>
-              <button
-                onClick={() => setAclModalItem(null)}
-                className="text-muted-foreground hover:text-foreground text-sm font-semibold"
-              >
-                ✕
-              </button>
+      <Modal
+        isOpen={!!aclModalItem}
+        onClose={() => setAclModalItem(null)}
+        title="Atur Batas Halaman PDF (ACL Publik)"
+        size="md"
+      >
+        {aclModalItem && (
+          <form onSubmit={handleSaveAcl} className="space-y-4 p-2">
+            <div>
+              <p className="text-xs text-muted-foreground">Karya Ilmiah:</p>
+              <p className="text-sm font-bold text-foreground mt-0.5">{aclModalItem.title}</p>
+              <p className="text-xs text-muted-foreground mt-1">
+                Total Dokumen Fisik: <strong>{aclModalItem.pageCount} Halaman</strong>
+              </p>
             </div>
 
-            <form onSubmit={handleSaveAcl} className="p-6 space-y-4">
+            <div className="p-3 rounded-xl bg-muted/50 border border-border text-xs text-muted-foreground space-y-1">
+              <p className="font-semibold text-foreground">Aturan Keamanan Slicing:</p>
+              <p>
+                Pengunjung publik hanya akan menerima potongan halaman ini dari server secara dinamis. Halaman selebihnya tidak dikirimkan dan digantikan oleh Card Pembatas Akses Civitas.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
               <div>
-                <p className="text-xs text-muted-foreground">Karya Ilmiah:</p>
-                <p className="text-sm font-bold text-foreground mt-0.5">{aclModalItem.title}</p>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Total Dokumen Fisik: <strong>{aclModalItem.pageCount} Halaman</strong>
-                </p>
+                <label className="block text-xs font-semibold text-foreground mb-1">
+                  Mulai Halaman
+                </label>
+                <input
+                  type="number"
+                  min={1}
+                  max={aclModalItem.pageCount}
+                  value={startPage}
+                  onChange={(e) => setStartPage(Number(e.target.value))}
+                  className="w-full px-3 py-2 rounded-xl border border-border bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
+                />
               </div>
+              <div>
+                <label className="block text-xs font-semibold text-foreground mb-1">
+                  Sampai Halaman
+                </label>
+                <input
+                  type="number"
+                  min={startPage}
+                  max={aclModalItem.pageCount}
+                  value={endPage}
+                  onChange={(e) => setEndPage(Number(e.target.value))}
+                  className="w-full px-3 py-2 rounded-xl border border-border bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
+                />
+              </div>
+            </div>
 
-              <div className="p-3 rounded-xl bg-muted/40 border border-border text-xs text-muted-foreground space-y-1">
-                <p className="font-semibold text-foreground">Aturan Keamanan Slicing:</p>
-                <p>
-                  Pengunjung publik hanya akan menerima potongan halaman ini dari server secara dinamis. Halaman selebihnya tidak dikirimkan dan digantikan oleh Card Pembatas Akses Civitas.
-                </p>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-semibold text-foreground mb-1">
-                    Mulai Halaman
-                  </label>
-                  <input
-                    type="number"
-                    min={1}
-                    max={aclModalItem.pageCount}
-                    value={startPage}
-                    onChange={(e) => setStartPage(Number(e.target.value))}
-                    className="w-full px-3 py-2 rounded-xl border border-border bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-red-600"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-foreground mb-1">
-                    Sampai Halaman
-                  </label>
-                  <input
-                    type="number"
-                    min={startPage}
-                    max={aclModalItem.pageCount}
-                    value={endPage}
-                    onChange={(e) => setEndPage(Number(e.target.value))}
-                    className="w-full px-3 py-2 rounded-xl border border-border bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-red-600"
-                  />
-                </div>
-              </div>
-
-              <div className="pt-4 border-t border-border flex justify-end gap-3">
-                <button
-                  type="button"
-                  onClick={() => setAclModalItem(null)}
-                  className="px-4 py-2 rounded-xl text-sm font-medium border border-border hover:bg-muted text-foreground transition-colors"
-                >
-                  Batal
-                </button>
-                <button
-                  type="submit"
-                  disabled={savingAcl}
-                  className="inline-flex items-center gap-2 px-5 py-2 rounded-xl text-sm font-medium text-white bg-red-700 hover:bg-red-800 transition-colors disabled:opacity-50"
-                >
-                  {savingAcl && <Loader2 className="w-4 h-4 animate-spin" />}
-                  Terapkan Batasan
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+            <div className="pt-4 border-t border-border flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setAclModalItem(null)}
+                className="px-4 py-2 rounded-xl text-sm font-medium border border-border hover:bg-muted text-foreground transition-colors cursor-pointer"
+              >
+                Batal
+              </button>
+              <button
+                type="submit"
+                disabled={savingAcl}
+                className="inline-flex items-center gap-2 px-5 py-2 rounded-xl text-sm font-medium text-primary-foreground bg-primary hover:bg-primary/90 transition-colors disabled:opacity-50 cursor-pointer shadow-sm"
+              >
+                {savingAcl && <Loader2 className="w-4 h-4 animate-spin" />}
+                Terapkan Batasan
+              </button>
+            </div>
+          </form>
+        )}
+      </Modal>
     </div>
   );
 }

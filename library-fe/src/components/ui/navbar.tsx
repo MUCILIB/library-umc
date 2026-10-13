@@ -7,6 +7,7 @@ import {
   ChevronDown,
   LayoutDashboard,
   BookOpen,
+  GraduationCap,
 } from "lucide-react";
 import { useNavigate, useLocation } from "react-router";
 import type { AuthUser } from "@/types/auth";
@@ -55,12 +56,15 @@ const Navbar = () => {
   const navItems = [
     { name: "Beranda", href: "/" },
     { name: "Katalog", href: "/katalog" },
-    { name: "E-Resource", href: "/e-resource" },
+    { name: "Repositori", href: "/e-resource" },
     { name: "Tentang", href: "/tentang" },
   ];
 
   // Cek apakah link aktif
   const isActive = (href: string) => {
+    if (href === "/e-resource" && (location.pathname === "/e-resource" || location.pathname === "/repositori")) {
+      return true;
+    }
     return location.pathname === href;
   };
 
@@ -82,6 +86,12 @@ const Navbar = () => {
 
   const handleMyLoansClick = () => {
     navigate("/my-loans");
+    setIsDropdownOpen(false);
+    setIsMenuOpen(false);
+  };
+
+  const handleRepositoryClick = () => {
+    navigate("/profile?tab=repositori-skripsi");
     setIsDropdownOpen(false);
     setIsMenuOpen(false);
   };
@@ -252,6 +262,17 @@ const Navbar = () => {
                         >
                           <BookOpen className="w-4 h-4 group-hover:text-primary transition-colors" />
                           <span>Peminjaman Saya</span>
+                        </button>
+
+                        <button
+                          onClick={handleRepositoryClick}
+                          className="w-full flex items-center space-x-3 px-4 py-2.5 text-sm text-foreground hover:bg-muted hover:text-primary transition-colors group"
+                        >
+                          <GraduationCap className="w-4 h-4 text-red-600 dark:text-red-400 group-hover:text-primary transition-colors" />
+                          <div className="flex flex-col text-left">
+                            <span className="font-medium">Repositori Skripsi</span>
+                            <span className="text-[10px] text-muted-foreground">Karya Ilmiah Mahasiswa</span>
+                          </div>
                         </button>
                       </div>
                       <div className="border-t border-border my-1"></div>
@@ -483,6 +504,14 @@ const Navbar = () => {
                       >
                         <BookOpen className="w-4 h-4 text-muted-foreground" />
                         <span>Peminjaman Saya</span>
+                      </button>
+
+                      <button
+                        onClick={handleRepositoryClick}
+                        className="w-full flex items-center space-x-3 px-4 py-2.5 text-xs font-medium text-muted-foreground hover:bg-muted rounded-xl transition-all"
+                      >
+                        <GraduationCap className="w-4 h-4 text-red-600 dark:text-red-400" />
+                        <span>Repositori Skripsi</span>
                       </button>
                     </>
                   )}

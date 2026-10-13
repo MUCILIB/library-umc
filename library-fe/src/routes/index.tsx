@@ -1,4 +1,4 @@
-import { Routes, Route } from "react-router";
+import { Routes, Route, Navigate } from "react-router";
 
 // Pages
 import Home from "../pages/Home";
@@ -41,6 +41,8 @@ const AppRoutes = () => {
         <Route path="/absensi" element={<NonAdminRoute><AbsensiPage /></NonAdminRoute>} />
         <Route path="/input-kunjungan" element={<NonAdminRoute><AbsensiPage /></NonAdminRoute>} />
         <Route path="/buku-tamu" element={<NonAdminRoute><AbsensiPage /></NonAdminRoute>} />
+        <Route path="/my-repository" element={<Navigate to="/profile?tab=repositori-skripsi" replace />} />
+        <Route path="/repositori" element={<Navigate to="/e-resource" replace />} />
         
         <Route 
           path="/my-loans" 

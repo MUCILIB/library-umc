@@ -25,6 +25,12 @@ router.post(
 );
 
 router.get(
+  ["/repository/published", "/api/repository/published", "/repository/public", "/api/repository/public"],
+  publicApiLimiter,
+  (req, res, next) => proposalController.getPublished(req, res, next)
+);
+
+router.get(
   ["/repository/proposals", "/api/repository/proposals"],
   publicApiLimiter,
   isAuthenticated,
@@ -34,7 +40,6 @@ router.get(
 router.get(
   ["/repository/proposals/:id", "/api/repository/proposals/:id"],
   publicApiLimiter,
-  isAuthenticated,
   (req, res, next) => proposalController.getById(req, res, next)
 );
 
@@ -58,6 +63,21 @@ router.get(
   ["/repository/proposals/:id/view-pdf", "/api/repository/proposals/:id/view-pdf"],
   publicApiLimiter,
   (req, res, next) => proposalController.viewPdf(req, res, next)
+);
+
+router.put(
+  ["/repository/proposals/:id", "/api/repository/proposals/:id"],
+  publicApiLimiter,
+  isAuthenticated,
+  upload.single("file"),
+  (req, res, next) => proposalController.update(req, res, next)
+);
+
+router.delete(
+  ["/repository/proposals/:id", "/api/repository/proposals/:id"],
+  publicApiLimiter,
+  isAuthenticated,
+  (req, res, next) => proposalController.delete(req, res, next)
 );
 
 /**
