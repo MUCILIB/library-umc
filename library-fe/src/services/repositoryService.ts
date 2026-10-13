@@ -21,6 +21,16 @@ export interface RepositoryProposal {
   reviewedAt: string | null;
   createdAt: string;
   updatedAt: string;
+  studyProgram?: {
+    id: number;
+    name: string;
+    code: string | null;
+    faculty?: {
+      id: number;
+      name: string;
+      code: string | null;
+    } | null;
+  } | null;
   pageRules?: Array<{
     id: string;
     roleScope: string;
@@ -78,6 +88,31 @@ class RepositoryService {
       headers: { "Content-Type": "application/json" }
     });
     return this.parseJsonResponse(response, "Gagal memuat daftar proposal");
+  }
+
+  async getPublishedProposals(params?: {
+    search?: string;
+    category?: string;
+    studyProgramId?: number;
+    facultyId?: number;
+    yearStart?: number;
+    yearEnd?: number;
+  }): Promise<RepositoryProposal[]> {
+    const query = new URLSearchParams();
+    if (params?.search) query.append("search", params.search);
+    if (params?.category) query.append("category", params.category);
+    if (params?.studyProgramId) query.append("studyProgramId", params.studyProgramId.toString());
+    if (params?.facultyId) query.append("facultyId", params.facultyId.toString());
+    if (params?.yearStart) query.append("yearStart", params.yearStart.toString());
+    if (params?.yearEnd) query.append("yearEnd", params.yearEnd.toString());
+
+    const qs = query.toString() ? `?${query.toString()}` : "";
+    const response = await fetch(`${this.baseUrl}/api/repository/published${qs}`, {
+      method: "GET",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" }
+    });
+    return this.parseJsonResponse(response, "Gagal memuat repositori karya ilmiah publik");
   }
 
   async getProposalById(id: string): Promise<RepositoryProposal> {
@@ -141,6 +176,38 @@ class RepositoryService {
       body: JSON.stringify(rule)
     });
     return this.parseJsonResponse(response, "Gagal menyimpan batasan halaman");
+  }
+
+  async updateProposal(
+    id: string,
+    payload: Partial<CreateProposalPayload>,
+    file?: File
+  ): Promise<RepositoryProposal> {
+    const formData = new FormData();
+    if (payload.title) formData.append("title", payload.title);
+    if (payload.abstract !== undefined) formData.append("abstract", payload.abstract || "");
+    if (payload.advisorName1) formData.append("advisorName1", payload.advisorName1);
+    if (payload.advisorName2 !== undefined) formData.append("advisorName2", payload.advisorName2 || "");
+    if (payload.studyProgramId) formData.append("studyProgramId", payload.studyProgramId.toString());
+    if (payload.documentCategory) formData.append("documentCategory", payload.documentCategory);
+    if (file) formData.append("file", file);
+
+    const response = await fetch(`${this.baseUrl}/api/repository/proposals/${id}`, {
+      method: "PUT",
+      credentials: "include",
+      body: formData
+    });
+
+    return this.parseJsonResponse(response, "Gagal memperbarui naskah proposal");
+  }
+
+  async deleteProposal(id: string): Promise<{ id: string }> {
+    const response = await fetch(`${this.baseUrl}/api/repository/proposals/${id}`, {
+      method: "DELETE",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" }
+    });
+    return this.parseJsonResponse(response, "Gagal menghapus naskah proposal");
   }
 }
 

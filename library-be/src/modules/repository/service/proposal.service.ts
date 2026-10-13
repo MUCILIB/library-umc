@@ -7,7 +7,9 @@ import {
   repositoryDocumentPageRules,
   proposalReviewLogs,
   members,
-  Users
+  Users,
+  studyPrograms,
+  faculties
 } from "../../../db/schema";
 import { eq, desc, and } from "drizzle-orm";
 import {
@@ -161,6 +163,86 @@ export class ProposalService {
   }
 
   /**
+   * Mengambil daftar karya ilmiah mahasiswa yang telah disetujui (APPROVED) untuk E-Resources publik
+   */
+  async getPublishedProposals(options?: {
+    search?: string;
+    category?: string;
+    studyProgramId?: number;
+    facultyId?: number;
+    yearStart?: number;
+    yearEnd?: number;
+  }) {
+    const conditions = [eq(repositoryProposals.status, "APPROVED")];
+
+    if (options?.category && options.category !== "Semua Kategori") {
+      let cat = options.category;
+      if (cat === "Skripsi") cat = "THESIS";
+      else if (cat === "Proposal") cat = "PROPOSAL";
+      else if (cat === "Laporan" || cat === "Jurnal" || cat === "Tesis") cat = "REPORT";
+      conditions.push(eq(repositoryProposals.documentCategory, cat));
+    }
+
+    if (options?.studyProgramId) {
+      conditions.push(eq(repositoryProposals.studyProgramId, options.studyProgramId));
+    }
+
+    const results = await db
+      .select()
+      .from(repositoryProposals)
+      .where(and(...conditions))
+      .orderBy(desc(repositoryProposals.createdAt));
+
+    // Ambil semua prodi dan fakultas untuk pemetaan relasi
+    const [allProdis, allFaculties] = await Promise.all([
+      db.select().from(studyPrograms),
+      db.select().from(faculties)
+    ]);
+
+    const prodiMap = new Map(allProdis.map((p) => [p.id, p]));
+    const facultyMap = new Map(allFaculties.map((f) => [f.id, f]));
+
+    let items = results.map((item) => {
+      const prodi = item.studyProgramId ? prodiMap.get(item.studyProgramId) : null;
+      const faculty = prodi && prodi.facultyId ? facultyMap.get(prodi.facultyId) : null;
+      return {
+        ...item,
+        studyProgram: prodi ? { ...prodi, faculty: faculty || null } : null
+      };
+    });
+
+    if (options?.facultyId) {
+      items = items.filter((item) => item.studyProgram?.faculty?.id === options.facultyId);
+    }
+
+    if (options?.search) {
+      const q = options.search.toLowerCase();
+      items = items.filter((item) =>
+        item.title.toLowerCase().includes(q) ||
+        item.authorName.toLowerCase().includes(q) ||
+        (item.abstract && item.abstract.toLowerCase().includes(q)) ||
+        (item.keywords && item.keywords.some((k: string) => k.toLowerCase().includes(q)))
+      );
+    }
+
+    if (options?.yearStart) {
+      items = items.filter((item) => {
+        const year = new Date(item.createdAt).getFullYear();
+        return year >= options.yearStart!;
+      });
+    }
+
+    if (options?.yearEnd) {
+      items = items.filter((item) => {
+        const year = new Date(item.createdAt).getFullYear();
+        return year <= options.yearEnd!;
+      });
+    }
+
+    return items;
+  }
+
+  /**
    * Detail proposal by ID
    */
   async getProposalById(id: string) {
@@ -174,18 +256,40 @@ export class ProposalService {
       throw new NotFoundError("Dokumen proposal tidak ditemukan");
     }
 
-    const rules = await db
-      .select()
-      .from(repositoryDocumentPageRules)
-      .where(eq(repositoryDocumentPageRules.proposalId, id));
+    const [rules, logs] = await Promise.all([
+      db
+        .select()
+        .from(repositoryDocumentPageRules)
+        .where(eq(repositoryDocumentPageRules.proposalId, id)),
+      db
+        .select()
+        .from(proposalReviewLogs)
+        .where(eq(proposalReviewLogs.proposalId, id))
+        .orderBy(desc(proposalReviewLogs.createdAt))
+    ]);
 
-    const logs = await db
-      .select()
-      .from(proposalReviewLogs)
-      .where(eq(proposalReviewLogs.proposalId, id))
-      .orderBy(desc(proposalReviewLogs.createdAt));
+    let studyProgram = null;
+    if (proposal.studyProgramId) {
+      const [sp] = await db
+        .select()
+        .from(studyPrograms)
+        .where(eq(studyPrograms.id, proposal.studyProgramId))
+        .limit(1);
+      if (sp) {
+        let faculty = null;
+        if (sp.facultyId) {
+          const [fac] = await db
+            .select()
+            .from(faculties)
+            .where(eq(faculties.id, sp.facultyId))
+            .limit(1);
+          faculty = fac || null;
+        }
+        studyProgram = { ...sp, faculty };
+      }
+    }
 
-    return { ...proposal, pageRules: rules, reviewLogs: logs };
+    return { ...proposal, pageRules: rules, reviewLogs: logs, studyProgram };
   }
 
   /**
@@ -369,6 +473,101 @@ export class ProposalService {
       endPage,
       isRestricted: endPage < totalPages
     };
+  }
+
+  /**
+   * Mahasiswa memperbarui atau merevisi proposal
+   */
+  async updateProposal(
+    id: string,
+    userId: string,
+    input: Partial<CreateProposalInput>,
+    fileBuffer?: Buffer,
+    originalFilename?: string,
+    isStaffOrAdmin: boolean = false
+  ) {
+    const proposal = await this.getProposalById(id);
+    if (!isStaffOrAdmin && proposal.authorUserId !== userId) {
+      throw new ForbiddenError("Anda tidak memiliki hak untuk mengedit proposal ini");
+    }
+
+    const updates: any = {
+      updatedAt: new Date()
+    };
+
+    if (input.title) updates.title = input.title;
+    if (input.abstract !== undefined) updates.abstract = input.abstract;
+    if (input.advisorName1) updates.advisorName1 = input.advisorName1;
+    if (input.advisorName2 !== undefined) updates.advisorName2 = input.advisorName2;
+    if (input.studyProgramId) updates.studyProgramId = input.studyProgramId;
+    if (input.documentCategory) updates.documentCategory = input.documentCategory;
+
+    if (fileBuffer && fileBuffer.length > 0) {
+      const magic = fileBuffer.subarray(0, 5).toString("ascii");
+      if (!magic.startsWith("%PDF")) {
+        throw new BadRequestError("Format file tidak valid. Berkas wajib berupa PDF asli.");
+      }
+      const pageCount = await pdfSlicingService.getPageCount(fileBuffer);
+      const uniqueFilename = `${Date.now()}-${crypto.randomBytes(6).toString("hex")}.pdf`;
+      const storagePath = path.join(this.uploadDir, uniqueFilename);
+      await fs.promises.writeFile(storagePath, fileBuffer);
+      const fileHash = crypto.createHash("sha256").update(fileBuffer).digest("hex");
+
+      if (fs.existsSync(proposal.storagePath)) {
+        try {
+          await fs.promises.unlink(proposal.storagePath);
+        } catch (e) {
+          console.error("Gagal menghapus file lama:", e);
+        }
+      }
+
+      updates.storagePath = storagePath;
+      updates.pageCount = pageCount;
+      updates.fileSize = fileBuffer.length;
+      updates.fileHashSha256 = fileHash;
+      updates.status = "SUBMITTED";
+    } else if (proposal.status === "REVISION_REQUIRED") {
+      updates.status = "SUBMITTED";
+    }
+
+    const [updated] = await db
+      .update(repositoryProposals)
+      .set(updates)
+      .where(eq(repositoryProposals.id, id))
+      .returning();
+
+    await db.insert(proposalReviewLogs).values({
+      proposalId: id,
+      reviewerUserId: userId,
+      action: "RESUBMIT",
+      notes: "Naskah diperbarui oleh mahasiswa"
+    });
+
+    return updated;
+  }
+
+  /**
+   * Menghapus proposal (hanya jika belum APPROVED, atau oleh Admin)
+   */
+  async deleteProposal(id: string, userId: string, isStaffOrAdmin: boolean) {
+    const proposal = await this.getProposalById(id);
+    if (!isStaffOrAdmin && proposal.authorUserId !== userId) {
+      throw new ForbiddenError("Anda tidak memiliki hak untuk menghapus proposal ini");
+    }
+    if (!isStaffOrAdmin && proposal.status === "APPROVED") {
+      throw new BadRequestError("Dokumen yang telah disetujui tidak dapat dihapus oleh mahasiswa");
+    }
+
+    if (fs.existsSync(proposal.storagePath)) {
+      try {
+        await fs.promises.unlink(proposal.storagePath);
+      } catch (e) {
+        console.error("Gagal menghapus file fisik:", e);
+      }
+    }
+
+    await db.delete(repositoryProposals).where(eq(repositoryProposals.id, id));
+    return { id };
   }
 }
 

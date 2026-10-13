@@ -70,12 +70,47 @@ export class ProposalController {
   }
 
   /**
-   * Ambil detail proposal
+   * Mengambil daftar proposal yang telah disetujui (APPROVED) untuk halaman publik E-Resources
+   */
+  async getPublished(req: Request, res: Response, next: NextFunction) {
+    try {
+      const proposals = await proposalService.getPublishedProposals({
+        search: req.query.search as string,
+        category: req.query.category as string,
+        studyProgramId: req.query.studyProgramId ? Number(req.query.studyProgramId) : undefined,
+        facultyId: req.query.facultyId ? Number(req.query.facultyId) : undefined,
+        yearStart: req.query.yearStart ? Number(req.query.yearStart) : undefined,
+        yearEnd: req.query.yearEnd ? Number(req.query.yearEnd) : undefined
+      });
+
+      sendSuccess(res, "Daftar repositori karya ilmiah publik berhasil diambil", proposals);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * Ambil detail proposal (Publik jika APPROVED, privat jika draft)
    */
   async getById(req: Request, res: Response, next: NextFunction) {
     try {
       const id = String(req.params.id);
       const proposal = await proposalService.getProposalById(id);
+
+      if (proposal.status !== "APPROVED") {
+        const session = req.user
+          ? { user: req.user }
+          : await getSession(req).catch(() => null);
+        const user = session?.user;
+        const isStaffOrAdmin =
+          user?.role === "super_admin" ||
+          user?.role === "staff" ||
+          user?.role === "admin";
+        if (!user || (!isStaffOrAdmin && user.id !== proposal.authorUserId)) {
+          return sendError(res, "Dokumen ini belum dipublikasikan untuk umum", 403);
+        }
+      }
+
       sendSuccess(res, "Detail proposal berhasil diambil", proposal);
     } catch (error) {
       next(error);
@@ -168,6 +203,60 @@ export class ProposalController {
       res.setHeader("X-Is-Restricted", result.isRestricted ? "true" : "false");
 
       res.status(200).send(result.buffer);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * Mahasiswa mengupdate naskah proposal / revisi
+   */
+  async update(req: Request, res: Response, next: NextFunction) {
+    try {
+      const user = (req as any).user;
+      if (!user?.id) {
+        return sendError(res, "Silakan login terlebih dahulu", 401);
+      }
+
+      const id = String(req.params.id);
+      const isStaffOrAdmin =
+        user.role === "super_admin" ||
+        user.role === "staff" ||
+        user.role === "admin";
+
+      const updated = await proposalService.updateProposal(
+        id,
+        user.id,
+        req.body,
+        req.file ? req.file.buffer : undefined,
+        req.file ? req.file.originalname : undefined,
+        isStaffOrAdmin
+      );
+
+      sendSuccess(res, "Proposal skripsi berhasil diperbarui", updated);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * Mahasiswa / Admin menghapus proposal
+   */
+  async delete(req: Request, res: Response, next: NextFunction) {
+    try {
+      const user = (req as any).user;
+      if (!user?.id) {
+        return sendError(res, "Silakan login terlebih dahulu", 401);
+      }
+
+      const id = String(req.params.id);
+      const isStaffOrAdmin =
+        user.role === "super_admin" ||
+        user.role === "staff" ||
+        user.role === "admin";
+
+      const result = await proposalService.deleteProposal(id, user.id, isStaffOrAdmin);
+      sendSuccess(res, "Dokumen proposal berhasil dihapus", result);
     } catch (error) {
       next(error);
     }
