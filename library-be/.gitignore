@@ -25,6 +25,10 @@ yarn-error.log*
 .env.production
 .env.local
 
+# Storage uploads
+storage/proposals/*
+!storage/proposals/.gitkeep
+
 # Editor directories and files
 .idea
 .vscode

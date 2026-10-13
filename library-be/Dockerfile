@@ -22,6 +22,9 @@ RUN npm run build
 FROM node:20-alpine AS production
 WORKDIR /app
 
+# Install curl untuk healthcheck Coolify & container monitoring
+RUN apk add --no-cache curl
+
 # Set environment ke production
 ENV NODE_ENV=production
 
