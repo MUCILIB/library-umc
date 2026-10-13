@@ -175,7 +175,7 @@ export default function StudentRepositoryTab() {
         );
       case "REVISION_REQUIRED":
         return (
-          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-900 dark:bg-amber-950/70 dark:text-amber-300 animate-pulse">
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-900 dark:bg-amber-950/70 dark:text-amber-300">
             <AlertCircle className="w-3.5 h-3.5" /> Perlu Revisi Naskah
           </span>
         );

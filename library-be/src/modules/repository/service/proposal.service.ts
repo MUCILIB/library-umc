@@ -18,6 +18,7 @@ import {
   ForbiddenError
 } from "../../../exceptions/AppError";
 import { pdfSlicingService } from "./pdf-slicing.service";
+import { storageService } from "./storage.service";
 import type {
   CreateProposalInput,
   ReviewProposalInput,
@@ -80,10 +81,9 @@ export class ProposalService {
     // Ekstrak total halaman dokumen via pdf-lib
     const pageCount = await pdfSlicingService.getPageCount(fileBuffer);
 
-    // Simpan file ke direktori privat (storage/proposals/)
+    // Simpan file ke direktori privat (S3 atau storage/proposals/)
     const uniqueFilename = `${Date.now()}-${crypto.randomBytes(6).toString("hex")}.pdf`;
-    const storagePath = path.join(this.uploadDir, uniqueFilename);
-    await fs.promises.writeFile(storagePath, fileBuffer);
+    const storagePath = await storageService.save(uniqueFilename, fileBuffer);
 
     // Generate proposal number PROP-YYYYMM-XXXX
     const datePrefix = new Date().toISOString().slice(0, 7).replace("-", "");
@@ -407,11 +407,12 @@ export class ProposalService {
   }> {
     const proposal = await this.getProposalById(proposalId);
 
-    if (!fs.existsSync(proposal.storagePath)) {
+    let masterBuffer: Buffer;
+    try {
+      masterBuffer = await storageService.read(proposal.storagePath);
+    } catch {
       throw new NotFoundError("File fisik dokumen tidak ditemukan di penyimpanan server");
     }
-
-    const masterBuffer = await fs.promises.readFile(proposal.storagePath);
     const totalPages = proposal.pageCount;
 
     // Hak akses penuh jika Admin, Staff, atau Mahasiswa pemilik berkas itu sendiri
@@ -509,17 +510,10 @@ export class ProposalService {
       }
       const pageCount = await pdfSlicingService.getPageCount(fileBuffer);
       const uniqueFilename = `${Date.now()}-${crypto.randomBytes(6).toString("hex")}.pdf`;
-      const storagePath = path.join(this.uploadDir, uniqueFilename);
-      await fs.promises.writeFile(storagePath, fileBuffer);
+      const storagePath = await storageService.save(uniqueFilename, fileBuffer);
       const fileHash = crypto.createHash("sha256").update(fileBuffer).digest("hex");
 
-      if (fs.existsSync(proposal.storagePath)) {
-        try {
-          await fs.promises.unlink(proposal.storagePath);
-        } catch (e) {
-          console.error("Gagal menghapus file lama:", e);
-        }
-      }
+      await storageService.delete(proposal.storagePath);
 
       updates.storagePath = storagePath;
       updates.pageCount = pageCount;
@@ -558,13 +552,7 @@ export class ProposalService {
       throw new BadRequestError("Dokumen yang telah disetujui tidak dapat dihapus oleh mahasiswa");
     }
 
-    if (fs.existsSync(proposal.storagePath)) {
-      try {
-        await fs.promises.unlink(proposal.storagePath);
-      } catch (e) {
-        console.error("Gagal menghapus file fisik:", e);
-      }
-    }
+    await storageService.delete(proposal.storagePath);
 
     await db.delete(repositoryProposals).where(eq(repositoryProposals.id, id));
     return { id };
