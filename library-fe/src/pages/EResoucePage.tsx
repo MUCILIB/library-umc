@@ -7,9 +7,15 @@ import { repositoryService } from "@/services/repositoryService";
 import { facultyApi, type Faculty } from "@/api/client";
 import { API_BASE_URL } from "@/utils/api-config";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   Search,
   Download,
-  ChevronDown,
   FileText,
   RotateCcw,
   X,
@@ -199,8 +205,6 @@ export default function EResourcePage() {
   const [itemsPerPage] = useState(6);
   const [showMobileFilter, setShowMobileFilter] = useState(false);
   const [sortBy, setSortBy] = useState<"date" | "downloads" | "views">("date");
-  const [isCategoryDropdownOpen, setIsCategoryDropdownOpen] = useState(false);
-  const [isFacultyDropdownOpen, setIsFacultyDropdownOpen] = useState(false);
 
   // Ambil karya mahasiswa yang berstatus APPROVED dari server dan daftar fakultas
   useEffect(() => {
@@ -282,21 +286,6 @@ export default function EResourcePage() {
     searchType,
     sortBy
   ]);
-
-  // Close dropdowns when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      const target = event.target as HTMLElement;
-      if (!target.closest(".category-dropdown")) {
-        setIsCategoryDropdownOpen(false);
-      }
-      if (!target.closest(".faculty-dropdown")) {
-        setIsFacultyDropdownOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
 
   // Hitung counts untuk setiap kategori
   const categoryCounts = useMemo(() => {
@@ -444,48 +433,45 @@ export default function EResourcePage() {
 
             {/* --- SEARCH BAR (Floating) --- */}
             <div className="absolute left-1/2 -bottom-8 -translate-x-1/2 w-full max-w-4xl px-4">
-              <div className="bg-card flex items-center rounded-2xl shadow-xl p-1.5 border border-border">
-                <div className="flex-1 flex items-center px-4">
-                  <Search className="text-muted-foreground w-5 h-5 mr-3 shrink-0" />
+              <div className="bg-card flex items-center rounded-2xl shadow-xl p-2 border border-border">
+                <div className="flex-1 flex items-center px-3 md:px-4">
+                  <Search className="text-muted-foreground w-4 h-4 md:w-5 md:h-5 mr-2.5 shrink-0" />
                   <input
                     type="text"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full py-3.5 text-foreground focus:outline-none font-medium text-base bg-transparent"
+                    className="w-full py-2.5 text-foreground focus:outline-none font-medium text-xs md:text-sm bg-transparent placeholder:text-muted-foreground/70"
                     placeholder="Cari judul skripsi, nama mahasiswa, atau kata kunci..."
                   />
                 </div>
 
-                {/* Search Type Dropdown */}
-                <div className="relative group">
-                  <button className="hidden md:flex items-center px-6 border-l border-border text-muted-foreground text-sm gap-2 font-semibold hover:text-primary transition-colors">
-                    {searchType === "all" && "Semua Bidang"}
-                    {searchType === "title" && "Judul Naskah"}
-                    {searchType === "author" && "Penulis"}
-                    <ChevronDown size={16} />
-                  </button>
-                  <div className="absolute right-0 top-full mt-2 w-44 bg-card rounded-xl shadow-lg border border-border py-2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50">
-                    {[
-                      { value: "all", label: "Semua Bidang" },
-                      { value: "title", label: "Judul Naskah" },
-                      { value: "author", label: "Nama Penulis" }
-                    ].map((type) => (
-                      <button
-                        key={type.value}
-                        onClick={() => setSearchType(type.value as any)}
-                        className={`w-full text-left px-4 py-2 text-sm hover:bg-muted ${
-                          searchType === type.value
-                            ? "text-primary font-bold"
-                            : "text-muted-foreground"
-                        }`}
-                      >
-                        {type.label}
-                      </button>
-                    ))}
-                  </div>
+                {/* Search Type Dropdown (Click-only via Shadcn UI) */}
+                <div className="flex items-center border-l border-border pl-2 pr-1">
+                  <Select
+                    value={searchType}
+                    onValueChange={(val) => setSearchType(val as "all" | "title" | "author")}
+                  >
+                    <SelectTrigger className="h-9 md:h-10 border-0 bg-transparent text-xs md:text-sm font-semibold text-muted-foreground hover:text-foreground focus:ring-0 shadow-none gap-1.5 md:gap-2 px-2.5 md:px-3 cursor-pointer">
+                      <SelectValue placeholder="Pilih Bidang" />
+                    </SelectTrigger>
+                    <SelectContent align="end" className="w-40 md:w-44 bg-card border-border shadow-lg">
+                      <SelectItem value="all" className="text-xs md:text-sm font-medium cursor-pointer">
+                        Semua Bidang
+                      </SelectItem>
+                      <SelectItem value="title" className="text-xs md:text-sm font-medium cursor-pointer">
+                        Judul Naskah
+                      </SelectItem>
+                      <SelectItem value="author" className="text-xs md:text-sm font-medium cursor-pointer">
+                        Nama Penulis
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
 
-                <button className="bg-red-700 hover:bg-red-800 text-white px-8 py-3.5 rounded-xl font-bold text-sm transition-all ml-2 shadow-sm">
+                <button
+                  type="button"
+                  className="bg-red-700 hover:bg-red-800 text-white px-5 md:px-8 py-2 md:py-2.5 rounded-xl font-bold text-xs md:text-sm transition-all ml-1.5 shadow-sm shrink-0 cursor-pointer"
+                >
                   Cari
                 </button>
               </div>
@@ -528,110 +514,82 @@ export default function EResourcePage() {
                 </div>
 
                 {/* Kategori Dropdown Filter */}
-                <div className="mb-6 category-dropdown">
-                  <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
+                <div className="mb-5 space-y-1.5">
+                  <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                     Kategori Naskah
                   </label>
-                  <div className="relative">
-                    <button
-                      onClick={() => setIsCategoryDropdownOpen(!isCategoryDropdownOpen)}
-                      className="w-full flex items-center justify-between px-4 py-2.5 bg-card border border-border rounded-xl text-foreground text-sm hover:border-primary/40 transition-colors"
-                    >
-                      <span className="truncate">{selectedCategory}</span>
-                      <ChevronDown
-                        size={16}
-                        className={`transition-transform shrink-0 ${isCategoryDropdownOpen ? "rotate-180" : ""}`}
-                      />
-                    </button>
-                    {isCategoryDropdownOpen && (
-                      <div className="absolute top-full left-0 right-0 mt-1 bg-card border border-border rounded-xl shadow-lg z-20 max-h-60 overflow-auto">
-                        {categoryOptions.map((option) => (
-                          <button
-                            key={option.value}
-                            onClick={() => {
-                              setSelectedCategory(option.value);
-                              setIsCategoryDropdownOpen(false);
-                            }}
-                            className={`w-full flex justify-between items-center px-4 py-2.5 text-sm hover:bg-muted transition-colors ${
-                              selectedCategory === option.value
-                                ? "bg-red-50 text-primary font-bold dark:bg-red-950/40"
-                                : "text-foreground"
-                            }`}
-                          >
+                  <Select
+                    value={selectedCategory}
+                    onValueChange={(val) => setSelectedCategory(val)}
+                  >
+                    <SelectTrigger className="w-full h-10 rounded-xl bg-card border-border text-xs md:text-sm font-medium text-foreground cursor-pointer">
+                      <SelectValue placeholder="Pilih Kategori" />
+                    </SelectTrigger>
+                    <SelectContent className="max-h-60 bg-card border-border shadow-lg">
+                      {categoryOptions.map((option) => (
+                        <SelectItem
+                          key={option.value}
+                          value={option.value}
+                          className="text-xs md:text-sm cursor-pointer"
+                        >
+                          <div className="flex items-center justify-between w-full gap-3">
                             <span>{option.label}</span>
-                            <span className="text-xs text-muted-foreground">
-                              {categoryCounts[option.value] || 0}
+                            <span className="text-[11px] text-muted-foreground">
+                              ({categoryCounts[option.value] || 0})
                             </span>
-                          </button>
-                        ))}
-                      </div>
-                    )}
-                  </div>
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
 
                 {/* Fakultas Dropdown Filter */}
-                <div className="mb-6 faculty-dropdown">
-                  <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
+                <div className="mb-5 space-y-1.5">
+                  <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                     Fakultas
                   </label>
-                  <div className="relative">
-                    <button
-                      onClick={() => setIsFacultyDropdownOpen(!isFacultyDropdownOpen)}
-                      className="w-full flex items-center justify-between px-4 py-2.5 bg-card border border-border rounded-xl text-foreground text-sm hover:border-primary/40 transition-colors"
-                    >
-                      <span className="truncate">{selectedFaculty}</span>
-                      <ChevronDown
-                        size={16}
-                        className={`transition-transform shrink-0 ${isFacultyDropdownOpen ? "rotate-180" : ""}`}
-                      />
-                    </button>
-                    {isFacultyDropdownOpen && (
-                      <div className="absolute top-full left-0 right-0 mt-1 bg-card border border-border rounded-xl shadow-lg z-20 max-h-60 overflow-auto">
-                        {facultyOptions.map((option) => (
-                          <button
-                            key={option.value}
-                            onClick={() => {
-                              setSelectedFaculty(option.value);
-                              setIsFacultyDropdownOpen(false);
-                            }}
-                            className={`w-full text-left px-4 py-2.5 text-sm hover:bg-muted transition-colors ${
-                              selectedFaculty === option.value
-                                ? "bg-red-50 text-primary font-bold dark:bg-red-950/40"
-                                : "text-foreground"
-                            }`}
-                          >
-                            {option.label}
-                          </button>
-                        ))}
-                      </div>
-                    )}
-                  </div>
+                  <Select
+                    value={selectedFaculty}
+                    onValueChange={(val) => setSelectedFaculty(val)}
+                  >
+                    <SelectTrigger className="w-full h-10 rounded-xl bg-card border-border text-xs md:text-sm font-medium text-foreground cursor-pointer">
+                      <SelectValue placeholder="Pilih Fakultas" />
+                    </SelectTrigger>
+                    <SelectContent className="max-h-60 bg-card border-border shadow-lg">
+                      {facultyOptions.map((option) => (
+                        <SelectItem
+                          key={option.value}
+                          value={option.value}
+                          className="text-xs md:text-sm cursor-pointer"
+                        >
+                          {option.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
 
                 {/* Tahun Terbit */}
-                <div className="mb-6">
-                  <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
+                <div className="mb-5 space-y-1.5">
+                  <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                     Tahun Naskah
                   </label>
-                  <div className="flex gap-3">
-                    <div className="flex-1">
-                      <input
-                        type="text"
-                        value={yearStart}
-                        onChange={(e) => setYearStart(e.target.value)}
-                        placeholder="Dari"
-                        className="w-full bg-card text-foreground border border-border rounded-xl px-3 py-2 text-sm outline-none focus:border-primary/60 transition-all placeholder:text-muted-foreground"
-                      />
-                    </div>
-                    <div className="flex-1">
-                      <input
-                        type="text"
-                        value={yearEnd}
-                        onChange={(e) => setYearEnd(e.target.value)}
-                        placeholder="Sampai"
-                        className="w-full bg-card text-foreground border border-border rounded-xl px-3 py-2 text-sm outline-none focus:border-primary/60 transition-all placeholder:text-muted-foreground"
-                      />
-                    </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <input
+                      type="number"
+                      value={yearStart}
+                      onChange={(e) => setYearStart(e.target.value)}
+                      placeholder="Dari (2020)"
+                      className="w-full bg-card text-foreground border border-border rounded-xl px-3 py-2 text-xs md:text-sm outline-none focus:ring-2 focus:ring-red-600/20 focus:border-red-600 transition-all placeholder:text-muted-foreground"
+                    />
+                    <input
+                      type="number"
+                      value={yearEnd}
+                      onChange={(e) => setYearEnd(e.target.value)}
+                      placeholder="Sampai (2026)"
+                      className="w-full bg-card text-foreground border border-border rounded-xl px-3 py-2 text-xs md:text-sm outline-none focus:ring-2 focus:ring-red-600/20 focus:border-red-600 transition-all placeholder:text-muted-foreground"
+                    />
                   </div>
                 </div>
 
@@ -681,17 +639,27 @@ export default function EResourcePage() {
                 </div>
 
                 {/* Sorting */}
-                <div className="flex items-center gap-2 text-sm">
-                  <span className="text-muted-foreground text-xs font-semibold">Urutkan:</span>
-                  <select
+                <div className="flex items-center gap-2">
+                  <span className="text-muted-foreground text-xs font-semibold shrink-0">Urutkan:</span>
+                  <Select
                     value={sortBy}
-                    onChange={(e) => setSortBy(e.target.value as any)}
-                    className="bg-card border border-border rounded-xl px-3 py-2 text-sm font-semibold text-foreground focus:outline-none focus:border-primary/60"
+                    onValueChange={(val) => setSortBy(val as "date" | "downloads" | "views")}
                   >
-                    <option value="date">Terbaru (Prioritas Mahasiswa)</option>
-                    <option value="downloads">Terpopuler</option>
-                    <option value="views">Terbanyak Dilihat</option>
-                  </select>
+                    <SelectTrigger className="w-[215px] h-9 rounded-xl bg-card border-border text-xs font-semibold cursor-pointer">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent align="end" className="bg-card border-border shadow-lg">
+                      <SelectItem value="date" className="text-xs font-medium cursor-pointer">
+                        Terbaru (Prioritas Mahasiswa)
+                      </SelectItem>
+                      <SelectItem value="downloads" className="text-xs font-medium cursor-pointer">
+                        Terpopuler
+                      </SelectItem>
+                      <SelectItem value="views" className="text-xs font-medium cursor-pointer">
+                        Terbanyak Dilihat
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
 
