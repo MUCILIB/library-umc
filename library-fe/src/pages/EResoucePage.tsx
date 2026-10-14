@@ -5,7 +5,6 @@ import Navbar from "@/components/ui/navbar";
 import Footer from "@/components/Footer";
 import { repositoryService } from "@/services/repositoryService";
 import { facultyApi, type Faculty } from "@/api/client";
-import { API_BASE_URL } from "@/utils/api-config";
 import {
   Search,
   Download,
@@ -46,124 +45,6 @@ interface RepositoryItem {
   proposalNumber?: string;
   pageCount?: number;
 }
-
-// --- Mock Data Tambahan sebagai Pelengkap Koleksi ---
-const mockRepositoryData: RepositoryItem[] = [
-  {
-    id: "mock-1",
-    title: "Implementasi Algoritma Deep Learning untuk Deteksi Penyakit Tanaman Padi",
-    author: "Ahmad Fauzi",
-    authorId: "202151001",
-    department: "Teknik Informatika",
-    faculty: "Fakultas Teknik",
-    abstract:
-      "Penelitian ini mengembangkan model deteksi penyakit tanaman padi menggunakan Convolutional Neural Network (CNN) dengan akurasi mencapai 95.7% pada dataset citra daun padi.",
-    date: "12 Januari 2026",
-    fileSize: "2.4 MB",
-    fileType: "Skripsi",
-    downloads: 245,
-    views: 1234,
-    category: "Skripsi",
-    year: "2026",
-    keywords: ["deep learning", "cnn", "tanaman padi", "deteksi penyakit"],
-    isDbRecord: false
-  },
-  {
-    id: "mock-2",
-    title: "Analisis Sentimen Masyarakat terhadap Kebijakan Pendidikan menggunakan Metode Naive Bayes",
-    author: "Siti Nurhaliza",
-    authorId: "202152002",
-    department: "Sistem Informasi",
-    faculty: "Fakultas Ilmu Komputer",
-    abstract:
-      "Penelitian ini menganalisis sentimen masyarakat terhadap kebijakan pendidikan terbaru menggunakan metode klasifikasi Naive Bayes dengan tingkat akurasi 89.3%.",
-    date: "15 Februari 2026",
-    fileSize: "1.8 MB",
-    fileType: "Jurnal",
-    downloads: 189,
-    views: 956,
-    category: "Jurnal",
-    year: "2026",
-    keywords: ["sentimen analisis", "naive bayes", "kebijakan pendidikan"],
-    isDbRecord: false
-  },
-  {
-    id: "mock-3",
-    title: "Rancang Bangun Aplikasi E-Learning berbasis Mobile untuk Sekolah Dasar",
-    author: "Budi Santoso",
-    authorId: "202153003",
-    department: "Teknik Informatika",
-    faculty: "Fakultas Teknik",
-    abstract:
-      "Aplikasi e-learning dikembangkan menggunakan framework Flutter dengan fitur interaktif untuk memfasilitasi pembelajaran jarak jauh bagi siswa sekolah dasar.",
-    date: "20 Maret 2026",
-    fileSize: "3.1 MB",
-    fileType: "Skripsi",
-    downloads: 312,
-    views: 1876,
-    category: "Skripsi",
-    year: "2026",
-    keywords: ["e-learning", "mobile", "flutter", "sekolah dasar"],
-    isDbRecord: false
-  },
-  {
-    id: "mock-4",
-    title: "Pengaruh Penggunaan Media Sosial terhadap Prestasi Belajar Mahasiswa",
-    author: "Dewi Lestari",
-    authorId: "202154004",
-    department: "Pendidikan",
-    faculty: "Fakultas Keguruan",
-    abstract:
-      "Studi kuantitatif ini menginvestigasi dampak penggunaan media sosial terhadap prestasi akademik mahasiswa dengan sampel 300 responden dari 5 universitas.",
-    date: "5 April 2026",
-    fileSize: "2.1 MB",
-    fileType: "Tesis",
-    downloads: 156,
-    views: 745,
-    category: "Tesis",
-    year: "2026",
-    keywords: ["media sosial", "prestasi belajar", "mahasiswa"],
-    isDbRecord: false
-  },
-  {
-    id: "mock-5",
-    title: "Optimasi Jaringan Syaraf Tiruan untuk Prediksi Cuaca di Wilayah Cirebon",
-    author: "Rizki Ramadhan",
-    authorId: "202155005",
-    department: "Teknik Informatika",
-    faculty: "Fakultas Teknik",
-    abstract:
-      "Penelitian ini mengoptimalkan algoritma neural network untuk memprediksi pola cuaca dengan akurasi 92% menggunakan data historis 10 tahun terakhir.",
-    date: "18 Mei 2025",
-    fileSize: "2.7 MB",
-    fileType: "Jurnal",
-    downloads: 98,
-    views: 432,
-    category: "Jurnal",
-    year: "2025",
-    keywords: ["neural network", "prediksi cuaca", "optimasi"],
-    isDbRecord: false
-  },
-  {
-    id: "mock-6",
-    title: "Sistem Pendukung Keputusan Pemilihan Program Studi menggunakan Metode AHP",
-    author: "Maya Sari",
-    authorId: "202156006",
-    department: "Sistem Informasi",
-    faculty: "Fakultas Ilmu Komputer",
-    abstract:
-      "Sistem pendukung keputusan berbasis web dikembangkan untuk membantu calon mahasiswa memilih program studi sesuai minat dan bakat menggunakan metode AHP.",
-    date: "22 Juni 2025",
-    fileSize: "2.9 MB",
-    fileType: "Skripsi",
-    downloads: 201,
-    views: 1023,
-    category: "Skripsi",
-    year: "2025",
-    keywords: ["spk", "ahp", "pemilihan prodi"],
-    isDbRecord: false
-  }
-];
 
 // Data untuk filter dropdown kategori
 const categoryOptions = [
@@ -257,11 +138,11 @@ export default function EResourcePage() {
           };
         });
 
-        // Naskah nyata mahasiswa ditaruh di awal, diikuti koleksi lainnya
-        setItems([...liveItems, ...mockRepositoryData]);
+        // Naskah nyata mahasiswa hasil kurasi pustakawan (100% dari endpoint repo)
+        setItems(liveItems);
       } catch (err) {
         console.error("Gagal memuat repositori dari backend:", err);
-        setItems(mockRepositoryData);
+        setItems([]);
       } finally {
         setLoading(false);
       }
@@ -818,28 +699,13 @@ export default function EResourcePage() {
                           <span>{item.fileSize}</span>
                         </div>
                         <div className="flex items-center gap-2">
-                          {item.isDbRecord && (
-                            <button
-                              onClick={() => navigate(`/repository/${item.id}`)}
-                              className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold border border-border bg-card hover:bg-muted text-foreground transition-colors"
-                            >
-                              <BookOpen size={13} />
-                              Detail
-                            </button>
-                          )}
-                          <a
-                            href={
-                              item.isDbRecord
-                                ? `${API_BASE_URL}/api/repository/proposals/${item.id}/view-pdf`
-                                : "#"
-                            }
-                            target={item.isDbRecord ? "_blank" : undefined}
-                            rel={item.isDbRecord ? "noreferrer" : undefined}
-                            className="inline-flex items-center gap-1 bg-red-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-red-800 transition-all shadow-xs"
+                          <button
+                            onClick={() => navigate(`/repository/${item.id}`)}
+                            className="inline-flex items-center gap-1.5 bg-red-700 text-white px-3.5 py-1.5 rounded-lg text-xs font-bold hover:bg-red-800 transition-all shadow-xs active:scale-95"
                           >
-                            <Eye size={13} />
+                            <BookOpen size={13} />
                             Baca PDF
-                          </a>
+                          </button>
                         </div>
                       </div>
                     </div>
