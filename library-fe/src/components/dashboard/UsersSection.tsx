@@ -17,10 +17,12 @@ import {
   CheckCircle,
   X,
   Columns3,
-  Check
+  Check,
+  Trash2
 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
+import Modal from "@/components/ui/modal";
 import { authClient } from "@/utils/auth-client";
 import { useToast } from "@/hooks/useToast";
 import { useUsersManagement } from "@/hooks/dashboard/useUsersManagement";
@@ -103,6 +105,8 @@ export default function UsersSection() {
   const [banSavingId, setBanSavingId] = useState<string | null>(null);
   const [syncSavingId, setSyncSavingId] = useState<string | null>(null);
   const [issueSavingId, setIssueSavingId] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [deleteConfirmUser, setDeleteConfirmUser] = useState<(typeof users)[number] | null>(null);
   const [search, setSearch] = useState("");
   const [recordSavingId, setRecordSavingId] = useState<string | null>(null);
   const [showOnlyUnsynced, setShowOnlyUnsynced] = useState(false);
@@ -330,8 +334,29 @@ export default function UsersSection() {
     }
   };
 
+  const handleDeleteUser = async () => {
+    if (!deleteConfirmUser) return;
+    const user = deleteConfirmUser;
+
+    setDeletingId(user.id);
+    setPageError(null);
+    try {
+      await usersManagementService.deleteUser(user.id);
+      await refetch();
+      success("User Dihapus", `Akun ${user.name} berhasil dihapus.`);
+      setDeleteConfirmUser(null);
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : "Gagal menghapus user";
+      setPageError(message);
+      showErrorToast("Hapus User Gagal", message);
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
   return (
-    <div className="space-y-6 overflow-x-hidden">
+    <div className="w-full min-w-0 max-w-full space-y-6">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h2 className="text-[28px] font-extrabold text-foreground tracking-tight">
@@ -403,7 +428,7 @@ export default function UsersSection() {
         </div>
       </div>
 
-      <div className="bg-card rounded-[24px] border border-border shadow-sm overflow-hidden">
+      <div className="w-full min-w-0 max-w-full bg-card rounded-[24px] border border-border shadow-sm overflow-hidden">
         <div className="p-6 border-b border-border flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="relative w-full sm:w-[360px]">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground w-4 h-4" />
@@ -516,48 +541,48 @@ export default function UsersSection() {
           </div>
         ) : (
           <>
-            <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse">
+            <div className="w-full max-w-full overflow-x-auto">
+              <table className="w-full min-w-[980px] text-left border-collapse">
                 <thead>
                   <tr className="bg-muted/50 border-b border-border">
                     {
                       visibleColumns.has("user") && (
-                        <th className="px-6 py-4 text-[11px] font-bold text-muted-foreground uppercase tracking-widest">
+                        <th className="px-6 py-4 text-[11px] font-bold text-muted-foreground uppercase tracking-widest whitespace-nowrap">
                           User
                         </th>
                       )
                     }
                     {
                       visibleColumns.has("role") && (
-                        <th className="px-6 py-4 text-[11px] font-bold text-muted-foreground uppercase tracking-widest">
+                        <th className="px-6 py-4 text-[11px] font-bold text-muted-foreground uppercase tracking-widest whitespace-nowrap">
                           Role
                         </th>
                       )
                     }
                     {
                       visibleColumns.has("status") && (
-                        <th className="px-6 py-4 text-[11px] font-bold text-muted-foreground uppercase tracking-widest">
+                        <th className="px-6 py-4 text-[11px] font-bold text-muted-foreground uppercase tracking-widest whitespace-nowrap">
                           Status
                         </th>
                       )
                     }
                     {
                       visibleColumns.has("kartu") && (
-                        <th className="px-6 py-4 text-[11px] font-bold text-muted-foreground uppercase tracking-widest">
+                        <th className="px-6 py-4 text-[11px] font-bold text-muted-foreground uppercase tracking-widest whitespace-nowrap">
                           Kartu
                         </th>
                       )
                     }
                     {
                       visibleColumns.has("terdaftar") && (
-                        <th className="px-6 py-4 text-[11px] font-bold text-muted-foreground uppercase tracking-widest">
+                        <th className="px-6 py-4 text-[11px] font-bold text-muted-foreground uppercase tracking-widest whitespace-nowrap">
                           Terdaftar
                         </th>
                       )
                     }
                     {
                       visibleColumns.has("aksi") && (
-                        <th className="px-6 py-4 text-[11px] font-bold text-muted-foreground uppercase tracking-widest text-right">
+                        <th className="px-6 py-4 text-[11px] font-bold text-muted-foreground uppercase tracking-widest text-right whitespace-nowrap">
                           Aksi
                         </th>
                       )
@@ -571,7 +596,7 @@ export default function UsersSection() {
                       className="hover:bg-surface-hover/40 transition-colors"
                     >
                       {visibleColumns.has("user") && (
-                        <td className="px-6 py-4">
+                        <td className="px-6 py-4 whitespace-nowrap">
                           <div className="flex items-center gap-3">
                             <div className="w-9 h-9 rounded-full bg-muted overflow-hidden flex items-center justify-center text-muted-foreground text-xs font-bold">
                               {user.image ? (
@@ -596,7 +621,7 @@ export default function UsersSection() {
                         </td>
                       )}
                       {visibleColumns.has("role") && (
-                        <td className="px-6 py-4">
+                        <td className="px-6 py-4 whitespace-nowrap">
                           <span
                             className={`inline-flex items-center px-3 py-1 rounded-full text-[11px] font-bold border ${roleBadgeClass(user.role)}`}
                           >
@@ -608,7 +633,7 @@ export default function UsersSection() {
                         </td>
                       )}
                       {visibleColumns.has("status") && (
-                        <td className="px-6 py-4">
+                        <td className="px-6 py-4 whitespace-nowrap">
                           {user.banned ? (
                             <span className="inline-flex items-center px-3 py-1 rounded-full text-[11px] font-bold border bg-orange-50 text-orange-700 border-orange-200">
                               <UserX size={12} className="mr-1.5" /> Banned
@@ -621,8 +646,8 @@ export default function UsersSection() {
                         </td>
                       )}
                       {visibleColumns.has("kartu") && (
-                        <td className="px-6 py-4 space-y-2">
-                          <div className="flex flex-wrap items-center gap-2">
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="flex items-center gap-2">
                             <span
                               className={`inline-flex items-center px-3 py-1 rounded-full text-[11px] font-bold border ${cardStatusClass(user.cardStatus)}`}
                             >
@@ -635,14 +660,14 @@ export default function UsersSection() {
                             ) : null}
                           </div>
                           {user.cardRejectedReason ? (
-                            <p className="max-w-[220px] text-[11px] text-rose-600">
+                            <p className="max-w-[220px] text-[11px] text-rose-600 truncate mt-1">
                               {user.cardRejectedReason}
                             </p>
                           ) : null}
                         </td>
                       )}
                       {visibleColumns.has("terdaftar") && (
-                        <td className="px-6 py-4 text-sm font-medium text-muted-foreground">
+                        <td className="px-6 py-4 text-sm font-medium text-muted-foreground whitespace-nowrap">
                           {user.createdAt
                             ? new Date(user.createdAt).toLocaleDateString("id-ID", {
                                 day: "2-digit",
@@ -653,8 +678,8 @@ export default function UsersSection() {
                         </td>
                       )}
                       {visibleColumns.has("aksi") && (
-                        <td className="px-6 py-4 text-right">
-                        <div className="inline-flex items-center gap-2">
+                        <td className="px-6 py-4 text-right whitespace-nowrap">
+                        <div className="inline-flex items-center gap-2 whitespace-nowrap">
                           <button
                             onClick={() => void handleRecordVisit(user)}
                             disabled={recordSavingId === user.id}
@@ -750,6 +775,25 @@ export default function UsersSection() {
                               ) : null}
                             </>
                           )}
+
+                          <button
+                            onClick={() => setDeleteConfirmUser(user)}
+                            disabled={
+                              user.id === currentUserId ||
+                              deletingId === user.id ||
+                              savingId === user.id ||
+                              banSavingId === user.id
+                            }
+                            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold border border-rose-200 dark:border-rose-900 bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-400 hover:bg-rose-100 dark:hover:bg-rose-900/80 transition-colors disabled:bg-muted disabled:text-muted-foreground disabled:border-border"
+                            title={
+                              user.id === currentUserId
+                                ? "Anda tidak bisa menghapus akun sendiri"
+                                : "Hapus user"
+                            }
+                          >
+                            <Trash2 size={12} />
+                            {deletingId === user.id ? "Menghapus..." : "Hapus"}
+                          </button>
                         </div>
                         </td>
                       )}
@@ -818,6 +862,91 @@ export default function UsersSection() {
           success("Import Berhasil", "Data user telah diperbarui.");
         }}
       />
+
+      <Modal
+        isOpen={Boolean(deleteConfirmUser)}
+        onClose={() => {
+          if (!deletingId) setDeleteConfirmUser(null);
+        }}
+        title="Konfirmasi Hapus Pengguna"
+        size="sm"
+      >
+        <div className="space-y-4">
+          <div className="flex items-start gap-3.5">
+            <div className="w-10 h-10 rounded-full bg-rose-100 dark:bg-rose-950/80 text-rose-600 dark:text-rose-400 flex items-center justify-center shrink-0 border border-rose-200 dark:border-rose-900 mt-0.5">
+              <Trash2 className="w-5 h-5" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold text-foreground">
+                Apakah Anda yakin ingin menghapus akun ini?
+              </p>
+              <p className="text-xs text-muted-foreground mt-1">
+                Akun pengguna akan dinonaktifkan dan seluruh sesi login aktif akan dicabut dari sistem.
+              </p>
+            </div>
+          </div>
+
+          {deleteConfirmUser && (
+            <div className="rounded-xl bg-muted/60 border border-border p-3.5 text-xs space-y-1.5">
+              <div className="flex items-center justify-between">
+                <span className="text-muted-foreground">Nama:</span>
+                <span className="font-bold text-foreground">
+                  {deleteConfirmUser.name || "Tanpa Nama"}
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-muted-foreground">Email:</span>
+                <span className="font-mono text-foreground">
+                  {deleteConfirmUser.email}
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-muted-foreground">Role:</span>
+                <span className="font-bold uppercase text-foreground">
+                  {deleteConfirmUser.role}
+                </span>
+              </div>
+              {deleteConfirmUser.cardNumber ? (
+                <div className="flex items-center justify-between">
+                  <span className="text-muted-foreground">No. Kartu:</span>
+                  <span className="font-mono text-foreground">
+                    {deleteConfirmUser.cardNumber}
+                  </span>
+                </div>
+              ) : null}
+            </div>
+          )}
+
+          <div className="flex items-center justify-end gap-3 pt-2">
+            <button
+              type="button"
+              onClick={() => setDeleteConfirmUser(null)}
+              disabled={Boolean(deletingId)}
+              className="h-9 rounded-lg border border-border px-4 text-sm font-medium text-muted-foreground hover:bg-muted"
+            >
+              Batal
+            </button>
+            <button
+              type="button"
+              onClick={() => void handleDeleteUser()}
+              disabled={Boolean(deletingId)}
+              className="inline-flex h-9 items-center gap-2 rounded-lg bg-destructive px-4 text-sm font-medium text-destructive-foreground hover:bg-destructive/90 disabled:opacity-50"
+            >
+              {deletingId ? (
+                <>
+                  <Loader2 className="size-4 animate-spin" />
+                  <span>Menghapus...</span>
+                </>
+              ) : (
+                <>
+                  <Trash2 className="size-4" />
+                  <span>Hapus Pengguna</span>
+                </>
+              )}
+            </button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }

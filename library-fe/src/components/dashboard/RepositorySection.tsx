@@ -15,12 +15,20 @@ import { repositoryService, type RepositoryProposal } from "@/services/repositor
 import { API_BASE_URL } from "@/utils/api-config";
 import { useToast } from "@/hooks/useToast";
 import Modal from "@/components/ui/modal";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 export default function RepositorySection() {
   const { success, error } = useToast();
   const [proposals, setProposals] = useState<RepositoryProposal[]>([]);
   const [loading, setLoading] = useState(true);
   const [filterStatus, setFilterStatus] = useState<string>("all");
+  const [filterCategory, setFilterCategory] = useState<string>("all");
   const [searchTerm, setSearchTerm] = useState("");
 
   // Review modal state
@@ -113,12 +121,16 @@ export default function RepositorySection() {
 
   const filteredProposals = proposals.filter((p) => {
     const term = searchTerm.toLowerCase();
-    return (
+    const matchesSearch =
       p.title.toLowerCase().includes(term) ||
       p.authorName.toLowerCase().includes(term) ||
       p.authorNim.toLowerCase().includes(term) ||
-      p.proposalNumber.toLowerCase().includes(term)
-    );
+      p.proposalNumber.toLowerCase().includes(term);
+
+    const matchesCategory =
+      filterCategory === "all" || p.documentCategory === filterCategory;
+
+    return matchesSearch && matchesCategory;
   });
 
   const getStatusBadge = (status: string) => {
@@ -168,8 +180,8 @@ export default function RepositorySection() {
       </div>
 
       {/* Filter and Search Bar */}
-      <div className="flex flex-col sm:flex-row gap-4 justify-between items-center bg-card p-4 rounded-xl border border-border">
-        <div className="relative w-full sm:w-80">
+      <div className="flex flex-col md:flex-row gap-4 justify-between items-stretch md:items-center bg-card p-4 rounded-xl border border-border">
+        <div className="relative w-full md:w-80">
           <Search className="w-4 h-4 absolute left-3 top-3 text-muted-foreground" />
           <input
             type="text"
@@ -180,19 +192,37 @@ export default function RepositorySection() {
           />
         </div>
 
-        <div className="flex items-center gap-2 w-full sm:w-auto">
-          <span className="text-xs font-semibold text-muted-foreground shrink-0">Status:</span>
-          <select
-            value={filterStatus}
-            onChange={(e) => setFilterStatus(e.target.value)}
-            className="w-full sm:w-auto px-3 py-2 rounded-lg border border-border bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-red-600"
-          >
-            <option value="all">Semua Status</option>
-            <option value="SUBMITTED">Pengajuan Baru</option>
-            <option value="UNDER_REVIEW">Sedang Ditinjau</option>
-            <option value="REVISION_REQUIRED">Perlu Revisi</option>
-            <option value="APPROVED">Disetujui</option>
-          </select>
+        <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-semibold text-muted-foreground shrink-0">Kategori:</span>
+            <Select value={filterCategory} onValueChange={(val) => setFilterCategory(val)}>
+              <SelectTrigger className="w-[155px] h-9 text-xs font-medium rounded-lg bg-background cursor-pointer">
+                <SelectValue placeholder="Semua Kategori" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all" className="text-xs cursor-pointer">Semua Kategori</SelectItem>
+                <SelectItem value="PROPOSAL" className="text-xs cursor-pointer">Proposal</SelectItem>
+                <SelectItem value="THESIS" className="text-xs cursor-pointer">Skripsi / Tesis</SelectItem>
+                <SelectItem value="REPORT" className="text-xs cursor-pointer">Laporan Magang</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-semibold text-muted-foreground shrink-0">Status:</span>
+            <Select value={filterStatus} onValueChange={(val) => setFilterStatus(val)}>
+              <SelectTrigger className="w-[165px] h-9 text-xs font-medium rounded-lg bg-background cursor-pointer">
+                <SelectValue placeholder="Semua Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all" className="text-xs cursor-pointer">Semua Status</SelectItem>
+                <SelectItem value="SUBMITTED" className="text-xs cursor-pointer">Pengajuan Baru</SelectItem>
+                <SelectItem value="UNDER_REVIEW" className="text-xs cursor-pointer">Sedang Ditinjau</SelectItem>
+                <SelectItem value="REVISION_REQUIRED" className="text-xs cursor-pointer">Perlu Revisi</SelectItem>
+                <SelectItem value="APPROVED" className="text-xs cursor-pointer">Disetujui</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </div>
       </div>
 

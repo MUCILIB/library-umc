@@ -410,7 +410,7 @@ export default function SuperAdminDashboard() {
         onSignOut={handleSignOut}
       />
 
-      <SidebarInset className="bg-background">
+      <SidebarInset className="bg-background min-w-0 max-w-full overflow-hidden">
         <header className="sticky top-0 z-10 flex min-h-20 flex-wrap items-center gap-3 border-b border-border bg-background/85 px-4 py-3 backdrop-blur-sm sm:px-6 lg:px-8">
           <SidebarTrigger className="size-9 rounded-lg border border-border text-foreground hover:bg-muted" />
 
@@ -446,7 +446,7 @@ export default function SuperAdminDashboard() {
           </div>
         </header>
 
-        <div className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-10">
+        <div className="flex-1 min-w-0 max-w-full overflow-y-auto overflow-x-hidden p-4 sm:p-6 lg:p-10">
           {activeLoading ? (
             <div className="mx-auto max-w-7xl animate-in space-y-8 fade-in duration-500">
               <div className="mb-8 space-y-2 text-left">
@@ -464,7 +464,7 @@ export default function SuperAdminDashboard() {
               <Skeleton className="mt-8 h-100 w-full rounded-[32px]" />
             </div>
           ) : (
-            <div className="mx-auto max-w-7xl rounded-3xl border border-border bg-card/70 p-3 shadow-sm backdrop-blur-sm animate-in space-y-8 fade-in duration-500 delay-150 sm:p-5 lg:p-6">
+            <div className="mx-auto max-w-7xl min-w-0 w-full rounded-3xl border border-border bg-card/70 p-3 shadow-sm backdrop-blur-sm animate-in space-y-8 fade-in duration-500 delay-150 sm:p-5 lg:p-6">
               {renderSection()}
             </div>
           )}

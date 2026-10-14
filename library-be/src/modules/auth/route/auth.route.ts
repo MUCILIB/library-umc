@@ -207,4 +207,37 @@ router.post(
   authController.syncUserMember
 );
 
+/**
+ * @swagger
+ * /users/{id}:
+ *   delete:
+ *     summary: Delete User (Super Admin Only)
+ *     description: Menghapus (soft delete) user, mencabut semua sesi aktif, dan menghapus profil member terkait.
+ *     tags: [Auth]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: User ID
+ *     responses:
+ *       200:
+ *         description: User berhasil dihapus
+ *       400:
+ *         description: Bad Request (misal menghapus diri sendiri, super admin terakhir, atau memiliki pinjaman aktif)
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden - Super Admin only
+ */
+router.delete(
+  "/users/:id",
+  isAuthenticated,
+  requireRole(["super_admin"]),
+  authController.deleteUser
+);
+
 export const authRoutes = router;
