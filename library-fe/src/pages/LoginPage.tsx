@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router";
 import { authClient } from "@/utils/auth-client";
-import { Mail, Lock, LogIn, UserCircle2, UserPlus, Eye, EyeOff } from "lucide-react";
+import { Mail, Lock, LogIn, UserCircle2, UserPlus, Eye, EyeOff, ShieldCheck } from "lucide-react";
 import { useToast } from "@/hooks/useToast";
 
 const LoginPage = () => {
@@ -199,6 +199,21 @@ const LoginPage = () => {
                 <span className="text-muted-foreground text-[10px]">Ingat saya</span>
               </label>
             </div>
+
+            {/* Auto Fill Super Admin */}
+            <button
+              type="button"
+              onClick={() => {
+                setEmail("admin@mucilib.ac.id");
+                setPassword("Admin123456!");
+                info("Super Admin", "Kredensial Super Admin berhasil diisi.");
+              }}
+              disabled={isLoading}
+              className="w-full flex items-center justify-center gap-1.5 h-8 bg-primary/10 hover:bg-primary/15 border border-dashed border-primary/40 text-primary rounded-xl font-semibold text-[11px] transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <ShieldCheck size={14} className="text-primary" />
+              <span>Auto Fill Super Admin</span>
+            </button>
 
             {/* Submit Button */}
             <button
