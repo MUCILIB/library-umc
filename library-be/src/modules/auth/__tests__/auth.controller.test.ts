@@ -3,6 +3,7 @@ import express from 'express';
 import request from 'supertest';
 import { AuthController } from '../controller/auth.controller';
 import { AuthService } from '../service/auth.service';
+import { UserService } from '../service/user.service';
 
 vi.mock('../../audit/service/audit.service', () => ({
   default: {
@@ -17,6 +18,10 @@ const authController = new AuthController();
 // Mocking Express Routes agar tidak perlu memanggil Router asli
 app.post('/register', (req, res, next) => authController.register(req, res, next));
 app.post('/login', (req, res, next) => authController.loginCredential(req, res, next));
+app.delete('/users/:id', (req, res, next) => {
+  req.user = { id: 'actor-super-admin-id', role: 'super_admin' } as any;
+  return authController.deleteUser(req, res, next);
+});
 
 describe('AuthController Unit Tests', () => {
   beforeEach(() => {
@@ -101,6 +106,45 @@ describe('AuthController Unit Tests', () => {
       expect(response.body.data).toEqual(mockResult);
 
       expect(loginSpy).toHaveBeenCalledWith('test@example.com', 'password123');
+    });
+  });
+
+  describe('DELETE /users/:id', () => {
+    it('harus merespon 400 jika service mengembalikan error (misal menghapus diri sendiri)', async () => {
+      vi.spyOn(UserService, 'deleteUser').mockResolvedValueOnce({
+        success: false,
+        message: 'Super admin tidak bisa menghapus akun dirinya sendiri',
+        data: null
+      });
+
+      const response = await request(app).delete('/users/actor-super-admin-id');
+
+      expect(response.status).toBe(400);
+      expect(response.body.success).toBe(false);
+      expect(response.body.message).toBe('Super admin tidak bisa menghapus akun dirinya sendiri');
+    });
+
+    it('harus merespon 200 dan mengembalikan user yang dihapus jika berhasil', async () => {
+      const mockDeleted = {
+        id: 'target-user-123',
+        name: 'User To Delete',
+        email: 'target@example.com',
+        role: 'student',
+        deletedAt: new Date().toISOString()
+      };
+
+      vi.spyOn(UserService, 'deleteUser').mockResolvedValueOnce({
+        success: true,
+        message: 'User berhasil dihapus',
+        data: mockDeleted as any
+      });
+
+      const response = await request(app).delete('/users/target-user-123');
+
+      expect(response.status).toBe(200);
+      expect(response.body.success).toBe(true);
+      expect(response.body.message).toBe('User berhasil dihapus');
+      expect(response.body.data).toEqual(mockDeleted);
     });
   });
 });

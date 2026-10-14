@@ -81,6 +81,14 @@ export const usersManagementService = {
     return jsonOrThrow(res);
   },
 
+  async deleteUser(userId: string) {
+    const res = await fetch(`${API_BASE_URL}/api/users/${userId}`, {
+      method: "DELETE",
+      credentials: "include"
+    });
+    return jsonOrThrow(res);
+  },
+
   async syncMemberByUserId(userId: string) {
     const res = await fetch(`${API_BASE_URL}/api/users/${userId}/sync-member`, {
       method: "POST",

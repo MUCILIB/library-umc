@@ -253,4 +253,38 @@ export class AuthController {
       next(error);
     }
   }
+
+  async deleteUser(req: Request, res: Response, next: NextFunction) {
+    try {
+      const userId = String(req.params.id || "");
+      const actorUserId = String(req.user?.id || "");
+
+      if (!userId || !actorUserId) {
+        return sendError(res, "Data user tidak lengkap", 400);
+      }
+
+      const result = await UserService.deleteUser(userId, actorUserId);
+
+      if (!result.success) {
+        return sendError(
+          res,
+          result.message ?? "Gagal menghapus user",
+          400
+        );
+      }
+
+      await auditService.createLog({
+        userId: actorUserId,
+        action: "delete",
+        entity: "Users",
+        entityId: userId,
+        ipAddress: req.ip,
+        detail: `delete_user; target_user_id=${userId}`
+      });
+
+      sendSuccess(res, result.message ?? "User berhasil dihapus", result.data);
+    } catch (error) {
+      next(error);
+    }
+  }
 }
