@@ -34,11 +34,11 @@ export default function RepositoryDetailPage() {
 
       <main className="flex-1 max-w-5xl w-full mx-auto px-4 py-8">
         <Link
-          to="/katalog"
+          to="/e-resource"
           className="inline-flex items-center gap-2 text-xs font-semibold text-muted-foreground hover:text-foreground mb-6 transition-colors"
         >
           <ArrowLeft className="w-4 h-4" />
-          Kembali ke Katalog
+          Kembali ke Repositori
         </Link>
 
         {loading ? (
