@@ -179,18 +179,24 @@ export class ProposalController {
   async viewPdf(req: Request, res: Response, next: NextFunction) {
     try {
       const id = String(req.params.id);
+      const isPublicPreview =
+        req.query?.preview === "public" ||
+        req.query?.mode === "public" ||
+        req.query?.forcePublic === "true";
 
-      // Cek apakah requester memiliki sesi login (optional auth)
-      const session = req.user
-        ? { user: req.user }
-        : await getSession(req).catch(() => null);
+      // Cek apakah requester memiliki sesi login (optional auth) jika bukan mode paksa publik
+      const session = !isPublicPreview
+        ? (req.user ? { user: req.user } : await getSession(req).catch(() => null))
+        : null;
 
       const requester = {
         userId: session?.user?.id,
-        role: (session?.user as any)?.role || "public"
+        role: isPublicPreview ? "public" : ((session?.user as any)?.role || "public")
       };
 
-      const result = await proposalService.getDocumentPdf(id, requester);
+      const result = await proposalService.getDocumentPdf(id, requester, {
+        forcePublicPreview: isPublicPreview
+      });
 
       res.setHeader("Content-Type", "application/pdf");
       res.setHeader(

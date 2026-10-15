@@ -11,7 +11,7 @@ import {
   studyPrograms,
   faculties
 } from "../../../db/schema";
-import { eq, desc, and } from "drizzle-orm";
+import { eq, desc, and, inArray } from "drizzle-orm";
 import {
   BadRequestError,
   NotFoundError,
@@ -159,7 +159,26 @@ export class ProposalService {
       query = query.where(and(...conditions)) as any;
     }
 
-    return await query.orderBy(desc(repositoryProposals.createdAt));
+    const proposals = await query.orderBy(desc(repositoryProposals.createdAt));
+    if (proposals.length === 0) return [];
+
+    const proposalIds = proposals.map((p) => p.id);
+    const rules = await db
+      .select()
+      .from(repositoryDocumentPageRules)
+      .where(inArray(repositoryDocumentPageRules.proposalId, proposalIds));
+
+    const rulesByProposalId = new Map<string, typeof rules>();
+    for (const r of rules) {
+      const list = rulesByProposalId.get(r.proposalId) || [];
+      list.push(r);
+      rulesByProposalId.set(r.proposalId, list);
+    }
+
+    return proposals.map((p) => ({
+      ...p,
+      pageRules: rulesByProposalId.get(p.id) || []
+    }));
   }
 
   /**
@@ -237,6 +256,26 @@ export class ProposalService {
         const year = new Date(item.createdAt).getFullYear();
         return year <= options.yearEnd!;
       });
+    }
+
+    const proposalIds = items.map((p) => p.id);
+    if (proposalIds.length > 0) {
+      const rules = await db
+        .select()
+        .from(repositoryDocumentPageRules)
+        .where(inArray(repositoryDocumentPageRules.proposalId, proposalIds));
+
+      const rulesByProposalId = new Map<string, typeof rules>();
+      for (const r of rules) {
+        const list = rulesByProposalId.get(r.proposalId) || [];
+        list.push(r);
+        rulesByProposalId.set(r.proposalId, list);
+      }
+
+      items = items.map((p) => ({
+        ...p,
+        pageRules: rulesByProposalId.get(p.id) || []
+      }));
     }
 
     return items;
@@ -397,7 +436,8 @@ export class ProposalService {
    */
   async getDocumentPdf(
     proposalId: string,
-    requester: { userId?: string; role?: string }
+    requester: { userId?: string; role?: string },
+    options?: { forcePublicPreview?: boolean }
   ): Promise<{
     buffer: Buffer;
     totalDocumentPages: number;
@@ -415,17 +455,21 @@ export class ProposalService {
     }
     const totalPages = proposal.pageCount;
 
-    // Hak akses penuh jika Admin, Staff, atau Mahasiswa pemilik berkas itu sendiri
-    const isOwner = requester.userId && requester.userId === proposal.authorUserId;
+    // Cek kepemilikan berkas dan peran staf/admin
+    const isOwner = Boolean(requester.userId && requester.userId === proposal.authorUserId);
     const isStaffOrAdmin =
-      requester.role === "super_admin" ||
-      requester.role === "staff" ||
-      requester.role === "admin";
-    const isCivitasMahasiswa =
-      requester.role === "mahasiswa" || requester.role === "student";
+      !options?.forcePublicPreview &&
+      (requester.role === "super_admin" ||
+        requester.role === "staff" ||
+        requester.role === "admin");
 
-    if (isStaffOrAdmin || isOwner || isCivitasMahasiswa) {
-      // Full access
+    // Keamanan ketat: Dokumen yang belum APPROVED dilarang diakses oleh publik/guest
+    if (proposal.status !== "APPROVED" && !isStaffOrAdmin && !isOwner) {
+      throw new ForbiddenError("Dokumen proposal ini belum disetujui untuk publik");
+    }
+
+    // Pemilik atau Admin (jika bukan mode force preview publik) mendapatkan akses penuh
+    if (isOwner || isStaffOrAdmin) {
       return {
         buffer: masterBuffer,
         totalDocumentPages: totalPages,
@@ -435,21 +479,25 @@ export class ProposalService {
       };
     }
 
-    // Role Mahasiswa/Member yang terautentikasi (bukan pemilik)
-    const isStudentOrMember = requester.role === "student" || requester.role === "member";
+    // Role Mahasiswa civitas (bukan pemilik) atau Publik
+    const isStudentOrMember =
+      !options?.forcePublicPreview &&
+      (requester.role === "student" || requester.role === "mahasiswa" || requester.role === "member");
     const targetScope = isStudentOrMember ? "STUDENT" : "PUBLIC";
 
-    // Ambil rule konfigurasi halaman
-    const [rule] = await db
+    // Ambil rule konfigurasi halaman untuk proposal ini
+    const rules = await db
       .select()
       .from(repositoryDocumentPageRules)
-      .where(
-        and(
-          eq(repositoryDocumentPageRules.proposalId, proposalId),
-          eq(repositoryDocumentPageRules.roleScope, targetScope)
-        )
-      )
-      .limit(1);
+      .where(eq(repositoryDocumentPageRules.proposalId, proposalId));
+
+    const rule = rules.find((r) => {
+      const scope = (r.roleScope || "").toUpperCase();
+      if (isStudentOrMember) {
+        return scope === "STUDENT" || scope === "ALL";
+      }
+      return scope === "PUBLIC" || scope === "ALL";
+    });
 
     // Default jika tidak ada rule khusus:
     // Jika Student login: beri full atau 1-totalPages; jika Public: batasi 1-10
