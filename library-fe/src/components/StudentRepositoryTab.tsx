@@ -31,6 +31,8 @@ export default function StudentRepositoryTab() {
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingProposal, setEditingProposal] = useState<RepositoryProposal | null>(null);
+  const [previewPdfItem, setPreviewPdfItem] = useState<{ id: string; title: string; blobUrl?: string } | null>(null);
+  const [loadingPreviewId, setLoadingPreviewId] = useState<string | null>(null);
 
   const [formData, setFormData] = useState({
     title: "",
@@ -161,6 +163,26 @@ export default function StudentRepositoryTab() {
       error("Gagal Menghapus", err.message || "Terjadi kesalahan saat menghapus");
     } finally {
       setDeletingId(null);
+    }
+  };
+
+  const handlePreviewPdf = async (item: RepositoryProposal) => {
+    try {
+      setLoadingPreviewId(item.id);
+      const res = await fetch(`${API_BASE_URL}/api/repository/proposals/${item.id}/view-pdf`, {
+        credentials: "include"
+      });
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => null);
+        throw new Error(errJson?.message || "Gagal memuat dokumen PDF");
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      setPreviewPdfItem({ id: item.id, title: item.title, blobUrl: url });
+    } catch (err: any) {
+      error("Pratinjau Gagal", err.message || "Tidak dapat memuat berkas naskah PDF");
+    } finally {
+      setLoadingPreviewId(null);
     }
   };
 
@@ -374,16 +396,20 @@ export default function StudentRepositoryTab() {
 
                   {/* Action Buttons */}
                   <div className="flex items-center gap-2 shrink-0 flex-wrap">
-                    <a
-                      href={`${API_BASE_URL}/api/repository/proposals/${item.id}/view-pdf`}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold bg-muted hover:bg-muted/80 text-foreground border border-border transition-colors"
-                      title="Lihat dokumen PDF di tab baru"
+                    <button
+                      type="button"
+                      onClick={() => handlePreviewPdf(item)}
+                      disabled={loadingPreviewId === item.id}
+                      className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold bg-muted hover:bg-muted/80 text-foreground border border-border transition-colors cursor-pointer disabled:opacity-50"
+                      title="Lihat dan periksa dokumen PDF naskah Anda"
                     >
-                      <Eye className="w-3.5 h-3.5 text-red-700" />
+                      {loadingPreviewId === item.id ? (
+                        <Loader2 className="w-3.5 h-3.5 animate-spin text-red-700" />
+                      ) : (
+                        <Eye className="w-3.5 h-3.5 text-red-700" />
+                      )}
                       Baca PDF
-                    </a>
+                    </button>
 
                     {item.status === "REVISION_REQUIRED" && (
                       <button
@@ -639,6 +665,45 @@ export default function StudentRepositoryTab() {
             </button>
           </div>
         </form>
+      </Modal>
+
+      {/* Modal Pratinjau Naskah PDF Mahasiswa */}
+      <Modal
+        isOpen={!!previewPdfItem}
+        onClose={() => {
+          if (previewPdfItem?.blobUrl) {
+            URL.revokeObjectURL(previewPdfItem.blobUrl);
+          }
+          setPreviewPdfItem(null);
+        }}
+        title={previewPdfItem ? `Naskah PDF: ${previewPdfItem.title}` : "Pratinjau Naskah PDF"}
+        size="lg"
+      >
+        {previewPdfItem && (
+          <div className="space-y-4 p-2">
+            <div className="flex items-center justify-between gap-3 pb-3 border-b border-border">
+              <span className="text-xs font-medium text-muted-foreground line-clamp-1">
+                {previewPdfItem.title}
+              </span>
+              <a
+                href={previewPdfItem.blobUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center gap-1.5 text-xs font-semibold text-primary hover:underline shrink-0"
+              >
+                Buka di Tab Baru
+              </a>
+            </div>
+
+            <div className="w-full h-[580px] rounded-xl overflow-hidden border border-border bg-slate-100 dark:bg-slate-900 shadow-inner">
+              <iframe
+                src={`${previewPdfItem.blobUrl}#toolbar=1&navpanes=1`}
+                title={previewPdfItem.title}
+                className="w-full h-full border-0"
+              />
+            </div>
+          </div>
+        )}
       </Modal>
     </div>
   );

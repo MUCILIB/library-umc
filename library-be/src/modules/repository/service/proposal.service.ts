@@ -458,18 +458,30 @@ export class ProposalService {
     // Cek kepemilikan berkas dan peran staf/admin
     const isOwner = Boolean(requester.userId && requester.userId === proposal.authorUserId);
     const isStaffOrAdmin =
-      !options?.forcePublicPreview &&
-      (requester.role === "super_admin" ||
-        requester.role === "staff" ||
-        requester.role === "admin");
+      requester.role === "super_admin" ||
+      requester.role === "staff" ||
+      requester.role === "admin";
 
-    // Keamanan ketat: Dokumen yang belum APPROVED dilarang diakses oleh publik/guest
-    if (proposal.status !== "APPROVED" && !isStaffOrAdmin && !isOwner) {
-      throw new ForbiddenError("Dokumen proposal ini belum disetujui untuk publik");
+    // 1. Dokumen yang belum APPROVED:
+    // Owner (mahasiswa pengunggah berkas) dan Staf/Admin/SuperAdmin SELALU dapat melihat
+    // dokumen secara penuh untuk keperluan verifikasi/pratinjau sebelum persetujuan.
+    // Publik / tamu luar dilarang mengakses dokumen yang belum disetujui.
+    if (proposal.status !== "APPROVED") {
+      if (!isStaffOrAdmin && !isOwner) {
+        throw new ForbiddenError("Dokumen proposal ini belum disetujui untuk publik");
+      }
+      return {
+        buffer: masterBuffer,
+        totalDocumentPages: totalPages,
+        startPage: 1,
+        endPage: totalPages,
+        isRestricted: false
+      };
     }
 
+    // 2. Dokumen yang sudah APPROVED:
     // Pemilik atau Admin (jika bukan mode force preview publik) mendapatkan akses penuh
-    if (isOwner || isStaffOrAdmin) {
+    if (!options?.forcePublicPreview && (isOwner || isStaffOrAdmin)) {
       return {
         buffer: masterBuffer,
         totalDocumentPages: totalPages,
