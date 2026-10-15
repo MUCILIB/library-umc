@@ -43,6 +43,34 @@ export default function RepositorySection() {
   const [endPage, setEndPage] = useState(10);
   const [savingAcl, setSavingAcl] = useState(false);
 
+  // PDF Preview modal state
+  const [previewPdfItem, setPreviewPdfItem] = useState<{ id: string; title: string; blobUrl?: string } | null>(null);
+  const [loadingPreviewId, setLoadingPreviewId] = useState<string | null>(null);
+
+  const handlePreviewPdf = async (item: RepositoryProposal, isPublicPreview = false) => {
+    try {
+      const loadingKey = item.id + (isPublicPreview ? "-public" : "");
+      setLoadingPreviewId(loadingKey);
+      const url = `${API_BASE_URL}/api/repository/proposals/${item.id}/view-pdf${isPublicPreview ? "?preview=public" : ""}`;
+      const res = await fetch(url, { credentials: "include" });
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => null);
+        throw new Error(errJson?.message || "Gagal memuat dokumen PDF");
+      }
+      const blob = await res.blob();
+      const blobUrl = URL.createObjectURL(blob);
+      setPreviewPdfItem({
+        id: item.id,
+        title: item.title + (isPublicPreview ? " (Pratinjau Tamu Publik)" : " (Naskah Asli Penuh)"),
+        blobUrl
+      });
+    } catch (err: any) {
+      error("Pratinjau Gagal", err.message || "Tidak dapat memuat berkas naskah PDF");
+    } finally {
+      setLoadingPreviewId(null);
+    }
+  };
+
   const fetchProposals = async () => {
     try {
       setLoading(true);
@@ -302,26 +330,34 @@ export default function RepositorySection() {
 
                       <td className="p-4 align-top text-right space-y-2">
                         <div className="flex items-center justify-end gap-1.5">
-                          <a
-                            href={`${API_BASE_URL}/api/repository/proposals/${item.id}/view-pdf`}
-                            target="_blank"
-                            rel="noreferrer"
+                          <button
+                            type="button"
+                            onClick={() => handlePreviewPdf(item, false)}
+                            disabled={loadingPreviewId === item.id}
                             title="Buka & Periksa Naskah PDF (Akses Verifikasi Pustakawan)"
-                            className="p-1.5 rounded-lg border border-border hover:bg-muted text-foreground transition-colors inline-flex items-center"
+                            className="p-1.5 rounded-lg border border-border hover:bg-muted text-foreground transition-colors inline-flex items-center cursor-pointer disabled:opacity-50"
                           >
-                            <Eye className="w-4 h-4 text-muted-foreground" />
-                          </a>
+                            {loadingPreviewId === item.id ? (
+                              <Loader2 className="w-4 h-4 animate-spin text-red-700" />
+                            ) : (
+                              <Eye className="w-4 h-4 text-muted-foreground" />
+                            )}
+                          </button>
 
                           {item.status === "APPROVED" && (
-                            <a
-                              href={`${API_BASE_URL}/api/repository/proposals/${item.id}/view-pdf?preview=public`}
-                              target="_blank"
-                              rel="noreferrer"
+                            <button
+                              type="button"
+                              onClick={() => handlePreviewPdf(item, true)}
+                              disabled={loadingPreviewId === item.id + "-public"}
                               title="Pratinjau Batas Halaman Publik (Tamu)"
-                              className="p-1.5 rounded-lg border border-border hover:bg-muted text-foreground transition-colors inline-flex items-center"
+                              className="p-1.5 rounded-lg border border-border hover:bg-muted text-foreground transition-colors inline-flex items-center cursor-pointer disabled:opacity-50"
                             >
-                              <FileText className="w-4 h-4 text-muted-foreground" />
-                            </a>
+                              {loadingPreviewId === item.id + "-public" ? (
+                                <Loader2 className="w-4 h-4 animate-spin text-red-700" />
+                              ) : (
+                                <FileText className="w-4 h-4 text-muted-foreground" />
+                              )}
+                            </button>
                           )}
 
                           <button
@@ -331,7 +367,7 @@ export default function RepositorySection() {
                               setEndPage(rule?.allowedEndPage || Math.min(10, item.pageCount));
                             }}
                             title="Konfigurasi Batas Halaman Publik"
-                            className="p-1.5 rounded-lg border border-border hover:bg-muted text-foreground transition-colors inline-flex items-center"
+                            className="p-1.5 rounded-lg border border-border hover:bg-muted text-foreground transition-colors inline-flex items-center cursor-pointer"
                           >
                             <Sliders className="w-4 h-4 text-muted-foreground" />
                           </button>
@@ -344,7 +380,7 @@ export default function RepositorySection() {
                               );
                               setReviewNotes(item.reviewNotes || "");
                             }}
-                            className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-red-700 hover:bg-red-800 text-white transition-colors"
+                            className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-red-700 hover:bg-red-800 text-white transition-colors cursor-pointer"
                           >
                             Review
                           </button>
@@ -375,15 +411,19 @@ export default function RepositorySection() {
                 Penulis: {reviewModalItem.authorName} ({reviewModalItem.authorNim})
               </p>
               <div className="mt-2.5">
-                <a
-                  href={`${API_BASE_URL}/api/repository/proposals/${reviewModalItem.id}/view-pdf`}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-muted hover:bg-muted/80 text-foreground border border-border transition-colors cursor-pointer"
+                <button
+                  type="button"
+                  onClick={() => handlePreviewPdf(reviewModalItem, false)}
+                  disabled={loadingPreviewId === reviewModalItem.id}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-muted hover:bg-muted/80 text-foreground border border-border transition-colors cursor-pointer disabled:opacity-50"
                 >
-                  <Eye className="w-3.5 h-3.5 text-red-700" />
+                  {loadingPreviewId === reviewModalItem.id ? (
+                    <Loader2 className="w-3.5 h-3.5 animate-spin text-red-700" />
+                  ) : (
+                    <Eye className="w-3.5 h-3.5 text-red-700" />
+                  )}
                   Buka & Periksa Naskah PDF
-                </a>
+                </button>
               </div>
             </div>
 
@@ -529,6 +569,47 @@ export default function RepositorySection() {
               </button>
             </div>
           </form>
+        )}
+      </Modal>
+
+      {/* Modal Pratinjau Naskah PDF Super Admin */}
+      <Modal
+        isOpen={!!previewPdfItem}
+        onClose={() => {
+          if (previewPdfItem?.blobUrl) {
+            URL.revokeObjectURL(previewPdfItem.blobUrl);
+          }
+          setPreviewPdfItem(null);
+        }}
+        title={previewPdfItem ? `Naskah PDF: ${previewPdfItem.title}` : "Pratinjau Naskah PDF"}
+        size="lg"
+      >
+        {previewPdfItem && (
+          <div className="space-y-4 p-2">
+            <div className="flex items-center justify-between gap-3 pb-3 border-b border-border">
+              <span className="text-xs font-medium text-muted-foreground line-clamp-1">
+                {previewPdfItem.title}
+              </span>
+              <div className="flex items-center gap-3 shrink-0">
+                <a
+                  href={previewPdfItem.blobUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-1.5 text-xs font-semibold text-primary hover:underline"
+                >
+                  Buka di Tab Baru
+                </a>
+              </div>
+            </div>
+
+            <div className="w-full h-[620px] rounded-xl overflow-hidden border border-border bg-slate-100 dark:bg-slate-900 shadow-inner">
+              <iframe
+                src={`${previewPdfItem.blobUrl}#toolbar=1&navpanes=1`}
+                title={previewPdfItem.title}
+                className="w-full h-full border-0"
+              />
+            </div>
+          </div>
         )}
       </Modal>
     </div>
