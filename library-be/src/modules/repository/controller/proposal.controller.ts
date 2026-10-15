@@ -189,9 +189,11 @@ export class ProposalController {
         ? { user: req.user }
         : await getSession(req).catch(() => null);
 
+      const user = session?.user;
       const requester = {
-        userId: session?.user?.id,
-        role: ((session?.user as any)?.role || "public")
+        userId: user?.id,
+        role: ((user as any)?.role || "public"),
+        email: user?.email
       };
 
       const result = await proposalService.getDocumentPdf(id, requester, {

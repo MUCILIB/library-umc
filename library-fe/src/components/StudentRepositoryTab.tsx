@@ -3,6 +3,7 @@ import { repositoryService, type RepositoryProposal } from "@/services/repositor
 import { studyProgramApi, type StudyProgram } from "@/api/client";
 import { useToast } from "@/hooks/useToast";
 import { API_BASE_URL } from "@/utils/api-config";
+import { authClient } from "@/utils/auth-client";
 import Modal from "@/components/ui/modal";
 import {
   GraduationCap,
@@ -22,6 +23,7 @@ import {
 } from "lucide-react";
 
 export default function StudentRepositoryTab() {
+  const { data: sessionData } = authClient.useSession();
   const { success, error } = useToast();
   const [proposals, setProposals] = useState<RepositoryProposal[]>([]);
   const [studyPrograms, setStudyPrograms] = useState<StudyProgram[]>([]);
@@ -171,8 +173,16 @@ export default function StudentRepositoryTab() {
   const handlePreviewPdf = async (item: RepositoryProposal) => {
     try {
       setLoadingPreviewId(item.id);
-      const res = await fetch(`${API_BASE_URL}/api/repository/proposals/${item.id}/view-pdf`, {
-        credentials: "include"
+      const sessionToken = (sessionData as any)?.session?.token || (sessionData as any)?.token;
+      const tokenParam = sessionToken ? `&token=${encodeURIComponent(sessionToken)}` : "";
+      const authHeaders: Record<string, string> = {};
+      if (sessionToken) {
+        authHeaders["Authorization"] = `Bearer ${sessionToken}`;
+      }
+
+      const res = await fetch(`${API_BASE_URL}/api/repository/proposals/${item.id}/view-pdf?scope=self${tokenParam}`, {
+        credentials: "include",
+        headers: authHeaders
       });
       if (!res.ok) {
         const errJson = await res.json().catch(() => null);
@@ -191,8 +201,16 @@ export default function StudentRepositoryTab() {
   const handleDownloadPdf = async (item: RepositoryProposal) => {
     try {
       setDownloadingId(item.id);
-      const res = await fetch(`${API_BASE_URL}/api/repository/proposals/${item.id}/view-pdf?download=true`, {
-        credentials: "include"
+      const sessionToken = (sessionData as any)?.session?.token || (sessionData as any)?.token;
+      const tokenParam = sessionToken ? `&token=${encodeURIComponent(sessionToken)}` : "";
+      const authHeaders: Record<string, string> = {};
+      if (sessionToken) {
+        authHeaders["Authorization"] = `Bearer ${sessionToken}`;
+      }
+
+      const res = await fetch(`${API_BASE_URL}/api/repository/proposals/${item.id}/view-pdf?download=true&scope=self${tokenParam}`, {
+        credentials: "include",
+        headers: authHeaders
       });
       if (!res.ok) {
         const errJson = await res.json().catch(() => null);
@@ -208,7 +226,7 @@ export default function StudentRepositoryTab() {
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
-      success("Unduhan Berhasil", `Berkas "${item.title}" berhasil diunduh`);
+      success("Unduhan Berhasil", `Berkas "${item.title}" berhasil diunduh secara utuh`);
     } catch (err: any) {
       error("Gagal Mengunduh", err.message || "Tidak dapat mengunduh berkas naskah PDF");
     } finally {
@@ -721,15 +739,20 @@ export default function StudentRepositoryTab() {
           }
           setPreviewPdfItem(null);
         }}
-        title={previewPdfItem ? `Naskah PDF: ${previewPdfItem.title}` : "Pratinjau Naskah PDF"}
+        title={previewPdfItem ? `Naskah PDF Lengkap: ${previewPdfItem.title}` : "Pratinjau Naskah PDF"}
         size="lg"
       >
         {previewPdfItem && (
           <div className="space-y-4 p-2">
-            <div className="flex items-center justify-between gap-3 pb-3 border-b border-border">
-              <span className="text-xs font-medium text-muted-foreground line-clamp-1">
-                {previewPdfItem.title}
-              </span>
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-3 border-b border-border">
+              <div className="flex items-center gap-2">
+                <span className="text-xs px-2.5 py-0.5 rounded-full font-semibold bg-emerald-100 text-emerald-800 dark:bg-emerald-950/70 dark:text-emerald-300 shrink-0">
+                  Naskah Milik Anda (Akses Penuh Bebas)
+                </span>
+                <span className="text-xs font-medium text-muted-foreground line-clamp-1">
+                  {previewPdfItem.title}
+                </span>
+              </div>
               <div className="flex items-center gap-3 shrink-0">
                 <button
                   type="button"
@@ -740,7 +763,7 @@ export default function StudentRepositoryTab() {
                   className="inline-flex items-center gap-1.5 text-xs font-semibold text-foreground hover:text-primary transition-colors cursor-pointer"
                 >
                   <Download className="w-3.5 h-3.5" />
-                  Unduh File
+                  Unduh Naskah Asli
                 </button>
                 <a
                   href={previewPdfItem.blobUrl}

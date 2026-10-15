@@ -7,7 +7,8 @@ import {
   LogIn,
   FileText,
   ShieldAlert,
-  Maximize2
+  Maximize2,
+  Download
 } from "lucide-react";
 
 interface SecurePdfViewerProps {
@@ -15,6 +16,7 @@ interface SecurePdfViewerProps {
   title: string;
   authorName: string;
   authorNim: string;
+  authorUserId?: string;
   totalPhysicalPages: number;
   allowedPublicPages?: number; // Default 10
 }
@@ -24,19 +26,58 @@ export default function SecurePdfViewer({
   title,
   authorName,
   authorNim,
+  authorUserId,
   totalPhysicalPages,
   allowedPublicPages = 10
 }: SecurePdfViewerProps) {
   const { data: session } = authClient.useSession();
   const [fullscreen, setFullscreen] = useState(false);
+  const [downloading, setDownloading] = useState(false);
 
-  // Jika user sudah login (mahasiswa/admin), seluruh halaman dapat diakses
-  const isAuthenticated = Boolean(session?.user);
+  const user = session?.user;
+  const isOwner = Boolean(user?.id && authorUserId && user.id === authorUserId);
+  const isStaffOrAdmin = Boolean(
+    user?.role === "super_admin" ||
+    user?.role === "staff" ||
+    user?.role === "admin"
+  );
+  // Civitas/login atau pemilik atau staff
+  const isAuthenticated = Boolean(user);
+  const canDownloadFull = isOwner || isStaffOrAdmin;
+
+  const sessionToken = (session as any)?.session?.token || (session as any)?.token;
+  const tokenParam = sessionToken ? `?token=${encodeURIComponent(sessionToken)}` : "";
 
   // Endpoint streaming dynamic sliced PDF dari backend
-  const pdfStreamUrl = `${API_BASE_URL}/api/repository/proposals/${proposalId}/view-pdf#toolbar=0&navpanes=0&scrollbar=1`;
+  const pdfStreamUrl = `${API_BASE_URL}/api/repository/proposals/${proposalId}/view-pdf${tokenParam}#toolbar=0&navpanes=0&scrollbar=1`;
 
-  const visiblePagesCount = isAuthenticated
+  const handleDownloadFull = async () => {
+    try {
+      setDownloading(true);
+      const downloadUrl = `${API_BASE_URL}/api/repository/proposals/${proposalId}/view-pdf?download=true${sessionToken ? `&token=${encodeURIComponent(sessionToken)}` : ""}`;
+      const res = await fetch(downloadUrl, {
+        credentials: "include",
+        headers: sessionToken ? { Authorization: `Bearer ${sessionToken}` } : {}
+      });
+      if (!res.ok) throw new Error("Gagal mengunduh dokumen");
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      const cleanTitle = title.replace(/[^a-zA-Z0-9_\- ]/g, "").trim().replace(/\s+/g, "_").substring(0, 50);
+      a.download = `${cleanTitle || "naskah"}_${proposalId}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error("Gagal mengunduh berkas:", err);
+    } finally {
+      setDownloading(false);
+    }
+  };
+
+  const visiblePagesCount = isOwner || isStaffOrAdmin || isAuthenticated
     ? totalPhysicalPages
     : Math.min(allowedPublicPages, totalPhysicalPages);
 
@@ -46,8 +87,24 @@ export default function SecurePdfViewer({
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 p-5 rounded-2xl bg-card border border-border">
         <div>
           <div className="flex items-center gap-2">
-            <span className="text-xs px-2.5 py-0.5 rounded-full font-semibold bg-red-100 text-red-800 dark:bg-red-950/60 dark:text-red-300">
-              {isAuthenticated ? "Akses Civitas Lengkap" : "Pratinjau Publik Terbatas"}
+            <span
+              className={`text-xs px-2.5 py-0.5 rounded-full font-semibold ${
+                isOwner
+                  ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950/70 dark:text-emerald-300"
+                  : isStaffOrAdmin
+                  ? "bg-blue-100 text-blue-800 dark:bg-blue-950/70 dark:text-blue-300"
+                  : isAuthenticated
+                  ? "bg-red-100 text-red-800 dark:bg-red-950/60 dark:text-red-300"
+                  : "bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300"
+              }`}
+            >
+              {isOwner
+                ? "Naskah Karya Anda Sendiri (Akses Penuh Bebas)"
+                : isStaffOrAdmin
+                ? "Akses Verifikasi Administrator"
+                : isAuthenticated
+                ? "Akses Civitas Lengkap"
+                : "Pratinjau Publik Terbatas"}
             </span>
             <span className="text-xs text-muted-foreground font-mono">
               Halaman 1 s/d {visiblePagesCount} dari total {totalPhysicalPages} Halaman
@@ -59,13 +116,26 @@ export default function SecurePdfViewer({
           </p>
         </div>
 
-        <button
-          onClick={() => setFullscreen(!fullscreen)}
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border text-xs font-semibold text-foreground hover:bg-muted transition-colors shrink-0"
-        >
-          <Maximize2 className="w-3.5 h-3.5 text-muted-foreground" />
-          {fullscreen ? "Tutup Layar Penuh" : "Layar Penuh"}
-        </button>
+        <div className="flex items-center gap-2 shrink-0">
+          {canDownloadFull && (
+            <button
+              onClick={handleDownloadFull}
+              disabled={downloading}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border text-xs font-semibold text-foreground hover:bg-muted transition-colors disabled:opacity-50"
+              title="Unduh Naskah Asli Penuh"
+            >
+              <Download className="w-3.5 h-3.5 text-muted-foreground" />
+              {downloading ? "Mengunduh..." : "Unduh Naskah Lengkap"}
+            </button>
+          )}
+          <button
+            onClick={() => setFullscreen(!fullscreen)}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border text-xs font-semibold text-foreground hover:bg-muted transition-colors"
+          >
+            <Maximize2 className="w-3.5 h-3.5 text-muted-foreground" />
+            {fullscreen ? "Tutup Layar Penuh" : "Layar Penuh"}
+          </button>
+        </div>
       </div>
 
       {/* PDF Frame Container */}
