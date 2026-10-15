@@ -283,4 +283,148 @@ describe("Strict 5-Page ACL & Public Safety Test", () => {
     const doc = await PDFDocument.load(result.buffer);
     expect(doc.getPageCount()).toBe(10);
   });
+
+  it("serves PDF with Content-Disposition attachment when query param download=true", async () => {
+    const { db } = await import("../../../db");
+
+    let callCount = 0;
+    (db.select as any).mockImplementation(() => {
+      callCount++;
+      if (callCount === 1) {
+        return createSelectChain([
+          {
+            id: proposalId,
+            title: "Proposal Belum Disetujui",
+            storagePath: tempFilePath,
+            pageCount: 10,
+            status: "SUBMITTED",
+            authorUserId: "student-author-123"
+          }
+        ]);
+      }
+      return createSelectChain([]);
+    });
+
+    let sentBuffer: Buffer | null = null;
+    const setHeaderMock = vi.fn();
+
+    const req = {
+      params: { id: proposalId },
+      query: { download: "true" },
+      user: { id: "student-author-123", role: "student" }
+    } as unknown as Request;
+
+    const res = {
+      setHeader: setHeaderMock,
+      status: vi.fn().mockReturnThis(),
+      send: vi.fn((buf: Buffer) => {
+        sentBuffer = buf;
+      })
+    } as unknown as Response;
+
+    const next = vi.fn();
+    await proposalController.viewPdf(req, res, next);
+
+    expect(setHeaderMock).toHaveBeenCalledWith(
+      "Content-Disposition",
+      expect.stringContaining("attachment")
+    );
+  });
+
+  it("author student (owner) gets 100% full un-sliced document on APPROVED proposal even when super admin configured restrictive 5-page rule", async () => {
+    const { db } = await import("../../../db");
+
+    (db.select as any).mockImplementation(() => {
+      return createSelectChain([
+        {
+          id: proposalId,
+          title: "Proposal Sudah Disetujui",
+          storagePath: tempFilePath,
+          pageCount: 10,
+          status: "APPROVED",
+          authorUserId: "student-author-123"
+        }
+      ]);
+    });
+
+    const result = await proposalService.getDocumentPdf(proposalId, {
+      userId: "student-author-123",
+      role: "student",
+      email: "author@student.ac.id"
+    });
+
+    // Author/owner MUST NOT be restricted
+    expect(result.startPage).toBe(1);
+    expect(result.endPage).toBe(10);
+    expect(result.isRestricted).toBe(false);
+
+    const doc = await PDFDocument.load(result.buffer);
+    expect(doc.getPageCount()).toBe(10);
+  });
+
+  it("other student (non-owner) is restricted by super admin 5-page rule on the same APPROVED proposal", async () => {
+    const { db } = await import("../../../db");
+
+    let callCount = 0;
+    (db.select as any).mockImplementation(() => {
+      callCount++;
+      if (callCount === 1) {
+        return createSelectChain([
+          {
+            id: proposalId,
+            title: "Proposal Sudah Disetujui",
+            storagePath: tempFilePath,
+            pageCount: 10,
+            status: "APPROVED",
+            authorUserId: "student-author-123"
+          }
+        ]);
+      } else if (callCount === 2) {
+        // rules for getProposalById
+        return createSelectChain([
+          {
+            id: "rule-1",
+            proposalId,
+            roleScope: "ALL",
+            allowedStartPage: 1,
+            allowedEndPage: 5,
+            allowDownloadFull: false
+          }
+        ]);
+      } else if (callCount === 3) {
+        // reviewLogs for getProposalById
+        return createSelectChain([]);
+      } else if (callCount === 4) {
+        // query author user email
+        return createSelectChain([{ email: "author@student.ac.id" }]);
+      } else if (callCount === 5) {
+        // rules lookup in getDocumentPdf
+        return createSelectChain([
+          {
+            id: "rule-1",
+            proposalId,
+            roleScope: "ALL",
+            allowedStartPage: 1,
+            allowedEndPage: 5,
+            allowDownloadFull: false
+          }
+        ]);
+      }
+      return createSelectChain([]);
+    });
+
+    const result = await proposalService.getDocumentPdf(proposalId, {
+      userId: "other-student-999",
+      role: "student",
+      email: "other@student.ac.id"
+    });
+
+    // Non-owner student MUST be restricted to 5 pages
+    expect(result.startPage).toBe(1);
+    expect(result.endPage).toBe(5);
+    expect(result.isRestricted).toBe(true);
+
+    const doc = await PDFDocument.load(result.buffer);
+    expect(doc.getPageCount()).toBe(5);
+  });
 });

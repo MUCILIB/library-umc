@@ -436,7 +436,7 @@ export class ProposalService {
    */
   async getDocumentPdf(
     proposalId: string,
-    requester: { userId?: string; role?: string },
+    requester: { userId?: string; role?: string; email?: string },
     options?: { forcePublicPreview?: boolean }
   ): Promise<{
     buffer: Buffer;
@@ -455,40 +455,42 @@ export class ProposalService {
     }
     const totalPages = proposal.pageCount;
 
-    // Cek kepemilikan berkas dan peran staf/admin
-    const isOwner = Boolean(requester.userId && requester.userId === proposal.authorUserId);
+    // Cek kepemilikan berkas (dia sendiri yang upload / milik sendiri) dan peran staf/admin
+    let isOwner = Boolean(requester.userId && requester.userId === proposal.authorUserId);
+
+    // Fallback: jika userId tidak cocok tetapi ada email, verifikasi apakah email requester sama dengan author berkas
+    if (!isOwner && requester.email && proposal.authorUserId) {
+      const [u] = await db
+        .select({ email: Users.email })
+        .from(Users)
+        .where(eq(Users.id, proposal.authorUserId));
+      if (u?.email && u.email.toLowerCase() === requester.email.toLowerCase()) {
+        isOwner = true;
+      }
+    }
+
     const isStaffOrAdmin =
       requester.role === "super_admin" ||
       requester.role === "staff" ||
       requester.role === "admin";
 
-    // 1. Dokumen yang belum APPROVED:
-    // Owner (mahasiswa pengunggah berkas) dan Staf/Admin/SuperAdmin SELALU dapat melihat
-    // dokumen secara penuh untuk keperluan verifikasi/pratinjau sebelum persetujuan.
-    // Publik / tamu luar dilarang mengakses dokumen yang belum disetujui.
-    if (proposal.status !== "APPROVED") {
-      if (!isStaffOrAdmin && !isOwner) {
-        throw new ForbiddenError("Dokumen proposal ini belum disetujui untuk publik");
+    // CONDITION: Ketika filenya milik sendiri (dia sendiri yang upload) atau staf/admin:
+    // Maka bebas view dan download secara utuh (seluruh halaman asli, tanpa batasan halaman super admin).
+    if (isOwner || isStaffOrAdmin) {
+      if (!options?.forcePublicPreview) {
+        return {
+          buffer: masterBuffer,
+          totalDocumentPages: totalPages,
+          startPage: 1,
+          endPage: totalPages,
+          isRestricted: false
+        };
       }
-      return {
-        buffer: masterBuffer,
-        totalDocumentPages: totalPages,
-        startPage: 1,
-        endPage: totalPages,
-        isRestricted: false
-      };
     }
 
-    // 2. Dokumen yang sudah APPROVED:
-    // Pemilik atau Admin (jika bukan mode force preview publik) mendapatkan akses penuh
-    if (!options?.forcePublicPreview && (isOwner || isStaffOrAdmin)) {
-      return {
-        buffer: masterBuffer,
-        totalDocumentPages: totalPages,
-        startPage: 1,
-        endPage: totalPages,
-        isRestricted: false
-      };
+    // Untuk pengguna lain (publik / mahasiswa lain), dokumen yang belum APPROVED dilarang
+    if (proposal.status !== "APPROVED") {
+      throw new ForbiddenError("Dokumen proposal ini belum disetujui untuk publik");
     }
 
     // Role Mahasiswa civitas (bukan pemilik) atau Publik

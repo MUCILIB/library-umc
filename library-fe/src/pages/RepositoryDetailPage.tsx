@@ -103,6 +103,7 @@ export default function RepositoryDetailPage() {
                 title={proposal.title}
                 authorName={proposal.authorName}
                 authorNim={proposal.authorNim}
+                authorUserId={proposal.authorUserId}
                 totalPhysicalPages={proposal.pageCount}
                 allowedPublicPages={
                   proposal.pageRules?.find(
