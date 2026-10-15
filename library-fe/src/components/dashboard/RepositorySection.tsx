@@ -255,7 +255,9 @@ export default function RepositorySection() {
               </thead>
               <tbody className="divide-y divide-border">
                 {filteredProposals.map((item) => {
-                  const rule = item.pageRules?.[0];
+                  const rule = item.pageRules?.find(
+                    (r) => r.roleScope?.toUpperCase() === "PUBLIC" || r.roleScope?.toUpperCase() === "ALL"
+                  ) || item.pageRules?.[0];
                   const publicRange = rule
                     ? `${rule.allowedStartPage} - ${rule.allowedEndPage}`
                     : "1 - 10 (Default)";
@@ -301,10 +303,10 @@ export default function RepositorySection() {
                       <td className="p-4 align-top text-right space-y-2">
                         <div className="flex items-center justify-end gap-1.5">
                           <a
-                            href={`${API_BASE_URL}/api/repository/proposals/${item.id}/view-pdf`}
+                            href={`${API_BASE_URL}/api/repository/proposals/${item.id}/view-pdf?preview=public`}
                             target="_blank"
                             rel="noreferrer"
-                            title="Pratinjau PDF Publik"
+                            title="Pratinjau PDF Publik (Sesuai Batas Halaman)"
                             className="p-1.5 rounded-lg border border-border hover:bg-muted text-foreground transition-colors inline-flex items-center"
                           >
                             <Eye className="w-4 h-4 text-muted-foreground" />

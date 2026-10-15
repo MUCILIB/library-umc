@@ -47,7 +47,7 @@ router.patch(
   ["/repository/proposals/:id/review", "/api/repository/proposals/:id/review"],
   publicApiLimiter,
   isAuthenticated,
-  requireRole(["super_admin", "staff"]),
+  requireRole(["super_admin", "admin", "staff"]),
   (req, res, next) => proposalController.review(req, res, next)
 );
 
@@ -55,7 +55,7 @@ router.post(
   ["/repository/proposals/:id/page-rules", "/api/repository/proposals/:id/page-rules"],
   publicApiLimiter,
   isAuthenticated,
-  requireRole(["super_admin", "staff"]),
+  requireRole(["super_admin", "admin", "staff"]),
   (req, res, next) => proposalController.configurePageRule(req, res, next)
 );
 

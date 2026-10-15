@@ -105,7 +105,9 @@ export default function RepositoryDetailPage() {
                 authorNim={proposal.authorNim}
                 totalPhysicalPages={proposal.pageCount}
                 allowedPublicPages={
-                  proposal.pageRules?.[0]?.allowedEndPage || Math.min(10, proposal.pageCount)
+                  proposal.pageRules?.find(
+                    (r) => r.roleScope?.toUpperCase() === "PUBLIC" || r.roleScope?.toUpperCase() === "ALL"
+                  )?.allowedEndPage || Math.min(10, proposal.pageCount)
                 }
               />
             </div>
