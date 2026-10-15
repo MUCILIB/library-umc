@@ -9,7 +9,8 @@ import {
   AlertCircle,
   FileText,
   User,
-  Loader2
+  Loader2,
+  Download
 } from "lucide-react";
 import { repositoryService, type RepositoryProposal } from "@/services/repositoryService";
 import { API_BASE_URL } from "@/utils/api-config";
@@ -46,6 +47,7 @@ export default function RepositorySection() {
   // PDF Preview modal state
   const [previewPdfItem, setPreviewPdfItem] = useState<{ id: string; title: string; blobUrl?: string } | null>(null);
   const [loadingPreviewId, setLoadingPreviewId] = useState<string | null>(null);
+  const [downloadingId, setDownloadingId] = useState<string | null>(null);
 
   const handlePreviewPdf = async (item: RepositoryProposal, isPublicPreview = false) => {
     try {
@@ -68,6 +70,33 @@ export default function RepositorySection() {
       error("Pratinjau Gagal", err.message || "Tidak dapat memuat berkas naskah PDF");
     } finally {
       setLoadingPreviewId(null);
+    }
+  };
+
+  const handleDownloadPdf = async (item: RepositoryProposal) => {
+    try {
+      setDownloadingId(item.id);
+      const url = `${API_BASE_URL}/api/repository/proposals/${item.id}/view-pdf?download=true`;
+      const res = await fetch(url, { credentials: "include" });
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => null);
+        throw new Error(errJson?.message || "Gagal mengunduh dokumen PDF");
+      }
+      const blob = await res.blob();
+      const blobUrl = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = blobUrl;
+      const cleanTitle = item.title.replace(/[^a-zA-Z0-9_\- ]/g, "").trim().replace(/\s+/g, "_").substring(0, 50);
+      a.download = `${cleanTitle || "naskah"}_${item.proposalNumber || item.id}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(blobUrl);
+      success("Unduhan Berhasil", `Naskah "${item.title}" berhasil diunduh`);
+    } catch (err: any) {
+      error("Gagal Mengunduh", err.message || "Tidak dapat mengunduh berkas naskah PDF");
+    } finally {
+      setDownloadingId(null);
     }
   };
 
@@ -344,6 +373,20 @@ export default function RepositorySection() {
                             )}
                           </button>
 
+                          <button
+                            type="button"
+                            onClick={() => handleDownloadPdf(item)}
+                            disabled={downloadingId === item.id}
+                            title="Unduh Langsung Berkas Naskah PDF Lengkap"
+                            className="p-1.5 rounded-lg border border-border hover:bg-muted text-foreground transition-colors inline-flex items-center cursor-pointer disabled:opacity-50"
+                          >
+                            {downloadingId === item.id ? (
+                              <Loader2 className="w-4 h-4 animate-spin text-red-700" />
+                            ) : (
+                              <Download className="w-4 h-4 text-muted-foreground" />
+                            )}
+                          </button>
+
                           {item.status === "APPROVED" && (
                             <button
                               type="button"
@@ -410,7 +453,7 @@ export default function RepositorySection() {
               <p className="text-xs text-muted-foreground mt-1">
                 Penulis: {reviewModalItem.authorName} ({reviewModalItem.authorNim})
               </p>
-              <div className="mt-2.5">
+              <div className="mt-2.5 flex items-center gap-2">
                 <button
                   type="button"
                   onClick={() => handlePreviewPdf(reviewModalItem, false)}
@@ -423,6 +466,19 @@ export default function RepositorySection() {
                     <Eye className="w-3.5 h-3.5 text-red-700" />
                   )}
                   Buka & Periksa Naskah PDF
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleDownloadPdf(reviewModalItem)}
+                  disabled={downloadingId === reviewModalItem.id}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-muted hover:bg-muted/80 text-foreground border border-border transition-colors cursor-pointer disabled:opacity-50"
+                >
+                  {downloadingId === reviewModalItem.id ? (
+                    <Loader2 className="w-3.5 h-3.5 animate-spin text-red-700" />
+                  ) : (
+                    <Download className="w-3.5 h-3.5 text-muted-foreground" />
+                  )}
+                  Unduh Naskah
                 </button>
               </div>
             </div>
@@ -591,6 +647,17 @@ export default function RepositorySection() {
                 {previewPdfItem.title}
               </span>
               <div className="flex items-center gap-3 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const matched = proposals.find((p) => p.id === previewPdfItem.id);
+                    if (matched) handleDownloadPdf(matched);
+                  }}
+                  className="inline-flex items-center gap-1.5 text-xs font-semibold text-foreground hover:text-primary transition-colors cursor-pointer"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  Unduh Naskah Asli
+                </button>
                 <a
                   href={previewPdfItem.blobUrl}
                   target="_blank"

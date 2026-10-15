@@ -12,6 +12,7 @@ import {
   Clock,
   Eye,
   Loader2,
+  Download,
   Trash2,
   Edit3,
   Plus,
@@ -33,6 +34,7 @@ export default function StudentRepositoryTab() {
   const [editingProposal, setEditingProposal] = useState<RepositoryProposal | null>(null);
   const [previewPdfItem, setPreviewPdfItem] = useState<{ id: string; title: string; blobUrl?: string } | null>(null);
   const [loadingPreviewId, setLoadingPreviewId] = useState<string | null>(null);
+  const [downloadingId, setDownloadingId] = useState<string | null>(null);
 
   const [formData, setFormData] = useState({
     title: "",
@@ -183,6 +185,34 @@ export default function StudentRepositoryTab() {
       error("Pratinjau Gagal", err.message || "Tidak dapat memuat berkas naskah PDF");
     } finally {
       setLoadingPreviewId(null);
+    }
+  };
+
+  const handleDownloadPdf = async (item: RepositoryProposal) => {
+    try {
+      setDownloadingId(item.id);
+      const res = await fetch(`${API_BASE_URL}/api/repository/proposals/${item.id}/view-pdf?download=true`, {
+        credentials: "include"
+      });
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => null);
+        throw new Error(errJson?.message || "Gagal mengunduh dokumen PDF");
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      const cleanTitle = item.title.replace(/[^a-zA-Z0-9_\- ]/g, "").trim().replace(/\s+/g, "_").substring(0, 50);
+      a.download = `${cleanTitle || "naskah"}_${item.proposalNumber || item.id}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      success("Unduhan Berhasil", `Berkas "${item.title}" berhasil diunduh`);
+    } catch (err: any) {
+      error("Gagal Mengunduh", err.message || "Tidak dapat mengunduh berkas naskah PDF");
+    } finally {
+      setDownloadingId(null);
     }
   };
 
@@ -404,11 +434,26 @@ export default function StudentRepositoryTab() {
                       title="Lihat dan periksa dokumen PDF naskah Anda"
                     >
                       {loadingPreviewId === item.id ? (
-                        <Loader2 className="w-3.5 h-3.5 animate-spin text-red-700" />
+                         <Loader2 className="w-3.5 h-3.5 animate-spin text-red-700" />
                       ) : (
                         <Eye className="w-3.5 h-3.5 text-red-700" />
                       )}
                       Baca PDF
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => handleDownloadPdf(item)}
+                      disabled={downloadingId === item.id}
+                      className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold bg-muted hover:bg-muted/80 text-foreground border border-border transition-colors cursor-pointer disabled:opacity-50"
+                      title="Unduh langsung berkas naskah PDF"
+                    >
+                      {downloadingId === item.id ? (
+                        <Loader2 className="w-3.5 h-3.5 animate-spin text-red-700" />
+                      ) : (
+                        <Download className="w-3.5 h-3.5 text-muted-foreground" />
+                      )}
+                      Unduh
                     </button>
 
                     {item.status === "REVISION_REQUIRED" && (
@@ -685,14 +730,27 @@ export default function StudentRepositoryTab() {
               <span className="text-xs font-medium text-muted-foreground line-clamp-1">
                 {previewPdfItem.title}
               </span>
-              <a
-                href={previewPdfItem.blobUrl}
-                target="_blank"
-                rel="noreferrer"
-                className="inline-flex items-center gap-1.5 text-xs font-semibold text-primary hover:underline shrink-0"
-              >
-                Buka di Tab Baru
-              </a>
+              <div className="flex items-center gap-3 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const matched = proposals.find((p) => p.id === previewPdfItem.id);
+                    if (matched) handleDownloadPdf(matched);
+                  }}
+                  className="inline-flex items-center gap-1.5 text-xs font-semibold text-foreground hover:text-primary transition-colors cursor-pointer"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  Unduh File
+                </button>
+                <a
+                  href={previewPdfItem.blobUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-1.5 text-xs font-semibold text-primary hover:underline shrink-0"
+                >
+                  Buka di Tab Baru
+                </a>
+              </div>
             </div>
 
             <div className="w-full h-[580px] rounded-xl overflow-hidden border border-border bg-slate-100 dark:bg-slate-900 shadow-inner">

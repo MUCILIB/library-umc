@@ -283,4 +283,51 @@ describe("Strict 5-Page ACL & Public Safety Test", () => {
     const doc = await PDFDocument.load(result.buffer);
     expect(doc.getPageCount()).toBe(10);
   });
+
+  it("serves PDF with Content-Disposition attachment when query param download=true", async () => {
+    const { db } = await import("../../../db");
+
+    let callCount = 0;
+    (db.select as any).mockImplementation(() => {
+      callCount++;
+      if (callCount === 1) {
+        return createSelectChain([
+          {
+            id: proposalId,
+            title: "Proposal Belum Disetujui",
+            storagePath: tempFilePath,
+            pageCount: 10,
+            status: "SUBMITTED",
+            authorUserId: "student-author-123"
+          }
+        ]);
+      }
+      return createSelectChain([]);
+    });
+
+    let sentBuffer: Buffer | null = null;
+    const setHeaderMock = vi.fn();
+
+    const req = {
+      params: { id: proposalId },
+      query: { download: "true" },
+      user: { id: "student-author-123", role: "student" }
+    } as unknown as Request;
+
+    const res = {
+      setHeader: setHeaderMock,
+      status: vi.fn().mockReturnThis(),
+      send: vi.fn((buf: Buffer) => {
+        sentBuffer = buf;
+      })
+    } as unknown as Response;
+
+    const next = vi.fn();
+    await proposalController.viewPdf(req, res, next);
+
+    expect(setHeaderMock).toHaveBeenCalledWith(
+      "Content-Disposition",
+      expect.stringContaining("attachment")
+    );
+  });
 });

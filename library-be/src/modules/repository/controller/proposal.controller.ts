@@ -198,10 +198,14 @@ export class ProposalController {
         forcePublicPreview: isPublicPreview
       });
 
+      const isDownload =
+        req.query?.download === "true" || req.query?.mode === "download";
+
       res.setHeader("Content-Type", "application/pdf");
+      const disposition = isDownload ? "attachment" : "inline";
       res.setHeader(
         "Content-Disposition",
-        `inline; filename="proposal-preview-${id}.pdf"`
+        `${disposition}; filename="proposal-${id}.pdf"`
       );
       res.setHeader("X-Total-Document-Pages", result.totalDocumentPages.toString());
       res.setHeader("X-Preview-Start-Page", result.startPage.toString());
