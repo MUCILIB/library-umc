@@ -23,6 +23,7 @@ import {
   X,
 } from "lucide-react";
 import { generateColorFromSeed, cleanIsbn } from "@/utils/format";
+import { isBookSaved, saveBook, removeBook } from "@/utils/bookmarks";
 
 const KatalogDetail = () => {
   const { id } = useParams<{ id: string }>();
@@ -30,13 +31,7 @@ const KatalogDetail = () => {
 
   const [showQrModal, setShowQrModal] = useState(false);
   const [selectedItemForQr, setSelectedItemForQr] = useState<{ id: string; itemCode?: string; status: string } | null>(null);
-  const [isSaved, setIsSaved] = useState(() => {
-    if (id) {
-      const savedIds = JSON.parse(localStorage.getItem("umc_library_bookmarks") || "[]");
-      return savedIds.includes(id);
-    }
-    return false;
-  });
+  const [isSaved, setIsSaved] = useState(false);
 
   const { data: session, isPending: sessionLoading } = authClient.useSession();
 
@@ -97,13 +92,21 @@ const KatalogDetail = () => {
   const isBorrowing = isUserBorrowing();
   const isPending = isUserPending();
 
-  // Track state sync if bibliography ID changes
+  // Track bookmark state sync if bibliography ID or user context changes
   useEffect(() => {
-    if (bibliography?.id) {
-      const savedIds = JSON.parse(localStorage.getItem("umc_library_bookmarks") || "[]");
-      setIsSaved(savedIds.includes(bibliography.id));
+    if (!bibliography?.id) {
+      setIsSaved(false);
+      return;
     }
-  }, [bibliography]);
+    const checkSaved = () => {
+      setIsSaved(isBookSaved(bibliography.id, currentUser?.id));
+    };
+    checkSaved();
+    window.addEventListener("storage", checkSaved);
+    return () => {
+      window.removeEventListener("storage", checkSaved);
+    };
+  }, [bibliography?.id, currentUser?.id]);
 
   const handleShare = async () => {
     if (!bibliography) return;
@@ -131,18 +134,18 @@ const KatalogDetail = () => {
 
   const handleToggleSave = () => {
     if (!bibliography?.id) return;
-    const savedIds: string[] = JSON.parse(
-      localStorage.getItem("umc_library_bookmarks") || "[]"
-    );
+
+    if (!currentUser?.id) {
+      toastInfo("Perlu Masuk", "Silakan login terlebih dahulu untuk menyimpan buku ke akun Anda.");
+      return;
+    }
 
     if (isSaved) {
-      const updated = savedIds.filter((id) => id !== bibliography.id);
-      localStorage.setItem("umc_library_bookmarks", JSON.stringify(updated));
+      removeBook(bibliography.id, currentUser.id);
       setIsSaved(false);
       toastInfo("Buku Dihapus", "Buku telah dihapus dari daftar simpanan.");
     } else {
-      savedIds.push(bibliography.id);
-      localStorage.setItem("umc_library_bookmarks", JSON.stringify(savedIds));
+      saveBook(bibliography.id, currentUser.id);
       setIsSaved(true);
       toastSuccess("Buku Disimpan", "Buku berhasil disimpan ke daftar simpanan.");
     }

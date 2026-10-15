@@ -19,7 +19,9 @@ import {
   Plus,
   FileCheck,
   AlertTriangle,
-  Info
+  Info,
+  Maximize2,
+  Minimize2
 } from "lucide-react";
 
 export default function StudentRepositoryTab() {
@@ -37,6 +39,7 @@ export default function StudentRepositoryTab() {
   const [previewPdfItem, setPreviewPdfItem] = useState<{ id: string; title: string; blobUrl?: string } | null>(null);
   const [loadingPreviewId, setLoadingPreviewId] = useState<string | null>(null);
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
+  const [isPdfFullscreen, setIsPdfFullscreen] = useState(false);
 
   const [formData, setFormData] = useState({
     title: "",
@@ -324,7 +327,7 @@ export default function StudentRepositoryTab() {
           <strong className="font-semibold text-red-800 dark:text-red-300">
             Pemberitahuan Khusus Repositori:
           </strong>{" "}
-          Semua naskah yang diajukan di tab ini akan diverifikasi oleh pustakawan kampus. Naskah yang disetujui (APPROVED) akan langsung terdaftar di katalog digital repositori perpustakaan UMC dan dapat dibaca sesuai batas halaman yang dikonfigurasi.
+          Semua naskah yang diajukan di halaman ini akan diverifikasi oleh pustakawan kampus. Naskah yang disetujui (APPROVED) akan langsung terdaftar di katalog digital repositori perpustakaan UMC dan dapat dibaca sesuai batas halaman yang dikonfigurasi.
         </div>
       </div>
 
@@ -738,14 +741,15 @@ export default function StudentRepositoryTab() {
             URL.revokeObjectURL(previewPdfItem.blobUrl);
           }
           setPreviewPdfItem(null);
+          setIsPdfFullscreen(false);
         }}
         title={previewPdfItem ? `Naskah PDF Lengkap: ${previewPdfItem.title}` : "Pratinjau Naskah PDF"}
-        size="lg"
+        size={isPdfFullscreen ? "fullscreen" : "full"}
       >
         {previewPdfItem && (
-          <div className="space-y-4 p-2">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-3 border-b border-border">
-              <div className="flex items-center gap-2">
+          <div className="flex flex-col h-full min-h-0 space-y-3">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-2 border-b border-border shrink-0">
+              <div className="flex items-center gap-2 min-w-0">
                 <span className="text-xs px-2.5 py-0.5 rounded-full font-semibold bg-emerald-100 text-emerald-800 dark:bg-emerald-950/70 dark:text-emerald-300 shrink-0">
                   Naskah Milik Anda (Akses Penuh Bebas)
                 </span>
@@ -753,30 +757,43 @@ export default function StudentRepositoryTab() {
                   {previewPdfItem.title}
                 </span>
               </div>
-              <div className="flex items-center gap-3 shrink-0">
+              <div className="flex items-center gap-2 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setIsPdfFullscreen(!isPdfFullscreen)}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border text-xs font-semibold text-foreground hover:bg-muted transition-colors cursor-pointer"
+                  title={isPdfFullscreen ? "Keluar Layar Penuh" : "Layar Penuh"}
+                >
+                  {isPdfFullscreen ? (
+                    <Minimize2 className="w-3.5 h-3.5" />
+                  ) : (
+                    <Maximize2 className="w-3.5 h-3.5" />
+                  )}
+                  <span>{isPdfFullscreen ? "Perkecil" : "Layar Penuh"}</span>
+                </button>
                 <button
                   type="button"
                   onClick={() => {
                     const matched = proposals.find((p) => p.id === previewPdfItem.id);
                     if (matched) handleDownloadPdf(matched);
                   }}
-                  className="inline-flex items-center gap-1.5 text-xs font-semibold text-foreground hover:text-primary transition-colors cursor-pointer"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border text-xs font-semibold text-foreground hover:bg-muted transition-colors cursor-pointer"
                 >
                   <Download className="w-3.5 h-3.5" />
-                  Unduh Naskah Asli
+                  Unduh Berkas
                 </button>
                 <a
                   href={previewPdfItem.blobUrl}
                   target="_blank"
                   rel="noreferrer"
-                  className="inline-flex items-center gap-1.5 text-xs font-semibold text-primary hover:underline shrink-0"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-700 hover:bg-red-800 text-white text-xs font-semibold transition-colors shrink-0"
                 >
                   Buka di Tab Baru
                 </a>
               </div>
             </div>
 
-            <div className="w-full h-[580px] rounded-xl overflow-hidden border border-border bg-slate-100 dark:bg-slate-900 shadow-inner">
+            <div className="flex-1 w-full min-h-0 rounded-xl overflow-hidden border border-border bg-slate-900 shadow-inner">
               <iframe
                 src={`${previewPdfItem.blobUrl}#toolbar=1&navpanes=1`}
                 title={previewPdfItem.title}

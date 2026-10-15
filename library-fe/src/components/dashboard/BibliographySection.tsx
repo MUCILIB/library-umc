@@ -33,6 +33,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import Modal from "@/components/ui/modal";
 import { cleanIsbn } from "@/utils/format";
 import {
@@ -411,12 +419,20 @@ export default function BibliographySection({
                     );
                   })}
                 </div>
-                <div className="border-t border-border px-3 py-2">
+                <div className="border-t border-border px-3 py-2 flex items-center justify-between">
+                  <button
+                    onClick={() =>
+                      setVisibleColumns(new Set(ALL_COLUMNS.map((c) => c.key)))
+                    }
+                    className="text-xs text-primary hover:underline cursor-pointer"
+                  >
+                    Tampilkan semua
+                  </button>
                   <button
                     onClick={() =>
                       setVisibleColumns(DEFAULT_COLUMNS)
                     }
-                    className="text-xs text-primary hover:underline"
+                    className="text-xs text-muted-foreground hover:underline cursor-pointer"
                   >
                     Reset tampilan
                   </button>
@@ -457,7 +473,7 @@ export default function BibliographySection({
       {/* Header Row 2: Filters */}
       <div className="flex flex-wrap items-center gap-2">
         <Select value={selectedFacultyId === "" ? "all" : selectedFacultyId} onValueChange={handleFacultyFilterChange}>
-          <SelectTrigger className="w-[180px]">
+          <SelectTrigger className="w-[180px]" aria-label="Filter Fakultas">
             <SelectValue placeholder="Semua Fakultas" />
           </SelectTrigger>
           <SelectContent>
@@ -471,7 +487,7 @@ export default function BibliographySection({
         </Select>
 
         <Select value={selectedStudyProgramId === "" ? "all" : selectedStudyProgramId} onValueChange={handleStudyProgramFilterChange}>
-          <SelectTrigger className="w-[200px]">
+          <SelectTrigger className="w-[200px]" aria-label="Filter Program Studi">
             <SelectValue placeholder="Semua Program Studi" />
           </SelectTrigger>
           <SelectContent>
@@ -527,149 +543,147 @@ export default function BibliographySection({
         </div>
       ) : (
         <div className="overflow-hidden rounded-2xl border border-border bg-card">
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-border bg-muted">
-                  <th className="px-4 py-3 text-left font-semibold text-muted-foreground">Judul</th>
+          <Table className="w-full text-sm min-w-[850px]">
+            <TableHeader>
+              <TableRow className="border-b border-border bg-muted/50 hover:bg-transparent">
+                <TableHead className="px-4 py-3.5 font-bold text-xs uppercase tracking-wider text-muted-foreground">Judul</TableHead>
+                {visibleColumns.has("fakultasProdi") && (
+                  <TableHead className="px-4 py-3.5 font-bold text-xs uppercase tracking-wider text-muted-foreground">Fakultas & Prodi</TableHead>
+                )}
+                {visibleColumns.has("penulis") && (
+                  <TableHead className="px-4 py-3.5 font-bold text-xs uppercase tracking-wider text-muted-foreground">Penulis</TableHead>
+                )}
+                {visibleColumns.has("penerbit") && (
+                  <TableHead className="px-4 py-3.5 font-bold text-xs uppercase tracking-wider text-muted-foreground">Penerbit</TableHead>
+                )}
+                {visibleColumns.has("tahun") && (
+                  <TableHead className="px-4 py-3.5 font-bold text-xs uppercase tracking-wider text-muted-foreground">Tahun</TableHead>
+                )}
+                {visibleColumns.has("isbn") && (
+                  <TableHead className="px-4 py-3.5 font-bold text-xs uppercase tracking-wider text-muted-foreground">ISBN / ISSN</TableHead>
+                )}
+                {visibleColumns.has("stok") && (
+                  <TableHead className="px-4 py-3.5 text-center font-bold text-xs uppercase tracking-wider text-muted-foreground">Stok</TableHead>
+                )}
+                <TableHead className="px-4 py-3.5 text-center font-bold text-xs uppercase tracking-wider text-muted-foreground">Aksi</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {data.items.map((bib) => (
+                <TableRow key={bib.id} className="border-b border-border hover:bg-muted/40 transition-colors">
+                  <TableCell className="px-4 py-3.5">
+                    <div className="max-w-xs truncate font-medium text-foreground">
+                      {bib.title}
+                    </div>
+                  </TableCell>
                   {visibleColumns.has("fakultasProdi") && (
-                    <th className="px-4 py-3 text-left font-semibold text-muted-foreground">Fakultas & Prodi</th>
+                    <TableCell className="px-4 py-3.5">
+                      <div className="max-w-[200px] space-y-1">
+                        {bib.faculties && bib.faculties.length > 0 ? (
+                          <div className="flex flex-wrap gap-1">
+                            {bib.faculties.map((f: any) => (
+                              <span
+                                key={f.id}
+                                className="inline-flex items-center rounded-md bg-blue-50 dark:bg-blue-950/60 px-2 py-0.5 text-[11px] font-medium text-blue-700 dark:text-blue-300 border border-blue-200/60 dark:border-blue-800/60"
+                              >
+                                {f.name}
+                              </span>
+                            ))}
+                          </div>
+                        ) : null}
+                        {bib.studyPrograms && bib.studyPrograms.length > 0 ? (
+                          <div className="flex flex-wrap gap-1">
+                            {bib.studyPrograms.map((sp: any) => (
+                              <span
+                                key={sp.id}
+                                className="inline-flex items-center rounded-md bg-emerald-50 dark:bg-emerald-950/60 px-2 py-0.5 text-[11px] font-medium text-emerald-700 dark:text-emerald-300 border border-emerald-200/60 dark:border-emerald-800/60"
+                              >
+                                {sp.name}
+                              </span>
+                            ))}
+                          </div>
+                        ) : null}
+                        {(!bib.faculties || bib.faculties.length === 0) && (!bib.studyPrograms || bib.studyPrograms.length === 0) && (
+                          <span className="text-xs text-muted-foreground/70 italic">-</span>
+                        )}
+                      </div>
+                    </TableCell>
                   )}
                   {visibleColumns.has("penulis") && (
-                    <th className="px-4 py-3 text-left font-semibold text-muted-foreground">Penulis</th>
+                    <TableCell className="px-4 py-3.5">
+                      <div className="max-w-[200px] truncate text-muted-foreground">
+                        {bib.authors?.map((a) => a.name).join(", ") || "-"}
+                        {bib.unlistedAuthorsLabel && (
+                          <span className="ml-1 text-xs text-muted-foreground">
+                            +{bib.unlistedAuthorsLabel}
+                          </span>
+                        )}
+                      </div>
+                    </TableCell>
                   )}
                   {visibleColumns.has("penerbit") && (
-                    <th className="px-4 py-3 text-left font-semibold text-muted-foreground">Penerbit</th>
+                    <TableCell className="px-4 py-3.5 text-muted-foreground">
+                      {bib.publisher?.name || "-"}
+                    </TableCell>
                   )}
                   {visibleColumns.has("tahun") && (
-                    <th className="px-4 py-3 text-left font-semibold text-muted-foreground">Tahun</th>
+                    <TableCell className="px-4 py-3.5 text-muted-foreground">
+                      {bib.publishYear || "-"}
+                    </TableCell>
                   )}
                   {visibleColumns.has("isbn") && (
-                    <th className="px-4 py-3 text-left font-semibold text-muted-foreground">ISBN / ISSN</th>
+                    <TableCell className="px-4 py-3.5 text-muted-foreground text-xs font-mono">
+                      {bib.isbn && bib.issn ? (
+                        <div className="space-y-0.5">
+                          <div><span className="text-[10px] text-muted-foreground/70 font-sans">ISBN: </span>{cleanIsbn(bib.isbn)}</div>
+                          <div><span className="text-[10px] text-muted-foreground/70 font-sans">ISSN: </span>{bib.issn}</div>
+                        </div>
+                      ) : bib.isbn ? (
+                        cleanIsbn(bib.isbn)
+                      ) : bib.issn ? (
+                        <span><span className="text-[10px] text-muted-foreground/70 font-sans">ISSN: </span>{bib.issn}</span>
+                      ) : (
+                        cleanIsbn(bib.isbnIssn) || "-"
+                      )}
+                    </TableCell>
                   )}
                   {visibleColumns.has("stok") && (
-                    <th className="px-4 py-3 text-center font-semibold text-muted-foreground">Stok</th>
+                    <TableCell className="px-4 py-3.5 text-center">
+                      <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 dark:bg-emerald-950 px-2 py-0.5 text-xs font-medium text-emerald-700 dark:text-emerald-400">
+                        <Package className="size-3" />
+                        {bib.availableItems}/{bib.totalItems}
+                      </span>
+                    </TableCell>
                   )}
-                  <th className="px-4 py-3 text-center font-semibold text-muted-foreground">Aksi</th>
-                </tr>
-              </thead>
-              <tbody>
-                {data.items.map((bib) => (
-                  <tr key={bib.id} className="border-b border-border hover:bg-surface-hover/50">
-                    <td className="px-4 py-3">
-                      <div className="max-w-xs truncate font-medium text-foreground">
-                        {bib.title}
-                      </div>
-                    </td>
-                    {visibleColumns.has("fakultasProdi") && (
-                      <td className="px-4 py-3">
-                        <div className="max-w-[200px] space-y-1">
-                          {bib.faculties && bib.faculties.length > 0 ? (
-                            <div className="flex flex-wrap gap-1">
-                              {bib.faculties.map((f: any) => (
-                                <span
-                                  key={f.id}
-                                  className="inline-flex items-center rounded-md bg-blue-50 dark:bg-blue-950/60 px-2 py-0.5 text-[11px] font-medium text-blue-700 dark:text-blue-300 border border-blue-200/60 dark:border-blue-800/60"
-                                >
-                                  {f.name}
-                                </span>
-                              ))}
-                            </div>
-                          ) : null}
-                          {bib.studyPrograms && bib.studyPrograms.length > 0 ? (
-                            <div className="flex flex-wrap gap-1">
-                              {bib.studyPrograms.map((sp: any) => (
-                                <span
-                                  key={sp.id}
-                                  className="inline-flex items-center rounded-md bg-emerald-50 dark:bg-emerald-950/60 px-2 py-0.5 text-[11px] font-medium text-emerald-700 dark:text-emerald-300 border border-emerald-200/60 dark:border-emerald-800/60"
-                                >
-                                  {sp.name}
-                                </span>
-                              ))}
-                            </div>
-                          ) : null}
-                          {(!bib.faculties || bib.faculties.length === 0) && (!bib.studyPrograms || bib.studyPrograms.length === 0) && (
-                            <span className="text-xs text-muted-foreground/70 italic">-</span>
-                          )}
-                        </div>
-                      </td>
-                    )}
-                    {visibleColumns.has("penulis") && (
-                      <td className="px-4 py-3">
-                        <div className="max-w-[200px] truncate text-muted-foreground">
-                          {bib.authors?.map((a) => a.name).join(", ") || "-"}
-                          {bib.unlistedAuthorsLabel && (
-                            <span className="ml-1 text-xs text-muted-foreground">
-                              +{bib.unlistedAuthorsLabel}
-                            </span>
-                          )}
-                        </div>
-                      </td>
-                    )}
-                    {visibleColumns.has("penerbit") && (
-                      <td className="px-4 py-3 text-muted-foreground">
-                        {bib.publisher?.name || "-"}
-                      </td>
-                    )}
-                    {visibleColumns.has("tahun") && (
-                      <td className="px-4 py-3 text-muted-foreground">
-                        {bib.publishYear || "-"}
-                      </td>
-                    )}
-                    {visibleColumns.has("isbn") && (
-                      <td className="px-4 py-3 text-muted-foreground text-xs font-mono">
-                        {bib.isbn && bib.issn ? (
-                          <div className="space-y-0.5">
-                            <div><span className="text-[10px] text-muted-foreground/70 font-sans">ISBN: </span>{cleanIsbn(bib.isbn)}</div>
-                            <div><span className="text-[10px] text-muted-foreground/70 font-sans">ISSN: </span>{bib.issn}</div>
-                          </div>
-                        ) : bib.isbn ? (
-                          cleanIsbn(bib.isbn)
-                        ) : bib.issn ? (
-                          <span><span className="text-[10px] text-muted-foreground/70 font-sans">ISSN: </span>{bib.issn}</span>
-                        ) : (
-                          cleanIsbn(bib.isbnIssn) || "-"
-                        )}
-                      </td>
-                    )}
-                    {visibleColumns.has("stok") && (
-                      <td className="px-4 py-3 text-center">
-                        <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 dark:bg-emerald-950 px-2 py-0.5 text-xs font-medium text-emerald-700 dark:text-emerald-400">
-                          <Package className="size-3" />
-                          {bib.availableItems}/{bib.totalItems}
-                        </span>
-                      </td>
-                    )}
-                    <td className="px-4 py-3 text-center">
-                      <div className="flex items-center justify-center gap-1">
-                        <button
-                          onClick={() => openDetail(bib.id)}
-                          className="rounded-lg p-1.5 text-muted-foreground hover:bg-muted hover:text-muted-foreground"
-                          title="Lihat detail"
-                        >
-                          <Eye className="size-4" />
-                        </button>
-                        <button
-                          onClick={() => handleEdit(bib)}
-                          className="rounded-lg p-1.5 text-blue-400 hover:bg-blue-50 dark:bg-blue-950 hover:text-blue-600 dark:text-blue-400"
-                          title="Edit"
-                        >
-                          <Pencil className="size-4" />
-                        </button>
-                        <button
-                          onClick={() => handleDelete(bib)}
-                          className="rounded-lg p-1.5 text-amber-500 hover:bg-amber-50 dark:bg-amber-950 hover:text-amber-700 dark:text-amber-400"
-                          title="Arsipkan"
-                        >
-                          <Archive className="size-4" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                  <TableCell className="px-4 py-3.5 text-center">
+                    <div className="flex items-center justify-center gap-1">
+                      <button
+                        onClick={() => openDetail(bib.id)}
+                        className="rounded-lg p-1.5 text-muted-foreground hover:bg-muted hover:text-muted-foreground transition-colors cursor-pointer"
+                        title="Lihat detail"
+                      >
+                        <Eye className="size-4" />
+                      </button>
+                      <button
+                        onClick={() => handleEdit(bib)}
+                        className="rounded-lg p-1.5 text-blue-500 hover:bg-blue-50 dark:bg-blue-950/60 hover:text-blue-600 dark:text-blue-400 transition-colors cursor-pointer"
+                        title="Edit"
+                      >
+                        <Pencil className="size-4" />
+                      </button>
+                      <button
+                        onClick={() => handleDelete(bib)}
+                        className="rounded-lg p-1.5 text-amber-500 hover:bg-amber-50 dark:bg-amber-950/60 hover:text-amber-700 dark:text-amber-400 transition-colors cursor-pointer"
+                        title="Arsipkan"
+                      >
+                        <Archive className="size-4" />
+                      </button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
 
           {/* Pagination */}
           {data.totalPages > 1 && (
@@ -2148,36 +2162,36 @@ function BibliographyForm({ bib, onClose, onSuccess }: BibliographyFormProps) {
                 </div>
               ) : (
                 <div className="border border-border rounded-xl overflow-hidden bg-card">
-                  <table className="w-full text-left text-sm border-collapse">
-                    <thead>
-                      <tr className="bg-muted/70 text-muted-foreground text-xs uppercase font-bold border-b border-border">
-                        <th className="px-4 py-3">Kode Item</th>
-                        <th className="px-4 py-3">Lokasi / Rak</th>
-                        <th className="px-4 py-3">Status Ketersediaan</th>
-                        <th className="px-4 py-3 text-right">Aksi</th>
-                      </tr>
-                    </thead>
-                    <tbody>
+                  <Table className="w-full text-left text-sm">
+                    <TableHeader>
+                      <TableRow className="bg-muted/50 hover:bg-transparent border-b border-border">
+                        <TableHead className="px-4 py-3 text-xs uppercase font-bold text-muted-foreground">Kode Item</TableHead>
+                        <TableHead className="px-4 py-3 text-xs uppercase font-bold text-muted-foreground">Lokasi / Rak</TableHead>
+                        <TableHead className="px-4 py-3 text-xs uppercase font-bold text-muted-foreground">Status Ketersediaan</TableHead>
+                        <TableHead className="px-4 py-3 text-right text-xs uppercase font-bold text-muted-foreground">Aksi</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
                       {/* For Editing Mode */}
                       {bib &&
                         (itemsList.length === 0 ? (
-                          <tr>
-                            <td colSpan={4} className="px-4 py-8 text-center text-muted-foreground">
+                          <TableRow>
+                            <TableCell colSpan={4} className="px-4 py-8 text-center text-muted-foreground">
                               Belum ada eksemplar fisik. Silakan input kode item di atas.
-                            </td>
-                          </tr>
+                            </TableCell>
+                          </TableRow>
                         ) : (
                           itemsList.map((item) => (
-                            <tr key={item.id} className="border-b border-border hover:bg-muted/30">
-                              <td className="px-4 py-3 font-semibold text-foreground">
+                            <TableRow key={item.id} className="border-b border-border hover:bg-muted/30 transition-colors">
+                              <TableCell className="px-4 py-3 font-semibold text-foreground">
                                 {item.itemCode}
-                              </td>
-                              <td className="px-4 py-3 text-muted-foreground">
+                              </TableCell>
+                              <TableCell className="px-4 py-3 text-muted-foreground">
                                 {item.location
                                   ? `${item.location.room} - Rak ${item.location.rack} (${item.location.shelf})`
                                   : "Sirkulasi"}
-                              </td>
-                              <td className="px-4 py-3">
+                              </TableCell>
+                              <TableCell className="px-4 py-3">
                                 <span
                                   className={`inline-flex items-center gap-1.5 text-xs font-semibold px-2 py-0.5 rounded-full ${
                                     item.status === "available"
@@ -2187,56 +2201,56 @@ function BibliographyForm({ bib, onClose, onSuccess }: BibliographyFormProps) {
                                 >
                                   {item.status === "available" ? "Tersedia" : item.status}
                                 </span>
-                              </td>
-                              <td className="px-4 py-3 text-right">
+                              </TableCell>
+                              <TableCell className="px-4 py-3 text-right">
                                 <button
                                   type="button"
                                   onClick={() => handleDeleteCopy(item.id, item.itemCode)}
-                                  className="text-red-500 hover:text-red-700 p-1.5 rounded-lg hover:bg-red-50 transition-colors"
+                                  className="text-red-500 hover:text-red-700 p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-950/50 transition-colors cursor-pointer"
                                 >
                                   <Trash2 className="size-4" />
                                 </button>
-                              </td>
-                            </tr>
+                              </TableCell>
+                            </TableRow>
                           ))
                         ))}
 
                       {/* For Creating Mode */}
                       {!bib &&
                         (localNewItems.length === 0 ? (
-                          <tr>
-                            <td colSpan={4} className="px-4 py-8 text-center text-muted-foreground">
+                          <TableRow>
+                            <TableCell colSpan={4} className="px-4 py-8 text-center text-muted-foreground">
                               Belum ada eksemplar fisik. Silakan input kode item di atas.
-                            </td>
-                          </tr>
+                            </TableCell>
+                          </TableRow>
                         ) : (
                           localNewItems.map((item, idx) => (
-                            <tr key={idx} className="border-b border-border hover:bg-muted/30">
-                              <td className="px-4 py-3 font-semibold text-foreground">
+                            <TableRow key={idx} className="border-b border-border hover:bg-muted/30 transition-colors">
+                              <TableCell className="px-4 py-3 font-semibold text-foreground">
                                 {item.itemCode}
-                              </td>
-                              <td className="px-4 py-3 text-muted-foreground">
+                              </TableCell>
+                              <TableCell className="px-4 py-3 text-muted-foreground">
                                 {item.locationName}
-                              </td>
-                              <td className="px-4 py-3">
+                              </TableCell>
+                              <TableCell className="px-4 py-3">
                                 <span className="inline-flex items-center gap-1.5 text-xs font-semibold px-2 py-0.5 rounded-full bg-success/10 text-success">
                                   Tersedia
                                 </span>
-                              </td>
-                              <td className="px-4 py-3 text-right">
+                              </TableCell>
+                              <TableCell className="px-4 py-3 text-right">
                                 <button
                                   type="button"
                                   onClick={() => handleDeleteCopy(idx, item.itemCode)}
-                                  className="text-red-500 hover:text-red-700 p-1.5 rounded-lg hover:bg-red-50 transition-colors"
+                                  className="text-red-500 hover:text-red-700 p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-950/50 transition-colors cursor-pointer"
                                 >
                                   <Trash2 className="size-4" />
                                 </button>
-                              </td>
-                            </tr>
+                              </TableCell>
+                            </TableRow>
                           ))
                         ))}
-                    </tbody>
-                  </table>
+                    </TableBody>
+                  </Table>
                 </div>
               )}
             </div>

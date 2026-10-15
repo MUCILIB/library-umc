@@ -10,7 +10,9 @@ import {
   FileText,
   User,
   Loader2,
-  Download
+  Download,
+  Maximize2,
+  Minimize2
 } from "lucide-react";
 import { repositoryService, type RepositoryProposal } from "@/services/repositoryService";
 import { API_BASE_URL } from "@/utils/api-config";
@@ -23,6 +25,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 export default function RepositorySection() {
   const { success, error } = useToast();
@@ -48,6 +58,7 @@ export default function RepositorySection() {
   const [previewPdfItem, setPreviewPdfItem] = useState<{ id: string; title: string; blobUrl?: string } | null>(null);
   const [loadingPreviewId, setLoadingPreviewId] = useState<string | null>(null);
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
+  const [isPdfFullscreen, setIsPdfFullscreen] = useState(false);
 
   const handlePreviewPdf = async (item: RepositoryProposal, isPublicPreview = false) => {
     try {
@@ -299,142 +310,142 @@ export default function RepositorySection() {
             </p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm border-collapse">
-              <thead>
-                <tr className="border-b border-border bg-muted/40 text-xs font-semibold text-muted-foreground">
-                  <th className="p-4">Nomor & Kategori</th>
-                  <th className="p-4">Karya Ilmiah & Penulis</th>
-                  <th className="p-4">Halaman & Batas Akses</th>
-                  <th className="p-4">Status</th>
-                  <th className="p-4 text-right">Aksi</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border">
-                {filteredProposals.map((item) => {
-                  const rule = item.pageRules?.find(
-                    (r) => r.roleScope?.toUpperCase() === "PUBLIC" || r.roleScope?.toUpperCase() === "ALL"
-                  ) || item.pageRules?.[0];
-                  const publicRange = rule
-                    ? `${rule.allowedStartPage} - ${rule.allowedEndPage}`
-                    : "1 - 10 (Default)";
+          <Table className="w-full text-left text-sm min-w-[850px]">
+            <TableHeader>
+              <TableRow className="border-b border-border bg-muted/50 hover:bg-transparent">
+                <TableHead className="px-4 py-3.5 font-bold text-xs uppercase tracking-wider text-muted-foreground whitespace-nowrap">Nomor & Kategori</TableHead>
+                <TableHead className="px-4 py-3.5 font-bold text-xs uppercase tracking-wider text-muted-foreground">Karya Ilmiah & Penulis</TableHead>
+                <TableHead className="px-4 py-3.5 font-bold text-xs uppercase tracking-wider text-muted-foreground whitespace-nowrap">Halaman & Batas Akses</TableHead>
+                <TableHead className="px-4 py-3.5 font-bold text-xs uppercase tracking-wider text-muted-foreground whitespace-nowrap">Status</TableHead>
+                <TableHead className="px-4 py-3.5 text-right font-bold text-xs uppercase tracking-wider text-muted-foreground whitespace-nowrap">Aksi</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filteredProposals.map((item) => {
+                const rule = item.pageRules?.find(
+                  (r) => r.roleScope?.toUpperCase() === "PUBLIC" || r.roleScope?.toUpperCase() === "ALL"
+                ) || item.pageRules?.[0];
+                const publicRange = rule
+                  ? `${rule.allowedStartPage} - ${rule.allowedEndPage}`
+                  : "1 - 10 (Default)";
 
-                  return (
-                    <tr key={item.id} className="hover:bg-muted/20 transition-colors">
-                      <td className="p-4 align-top">
-                        <div className="font-mono text-xs font-bold text-foreground">
-                          {item.proposalNumber}
-                        </div>
-                        <span className="inline-block mt-1 text-[11px] px-2 py-0.5 rounded bg-muted text-muted-foreground font-medium">
-                          {item.documentCategory}
+                return (
+                  <TableRow key={item.id} className="border-b border-border hover:bg-muted/40 transition-colors">
+                    <TableCell className="px-4 py-3.5 align-top whitespace-nowrap">
+                      <div className="font-mono text-xs font-bold text-foreground">
+                        {item.proposalNumber}
+                      </div>
+                      <span className="inline-block mt-1.5 text-[11px] px-2 py-0.5 rounded bg-muted text-muted-foreground font-medium border border-border/50">
+                        {item.documentCategory}
+                      </span>
+                    </TableCell>
+
+                    <TableCell className="px-4 py-3.5 align-top max-w-md whitespace-normal">
+                      <div className="font-bold text-foreground leading-snug">{item.title}</div>
+                      <div className="flex items-center gap-1.5 text-xs text-muted-foreground mt-1.5">
+                        <User className="w-3.5 h-3.5 text-muted-foreground/70 shrink-0" />
+                        <span>
+                          {item.authorName} ({item.authorNim})
                         </span>
-                      </td>
+                      </div>
+                      <div className="text-xs text-muted-foreground mt-0.5">
+                        Dosen Pembimbing: {item.advisorName1}
+                      </div>
+                    </TableCell>
 
-                      <td className="p-4 align-top max-w-md">
-                        <div className="font-bold text-foreground leading-snug">{item.title}</div>
-                        <div className="flex items-center gap-1.5 text-xs text-muted-foreground mt-1.5">
-                          <User className="w-3.5 h-3.5" />
-                          <span>
-                            {item.authorName} ({item.authorNim})
-                          </span>
-                        </div>
-                        <div className="text-xs text-muted-foreground mt-0.5">
-                          Dosen Pembimbing: {item.advisorName1}
-                        </div>
-                      </td>
+                    <TableCell className="px-4 py-3.5 align-top text-xs whitespace-nowrap">
+                      <div className="font-medium text-foreground">
+                        Total: <strong className="font-bold">{item.pageCount} Hal</strong>
+                      </div>
+                      <div className="text-muted-foreground mt-1 flex items-center gap-1.5">
+                        <span>Akses Publik:</span>
+                        <span className="font-semibold text-foreground bg-muted px-1.5 py-0.5 rounded border border-border/50">
+                          {publicRange}
+                        </span>
+                      </div>
+                    </TableCell>
 
-                      <td className="p-4 align-top text-xs">
-                        <div className="font-medium text-foreground">
-                          Total: <strong className="font-bold">{item.pageCount} Hal</strong>
-                        </div>
-                        <div className="text-muted-foreground mt-1 flex items-center gap-1">
-                          <span>Akses Publik:</span>
-                          <span className="font-semibold text-foreground bg-muted px-1.5 py-0.5 rounded">
-                            {publicRange}
-                          </span>
-                        </div>
-                      </td>
+                    <TableCell className="px-4 py-3.5 align-top whitespace-nowrap">
+                      {getStatusBadge(item.status)}
+                    </TableCell>
 
-                      <td className="p-4 align-top">{getStatusBadge(item.status)}</td>
-
-                      <td className="p-4 align-top text-right space-y-2">
-                        <div className="flex items-center justify-end gap-1.5">
-                          <button
-                            type="button"
-                            onClick={() => handlePreviewPdf(item, false)}
-                            disabled={loadingPreviewId === item.id}
-                            title="Buka & Periksa Naskah PDF (Akses Verifikasi Pustakawan)"
-                            className="p-1.5 rounded-lg border border-border hover:bg-muted text-foreground transition-colors inline-flex items-center cursor-pointer disabled:opacity-50"
-                          >
-                            {loadingPreviewId === item.id ? (
-                              <Loader2 className="w-4 h-4 animate-spin text-red-700" />
-                            ) : (
-                              <Eye className="w-4 h-4 text-muted-foreground" />
-                            )}
-                          </button>
-
-                          <button
-                            type="button"
-                            onClick={() => handleDownloadPdf(item)}
-                            disabled={downloadingId === item.id}
-                            title="Unduh Langsung Berkas Naskah PDF Lengkap"
-                            className="p-1.5 rounded-lg border border-border hover:bg-muted text-foreground transition-colors inline-flex items-center cursor-pointer disabled:opacity-50"
-                          >
-                            {downloadingId === item.id ? (
-                              <Loader2 className="w-4 h-4 animate-spin text-red-700" />
-                            ) : (
-                              <Download className="w-4 h-4 text-muted-foreground" />
-                            )}
-                          </button>
-
-                          {item.status === "APPROVED" && (
-                            <button
-                              type="button"
-                              onClick={() => handlePreviewPdf(item, true)}
-                              disabled={loadingPreviewId === item.id + "-public"}
-                              title="Pratinjau Batas Halaman Publik (Tamu)"
-                              className="p-1.5 rounded-lg border border-border hover:bg-muted text-foreground transition-colors inline-flex items-center cursor-pointer disabled:opacity-50"
-                            >
-                              {loadingPreviewId === item.id + "-public" ? (
-                                <Loader2 className="w-4 h-4 animate-spin text-red-700" />
-                              ) : (
-                                <FileText className="w-4 h-4 text-muted-foreground" />
-                              )}
-                            </button>
+                    <TableCell className="px-4 py-3.5 align-top text-right whitespace-nowrap">
+                      <div className="flex items-center justify-end gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => handlePreviewPdf(item, false)}
+                          disabled={loadingPreviewId === item.id}
+                          title="Buka & Periksa Naskah PDF (Akses Verifikasi Pustakawan)"
+                          className="p-1.5 rounded-lg border border-border hover:bg-muted text-foreground transition-colors inline-flex items-center cursor-pointer disabled:opacity-50"
+                        >
+                          {loadingPreviewId === item.id ? (
+                            <Loader2 className="w-4 h-4 animate-spin text-red-700" />
+                          ) : (
+                            <Eye className="w-4 h-4 text-muted-foreground" />
                           )}
+                        </button>
 
-                          <button
-                            onClick={() => {
-                              setAclModalItem(item);
-                              setStartPage(rule?.allowedStartPage || 1);
-                              setEndPage(rule?.allowedEndPage || Math.min(10, item.pageCount));
-                            }}
-                            title="Konfigurasi Batas Halaman Publik"
-                            className="p-1.5 rounded-lg border border-border hover:bg-muted text-foreground transition-colors inline-flex items-center cursor-pointer"
-                          >
-                            <Sliders className="w-4 h-4 text-muted-foreground" />
-                          </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDownloadPdf(item)}
+                          disabled={downloadingId === item.id}
+                          title="Unduh Langsung Berkas Naskah PDF Lengkap"
+                          className="p-1.5 rounded-lg border border-border hover:bg-muted text-foreground transition-colors inline-flex items-center cursor-pointer disabled:opacity-50"
+                        >
+                          {downloadingId === item.id ? (
+                            <Loader2 className="w-4 h-4 animate-spin text-red-700" />
+                          ) : (
+                            <Download className="w-4 h-4 text-muted-foreground" />
+                          )}
+                        </button>
 
+                        {item.status === "APPROVED" && (
                           <button
-                            onClick={() => {
-                              setReviewModalItem(item);
-                              setReviewAction(
-                                item.status === "APPROVED" ? "REVISION_REQUIRED" : "APPROVE"
-                              );
-                              setReviewNotes(item.reviewNotes || "");
-                            }}
-                            className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-red-700 hover:bg-red-800 text-white transition-colors cursor-pointer"
+                            type="button"
+                            onClick={() => handlePreviewPdf(item, true)}
+                            disabled={loadingPreviewId === item.id + "-public"}
+                            title="Pratinjau Batas Halaman Publik (Tamu)"
+                            className="p-1.5 rounded-lg border border-border hover:bg-muted text-foreground transition-colors inline-flex items-center cursor-pointer disabled:opacity-50"
                           >
-                            Review
+                            {loadingPreviewId === item.id + "-public" ? (
+                              <Loader2 className="w-4 h-4 animate-spin text-red-700" />
+                            ) : (
+                              <FileText className="w-4 h-4 text-muted-foreground" />
+                            )}
                           </button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+                        )}
+
+                        <button
+                          onClick={() => {
+                            setAclModalItem(item);
+                            setStartPage(rule?.allowedStartPage || 1);
+                            setEndPage(rule?.allowedEndPage || Math.min(10, item.pageCount));
+                          }}
+                          title="Konfigurasi Batas Halaman Publik"
+                          className="p-1.5 rounded-lg border border-border hover:bg-muted text-foreground transition-colors inline-flex items-center cursor-pointer"
+                        >
+                          <Sliders className="w-4 h-4 text-muted-foreground" />
+                        </button>
+
+                        <button
+                          onClick={() => {
+                            setReviewModalItem(item);
+                            setReviewAction(
+                              item.status === "APPROVED" ? "REVISION_REQUIRED" : "APPROVE"
+                            );
+                            setReviewNotes(item.reviewNotes || "");
+                          }}
+                          className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-red-700 hover:bg-red-800 text-white transition-colors cursor-pointer shadow-sm"
+                        >
+                          Review
+                        </button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
+            </TableBody>
+          </Table>
         )}
       </div>
 
@@ -636,24 +647,39 @@ export default function RepositorySection() {
             URL.revokeObjectURL(previewPdfItem.blobUrl);
           }
           setPreviewPdfItem(null);
+          setIsPdfFullscreen(false);
         }}
         title={previewPdfItem ? `Naskah PDF: ${previewPdfItem.title}` : "Pratinjau Naskah PDF"}
-        size="lg"
+        size={isPdfFullscreen ? "fullscreen" : "full"}
       >
         {previewPdfItem && (
-          <div className="space-y-4 p-2">
-            <div className="flex items-center justify-between gap-3 pb-3 border-b border-border">
+          <div className="flex flex-col h-full min-h-0 space-y-3">
+            <div className="flex items-center justify-between gap-3 pb-2 border-b border-border shrink-0">
               <span className="text-xs font-medium text-muted-foreground line-clamp-1">
                 {previewPdfItem.title}
               </span>
-              <div className="flex items-center gap-3 shrink-0">
+              <div className="flex items-center gap-2 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setIsPdfFullscreen(!isPdfFullscreen)}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border text-xs font-semibold text-foreground hover:bg-muted transition-colors cursor-pointer"
+                  title={isPdfFullscreen ? "Keluar Layar Penuh" : "Layar Penuh"}
+                >
+                  {isPdfFullscreen ? (
+                    <Minimize2 className="w-3.5 h-3.5" />
+                  ) : (
+                    <Maximize2 className="w-3.5 h-3.5" />
+                  )}
+                  <span>{isPdfFullscreen ? "Perkecil" : "Layar Penuh"}</span>
+                </button>
                 <button
                   type="button"
                   onClick={() => {
                     const matched = proposals.find((p) => p.id === previewPdfItem.id);
                     if (matched) handleDownloadPdf(matched);
                   }}
-                  className="inline-flex items-center gap-1.5 text-xs font-semibold text-foreground hover:text-primary transition-colors cursor-pointer"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border text-xs font-semibold text-foreground hover:bg-muted transition-colors cursor-pointer"
+                  title="Unduh Naskah Asli Lengkap"
                 >
                   <Download className="w-3.5 h-3.5" />
                   Unduh Naskah Asli
@@ -662,14 +688,15 @@ export default function RepositorySection() {
                   href={previewPdfItem.blobUrl}
                   target="_blank"
                   rel="noreferrer"
-                  className="inline-flex items-center gap-1.5 text-xs font-semibold text-primary hover:underline"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-700 hover:bg-red-800 text-white text-xs font-semibold transition-colors shadow-sm"
+                  title="Buka langsung di tab baru browser"
                 >
                   Buka di Tab Baru
                 </a>
               </div>
             </div>
 
-            <div className="w-full h-[620px] rounded-xl overflow-hidden border border-border bg-slate-100 dark:bg-slate-900 shadow-inner">
+            <div className="flex-1 w-full min-h-0 rounded-xl overflow-hidden border border-border bg-slate-900 shadow-inner">
               <iframe
                 src={`${previewPdfItem.blobUrl}#toolbar=1&navpanes=1`}
                 title={previewPdfItem.title}

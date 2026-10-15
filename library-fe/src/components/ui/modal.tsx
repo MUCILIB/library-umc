@@ -8,8 +8,10 @@ interface ModalProps {
   onClose: () => void;
   children: ReactNode;
   title?: string;
-  size?: "sm" | "md" | "lg" | "xl";
+  size?: "sm" | "md" | "lg" | "xl" | "full" | "fullscreen";
   animation?: "scale" | "slide" | "fade" | "bounce";
+  className?: string;
+  bodyClassName?: string;
 }
 
 const Modal: React.FC<ModalProps> = ({
@@ -19,6 +21,8 @@ const Modal: React.FC<ModalProps> = ({
   title,
   size = "md",
   animation = "scale",
+  className,
+  bodyClassName,
 }) => {
   // Animation variants based on animation type
   const getModalVariants = (animationType: string) => {
@@ -168,11 +172,15 @@ const Modal: React.FC<ModalProps> = ({
 
   if (!isOpen) return null;
 
+  const isFull = size === "full" || size === "fullscreen";
+
   const sizeClasses = {
     sm: "max-w-md",
     md: "max-w-lg",
     lg: "max-w-2xl",
     xl: "max-w-4xl",
+    full: "w-[96vw] max-w-[96vw] h-[94vh] max-h-[94vh] mx-auto rounded-2xl flex flex-col overflow-hidden",
+    fullscreen: "w-screen max-w-none h-screen max-h-screen m-0 rounded-none flex flex-col overflow-hidden",
   };
 
   return createPortal(
@@ -190,7 +198,7 @@ const Modal: React.FC<ModalProps> = ({
           <motion.div
             className={cn(
               "absolute inset-0 backdrop-blur-sm",
-              "bg-black/50 dark:bg-black/70"
+              "bg-black/60 dark:bg-black/80"
             )}
             onClick={onClose}
             initial={{ opacity: 0 }}
@@ -201,10 +209,13 @@ const Modal: React.FC<ModalProps> = ({
           {/* Modal Content */}
           <motion.div
             className={cn(
-              "relative rounded-lg shadow-xl w-full mx-4 max-h-[90vh] overflow-auto",
-              "bg-white dark:bg-gray-900",
-              "border-0 dark:border dark:border-gray-700",
-              sizeClasses[size]
+              "relative shadow-2xl w-full",
+              isFull
+                ? sizeClasses[size]
+                : cn("mx-4 rounded-xl max-h-[90vh] overflow-auto", sizeClasses[size]),
+              "bg-card text-card-foreground",
+              "border border-border",
+              className
             )}
             variants={modalVariants}
             initial="hidden"
@@ -214,14 +225,14 @@ const Modal: React.FC<ModalProps> = ({
             {title && (
               <div
                 className={cn(
-                  "flex items-center justify-between p-4 border-b",
-                  "border-gray-200 dark:border-gray-700"
+                  "flex items-center justify-between p-4 border-b shrink-0",
+                  "border-border bg-muted/30"
                 )}
               >
                 <h3
                   className={cn(
-                    "text-lg font-semibold",
-                    "text-gray-900 dark:text-white"
+                    "text-base font-bold",
+                    "text-foreground truncate pr-4"
                   )}
                 >
                   {title}
@@ -229,10 +240,9 @@ const Modal: React.FC<ModalProps> = ({
                 <button
                   onClick={onClose}
                   className={cn(
-                    "p-1 rounded-md transition-colors",
-                    "text-gray-400 hover:text-gray-600",
-                    "dark:text-gray-400 dark:hover:text-gray-200",
-                    "hover:bg-gray-100 dark:hover:bg-gray-800"
+                    "p-1.5 rounded-lg transition-colors cursor-pointer shrink-0",
+                    "text-muted-foreground hover:text-foreground",
+                    "hover:bg-muted"
                   )}
                 >
                   <svg
@@ -252,7 +262,15 @@ const Modal: React.FC<ModalProps> = ({
               </div>
             )}
 
-            <div className="p-4">{children}</div>
+            <div
+              className={cn(
+                "p-4",
+                isFull && "flex-1 flex flex-col min-h-0 overflow-hidden p-4",
+                bodyClassName
+              )}
+            >
+              {children}
+            </div>
           </motion.div>
         </motion.div>
       )}

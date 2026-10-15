@@ -22,6 +22,15 @@ import {
 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import Modal from "@/components/ui/modal";
 import { authClient } from "@/utils/auth-client";
 import { useToast } from "@/hooks/useToast";
@@ -167,6 +176,15 @@ export default function UsersSection() {
   const handleSearchChange = (val: string) => {
     setSearch(val);
     setCurrentPage(1);
+  };
+
+  const getFallbackInitials = (name?: string | null) => {
+    if (!name) return "U";
+    const parts = name.trim().split(/\s+/);
+    if (parts.length >= 2) {
+      return (parts[0][0] + parts[1][0]).toUpperCase();
+    }
+    return name.slice(0, 2).toUpperCase();
   };
 
   const roleBadgeClass = (role: string) => {
@@ -541,87 +559,85 @@ export default function UsersSection() {
           </div>
         ) : (
           <>
-            <div className="w-full max-w-full overflow-x-auto">
-              <table className="w-full min-w-[980px] text-left border-collapse">
-                <thead>
-                  <tr className="bg-muted/50 border-b border-border">
+            <div className="w-full">
+              <Table className="w-full min-w-[980px]">
+                <TableHeader>
+                  <TableRow className="bg-muted/50 hover:bg-transparent border-b border-border">
                     {
                       visibleColumns.has("user") && (
-                        <th className="px-6 py-4 text-[11px] font-bold text-muted-foreground uppercase tracking-widest whitespace-nowrap">
+                        <TableHead className="px-6 py-4 text-xs font-bold text-muted-foreground uppercase tracking-wider whitespace-nowrap">
                           User
-                        </th>
+                        </TableHead>
                       )
                     }
                     {
                       visibleColumns.has("role") && (
-                        <th className="px-6 py-4 text-[11px] font-bold text-muted-foreground uppercase tracking-widest whitespace-nowrap">
+                        <TableHead className="px-6 py-4 text-xs font-bold text-muted-foreground uppercase tracking-wider whitespace-nowrap">
                           Role
-                        </th>
+                        </TableHead>
                       )
                     }
                     {
                       visibleColumns.has("status") && (
-                        <th className="px-6 py-4 text-[11px] font-bold text-muted-foreground uppercase tracking-widest whitespace-nowrap">
+                        <TableHead className="px-6 py-4 text-xs font-bold text-muted-foreground uppercase tracking-wider whitespace-nowrap">
                           Status
-                        </th>
+                        </TableHead>
                       )
                     }
                     {
                       visibleColumns.has("kartu") && (
-                        <th className="px-6 py-4 text-[11px] font-bold text-muted-foreground uppercase tracking-widest whitespace-nowrap">
+                        <TableHead className="px-6 py-4 text-xs font-bold text-muted-foreground uppercase tracking-wider whitespace-nowrap">
                           Kartu
-                        </th>
+                        </TableHead>
                       )
                     }
                     {
                       visibleColumns.has("terdaftar") && (
-                        <th className="px-6 py-4 text-[11px] font-bold text-muted-foreground uppercase tracking-widest whitespace-nowrap">
+                        <TableHead className="px-6 py-4 text-xs font-bold text-muted-foreground uppercase tracking-wider whitespace-nowrap">
                           Terdaftar
-                        </th>
+                        </TableHead>
                       )
                     }
                     {
                       visibleColumns.has("aksi") && (
-                        <th className="px-6 py-4 text-[11px] font-bold text-muted-foreground uppercase tracking-widest text-right whitespace-nowrap">
+                        <TableHead className="px-6 py-4 text-xs font-bold text-muted-foreground uppercase tracking-wider text-right whitespace-nowrap">
                           Aksi
-                        </th>
+                        </TableHead>
                       )
                     }
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-50">
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
                   {paginatedUsers.map((user) => (
-                    <tr
+                    <TableRow
                       key={user.id}
-                      className="hover:bg-surface-hover/40 transition-colors"
+                      className="hover:bg-muted/40 transition-colors border-b border-border"
                     >
                       {visibleColumns.has("user") && (
-                        <td className="px-6 py-4 whitespace-nowrap">
+                        <TableCell className="px-6 py-4 whitespace-nowrap">
                           <div className="flex items-center gap-3">
-                            <div className="w-9 h-9 rounded-full bg-muted overflow-hidden flex items-center justify-center text-muted-foreground text-xs font-bold">
-                              {user.image ? (
-                                <img
-                                  src={user.image}
-                                  alt={user.name}
-                                  className="w-full h-full object-cover"
-                                />
-                              ) : (
-                                user.name?.charAt(0)?.toUpperCase() || "U"
-                              )}
-                            </div>
+                            <Avatar className="size-9">
+                              <AvatarImage
+                                src={user.image || ""}
+                                alt={user.name || "User"}
+                              />
+                              <AvatarFallback className="text-xs font-bold bg-muted text-muted-foreground">
+                                {getFallbackInitials(user.name)}
+                              </AvatarFallback>
+                            </Avatar>
                             <div>
-                              <p className="text-sm font-bold text-foreground">
+                              <p className="text-sm font-semibold text-foreground leading-tight">
                                 {user.name || "-"}
                               </p>
-                              <p className="text-xs font-medium text-muted-foreground">
+                              <p className="text-xs font-medium text-muted-foreground mt-0.5">
                                 {user.email}
                               </p>
                             </div>
                           </div>
-                        </td>
+                        </TableCell>
                       )}
                       {visibleColumns.has("role") && (
-                        <td className="px-6 py-4 whitespace-nowrap">
+                        <TableCell className="px-6 py-4 whitespace-nowrap">
                           <span
                             className={`inline-flex items-center px-3 py-1 rounded-full text-[11px] font-bold border ${roleBadgeClass(user.role)}`}
                           >
@@ -630,23 +646,23 @@ export default function UsersSection() {
                             ) : null}
                             {user.role}
                           </span>
-                        </td>
+                        </TableCell>
                       )}
                       {visibleColumns.has("status") && (
-                        <td className="px-6 py-4 whitespace-nowrap">
+                        <TableCell className="px-6 py-4 whitespace-nowrap">
                           {user.banned ? (
-                            <span className="inline-flex items-center px-3 py-1 rounded-full text-[11px] font-bold border bg-orange-50 text-orange-700 border-orange-200">
+                            <span className="inline-flex items-center px-3 py-1 rounded-full text-[11px] font-bold border bg-orange-50 dark:bg-orange-950/60 text-orange-700 dark:text-orange-400 border-orange-200 dark:border-orange-800">
                               <UserX size={12} className="mr-1.5" /> Banned
                             </span>
                           ) : (
-                            <span className="inline-flex items-center px-3 py-1 rounded-full text-[11px] font-bold border bg-green-50 dark:bg-green-950 text-green-700 dark:text-green-400 border-green-200 dark:border-green-800">
+                            <span className="inline-flex items-center px-3 py-1 rounded-full text-[11px] font-bold border bg-green-50 dark:bg-green-950/60 text-green-700 dark:text-green-400 border-green-200 dark:border-green-800">
                               Aktif
                             </span>
                           )}
-                        </td>
+                        </TableCell>
                       )}
                       {visibleColumns.has("kartu") && (
-                        <td className="px-6 py-4 whitespace-nowrap">
+                        <TableCell className="px-6 py-4 whitespace-nowrap">
                           <div className="flex items-center gap-2">
                             <span
                               className={`inline-flex items-center px-3 py-1 rounded-full text-[11px] font-bold border ${cardStatusClass(user.cardStatus)}`}
@@ -664,10 +680,10 @@ export default function UsersSection() {
                               {user.cardRejectedReason}
                             </p>
                           ) : null}
-                        </td>
+                        </TableCell>
                       )}
                       {visibleColumns.has("terdaftar") && (
-                        <td className="px-6 py-4 text-sm font-medium text-muted-foreground whitespace-nowrap">
+                        <TableCell className="px-6 py-4 text-xs font-medium text-muted-foreground whitespace-nowrap">
                           {user.createdAt
                             ? new Date(user.createdAt).toLocaleDateString("id-ID", {
                                 day: "2-digit",
@@ -675,15 +691,15 @@ export default function UsersSection() {
                                 year: "numeric"
                               })
                             : "-"}
-                        </td>
+                        </TableCell>
                       )}
                       {visibleColumns.has("aksi") && (
-                        <td className="px-6 py-4 text-right whitespace-nowrap">
+                        <TableCell className="px-6 py-4 text-right whitespace-nowrap">
                         <div className="inline-flex items-center gap-2 whitespace-nowrap">
                           <button
                             onClick={() => void handleRecordVisit(user)}
                             disabled={recordSavingId === user.id}
-                            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold border bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-400 border-emerald-200 hover:bg-emerald-100 transition-colors disabled:opacity-50"
+                            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold border bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-400 border-emerald-200 hover:bg-emerald-100 transition-colors disabled:opacity-50 cursor-pointer"
                             title="Catat Kunjungan Hari Ini"
                           >
                             <UserCheck size={12} />
@@ -702,14 +718,14 @@ export default function UsersSection() {
                               user.id === currentUserId || savingId === user.id
                             }
                           >
-                            <SelectTrigger className="w-[120px] h-8 text-xs font-bold">
+                            <SelectTrigger className="w-[120px] h-8 text-xs font-bold bg-background cursor-pointer">
                               <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="student">student</SelectItem>
-                              <SelectItem value="lecturer">lecturer</SelectItem>
-                              <SelectItem value="staff">staff</SelectItem>
-                              <SelectItem value="super_admin">super_admin</SelectItem>
+                              <SelectItem value="student" className="text-xs cursor-pointer">student</SelectItem>
+                              <SelectItem value="lecturer" className="text-xs cursor-pointer">lecturer</SelectItem>
+                              <SelectItem value="staff" className="text-xs cursor-pointer">staff</SelectItem>
+                              <SelectItem value="super_admin" className="text-xs cursor-pointer">super_admin</SelectItem>
                             </SelectContent>
                           </Select>
 
@@ -720,7 +736,7 @@ export default function UsersSection() {
                               savingId === user.id ||
                               (roleDraft[user.id] || user.role) === user.role
                             }
-                            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold bg-primary text-white hover:bg-primary/90 disabled:bg-muted disabled:text-muted-foreground"
+                            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold bg-primary text-white hover:bg-primary/90 disabled:bg-muted disabled:text-muted-foreground cursor-pointer"
                           >
                             <Save size={12} />
                             {savingId === user.id ? "Menyimpan..." : "Simpan"}
@@ -731,7 +747,7 @@ export default function UsersSection() {
                             disabled={
                               user.id === currentUserId || banSavingId === user.id
                             }
-                            className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold border transition-colors disabled:bg-muted disabled:text-muted-foreground disabled:border-border ${
+                            className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold border transition-colors disabled:bg-muted disabled:text-muted-foreground disabled:border-border cursor-pointer ${
                               user.banned
                                 ? "bg-green-50 dark:bg-green-950 text-green-700 dark:text-green-400 border-green-200 dark:border-green-800 hover:bg-green-100 dark:bg-green-900"
                                 : "bg-orange-50 text-orange-700 border-orange-200 hover:bg-orange-100 dark:bg-orange-900"
@@ -749,7 +765,7 @@ export default function UsersSection() {
                             <button
                               onClick={() => void handleSyncMember(user)}
                               disabled={syncSavingId === user.id}
-                              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold border bg-sky-50 text-sky-700 border-sky-200 hover:bg-sky-100 transition-colors disabled:bg-muted disabled:text-muted-foreground disabled:border-border"
+                              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold border bg-sky-50 text-sky-700 border-sky-200 hover:bg-sky-100 transition-colors disabled:bg-muted disabled:text-muted-foreground disabled:border-border cursor-pointer"
                             >
                               <Link size={12} />
                               {syncSavingId === user.id
@@ -765,7 +781,7 @@ export default function UsersSection() {
                                 <button
                                   onClick={() => void handleIssueCard(user)}
                                   disabled={issueSavingId === user.id}
-                                  className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold bg-primary text-white hover:bg-primary/90 disabled:bg-muted disabled:text-muted-foreground"
+                                  className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold bg-primary text-white hover:bg-primary/90 disabled:bg-muted disabled:text-muted-foreground cursor-pointer"
                                 >
                                   <ShieldCheck size={12} />
                                   {issueSavingId === user.id
@@ -784,7 +800,7 @@ export default function UsersSection() {
                               savingId === user.id ||
                               banSavingId === user.id
                             }
-                            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold border border-rose-200 dark:border-rose-900 bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-400 hover:bg-rose-100 dark:hover:bg-rose-900/80 transition-colors disabled:bg-muted disabled:text-muted-foreground disabled:border-border"
+                            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold border border-rose-200 dark:border-rose-900 bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-400 hover:bg-rose-100 dark:hover:bg-rose-900/80 transition-colors disabled:bg-muted disabled:text-muted-foreground disabled:border-border cursor-pointer"
                             title={
                               user.id === currentUserId
                                 ? "Anda tidak bisa menghapus akun sendiri"
@@ -795,12 +811,12 @@ export default function UsersSection() {
                             {deletingId === user.id ? "Menghapus..." : "Hapus"}
                           </button>
                         </div>
-                        </td>
+                        </TableCell>
                       )}
-                    </tr>
+                    </TableRow>
                   ))}
-                </tbody>
-              </table>
+                </TableBody>
+              </Table>
             </div>
 
             {/* Pagination Controls */}

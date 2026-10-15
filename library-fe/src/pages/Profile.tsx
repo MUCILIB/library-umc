@@ -13,11 +13,10 @@ import RiwayatPeminjaman from "@/components/RiwayatPeminjaman";
 import FinesList from "@/components/FinesList";
 import MemberCard from "@/components/MemberCard";
 import SavedBooksTab from "@/components/SavedBooksTab";
-import StudentRepositoryTab from "@/components/StudentRepositoryTab";
-import { repositoryService } from "@/services/repositoryService";
 import { useToast } from "@/hooks/useToast";
 import { API_BASE_URL } from "@/utils/api-config";
-import { Settings, Mail, BookMarked, Send, Loader2, Info, GraduationCap, BookOpen } from "lucide-react";
+import { getSavedBookIds } from "@/utils/bookmarks";
+import { Settings, Mail, BookMarked, Send, Loader2, Info, BookOpen } from "lucide-react";
 import type { AuthUser } from "@/types/auth";
 
 const Profile = () => {
@@ -37,7 +36,6 @@ const Profile = () => {
   const [activeLoanCount, setActiveLoanCount] = useState(0);
   const [unpaidFineCount, setUnpaidFineCount] = useState(0);
   const [savedCount, setSavedCount] = useState(0);
-  const [proposalCount, setProposalCount] = useState(0);
   const { success, error } = useToast();
   const currentUserId = session?.user?.id;
 
@@ -59,13 +57,17 @@ const Profile = () => {
 
   useEffect(() => {
     if (tabParam) {
+      if (tabParam === "repositori-skripsi" || tabParam === "repository") {
+        navigate("/my-repository", { replace: true });
+        return;
+      }
       if (tabParam === "loans" || tabParam === "riwayat-peminjaman") {
         setActiveTab("riwayat-peminjaman");
       } else {
         setActiveTab(tabParam);
       }
     }
-  }, [tabParam]);
+  }, [tabParam, navigate]);
 
   useEffect(() => {
     const currentUserId = session?.user?.id;
@@ -112,7 +114,7 @@ const Profile = () => {
 
   useEffect(() => {
     const updateCount = () => {
-      const savedIds = JSON.parse(localStorage.getItem("umc_library_bookmarks") || "[]");
+      const savedIds = getSavedBookIds(currentUserId);
       setSavedCount(savedIds.length);
     };
     updateCount();
@@ -120,7 +122,7 @@ const Profile = () => {
     return () => {
       window.removeEventListener("storage", updateCount);
     };
-  }, []);
+  }, [currentUserId]);
 
   useEffect(() => {
     const fetchProfileCounters = async () => {
@@ -128,14 +130,12 @@ const Profile = () => {
         if (!currentUserId) {
           setActiveLoanCount(0);
           setUnpaidFineCount(0);
-          setProposalCount(0);
           return;
         }
 
-        const [loans, fines, myProposals] = await Promise.all([
+        const [loans, fines] = await Promise.all([
           loanService.getMyLoanHistory(),
-          fineService.getMyFines(),
-          repositoryService.getMyProposals().catch(() => [])
+          fineService.getMyFines()
         ]);
 
         const activeLoans = loans.filter((loan) =>
@@ -147,12 +147,10 @@ const Profile = () => {
 
         setActiveLoanCount(activeLoans);
         setUnpaidFineCount(unpaidFines);
-        setProposalCount(myProposals.length);
       } catch (err) {
         console.error("Failed to fetch profile counters:", err);
         setActiveLoanCount(0);
         setUnpaidFineCount(0);
-        setProposalCount(0);
       }
     };
 
@@ -292,13 +290,6 @@ const Profile = () => {
       label: "Buku Disimpan",
       count: savedCount > 0 ? savedCount : null
     },
-    {
-      id: "repositori-skripsi",
-      label: "Repositori Skripsi",
-      icon: <GraduationCap size={15} className="shrink-0 text-red-600 dark:text-red-400" />,
-      count: proposalCount > 0 ? proposalCount : null,
-      highlight: true
-    },
     { id: "kartu-member", label: "Kartu Member", count: null },
     ...(isLecturerOnly
       ? [{ id: "usulan-koleksi", label: "Usulan Koleksi", count: null }]
@@ -374,8 +365,6 @@ const Profile = () => {
                 className={`relative pb-5 text-xs font-black uppercase tracking-[0.15em] transition-all flex items-center gap-1.5 ${
                   activeTab === tab.id
                     ? "text-primary scale-105"
-                    : tab.highlight
-                    ? "text-red-700 dark:text-red-400 hover:text-red-800 font-black"
                     : "text-slate-400 hover:text-slate-600"
                 }`}
               >
@@ -413,7 +402,6 @@ const Profile = () => {
               />
             </div>
           )}
-          {activeTab === "repositori-skripsi" && <StudentRepositoryTab />}
           {activeTab === "usulan-koleksi" && isLecturerOnly && (
             <section className="bg-card border border-red-100 rounded-[28px] p-6 md:p-8 shadow-sm">
               <div className="flex items-start gap-4 mb-6">

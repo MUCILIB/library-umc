@@ -76,7 +76,7 @@ describe("ImportSection", () => {
   it("should display batch type", async () => {
     render(<ImportSection />);
     await waitFor(() => {
-      expect(screen.getByText(/Bibliografi/)).toBeInTheDocument();
+      expect(screen.getAllByText(/Bibliografi/).length).toBeGreaterThan(0);
     });
   });
 
