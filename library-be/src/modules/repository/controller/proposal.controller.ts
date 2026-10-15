@@ -184,14 +184,14 @@ export class ProposalController {
         req.query?.mode === "public" ||
         req.query?.forcePublic === "true";
 
-      // Cek apakah requester memiliki sesi login (optional auth) jika bukan mode paksa publik
-      const session = !isPublicPreview
-        ? (req.user ? { user: req.user } : await getSession(req).catch(() => null))
-        : null;
+      // Cek apakah requester memiliki sesi login (optional auth)
+      const session = req.user
+        ? { user: req.user }
+        : await getSession(req).catch(() => null);
 
       const requester = {
         userId: session?.user?.id,
-        role: isPublicPreview ? "public" : ((session?.user as any)?.role || "public")
+        role: ((session?.user as any)?.role || "public")
       };
 
       const result = await proposalService.getDocumentPdf(id, requester, {

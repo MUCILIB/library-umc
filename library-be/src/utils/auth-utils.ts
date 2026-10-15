@@ -28,6 +28,11 @@ export async function getSession(req: Request) {
     }
   }
 
+  // Fallback: ambil token dari query parameter jika direct navigation / iframe
+  if (!bearerToken && req.query && typeof req.query.token === "string") {
+    bearerToken = req.query.token;
+  }
+
   if (bearerToken) {
     const existingCookie = headers.get("cookie");
     const sessionCookie = `better-auth.session_token=${bearerToken}`;

@@ -303,14 +303,26 @@ export default function RepositorySection() {
                       <td className="p-4 align-top text-right space-y-2">
                         <div className="flex items-center justify-end gap-1.5">
                           <a
-                            href={`${API_BASE_URL}/api/repository/proposals/${item.id}/view-pdf?preview=public`}
+                            href={`${API_BASE_URL}/api/repository/proposals/${item.id}/view-pdf`}
                             target="_blank"
                             rel="noreferrer"
-                            title="Pratinjau PDF Publik (Sesuai Batas Halaman)"
+                            title="Buka & Periksa Naskah PDF (Akses Verifikasi Pustakawan)"
                             className="p-1.5 rounded-lg border border-border hover:bg-muted text-foreground transition-colors inline-flex items-center"
                           >
                             <Eye className="w-4 h-4 text-muted-foreground" />
                           </a>
+
+                          {item.status === "APPROVED" && (
+                            <a
+                              href={`${API_BASE_URL}/api/repository/proposals/${item.id}/view-pdf?preview=public`}
+                              target="_blank"
+                              rel="noreferrer"
+                              title="Pratinjau Batas Halaman Publik (Tamu)"
+                              className="p-1.5 rounded-lg border border-border hover:bg-muted text-foreground transition-colors inline-flex items-center"
+                            >
+                              <FileText className="w-4 h-4 text-muted-foreground" />
+                            </a>
+                          )}
 
                           <button
                             onClick={() => {
@@ -362,6 +374,17 @@ export default function RepositorySection() {
               <p className="text-xs text-muted-foreground mt-1">
                 Penulis: {reviewModalItem.authorName} ({reviewModalItem.authorNim})
               </p>
+              <div className="mt-2.5">
+                <a
+                  href={`${API_BASE_URL}/api/repository/proposals/${reviewModalItem.id}/view-pdf`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-muted hover:bg-muted/80 text-foreground border border-border transition-colors cursor-pointer"
+                >
+                  <Eye className="w-3.5 h-3.5 text-red-700" />
+                  Buka & Periksa Naskah PDF
+                </a>
+              </div>
             </div>
 
             <div>

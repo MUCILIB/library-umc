@@ -215,4 +215,72 @@ describe("Strict 5-Page ACL & Public Safety Test", () => {
       proposalService.getDocumentPdf(proposalId, { role: "public" })
     ).rejects.toThrow("Dokumen proposal ini belum disetujui untuk publik");
   });
+
+  it("allows author student (owner) to view unapproved PDF proposal in full", async () => {
+    const { db } = await import("../../../db");
+
+    let callCount = 0;
+    (db.select as any).mockImplementation(() => {
+      callCount++;
+      if (callCount === 1) {
+        return createSelectChain([
+          {
+            id: proposalId,
+            title: "Proposal Belum Disetujui",
+            storagePath: tempFilePath,
+            pageCount: 10,
+            status: "SUBMITTED",
+            authorUserId: "student-author-123"
+          }
+        ]);
+      }
+      return createSelectChain([]);
+    });
+
+    const result = await proposalService.getDocumentPdf(proposalId, {
+      userId: "student-author-123",
+      role: "student"
+    });
+
+    expect(result.startPage).toBe(1);
+    expect(result.endPage).toBe(10);
+    expect(result.isRestricted).toBe(false);
+
+    const doc = await PDFDocument.load(result.buffer);
+    expect(doc.getPageCount()).toBe(10);
+  });
+
+  it("allows super_admin or staff to view unapproved PDF proposal in full for verification", async () => {
+    const { db } = await import("../../../db");
+
+    let callCount = 0;
+    (db.select as any).mockImplementation(() => {
+      callCount++;
+      if (callCount === 1) {
+        return createSelectChain([
+          {
+            id: proposalId,
+            title: "Proposal Belum Disetujui",
+            storagePath: tempFilePath,
+            pageCount: 10,
+            status: "SUBMITTED",
+            authorUserId: "student-author-123"
+          }
+        ]);
+      }
+      return createSelectChain([]);
+    });
+
+    const result = await proposalService.getDocumentPdf(proposalId, {
+      userId: "admin-reviewer-456",
+      role: "super_admin"
+    });
+
+    expect(result.startPage).toBe(1);
+    expect(result.endPage).toBe(10);
+    expect(result.isRestricted).toBe(false);
+
+    const doc = await PDFDocument.load(result.buffer);
+    expect(doc.getPageCount()).toBe(10);
+  });
 });
