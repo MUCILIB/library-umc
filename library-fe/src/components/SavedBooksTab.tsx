@@ -4,8 +4,12 @@ import { bibliographyApi, type Bibliography } from "@/api/client";
 import { generateColorFromSeed } from "@/utils/format";
 import { Bookmark, Trash2, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/useToast";
+import { authClient } from "@/utils/auth-client";
+import { getSavedBookIds, removeBook } from "@/utils/bookmarks";
 
 export default function SavedBooksTab() {
+  const { data: session } = authClient.useSession();
+  const userId = session?.user?.id;
   const [savedBooks, setSavedBooks] = useState<Bibliography[]>([]);
   const [loading, setLoading] = useState(true);
   const { info } = useToast();
@@ -14,9 +18,12 @@ export default function SavedBooksTab() {
     async function loadSavedBooks() {
       try {
         setLoading(true);
-        const savedIds: string[] = JSON.parse(
-          localStorage.getItem("umc_library_bookmarks") || "[]"
-        );
+        if (!userId) {
+          setSavedBooks([]);
+          return;
+        }
+
+        const savedIds: string[] = getSavedBookIds(userId);
         
         if (savedIds.length === 0) {
           setSavedBooks([]);
@@ -45,23 +52,20 @@ export default function SavedBooksTab() {
     }
 
     loadSavedBooks();
-  }, []);
+
+    window.addEventListener("storage", loadSavedBooks);
+    return () => {
+      window.removeEventListener("storage", loadSavedBooks);
+    };
+  }, [userId]);
 
   const handleRemove = (bookId: string, e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
     
-    const savedIds: string[] = JSON.parse(
-      localStorage.getItem("umc_library_bookmarks") || "[]"
-    );
-    const updated = savedIds.filter((id) => id !== bookId);
-    localStorage.setItem("umc_library_bookmarks", JSON.stringify(updated));
-    
+    removeBook(bookId, userId);
     setSavedBooks((prev) => prev.filter((b) => b.id !== bookId));
     info("Buku Dihapus", "Buku telah dihapus dari daftar simpanan.");
-    
-    // Dispatch an event so other components know (like active count in tabs)
-    window.dispatchEvent(new Event("storage"));
   };
 
   if (loading) {

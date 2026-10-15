@@ -15,6 +15,7 @@ import Profile from "../pages/Profile";
 import RepositoryDetailPage from "../pages/RepositoryDetailPage";
 import Eresource from "../pages/EResoucePage";
 import MyLoans from "../pages/MyLoansPage";
+import MyRepositoryPage from "../pages/MyRepositoryPage";
 import NotFound from "../pages/NotFound";
 import ProtectedRoute from "../components/ProtectedRoute";
 import NonAdminRoute from "./NonAdminRoute"; 
@@ -41,14 +42,23 @@ const AppRoutes = () => {
         <Route path="/absensi" element={<NonAdminRoute><AbsensiPage /></NonAdminRoute>} />
         <Route path="/input-kunjungan" element={<NonAdminRoute><AbsensiPage /></NonAdminRoute>} />
         <Route path="/buku-tamu" element={<NonAdminRoute><AbsensiPage /></NonAdminRoute>} />
-        <Route path="/my-repository" element={<Navigate to="/profile?tab=repositori-skripsi" replace />} />
         <Route path="/repositori" element={<Navigate to="/e-resource" replace />} />
+        <Route path="/repositori-saya" element={<Navigate to="/my-repository" replace />} />
         
         <Route 
           path="/my-loans" 
           element={
             <ProtectedRoute excludeRole={["super_admin", "staff"]}>
               <MyLoans />
+            </ProtectedRoute>
+          } 
+        />
+
+        <Route 
+          path="/my-repository" 
+          element={
+            <ProtectedRoute excludeRole={["super_admin", "staff"]}>
+              <MyRepositoryPage />
             </ProtectedRoute>
           } 
         />

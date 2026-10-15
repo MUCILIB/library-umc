@@ -72,6 +72,8 @@ const Navbar = () => {
     if (session) {
       await authClient.signOut();
     }
+    localStorage.removeItem("umc_library_bookmarks");
+    window.dispatchEvent(new Event("storage"));
 
     setIsDropdownOpen(false);
     setIsMenuOpen(false);
@@ -91,7 +93,7 @@ const Navbar = () => {
   };
 
   const handleRepositoryClick = () => {
-    navigate("/profile?tab=repositori-skripsi");
+    navigate("/my-repository");
     setIsDropdownOpen(false);
     setIsMenuOpen(false);
   };
@@ -266,12 +268,12 @@ const Navbar = () => {
 
                         <button
                           onClick={handleRepositoryClick}
-                          className="w-full flex items-center space-x-3 px-4 py-2.5 text-sm text-foreground hover:bg-muted hover:text-primary transition-colors group"
+                          className="w-full flex items-center space-x-3 px-4 py-2.5 text-sm text-foreground hover:bg-muted hover:text-primary transition-colors group cursor-pointer"
                         >
                           <GraduationCap className="w-4 h-4 text-red-600 dark:text-red-400 group-hover:text-primary transition-colors" />
                           <div className="flex flex-col text-left">
-                            <span className="font-medium">Repositori Skripsi</span>
-                            <span className="text-[10px] text-muted-foreground">Karya Ilmiah Mahasiswa</span>
+                            <span className="font-medium">Repositori Saya</span>
+                            <span className="text-[10px] text-muted-foreground">Karya Ilmiah & Skripsi</span>
                           </div>
                         </button>
                       </div>
@@ -508,10 +510,10 @@ const Navbar = () => {
 
                       <button
                         onClick={handleRepositoryClick}
-                        className="w-full flex items-center space-x-3 px-4 py-2.5 text-xs font-medium text-muted-foreground hover:bg-muted rounded-xl transition-all"
+                        className="w-full flex items-center space-x-3 px-4 py-2.5 text-xs font-medium text-muted-foreground hover:bg-muted rounded-xl transition-all cursor-pointer"
                       >
                         <GraduationCap className="w-4 h-4 text-red-600 dark:text-red-400" />
-                        <span>Repositori Skripsi</span>
+                        <span>Repositori Saya</span>
                       </button>
                     </>
                   )}
