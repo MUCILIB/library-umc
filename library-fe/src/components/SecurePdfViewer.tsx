@@ -34,7 +34,7 @@ export default function SecurePdfViewer({
   const [fullscreen, setFullscreen] = useState(false);
   const [downloading, setDownloading] = useState(false);
 
-  const user = session?.user;
+  const user = session?.user as any;
   const isOwner = Boolean(user?.id && authorUserId && user.id === authorUserId);
   const isStaffOrAdmin = Boolean(
     user?.role === "super_admin" ||
