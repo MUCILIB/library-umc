@@ -51,6 +51,12 @@ export const auth = betterAuth({
       },
     },
   },
+  account: {
+    skipStateCookieCheck: true, // Fix for cross-domain OAuth (Vercel FE <-> VPS BE) where third-party state cookies are blocked
+  },
+  onAPIError: {
+    errorURL: `${process.env.FRONTEND_URL || "https://library-fe-one.vercel.app"}/login`,
+  },
   socialProviders: {
     google: {
       clientId: process.env.GOOGLE_CLIENT_ID as string,

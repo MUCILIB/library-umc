@@ -21,6 +21,7 @@ const LoginPage = () => {
       await authClient.signIn.social({
         provider: "google",
         callbackURL: window.location.origin,
+        errorCallbackURL: `${window.location.origin}/login`,
       });
     } catch {
       error("Gagal!", "Gagal login SSO. Coba lagi.", 5000);
