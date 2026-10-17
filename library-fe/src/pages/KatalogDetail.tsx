@@ -1,13 +1,12 @@
 import { useState, useEffect } from "react";
-import { useParams, Link } from "react-router";
+import { useParams, Link, useNavigate } from "react-router";
 import Navbar from "@/components/ui/navbar";
 import Footer from "@/components/Footer";
 import ReservationList from "@/components/ReservationList";
 import { authClient } from "@/utils/auth-client";
 import { useKatalogDetail } from "@/hooks/useKatalogDetail";
 import { useKatalogActions } from "@/hooks/useKatalogActions";
-import type { LibraryUser } from "@/types";
-import { PerspectiveBook } from "@/components/perspective-book";
+import type { Bibliography, LibraryUser } from "@/types";
 import { useToast } from "@/hooks/useToast";
 import {
   Share2,
@@ -19,7 +18,7 @@ import {
   Bell,
   CheckCircle,
   Clock,
-  BookOpen,
+  Heart,
   X,
 } from "lucide-react";
 import { generateColorFromSeed, cleanIsbn } from "@/utils/format";
@@ -27,11 +26,13 @@ import { isBookSaved, saveBook, removeBook } from "@/utils/bookmarks";
 
 const KatalogDetail = () => {
   const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
   const { error: toastError, success: toastSuccess, info: toastInfo } = useToast();
 
   const [showQrModal, setShowQrModal] = useState(false);
   const [selectedItemForQr, setSelectedItemForQr] = useState<{ id: string; itemCode?: string; status: string } | null>(null);
   const [isSaved, setIsSaved] = useState(false);
+  const [similarSavedMap, setSimilarSavedMap] = useState<Record<string, boolean>>({});
 
   const { data: session, isPending: sessionLoading } = authClient.useSession();
 
@@ -58,6 +59,7 @@ const KatalogDetail = () => {
     loading,
     error,
     similarBooks,
+    similarLoading,
     setUserReservation,
     setPendingRequests,
   } = useKatalogDetail(id, currentUser, sessionLoading);
@@ -149,6 +151,60 @@ const KatalogDetail = () => {
       setIsSaved(true);
       toastSuccess("Buku Disimpan", "Buku berhasil disimpan ke daftar simpanan.");
     }
+  };
+
+  // Sinkronisasi status bookmark untuk buku serupa
+  useEffect(() => {
+    const checkBookmarks = () => {
+      const map: Record<string, boolean> = {};
+      similarBooks.forEach((b) => {
+        if (b.id) {
+          map[b.id] = isBookSaved(b.id, currentUser?.id);
+        }
+      });
+      setSimilarSavedMap(map);
+    };
+
+    checkBookmarks();
+    window.addEventListener("storage", checkBookmarks);
+    return () => window.removeEventListener("storage", checkBookmarks);
+  }, [similarBooks, currentUser?.id]);
+
+  const handleToggleSimilarBookmark = (e: React.MouseEvent, bookId: string) => {
+    e.stopPropagation();
+    if (!currentUser?.id) {
+      toastInfo("Perlu Masuk", "Silakan login terlebih dahulu untuk menyimpan buku.");
+      return;
+    }
+
+    const isBookSavedStatus = similarSavedMap[bookId];
+    if (isBookSavedStatus) {
+      removeBook(bookId, currentUser.id);
+      toastInfo("Buku Dihapus", "Buku telah dihapus dari daftar simpanan.");
+    } else {
+      saveBook(bookId, currentUser.id);
+      toastSuccess("Buku Disimpan", "Buku berhasil disimpan ke daftar simpanan.");
+    }
+  };
+
+  const getSimilarBookStatus = (book: Bibliography): "available" | "borrowed" => {
+    if (book.type === "ebook") return "available";
+
+    if (book.items && book.items.length > 0) {
+      const availableItems = book.items.filter((i) => i.status === "available");
+      if (availableItems.length > 0) return "available";
+
+      const loanedItems = book.items.filter((i) => i.status === "loaned");
+      if (loanedItems.length > 0) return "borrowed";
+
+      return "borrowed";
+    }
+
+    if (typeof book.stock === "number") {
+      return book.stock > 0 ? "available" : "borrowed";
+    }
+
+    return "available";
   };
 
   // Override handleCheckLoans for admin
@@ -630,11 +686,11 @@ const KatalogDetail = () => {
         <div className="mb-20">
           <div className="flex justify-between items-end mb-8">
             <div>
-              <h2 className="text-lg sm:text-xl font-extrabold text-slate-900">
+              <h2 className="text-lg sm:text-xl font-extrabold text-slate-900 dark:text-foreground">
                 Buku Serupa
               </h2>
-              <p className="text-xs sm:text-sm text-slate-400 font-medium">
-                Buku lain dengan topik yang mungkin Anda sukai
+              <p className="text-xs sm:text-sm text-slate-400 dark:text-muted-foreground font-medium">
+                Buku lain dengan topik atau kategori yang mungkin Anda sukai
               </p>
             </div>
             <Link
@@ -645,45 +701,178 @@ const KatalogDetail = () => {
             </Link>
           </div>
 
-          <div className="flex flex-wrap justify-center sm:justify-start gap-4 sm:gap-6">
-            {similarBooks.map((book) => (
-              <Link
-                key={book.id}
-                to={`/katalog/${book.id}`}
-                className="group flex flex-col items-center gap-2"
-              >
-                <PerspectiveBook
-                  size="sm"
-                  className={generateColorFromSeed(book.id)}
+          {similarLoading ? (
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4 md:gap-5">
+              {[1, 2, 3, 4].map((i) => (
+                <div
+                  key={i}
+                  className="bg-white dark:bg-card rounded-2xl p-3 sm:p-3.5 border border-slate-100 dark:border-border/60 shadow-xs animate-pulse"
                 >
-                  <div className="flex flex-col h-full gap-1.5">
-                    <p className="font-semibold capitalize leading-4 text-white text-xs line-clamp-3">
-                      {book.title}
-                    </p>
-                    <div className="mt-auto flex flex-col gap-1">
-                      <span className="text-white/70 text-[10px] leading-tight line-clamp-1">
-                        {book.author}
-                      </span>
-                      <div className="flex items-center gap-1">
-                        <BookOpen className="size-3 text-white/70" />
-                        <span className="text-white/60 text-[9px]">
-                          {book.publicationYear ?? ""}
-                        </span>
+                  <div className="aspect-[4/5] bg-slate-200 dark:bg-muted rounded-xl mb-3" />
+                  <div className="h-4 bg-slate-200 dark:bg-muted rounded w-3/4 mb-2" />
+                  <div className="h-3 bg-slate-100 dark:bg-muted/70 rounded w-1/2 mb-3" />
+                  <div className="flex gap-1.5 mb-4">
+                    <div className="h-4 bg-slate-100 dark:bg-muted rounded w-12" />
+                    <div className="h-4 bg-slate-100 dark:bg-muted rounded w-14" />
+                  </div>
+                  <div className="h-8 bg-slate-100 dark:bg-muted rounded-lg w-full" />
+                </div>
+              ))}
+            </div>
+          ) : similarBooks.length === 0 ? (
+            <div className="bg-white dark:bg-card border border-slate-100 dark:border-border/60 rounded-2xl p-8 text-center shadow-xs">
+              <p className="text-xs sm:text-sm text-slate-400 dark:text-muted-foreground">
+                Belum ada buku serupa yang ditemukan saat ini.
+              </p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4 md:gap-5">
+              {similarBooks.map((book) => {
+                const status = getSimilarBookStatus(book);
+                const isEbook = book.type === "ebook";
+                const seedColor = generateColorFromSeed(book.id || book.title);
+                const isBookSavedStatus = !!similarSavedMap[book.id];
+
+                // Category tags
+                const tags: string[] = [];
+                if (Array.isArray(book.subjects) && book.subjects.length > 0) {
+                  book.subjects.slice(0, 2).forEach((s) => {
+                    if (s?.name) tags.push(s.name);
+                  });
+                }
+                if (tags.length === 0) {
+                  tags.push(isEbook ? "E-Book" : "Umum");
+                }
+
+                return (
+                  <div
+                    key={book.id}
+                    onClick={() => {
+                      navigate(`/katalog/${book.id}`);
+                      window.scrollTo({ top: 0, behavior: "smooth" });
+                    }}
+                    className="bg-white dark:bg-card rounded-2xl p-2.5 sm:p-3 md:p-3.5 border border-slate-100 dark:border-border/60 shadow-xs hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex flex-col justify-between group cursor-pointer"
+                  >
+                    <div>
+                      {/* Bagian Cover Buku & Badge Mengambang */}
+                      <div className="relative w-full aspect-[4/5] rounded-xl overflow-hidden bg-slate-100 dark:bg-muted">
+                        {book.image ? (
+                          <img
+                            src={book.image}
+                            alt={book.title}
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                            loading="lazy"
+                          />
+                        ) : (
+                          <div
+                            className={`w-full h-full bg-gradient-to-br ${seedColor} p-2.5 sm:p-4 flex flex-col justify-between text-white shadow-inner`}
+                          >
+                            <span className="text-[8px] sm:text-[9px] font-bold uppercase tracking-wider text-white/60">
+                              {isEbook ? "E-Book" : "UMC Library"}
+                            </span>
+                            <span className="font-bold text-[11px] sm:text-xs md:text-sm text-center leading-snug line-clamp-3 my-auto">
+                              {book.title}
+                            </span>
+                            <span className="text-[8px] sm:text-[9px] text-white/70 line-clamp-1 text-right">
+                              {book.author}
+                            </span>
+                          </div>
+                        )}
+
+                        {/* Status Badge Mengambang di Pojok Kanan Atas Cover */}
+                        <div className="absolute top-2 right-2 sm:top-2.5 sm:right-2.5 z-10">
+                          {status === "available" ? (
+                            <span className="inline-flex items-center gap-1 sm:gap-1.5 px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full text-[10px] sm:text-[11px] font-semibold bg-emerald-50/95 backdrop-blur-xs text-emerald-600 border border-emerald-100/90 shadow-xs">
+                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                              Tersedia
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 sm:gap-1.5 px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full text-[10px] sm:text-[11px] font-semibold bg-blue-50/95 backdrop-blur-xs text-blue-600 border border-blue-100/90 shadow-xs">
+                              <span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
+                              Dipinjam
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Informasi Buku */}
+                      <div className="mt-2.5 sm:mt-3">
+                        <h3
+                          title={book.title}
+                          className="font-bold text-slate-900 dark:text-foreground text-[13px] sm:text-[14px] md:text-[15px] leading-snug line-clamp-1 group-hover:text-[#9D171D] transition-colors"
+                        >
+                          {book.title}
+                        </h3>
+                        <p className="text-[11px] sm:text-xs text-slate-400 dark:text-slate-400 font-normal line-clamp-1 mt-0.5">
+                          {book.author || "Penulis Tidak Diketahui"}
+                        </p>
+
+                        {/* Kategori / Tags */}
+                        <div className="flex flex-wrap gap-1 sm:gap-1.5 mt-2">
+                          {tags.map((tag, idx) => (
+                            <span
+                              key={idx}
+                              className="text-[9px] sm:text-[10px] md:text-[11px] font-medium px-1.5 py-0.5 sm:px-2 rounded-md bg-slate-100 dark:bg-muted text-slate-600 dark:text-slate-300"
+                            >
+                              {tag}
+                            </span>
+                          ))}
+                        </div>
                       </div>
                     </div>
+
+                    {/* Tombol Aksi di Bagian Bawah Kartu */}
+                    <div className="mt-3 sm:mt-3.5 pt-2 flex items-center justify-between gap-1.5 sm:gap-2 border-t border-slate-50 dark:border-border/30">
+                      {/* Tombol Favorit / Heart */}
+                      <button
+                        type="button"
+                        onClick={(e) => handleToggleSimilarBookmark(e, book.id)}
+                        className="p-1 sm:p-1.5 rounded-full text-slate-400 hover:text-red-500 hover:bg-red-50/60 transition-colors shrink-0 cursor-pointer"
+                        aria-label="Simpan buku"
+                      >
+                        <Heart
+                          size={16}
+                          className={`sm:w-[18px] sm:h-[18px] ${
+                            isBookSavedStatus
+                              ? "fill-red-500 text-red-500"
+                              : "transition-transform hover:scale-110"
+                          }`}
+                        />
+                      </button>
+
+                      {/* Tombol Aksi: Lihat Detail / Lakukan Reservasi */}
+                      {status === "available" ? (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            navigate(`/katalog/${book.id}`);
+                            window.scrollTo({ top: 0, behavior: "smooth" });
+                          }}
+                          className="flex-1 min-w-0 inline-flex items-center justify-center gap-1 sm:gap-1.5 py-1.5 px-2 sm:px-3 rounded-lg text-[10px] sm:text-[11px] font-bold text-[#9D171D] bg-[#FDF2F2] hover:bg-[#FCE8E8] transition-colors uppercase tracking-wider cursor-pointer"
+                        >
+                          <span className="truncate">LIHAT DETAIL</span>
+                          <ArrowRight size={12} className="shrink-0 sm:w-[13px] sm:h-[13px]" />
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            navigate(`/katalog/${book.id}`);
+                            window.scrollTo({ top: 0, behavior: "smooth" });
+                          }}
+                          className="flex-1 min-w-0 inline-flex items-center justify-center gap-1 sm:gap-1.5 py-1.5 px-2 sm:px-3 rounded-lg text-[10px] sm:text-[11px] font-bold text-[#9D171D] bg-[#FDF2F2] hover:bg-[#FCE8E8] transition-colors cursor-pointer"
+                        >
+                          <span className="truncate">Lakukan Reservasi</span>
+                        </button>
+                      )}
+                    </div>
                   </div>
-                </PerspectiveBook>
-                <div className="text-center w-[150px]">
-                  <p className="text-xs font-bold text-foreground line-clamp-2 leading-tight group-hover:text-primary transition-colors">
-                    {book.title}
-                  </p>
-                  <p className="text-[10px] text-slate-400 font-medium truncate mt-0.5">
-                    {book.author}
-                  </p>
-                </div>
-              </Link>
-            ))}
-          </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       </div>
 
