@@ -68,24 +68,25 @@ export function useBookList(
 
     // Map Bibliography API shape → Bibliography shape expected by BookList
     const mapped: Bibliography[] = rawItems.map((item: any) => ({
-      id: item.id,
-      title: item.title,
+      id: String(item.id || ""),
+      title: item.title || "Tanpa Judul",
       author: Array.isArray(item.authors)
-        ? item.authors.map((a: any) => a.name).join(", ")
+        ? item.authors.map((a: any) => a?.name || "").filter(Boolean).join(", ")
         : item.author || "",
       publisher: typeof item.publisher === "object"
         ? item.publisher?.name || ""
         : item.publisher || "",
+      publicationYear: item.publicationYear ? String(item.publicationYear) : item.publishYear ? String(item.publishYear) : "",
       isbn: cleanIsbn(item.isbn || item.isbnIssn || ""),
       issn: item.issn || (item.isbnIssn?.startsWith("ISSN") ? item.isbnIssn.replace(/^ISSN[:\s]*/i, "") : undefined),
       isbnIssn: item.isbnIssn || undefined,
       type: item.type || "physical_book",
       image: item.image || null,
       stock: item.stock ?? item.totalItems ?? 0,
-      items: item.items || [],
-      subjects: item.subjects || [],
-      faculties: item.faculties || [],
-      studyPrograms: item.studyPrograms || [],
+      items: Array.isArray(item.items) ? item.items : [],
+      subjects: Array.isArray(item.subjects) ? item.subjects : [],
+      faculties: Array.isArray(item.faculties) ? item.faculties : [],
+      studyPrograms: Array.isArray(item.studyPrograms) ? item.studyPrograms : [],
     }));
 
     setBibliographies(mapped);
