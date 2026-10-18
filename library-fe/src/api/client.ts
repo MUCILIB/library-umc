@@ -611,6 +611,13 @@ export const guestApi = {
       body: JSON.stringify(data),
     }),
 
+  createAbsensi: (data: { name: string; major: string }) =>
+    apiFetch<any>("/api/guests/absensi", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    }),
+
   list: (params?: {
     page?: number;
     limit?: number;
