@@ -134,21 +134,18 @@ const Modal: React.FC<ModalProps> = ({
   };
 
   const modalVariants = getModalVariants(animation);
-  // Handle body scroll and pointer events
+  // Handle body scroll
   useEffect(() => {
     if (isOpen) {
       // Store original values
       const originalOverflow = document.body.style.overflow;
-      const originalPointerEvents = document.body.style.pointerEvents;
 
-      // Apply modal styles
+      // Apply modal styles (lock background scrolling)
       document.body.style.overflow = "hidden";
-      document.body.style.pointerEvents = "none";
 
       // Cleanup on modal close or unmount
       return () => {
         document.body.style.overflow = originalOverflow || "";
-        document.body.style.pointerEvents = originalPointerEvents || "";
       };
     }
   }, [isOpen]);

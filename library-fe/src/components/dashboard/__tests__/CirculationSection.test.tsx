@@ -72,4 +72,36 @@ describe("CirculationSection", () => {
       expect(screen.getByText("available")).toBeInTheDocument();
     });
   });
+
+  it("shows tailored loan info and does not show raw bulk return buttons when item is loaned", async () => {
+    vi.mocked(fetch).mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        success: true,
+        data: {
+          item: { id: "2", itemCode: "ITEM-002", title: "Loaned Book", status: "loaned", location: "Main" },
+          activeLoan: {
+            id: "loan-123",
+            memberName: "Budi Santoso",
+            dueDate: "2026-11-01T00:00:00.000Z",
+          },
+          allowedActions: ["return"],
+        },
+      }),
+    } as any);
+
+    render(<CirculationSection />);
+    const input = screen.getByPlaceholderText(/kode item/i);
+    fireEvent.change(input, { target: { value: "ITEM-002" } });
+    fireEvent.click(screen.getByRole("button", { name: /lookup/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText("ITEM-002")).toBeInTheDocument();
+      expect(screen.getAllByText("Budi Santoso").length).toBeGreaterThanOrEqual(1);
+      // Inspect mode (default) does not render the 3 raw return buttons
+      expect(screen.queryByText("Kembalikan (Kondisi Baik)")).not.toBeInTheDocument();
+      expect(screen.queryByText("Kembalikan (Kondisi Rusak)")).not.toBeInTheDocument();
+      expect(screen.queryByText("Kembalikan (Hilang)")).not.toBeInTheDocument();
+    });
+  });
 });
