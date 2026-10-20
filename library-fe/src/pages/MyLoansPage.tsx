@@ -16,6 +16,7 @@ import {
   CalendarDays,
   RotateCcw,
   Barcode,
+  ChevronDown,
 } from "lucide-react";
 import loanService, { type Loan } from "@/services/loanService";
 import { authClient } from "@/utils/auth-client";
@@ -613,7 +614,6 @@ export default function MyLoansPage() {
   const [extendingId, setExtendingId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
-  const [showFilters, setShowFilters] = useState(false);
   const [selectedLoan, setSelectedLoan] = useState<Loan | null>(null);
 
   // ─── Auth guard ──────────────────────────────────────────────────────────────
@@ -777,26 +777,55 @@ export default function MyLoansPage() {
 
         {/* ── TOP SECTION ── */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-          {/* Search */}
-          <div className="lg:col-span-2 bg-card p-6 rounded-2xl border border-slate-100 shadow-sm">
-            <div className="flex items-center justify-between mb-5">
-              <h2 className="font-bold text-slate-800">Cari Pinjaman</h2>
-              <button
-                onClick={() => setShowFilters(!showFilters)}
-                className="lg:hidden text-slate-400 hover:text-primary transition-colors"
-              >
-                <Filter size={18} />
-              </button>
+          {/* Search & Mobile Filter */}
+          <div className="lg:col-span-2 bg-card p-5 sm:p-6 rounded-2xl border border-slate-100 shadow-sm space-y-3.5">
+            <div className="flex items-center justify-between">
+              <h2 className="font-bold text-slate-800 text-sm sm:text-base">Cari Pinjaman</h2>
+              {filterStatus !== "all" && (
+                <span className="lg:hidden text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-primary/10 text-primary">
+                  {FILTER_OPTIONS.find((o) => o.value === filterStatus)?.label}
+                </span>
+              )}
             </div>
-            <div className="relative">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 w-5 h-5" />
-              <input
-                type="text"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                placeholder="Ketik judul atau penulis..."
-                className="w-full pl-12 pr-4 py-3 bg-card border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/10 focus:border-primary text-sm text-slate-900 placeholder:text-slate-400"
-              />
+
+            <div className="flex flex-col sm:flex-row gap-2.5">
+              {/* Search Bar */}
+              <div className="relative flex-1">
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
+                <input
+                  type="text"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  placeholder="Ketik judul atau penulis..."
+                  className="w-full pl-11 pr-4 py-2.5 sm:py-3 bg-card border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/10 focus:border-primary text-xs sm:text-sm text-slate-900 placeholder:text-slate-400 font-medium"
+                />
+              </div>
+
+              {/* Dropdown Filter untuk Tampilan HP (lg:hidden) */}
+              <div className="lg:hidden relative">
+                <div className="absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400 flex items-center gap-1.5">
+                  <Filter size={13} className="text-primary" />
+                </div>
+                <select
+                  value={filterStatus}
+                  onChange={(e) => setFilterStatus(e.target.value)}
+                  aria-label="Filter status peminjaman"
+                  className="w-full pl-9 pr-9 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-primary/20 appearance-none cursor-pointer shadow-2xs"
+                >
+                  {FILTER_OPTIONS.map((opt) => {
+                    const count =
+                      opt.value === "all"
+                        ? loans.length
+                        : loansWithStatus.filter((l) => l.status === opt.value).length;
+                    return (
+                      <option key={opt.value} value={opt.value}>
+                        {opt.label} ({count})
+                      </option>
+                    );
+                  })}
+                </select>
+                <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400" />
+              </div>
             </div>
           </div>
 
@@ -823,8 +852,8 @@ export default function MyLoansPage() {
           </div>
         </div>
 
-        {/* ── FILTER BAR ── */}
-        <div className={`mb-6 transition-all duration-300 ${showFilters ? "block" : "hidden lg:block"}`}>
+        {/* ── FILTER BAR (Desktop / Layar Lebar) ── */}
+        <div className="hidden lg:block mb-6">
           <div className="bg-card rounded-xl border border-slate-100 p-4">
             <div className="flex flex-wrap items-center gap-2">
               <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Filter:</span>

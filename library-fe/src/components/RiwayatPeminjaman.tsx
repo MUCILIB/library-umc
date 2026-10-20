@@ -18,7 +18,9 @@ import {
   Table as TableIcon,
   Tag,
   MapPin,
-  Barcode
+  Barcode,
+  ChevronDown,
+  Filter
 } from "lucide-react";
 import loanService, { type Loan as LoanData } from "@/services/loanService";
 import { useToast } from "@/hooks/useToast";
@@ -287,7 +289,26 @@ const RiwayatPeminjaman = ({
 
         {/* Faceted Status Filters & Layout Toggle */}
         <div className="flex items-center justify-between sm:justify-end gap-2">
-          <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5">
+          {/* Mobile Filter Dropdown (Tampilan HP) */}
+          <div className="sm:hidden relative flex-1 min-w-[140px]">
+            <div className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none text-muted-foreground flex items-center gap-1">
+              <Filter size={12} className="text-primary" />
+            </div>
+            <select
+              value={statusFilter}
+              onChange={(e) => handleStatusFilterChange(e.target.value)}
+              aria-label="Filter status riwayat peminjaman"
+              className="w-full pl-8 pr-7 py-2 bg-muted/60 border border-border rounded-xl text-xs font-bold text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 appearance-none cursor-pointer shadow-2xs"
+            >
+              <option value="all">Semua Status ({statusCounts.all})</option>
+              <option value="returned">Dikembalikan ({statusCounts.returned})</option>
+              <option value="rejected">Ditolak ({statusCounts.rejected})</option>
+            </select>
+            <ChevronDown size={13} className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-muted-foreground" />
+          </div>
+
+          {/* Desktop Filter Chips */}
+          <div className="hidden sm:flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5">
             <button
               onClick={() => handleStatusFilterChange("all")}
               className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0 ${
