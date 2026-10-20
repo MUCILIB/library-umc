@@ -4,6 +4,7 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@
 import Modal from "@/components/ui/modal";
 import jsQR from "jsqr";
 import { API_BASE_URL } from "@/utils/api-config";
+import { getAuthHeaders } from "@/api/client";
 import { useToast } from "@/hooks/useToast";
 
 interface ItemResult {
@@ -140,7 +141,13 @@ function CameraScannerModal({ isOpen, onClose, onScanSuccess }: CameraScannerMod
           // 2. Fallback to BarcodeDetector API for 1D Barcodes
           if ("BarcodeDetector" in window) {
             try {
-              const barcodeDetector = new (window as any).BarcodeDetector();
+              let barcodeDetector: any;
+              try {
+                const formats = ["code_128", "code_39", "code_93", "ean_13", "ean_8", "upc_a", "upc_e", "itf", "qr_code"];
+                barcodeDetector = new (window as any).BarcodeDetector({ formats });
+              } catch {
+                barcodeDetector = new (window as any).BarcodeDetector();
+              }
               barcodeDetector.detect(video).then((barcodes: any[]) => {
                 if (isActive && barcodes && barcodes.length > 0 && barcodes[0].rawValue) {
                   isActive = false;
@@ -307,7 +314,10 @@ export default function CirculationSection() {
 
       const res = await fetch(`${API_BASE_URL}${endpoint}`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...getAuthHeaders(),
+        },
         credentials: "include",
         body: JSON.stringify(body),
       });
@@ -348,7 +358,10 @@ export default function CirculationSection() {
     try {
       const res = await fetch(`${API_BASE_URL}/api/loans/request`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...getAuthHeaders(),
+        },
         credentials: "include",
         body: JSON.stringify({
           memberId: "current-user",
@@ -387,7 +400,10 @@ export default function CirculationSection() {
       const loanId = itemResult.activeLoan?.id || "current-loan";
       const res = await fetch(`${API_BASE_URL}/api/loans/${loanId}/return`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...getAuthHeaders(),
+        },
         credentials: "include",
         body: JSON.stringify({ condition }),
       });

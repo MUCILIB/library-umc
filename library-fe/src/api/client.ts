@@ -135,6 +135,32 @@ export interface ImportPreviewResponse {
 }
 
 // ==========================================
+// Auth Token & Header Utilities
+// ==========================================
+
+const TOKEN_STORAGE_KEY = "better_auth_token";
+
+export function getAuthToken(): string | null {
+  if (typeof window === "undefined") return null;
+  return localStorage.getItem(TOKEN_STORAGE_KEY);
+}
+
+export function setAuthToken(token: string): void {
+  if (typeof window === "undefined" || !token) return;
+  localStorage.setItem(TOKEN_STORAGE_KEY, token);
+}
+
+export function clearAuthToken(): void {
+  if (typeof window === "undefined") return;
+  localStorage.removeItem(TOKEN_STORAGE_KEY);
+}
+
+export function getAuthHeaders(): Record<string, string> {
+  const token = getAuthToken();
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
+
+// ==========================================
 // HTTP Client
 // ==========================================
 
@@ -143,10 +169,12 @@ async function apiFetch<T>(
   options: RequestInit = {}
 ): Promise<ApiSuccessResponse<T>> {
   const url = `${API_BASE_URL}${path}`;
+  const authHeaders = getAuthHeaders();
   const response = await fetch(url, {
     ...options,
     credentials: "include",
     headers: {
+      ...authHeaders,
       ...options.headers,
     },
   });
@@ -170,7 +198,13 @@ async function apiFetch<T>(
 
 async function apiFetchBlob(path: string, filename: string): Promise<void> {
   const url = `${API_BASE_URL}${path}`;
-  const response = await fetch(url, { credentials: "include" });
+  const authHeaders = getAuthHeaders();
+  const response = await fetch(url, {
+    credentials: "include",
+    headers: {
+      ...authHeaders,
+    },
+  });
 
   if (!response.ok) {
     throw new Error(`Export failed: ${response.statusText}`);
@@ -192,7 +226,7 @@ async function apiFetchBlob(path: string, filename: string): Promise<void> {
 // ==========================================
 
 export const bibliographyApi = {
-  list: (params?: Record<string, string | number | undefined>) => {
+  list: (params?: Record<string, string | number | undefined>, options?: RequestInit) => {
     const searchParams = new URLSearchParams();
     if (params) {
       Object.entries(params).forEach(([key, value]) => {
@@ -200,7 +234,7 @@ export const bibliographyApi = {
       });
     }
     const query = searchParams.toString();
-    return apiFetch<BibliographyListResponse>(`/api/bibliographies${query ? `?${query}` : ""}`);
+    return apiFetch<BibliographyListResponse>(`/api/bibliographies${query ? `?${query}` : ""}`, options);
   },
 
   getById: (id: string) =>

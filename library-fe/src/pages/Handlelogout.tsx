@@ -1,4 +1,5 @@
 import { authClient } from "@/utils/auth-client";
+import { clearAuthToken } from "@/api/client";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useNavigate } from "react-router";
 
@@ -7,6 +8,7 @@ const HandleLogout = () => {
   const navigate = useNavigate();
 
   const handleLogout = async () => {
+    clearAuthToken();
     await authClient.signOut();
     navigate("/login");
   };
