@@ -299,43 +299,43 @@ export default function EResourcePage() {
 
       <main className="flex-1">
         {/* --- HERO SECTION --- */}
-        <section className="bg-gradient-to-r from-red-950 via-slate-900 to-red-900 pt-20 pb-28 px-4 relative shadow-lg">
+        <section className="bg-gradient-to-r from-red-950 via-slate-900 to-red-900 pt-10 sm:pt-14 md:pt-20 pb-12 sm:pb-16 md:pb-28 px-3 sm:px-4 relative shadow-lg">
           <div className="max-w-4xl mx-auto text-center relative z-10">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-red-500/20 text-red-200 border border-red-500/30 text-xs font-semibold uppercase tracking-wider mb-4">
-              <GraduationCap className="w-4 h-4" />
+            <div className="inline-flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1 rounded-full bg-red-500/20 text-red-200 border border-red-500/30 text-[11px] sm:text-xs font-semibold uppercase tracking-wider mb-3 md:mb-4">
+              <GraduationCap className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
               E-Resource & Repositori Digital UMC
             </div>
-            <h1 className="text-3xl md:text-5xl font-black text-white mb-4 tracking-tight">
+            <h1 className="text-2xl sm:text-3xl md:text-5xl font-black text-white mb-2.5 sm:mb-4 tracking-tight leading-tight">
               Repositori Karya Ilmiah Mahasiswa
             </h1>
-            <p className="text-slate-300 text-base md:text-lg font-medium mb-12 max-w-2xl mx-auto leading-relaxed">
+            <p className="text-slate-300 text-xs sm:text-base md:text-lg font-medium mb-8 sm:mb-10 md:mb-12 max-w-2xl mx-auto leading-relaxed px-2">
               Jelajahi dan baca karya ilmiah, draf proposal, laporan skripsi terverifikasi pustakawan, dan jurnal publikasi sivitas akademika Universitas Muhammadiyah Cirebon.
             </p>
 
             {/* --- SEARCH BAR (Floating) --- */}
-            <div className="absolute left-1/2 -bottom-8 -translate-x-1/2 w-full max-w-4xl px-4">
-              <div className="bg-card flex items-center rounded-2xl shadow-xl p-2 border border-border">
-                <div className="flex-1 flex items-center px-3 md:px-4">
-                  <Search className="text-muted-foreground w-4 h-4 md:w-5 md:h-5 mr-2.5 shrink-0" />
+            <div className="absolute left-1/2 -bottom-6 sm:-bottom-7 md:-bottom-8 -translate-x-1/2 w-full max-w-4xl px-3 sm:px-4">
+              <div className="bg-card flex items-center rounded-2xl shadow-xl p-1.5 sm:p-2 border border-border">
+                <div className="flex-1 flex items-center px-2 sm:px-3 md:px-4 min-w-0">
+                  <Search className="text-muted-foreground w-4 h-4 md:w-5 md:h-5 mr-1.5 sm:mr-2.5 shrink-0" />
                   <input
                     type="text"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full py-2.5 text-foreground focus:outline-none font-medium text-xs md:text-sm bg-transparent placeholder:text-muted-foreground/70"
-                    placeholder="Cari judul skripsi, nama mahasiswa, atau kata kunci..."
+                    className="w-full py-1.5 sm:py-2.5 text-foreground focus:outline-none font-medium text-xs md:text-sm bg-transparent placeholder:text-muted-foreground/70 truncate"
+                    placeholder="Cari judul skripsi, nama mahasiswa..."
                   />
                 </div>
 
                 {/* Search Type Dropdown (Click-only via Shadcn UI) */}
-                <div className="flex items-center border-l border-border pl-2 pr-1">
+                <div className="flex items-center border-l border-border pl-1.5 sm:pl-2 pr-1 shrink-0">
                   <Select
                     value={searchType}
                     onValueChange={(val) => setSearchType(val as "all" | "title" | "author")}
                   >
-                    <SelectTrigger className="h-9 md:h-10 border-0 bg-transparent text-xs md:text-sm font-semibold text-muted-foreground hover:text-foreground focus:ring-0 shadow-none gap-1.5 md:gap-2 px-2.5 md:px-3 cursor-pointer">
+                    <SelectTrigger className="h-8 sm:h-9 md:h-10 border-0 bg-transparent text-[11px] sm:text-xs md:text-sm font-semibold text-muted-foreground hover:text-foreground focus:ring-0 shadow-none gap-1 sm:gap-1.5 md:gap-2 px-1.5 sm:px-2.5 md:px-3 cursor-pointer">
                       <SelectValue placeholder="Pilih Bidang" />
                     </SelectTrigger>
-                    <SelectContent align="end" className="w-40 md:w-44 bg-card border-border shadow-lg">
+                    <SelectContent align="end" className="w-36 sm:w-40 md:w-44 bg-card border-border shadow-lg">
                       <SelectItem value="all" className="text-xs md:text-sm font-medium cursor-pointer">
                         Semua Bidang
                       </SelectItem>
@@ -351,7 +351,7 @@ export default function EResourcePage() {
 
                 <button
                   type="button"
-                  className="bg-red-700 hover:bg-red-800 text-white px-5 md:px-8 py-2 md:py-2.5 rounded-xl font-bold text-xs md:text-sm transition-all ml-1.5 shadow-sm shrink-0 cursor-pointer"
+                  className="bg-red-700 hover:bg-red-800 text-white px-3.5 sm:px-5 md:px-8 py-1.5 sm:py-2 md:py-2.5 rounded-xl font-bold text-xs md:text-sm transition-all ml-1 sm:ml-1.5 shadow-sm shrink-0 cursor-pointer"
                 >
                   Cari
                 </button>
@@ -361,14 +361,19 @@ export default function EResourcePage() {
         </section>
 
         {/* --- MAIN CONTENT AREA --- */}
-        <section className="max-w-7xl mx-auto px-4 md:px-6 pt-28 pb-20">
+        <section className="max-w-7xl mx-auto px-4 md:px-6 pt-10 sm:pt-14 md:pt-24 pb-12 sm:pb-16 md:pb-20">
           {/* Mobile Filter Toggle */}
           <button
             onClick={() => setShowMobileFilter(!showMobileFilter)}
-            className="lg:hidden w-full mb-6 flex items-center justify-between px-5 py-3 bg-card border border-border rounded-xl shadow-sm"
+            className="lg:hidden w-full mb-4 sm:mb-6 flex items-center justify-between px-4 sm:px-5 py-2.5 sm:py-3 bg-card border border-border rounded-xl shadow-xs active:bg-muted/70 transition-colors cursor-pointer"
           >
-            <span className="font-medium text-foreground">Filter Pencarian</span>
-            <Filter className="w-5 h-5 text-muted-foreground" />
+            <span className="font-semibold text-xs sm:text-sm text-foreground flex items-center gap-2">
+              <Filter className="w-4 h-4 text-primary" />
+              Filter Pencarian
+            </span>
+            <span className="text-xs text-muted-foreground font-medium">
+              {showMobileFilter ? "Sembunyikan Filter" : "Tampilkan Filter"}
+            </span>
           </button>
 
           <div className="flex flex-col lg:flex-row gap-8">
@@ -376,7 +381,7 @@ export default function EResourcePage() {
             <aside
               className={`
               lg:w-72 flex-shrink-0
-              ${showMobileFilter ? "block" : "hidden lg:block"}
+              ${showMobileFilter ? "block mb-4 lg:mb-0" : "hidden lg:block"}
             `}
             >
               <div className="sticky top-24 bg-card rounded-2xl border border-border shadow-xs p-5">
@@ -509,24 +514,24 @@ export default function EResourcePage() {
             {/* --- RESULTS LIST --- */}
             <div className="flex-1">
               {/* Results Header */}
-              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-                <div className="flex items-center gap-3">
-                  <h2 className="text-xl font-black text-foreground">
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-4 mb-5 sm:mb-6">
+                <div className="flex items-center gap-2 sm:gap-3">
+                  <h2 className="text-lg sm:text-xl font-black text-foreground">
                     Koleksi Repositori
                   </h2>
-                  <span className="bg-red-100 text-primary dark:bg-red-950/60 dark:text-red-300 text-xs font-bold px-3 py-1 rounded-full">
+                  <span className="bg-red-100 text-primary dark:bg-red-950/60 dark:text-red-300 text-xs font-bold px-2.5 sm:px-3 py-0.5 sm:py-1 rounded-full">
                     {filteredItems.length} dokumen
                   </span>
                 </div>
 
                 {/* Sorting */}
-                <div className="flex items-center gap-2">
+                <div className="flex items-center justify-between sm:justify-start w-full sm:w-auto gap-2">
                   <span className="text-muted-foreground text-xs font-semibold shrink-0">Urutkan:</span>
                   <Select
                     value={sortBy}
                     onValueChange={(val) => setSortBy(val as "date" | "downloads" | "views")}
                   >
-                    <SelectTrigger className="w-[215px] h-9 rounded-xl bg-card border-border text-xs font-semibold cursor-pointer">
+                    <SelectTrigger className="flex-1 sm:w-[215px] h-9 rounded-xl bg-card border-border text-xs font-semibold cursor-pointer">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent align="end" className="bg-card border-border shadow-lg">
