@@ -754,8 +754,8 @@ export default function MyLoansPage() {
         <Navbar />
         <main className="flex-1 max-w-7xl mx-auto px-4 md:px-6 py-10 w-full">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-            <Skeleton className="lg:col-span-2 h-40 rounded-2xl" />
-            <Skeleton className="h-40 rounded-2xl" />
+            <Skeleton className="order-2 lg:order-1 lg:col-span-2 h-36 sm:h-40 rounded-2xl" />
+            <Skeleton className="order-1 lg:order-2 h-28 sm:h-40 rounded-2xl" />
           </div>
           <Skeleton className="h-14 rounded-xl mb-6" />
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -776,9 +776,39 @@ export default function MyLoansPage() {
       <main className="flex-1 max-w-7xl mx-auto px-4 md:px-6 py-10 w-full">
 
         {/* ── TOP SECTION ── */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-          {/* Search & Mobile Filter */}
-          <div className="lg:col-span-2 bg-card p-5 sm:p-6 rounded-2xl border border-slate-100 shadow-sm space-y-3.5">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 mb-6">
+          {/* User Card (Paling Atas pada Tampilan HP: order-1) */}
+          <div className="order-1 lg:order-2 bg-card p-4 sm:p-6 rounded-2xl border border-slate-100 shadow-sm flex items-center gap-3.5 sm:gap-4">
+            <div className="w-12 h-12 sm:w-14 sm:h-14 bg-linear-to-br from-red-500 to-red-700 rounded-full shrink-0 flex items-center justify-center text-white font-bold text-base sm:text-lg overflow-hidden border border-white/20 shadow-xs">
+              {user?.image ? (
+                <img
+                  src={user.image}
+                  alt={user.name || "User"}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                user?.name?.split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase()
+              )}
+            </div>
+            <div className="flex-1 min-w-0">
+              <h3 className="font-bold text-slate-900 truncate text-sm sm:text-base leading-snug">{user?.name}</h3>
+              <p className="text-xs text-slate-400 mb-2 sm:mb-3 truncate">{user?.email}</p>
+              <div className="space-y-1">
+                <div className="flex justify-between text-[10px] font-bold">
+                  <span className="text-slate-400 uppercase tracking-widest">Pinjaman Aktif</span>
+                  <span className="text-primary">{stats.active + stats.warning + stats.late} buku</span>
+                </div>
+                {stats.totalFine > 0 && (
+                  <p className="text-[10px] text-primary font-medium pt-0.5">
+                    ⚠ Denda: Rp {stats.totalFine.toLocaleString("id-ID")}
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Search & Mobile Filter (Di Bawah Identitas User pada HP: order-2) */}
+          <div className="order-2 lg:order-1 lg:col-span-2 bg-card p-4 sm:p-6 rounded-2xl border border-slate-100 shadow-sm space-y-3 sm:space-y-3.5">
             <div className="flex items-center justify-between">
               <h2 className="font-bold text-slate-800 text-sm sm:text-base">Cari Pinjaman</h2>
               {filterStatus !== "all" && (
@@ -825,28 +855,6 @@ export default function MyLoansPage() {
                   })}
                 </select>
                 <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400" />
-              </div>
-            </div>
-          </div>
-
-          {/* User Card */}
-          <div className="bg-card p-6 rounded-2xl border border-slate-100 shadow-sm flex items-center gap-4">
-            <div className="w-14 h-14 bg-linear-to-br from-red-500 to-red-700 rounded-full shrink-0 flex items-center justify-center text-white font-bold text-lg">
-              {user?.name?.split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase()}
-            </div>
-            <div className="flex-1 min-w-0">
-              <h3 className="font-bold text-slate-900 truncate">{user?.name}</h3>
-              <p className="text-xs text-slate-400 mb-3 truncate">{user?.email}</p>
-              <div className="space-y-1">
-                <div className="flex justify-between text-[10px] font-bold">
-                  <span className="text-slate-400 uppercase tracking-widest">Pinjaman Aktif</span>
-                  <span className="text-primary">{stats.active + stats.warning + stats.late} buku</span>
-                </div>
-                {stats.totalFine > 0 && (
-                  <p className="text-[10px] text-primary font-medium pt-1">
-                    ⚠ Denda: Rp {stats.totalFine.toLocaleString("id-ID")}
-                  </p>
-                )}
               </div>
             </div>
           </div>
