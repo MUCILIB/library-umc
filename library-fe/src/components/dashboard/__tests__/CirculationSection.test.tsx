@@ -71,6 +71,56 @@ describe("CirculationSection", () => {
       expect(screen.getByText("ITEM-001")).toBeInTheDocument();
       expect(screen.getByText("Test Book")).toBeInTheDocument();
       expect(screen.getByText("available")).toBeInTheDocument();
+      // When there is no request, do NOT show borrow buttons
+      expect(screen.queryByRole("button", { name: /pinjamkan/i })).not.toBeInTheDocument();
+      expect(screen.getByText(/buku tersedia di perpustakaan/i)).toBeInTheDocument();
+    });
+  });
+
+  it("shows pending loan request with approve action button when item has pending request", async () => {
+    vi.mocked(fetch).mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        success: true,
+        data: {
+          item: { id: "3", itemCode: "ITEM-003", title: "Requested Book", status: "available", location: "Rak 3" },
+          activeLoan: {
+            id: "loan-pending-1",
+            memberName: "Siti Rahma",
+            status: "pending",
+            loanDate: "2026-10-20",
+            dueDate: "2026-10-27",
+          },
+          allowedActions: ["loan"],
+        },
+      }),
+    } as any);
+
+    render(<CirculationSection />);
+    const input = screen.getByPlaceholderText(/kode item/i);
+    fireEvent.change(input, { target: { value: "ITEM-003" } });
+    fireEvent.click(screen.getByRole("button", { name: /lookup/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText("ITEM-003")).toBeInTheDocument();
+      expect(screen.getAllByText("Siti Rahma").length).toBeGreaterThanOrEqual(1);
+      expect(screen.getByRole("button", { name: /setujui & serahkan buku/i })).toBeInTheDocument();
+    });
+
+    // Mock approve response
+    vi.mocked(fetch).mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        success: true,
+        message: "Peminjaman buku berhasil disetujui",
+        data: { id: "loan-pending-1", status: "approved", dueDate: "2026-10-27" },
+      }),
+    } as any);
+
+    fireEvent.click(screen.getByRole("button", { name: /setujui & serahkan buku/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText("Peminjaman Berhasil")).toBeInTheDocument();
     });
   });
 

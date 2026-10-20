@@ -407,21 +407,24 @@ export default function CirculationSection() {
 
   const handleLoan = async () => {
     if (!itemResult) return;
+    const isPending = Boolean(itemResult.activeLoan && itemResult.activeLoan.status === "pending");
+    if (!isPending) {
+      setError("Tidak ada permintaan peminjaman (request) aktif untuk buku ini.");
+      return;
+    }
+
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(`${API_BASE_URL}/api/loans/request`, {
+      const loanId = itemResult.activeLoan!.id;
+      const res = await fetch(`${API_BASE_URL}/api/loans/${loanId}/approve`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           ...getAuthHeaders(),
         },
         credentials: "include",
-        body: JSON.stringify({
-          memberId: "current-user",
-          bibliographyId: (itemResult.item as any).bibliographyId || itemResult.item.id,
-          itemId: itemResult.item.id,
-        }),
+        body: JSON.stringify({}),
       });
 
       let data: any;
@@ -434,11 +437,12 @@ export default function CirculationSection() {
       }
 
       if (!data.success) {
-        setError(data.message || "Peminjaman gagal");
+        setError(data.message || "Persetujuan peminjaman gagal");
         return;
       }
       setLoanResult(data.data ? { loan: data.data, message: data.message } : { loan: null, message: data.message });
       setMode("loan");
+      toast.success("Peminjaman Disetujui!", `Buku ${itemResult.item.title} berhasil dipinjamkan.`);
     } catch (err: any) {
       setError(err.message || "Kesalahan jaringan");
     } finally {
@@ -580,8 +584,10 @@ export default function CirculationSection() {
       {mode === "result" && itemResult && (() => {
         const isLoaned = Boolean(
           itemResult.item.status === "loaned" ||
-          itemResult.allowedActions.includes("return") ||
-          itemResult.activeLoan
+          (itemResult.activeLoan && ["approved", "extended"].includes(itemResult.activeLoan.status))
+        );
+        const hasPendingRequest = Boolean(
+          itemResult.activeLoan && itemResult.activeLoan.status === "pending"
         );
 
         return (
@@ -617,12 +623,22 @@ export default function CirculationSection() {
               <div>
                 <dt className="text-xs font-bold text-muted-foreground uppercase">Status</dt>
                 <dd className="text-sm font-bold flex items-center gap-2">
-                  <span className={isLoaned ? "text-amber-600 dark:text-amber-400 capitalize" : "text-emerald-600 dark:text-emerald-400 capitalize"}>
+                  <span className={isLoaned ? "text-amber-600 dark:text-amber-400 capitalize" : hasPendingRequest ? "text-indigo-600 dark:text-indigo-400 capitalize" : "text-emerald-600 dark:text-emerald-400 capitalize"}>
                     {itemResult.item.status}
                   </span>
                   {isLoaned && (
                     <span className="text-[11px] font-semibold px-2 py-0.5 rounded-md bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300">
                       Sedang Dipinjam
+                    </span>
+                  )}
+                  {hasPendingRequest && (
+                    <span className="text-[11px] font-semibold px-2 py-0.5 rounded-md bg-indigo-100 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300">
+                      Ada Permintaan Pinjam (Pending)
+                    </span>
+                  )}
+                  {!isLoaned && !hasPendingRequest && (
+                    <span className="text-[11px] font-semibold px-2 py-0.5 rounded-md bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300">
+                      Tersedia di Rak
                     </span>
                   )}
                 </dd>
@@ -633,7 +649,7 @@ export default function CirculationSection() {
               </div>
 
               {/* Informasi Peminjaman Aktif jika ada */}
-              {itemResult.activeLoan && (
+              {itemResult.activeLoan && isLoaned && (
                 <>
                   <div className="sm:col-span-1 pt-2 border-t border-border/60">
                     <dt className="text-xs font-bold text-muted-foreground uppercase">Peminjam Aktif</dt>
@@ -644,6 +660,24 @@ export default function CirculationSection() {
                   <div className="sm:col-span-1 pt-2 border-t border-border/60">
                     <dt className="text-xs font-bold text-muted-foreground uppercase">Jatuh Tempo Pengembalian</dt>
                     <dd className="text-sm font-bold text-amber-600 dark:text-amber-400">
+                      {formatDateStr(itemResult.activeLoan.dueDate)}
+                    </dd>
+                  </div>
+                </>
+              )}
+
+              {/* Informasi Permintaan Peminjaman jika ada request */}
+              {itemResult.activeLoan && hasPendingRequest && (
+                <>
+                  <div className="sm:col-span-1 pt-2 border-t border-border/60">
+                    <dt className="text-xs font-bold text-muted-foreground uppercase">Pemohon Pinjam (Member)</dt>
+                    <dd className="text-sm font-bold text-foreground">
+                      {itemResult.activeLoan.memberName || itemResult.activeLoan.memberId || "-"}
+                    </dd>
+                  </div>
+                  <div className="sm:col-span-1 pt-2 border-t border-border/60">
+                    <dt className="text-xs font-bold text-muted-foreground uppercase">Rencana Jatuh Tempo</dt>
+                    <dd className="text-sm font-bold text-indigo-600 dark:text-indigo-400">
                       {formatDateStr(itemResult.activeLoan.dueDate)}
                     </dd>
                   </div>
@@ -760,63 +794,72 @@ export default function CirculationSection() {
                 </>
               )}
 
-              {/* KONDISI 2: BUKU TERSEDIA (TIDAK SEDANG DIPINJAM) */}
-              {!isLoaned && (
-                <>
-                  {/* 2A. Intent = LOAN (Tujuan ingin pinjam dan buku tersedia) */}
-                  {intent === "loan" && (
+              {/* KONDISI 2: ADA PERMINTAAN PEMINJAMAN (REQUEST DARI ANGGOTA) */}
+              {hasPendingRequest && itemResult.activeLoan && (
+                <div className="rounded-2xl border border-indigo-200 dark:border-indigo-900/60 bg-indigo-50/50 dark:bg-indigo-950/20 p-4 space-y-3">
+                  <div className="flex items-start gap-3">
+                    <CheckCircle className="size-5 text-indigo-600 dark:text-indigo-400 shrink-0 mt-0.5" />
+                    <div className="space-y-1">
+                      <h4 className="text-sm font-bold text-indigo-950 dark:text-indigo-200">
+                        Permintaan Peminjaman Ditemukan
+                      </h4>
+                      <p className="text-xs text-indigo-800 dark:text-indigo-300 leading-relaxed">
+                        Anggota <strong>{itemResult.activeLoan.memberName || "Anggota"}</strong> telah mengajukan permintaan peminjaman untuk buku ini. Silakan periksa kondisi fisik buku sebelum menyetujui penyerahan.
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-indigo-200/60 dark:border-indigo-900/40">
                     <button
                       onClick={handleLoan}
                       disabled={loading}
-                      className="flex items-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-bold text-white hover:bg-primary/90 disabled:opacity-50 transition-all active:scale-95 cursor-pointer shadow-xs"
+                      className="flex items-center gap-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 px-5 py-2.5 text-sm font-bold text-white transition-all active:scale-95 cursor-pointer shadow-xs disabled:opacity-50"
                     >
                       {loading ? <Loader2 className="size-4 animate-spin" /> : <CheckCircle className="size-4" />}
-                      Pinjamkan Buku
+                      <span>Setujui & Serahkan Buku</span>
                     </button>
-                  )}
+                    <button
+                      type="button"
+                      onClick={reset}
+                      className="px-3.5 py-2.5 bg-muted hover:bg-muted/80 text-foreground rounded-xl text-xs font-bold transition-all active:scale-95 cursor-pointer"
+                    >
+                      Scan Buku Lain
+                    </button>
+                  </div>
+                </div>
+              )}
 
-                  {/* 2B. Intent = RETURN (Tujuan ingin kembalikan, tapi buku sudah tersedia) */}
-                  {intent === "return" && (
-                    <div className="rounded-2xl border border-emerald-200 dark:border-emerald-900/60 bg-emerald-50 dark:bg-emerald-950/30 p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                      <div className="flex items-start gap-3">
-                        <CheckCircle className="size-5 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
-                        <div>
-                          <h4 className="text-sm font-bold text-emerald-900 dark:text-emerald-300">Buku Sudah Tersedia</h4>
-                          <p className="text-xs text-emerald-700 dark:text-emerald-400 mt-0.5">
-                            Buku ini tidak sedang dipinjam oleh siapapun dan siap dipinjamkan.
-                          </p>
-                        </div>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => setIntent("loan")}
-                        className="px-3.5 py-2 bg-primary hover:bg-primary/90 text-white rounded-xl text-xs font-bold transition-all active:scale-95 cursor-pointer shrink-0"
-                      >
-                        Beralih ke Peminjaman
-                      </button>
+              {/* KONDISI 3: BUKU TIDAK SEDANG DIPINJAM DAN TIDAK ADA YANG REQUEST */}
+              {!isLoaned && !hasPendingRequest && (
+                <div className="rounded-2xl border border-border bg-slate-50 dark:bg-slate-800/40 p-4">
+                  <div className="flex items-start gap-3">
+                    <Info className="size-5 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
+                    <div className="space-y-1">
+                      <h4 className="text-sm font-bold text-foreground">
+                        {intent === "loan"
+                          ? "Tidak Ada Permintaan Peminjaman (Request)"
+                          : intent === "return"
+                          ? "Buku Tidak Sedang Dipinjam"
+                          : "Buku Tersedia di Perpustakaan"}
+                      </h4>
+                      <p className="text-xs text-muted-foreground leading-relaxed">
+                        {intent === "loan"
+                          ? "Belum ada anggota perpustakaan yang mengajukan permintaan (request) untuk kode buku ini. Tombol pinjamkan dinonaktifkan karena buku hanya dapat diserahkan jika sudah ada request peminjaman dari anggota."
+                          : intent === "return"
+                          ? "Buku ini berstatus tersedia di rak perpustakaan dan saat ini tidak sedang dalam masa peminjaman."
+                          : "Buku ini berstatus tersedia di rak perpustakaan. Saat ini tidak ada permintaan (request) peminjaman aktif untuk kode buku ini."}
+                      </p>
                     </div>
-                  )}
-
-                  {/* 2C. Intent = INSPECT (Hanya periksa status dan buku tersedia) */}
-                  {intent === "inspect" && (
-                    <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-border bg-slate-50 dark:bg-slate-800/40 p-4">
-                      <div className="flex items-center gap-2.5">
-                        <CheckCircle className="size-5 text-emerald-500" />
-                        <span className="text-xs font-medium text-foreground">
-                          Buku ini berstatus <strong>Tersedia</strong> dan dapat dipinjamkan.
-                        </span>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => setIntent("loan")}
-                        className="px-3.5 py-2 bg-primary hover:bg-primary/90 text-white rounded-xl text-xs font-bold transition-all active:scale-95 cursor-pointer flex items-center gap-1.5"
-                      >
-                        <CheckCircle className="size-3.5" />
-                        <span>Pinjamkan Buku Ini</span>
-                      </button>
-                    </div>
-                  )}
-                </>
+                  </div>
+                  <div className="mt-3 pt-3 border-t border-border/60 flex justify-end">
+                    <button
+                      type="button"
+                      onClick={reset}
+                      className="px-4 py-2 bg-muted hover:bg-muted/80 text-foreground rounded-xl text-xs font-bold transition-all active:scale-95 cursor-pointer"
+                    >
+                      Scan / Cari Buku Lain
+                    </button>
+                  </div>
+                </div>
               )}
             </div>
           </div>
