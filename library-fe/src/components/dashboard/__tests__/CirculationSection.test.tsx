@@ -4,6 +4,7 @@ import CirculationSection from "@/components/dashboard/CirculationSection";
 
 vi.mock("@/api/client", () => ({
   API_BASE_URL: "http://localhost:4100",
+  getAuthHeaders: () => ({}),
 }));
 
 describe("CirculationSection", () => {

@@ -16,10 +16,10 @@ export function useCategoriesData(enabled: boolean) {
     try {
       const data = await dashboardDataService.getCategories();
       setCategories(data);
-      setHasLoaded(true);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Gagal memuat kategori");
     } finally {
+      setHasLoaded(true);
       setLoading(false);
     }
   }, []);

@@ -4,6 +4,7 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@
 import Modal from "@/components/ui/modal";
 import { BrowserMultiFormatReader, BarcodeFormat, DecodeHintType } from "@zxing/library";
 import { API_BASE_URL } from "@/utils/api-config";
+import { getAuthHeaders } from "@/api/client";
 import { useToast } from "@/hooks/useToast";
 
 interface ItemResult {
@@ -172,7 +173,7 @@ function CameraScannerModal({ isOpen, onClose, onScanSuccess }: CameraScannerMod
           }
         );
       } catch (err: any) {
-        console.error("Camera error:", err);
+console.error("Camera error:", err);
         if (isMounted) {
           setIsScanning(false);
           const name = err?.name || "";
@@ -361,7 +362,10 @@ export default function CirculationSection() {
 
       const res = await fetch(`${API_BASE_URL}${endpoint}`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...getAuthHeaders(),
+        },
         credentials: "include",
         body: JSON.stringify(body),
       });
@@ -408,7 +412,10 @@ export default function CirculationSection() {
     try {
       const res = await fetch(`${API_BASE_URL}/api/loans/request`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...getAuthHeaders(),
+        },
         credentials: "include",
         body: JSON.stringify({
           memberId: "current-user",
@@ -447,7 +454,10 @@ export default function CirculationSection() {
       const loanId = itemResult.activeLoan?.id || "current-loan";
       const res = await fetch(`${API_BASE_URL}/api/loans/${loanId}/return`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...getAuthHeaders(),
+        },
         credentials: "include",
         body: JSON.stringify({ condition }),
       });

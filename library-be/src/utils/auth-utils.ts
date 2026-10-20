@@ -1,5 +1,8 @@
 import { auth } from "../lib/auth";
 import type { Request } from "express";
+import { db } from "../db";
+import { session as sessionTable, Users } from "../db/schema";
+import { and, eq, gt } from "drizzle-orm";
 
 // Definisi Role seuai schema/better-auth
 import { ROLES, type Role } from "./auth-types";
@@ -50,11 +53,39 @@ export async function getSession(req: Request) {
     const session = await auth.api.getSession({
       headers: headers,
     });
-    return session;
+    if (session) return session;
   } catch (error) {
-    console.error("Error getting session: ", error);
-    return null;
+    console.error("Error getting session from auth.api: ", error);
   }
+
+  // Resilient fallback: lookup active session directly in DB using bearerToken
+  if (bearerToken) {
+    try {
+      const foundSession = await db.query.session.findFirst({
+        where: and(
+          eq(sessionTable.token, bearerToken),
+          gt(sessionTable.expiresAt, new Date())
+        ),
+      });
+
+      if (foundSession) {
+        const user = await db.query.Users.findFirst({
+          where: eq(Users.id, foundSession.userId),
+        });
+
+        if (user) {
+          return {
+            session: foundSession,
+            user: user,
+          } as any;
+        }
+      }
+    } catch (dbErr) {
+      console.error("Error getting session fallback from db: ", dbErr);
+    }
+  }
+
+  return null;
 }
 
 /**

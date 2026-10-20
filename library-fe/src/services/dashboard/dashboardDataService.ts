@@ -1,4 +1,5 @@
 import { API_BASE_URL } from "@/utils/api-config";
+import { getAuthHeaders } from "@/api/client";
 
 export interface DashboardStats {
   totalBibliographies: number;
@@ -74,7 +75,10 @@ const jsonOrThrow = async (res: Response) => {
 export const dashboardDataService = {
   async getBibliographies(): Promise<BibliographyItem[]> {
     const res = await fetch(`${API_BASE_URL}/api/bibliographies`, {
-      credentials: "include"
+      credentials: "include",
+      headers: {
+        ...getAuthHeaders(),
+      },
     });
     const data = await jsonOrThrow(res);
     // Bibliographies API returns paginated { items, total, ... }
@@ -86,7 +90,10 @@ export const dashboardDataService = {
 
   async getCategories(): Promise<CategoryItem[]> {
     const res = await fetch(`${API_BASE_URL}/api/categories`, {
-      credentials: "include"
+      credentials: "include",
+      headers: {
+        ...getAuthHeaders(),
+      },
     });
     const data = await jsonOrThrow(res);
     return data.success && Array.isArray(data.data) ? data.data : [];
@@ -105,13 +112,17 @@ export const dashboardDataService = {
     if (params?.search) query.set("search", params.search);
     const qs = query.toString();
     const res = await fetch(`${API_BASE_URL}/api/guests${qs ? `?${qs}` : ""}`, {
-      credentials: "include"
+      credentials: "include",
+      headers: {
+        ...getAuthHeaders(),
+      },
     });
     const data = await jsonOrThrow(res);
     return data.success && Array.isArray(data.data) ? data.data : [];
   },
 
   async getStats(): Promise<DashboardStats> {
+    const authHeaders = getAuthHeaders();
     const [
       bibliographies,
       categories,
@@ -126,19 +137,24 @@ export const dashboardDataService = {
       this.getCategories(),
       this.getGuests().catch(() => []),
       fetch(`${API_BASE_URL}/api/loans?status=approved&limit=200`, {
-        credentials: "include"
+        credentials: "include",
+        headers: { ...authHeaders },
       }),
       fetch(`${API_BASE_URL}/api/fines?status=unpaid&limit=200`, {
-        credentials: "include"
+        credentials: "include",
+        headers: { ...authHeaders },
       }),
       fetch(`${API_BASE_URL}/api/fines?status=paid&limit=200`, {
-        credentials: "include"
+        credentials: "include",
+        headers: { ...authHeaders },
       }),
       fetch(`${API_BASE_URL}/api/reports/web-traffic?days=1`, {
-        credentials: "include"
+        credentials: "include",
+        headers: { ...authHeaders },
       }),
       fetch(`${API_BASE_URL}/api/reservations?status=waiting&limit=200`, {
-        credentials: "include"
+        credentials: "include",
+        headers: { ...authHeaders },
       }).catch(() => null)
     ]);
 
@@ -221,7 +237,10 @@ export const dashboardDataService = {
   async deleteBibliography(id: string) {
     const res = await fetch(`${API_BASE_URL}/api/bibliographies/${id}`, {
       method: "DELETE",
-      credentials: "include"
+      credentials: "include",
+      headers: {
+        ...getAuthHeaders(),
+      },
     });
     return jsonOrThrow(res);
   },
@@ -229,7 +248,10 @@ export const dashboardDataService = {
   async deleteCategory(id: number) {
     const res = await fetch(`${API_BASE_URL}/api/categories/${id}`, {
       method: "DELETE",
-      credentials: "include"
+      credentials: "include",
+      headers: {
+        ...getAuthHeaders(),
+      },
     });
     return jsonOrThrow(res);
   },
@@ -237,7 +259,10 @@ export const dashboardDataService = {
   async deleteGuest(id: string) {
     const res = await fetch(`${API_BASE_URL}/api/guests/${id}`, {
       method: "DELETE",
-      credentials: "include"
+      credentials: "include",
+      headers: {
+        ...getAuthHeaders(),
+      },
     });
     return jsonOrThrow(res);
   },
@@ -245,7 +270,10 @@ export const dashboardDataService = {
   async recordVisit(payload: { name: string; email: string; identifier?: string; faculty?: string; major?: string }) {
     const res = await fetch(`${API_BASE_URL}/api/guests/direct`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        ...getAuthHeaders(),
+      },
       credentials: "include",
       body: JSON.stringify({
         name: payload.name,

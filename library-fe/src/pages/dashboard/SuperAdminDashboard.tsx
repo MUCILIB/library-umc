@@ -69,6 +69,7 @@ import { useGuestsData } from "@/hooks/dashboard/useGuestsData";
 import { cn } from "@/lib/utils";
 import { dashboardDataService } from "@/services/dashboard/dashboardDataService";
 import { authClient } from "@/utils/auth-client";
+import { setAuthToken, clearAuthToken } from "@/api/client";
 
 type ActiveMenu =
   | "dashboard"
@@ -242,6 +243,13 @@ export default function SuperAdminDashboard() {
   const isSuperAdmin =
     (session?.user as { role?: string } | undefined)?.role === "super_admin";
 
+  useEffect(() => {
+    const token = (session as any)?.session?.token;
+    if (token) {
+      setAuthToken(token);
+    }
+  }, [session]);
+
   const visibleMenus = useMemo(
     () => MENU_CONFIG.filter((item) => !item.superAdminOnly || isSuperAdmin),
     [isSuperAdmin]
@@ -285,6 +293,7 @@ export default function SuperAdminDashboard() {
   ]);
 
   const handleSignOut = async () => {
+    clearAuthToken();
     await authClient.signOut();
     navigate("/login");
   };

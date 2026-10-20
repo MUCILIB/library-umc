@@ -111,14 +111,16 @@ export default function RepositorySection() {
     }
   };
 
-  const fetchProposals = async () => {
+  const fetchProposals = async (signal?: AbortSignal) => {
     try {
       setLoading(true);
       const data = await repositoryService.getAllProposals(
-        filterStatus === "all" ? undefined : filterStatus
+        filterStatus === "all" ? undefined : filterStatus,
+        { signal }
       );
       setProposals(data);
     } catch (err: any) {
+      if (err?.name === "AbortError") return;
       error("Gagal Memuat", err.message || "Gagal memuat repositori karya ilmiah");
     } finally {
       setLoading(false);
@@ -126,7 +128,11 @@ export default function RepositorySection() {
   };
 
   useEffect(() => {
-    fetchProposals();
+    const controller = new AbortController();
+    fetchProposals(controller.signal);
+    return () => {
+      controller.abort();
+    };
   }, [filterStatus]);
 
   const handleReviewSubmit = async (e: React.FormEvent) => {

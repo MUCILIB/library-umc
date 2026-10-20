@@ -181,7 +181,8 @@ describe("BibliographySection", () => {
 
     await waitFor(() => {
       expect(bibliographyApi.list).toHaveBeenCalledWith(
-        expect.objectContaining({ facultyId: 1 })
+        expect.objectContaining({ facultyId: 1 }),
+        expect.anything()
       );
     });
 
@@ -209,7 +210,8 @@ describe("BibliographySection", () => {
 
     await waitFor(() => {
       expect(bibliographyApi.list).toHaveBeenCalledWith(
-        expect.objectContaining({ studyProgramId: 10 })
+        expect.objectContaining({ studyProgramId: 10 }),
+        expect.anything()
       );
     });
 

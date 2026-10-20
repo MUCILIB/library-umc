@@ -5,8 +5,6 @@ import {
   Users2,
   ShieldCheck,
   UserX,
-  Save,
-  Link,
   ChevronLeft,
   ChevronRight,
   UserCheck,
@@ -19,10 +17,8 @@ import {
   Columns3,
   Check,
   Trash2,
-  UserCog,
-  CreditCard,
-  GraduationCap,
-  BookOpen
+  MoreHorizontal,
+  CreditCard
 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
@@ -35,6 +31,14 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import Modal from "@/components/ui/modal";
 import { authClient } from "@/utils/auth-client";
 import { useToast } from "@/hooks/useToast";
@@ -42,37 +46,6 @@ import { useUsersManagement } from "@/hooks/dashboard/useUsersManagement";
 import { usersManagementService } from "@/services/dashboard/usersManagementService";
 import { dashboardDataService } from "@/services/dashboard/dashboardDataService";
 import { exportApi, importApi } from "@/api/client";
-
-const AVAILABLE_ROLES = [
-  {
-    value: "student",
-    label: "Mahasiswa",
-    description: "Akses peminjaman buku standar dan pencatatan absensi kunjungan.",
-    badge: "bg-muted text-muted-foreground border-border",
-    icon: GraduationCap,
-  },
-  {
-    value: "lecturer",
-    label: "Dosen",
-    description: "Akses peminjaman kuota dosen dan durasi lebih panjang untuk riset.",
-    badge: "bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-blue-400 border-blue-200 dark:border-blue-800",
-    icon: BookOpen,
-  },
-  {
-    value: "staff",
-    label: "Staff Perpustakaan",
-    description: "Akses dashboard, katalog bibliografi, sirkulasi, dan inventaris.",
-    badge: "bg-purple-50 dark:bg-purple-950 text-purple-700 dark:text-purple-400 border-purple-200 dark:border-purple-800",
-    icon: Users2,
-  },
-  {
-    value: "super_admin",
-    label: "Super Admin",
-    description: "Akses penuh seluruh konfigurasi sistem, kelola user, dan laporan.",
-    badge: "bg-warning-bg text-destructive border-warning-border",
-    icon: ShieldCheck,
-  },
-];
 
 const BAN_PRESET_REASONS = [
   "Pelanggaran kebijakan sistem",
@@ -160,18 +133,10 @@ export default function UsersSection() {
   const [deleteConfirmUser, setDeleteConfirmUser] = useState<(typeof users)[number] | null>(null);
   const [search, setSearch] = useState("");
   const [recordSavingId, setRecordSavingId] = useState<string | null>(null);
-  const [showOnlyUnsynced, setShowOnlyUnsynced] = useState(false);
-  const [roleDraft, setRoleDraft] = useState<Record<string, string>>({});
-  const [editingRoleUser, setEditingRoleUser] = useState<(typeof users)[number] | null>(null);
-  const [selectedRole, setSelectedRole] = useState<string>("");
   const [banModalUser, setBanModalUser] = useState<(typeof users)[number] | null>(null);
   const [banReasonInput, setBanReasonInput] = useState("Pelanggaran kebijakan sistem");
 
-  const openEditRoleModal = (user: (typeof users)[number]) => {
-    setEditingRoleUser(user);
-    const isKnown = AVAILABLE_ROLES.some((r) => r.value === user.role);
-    setSelectedRole(isKnown ? user.role : "");
-  };
+  const [showOnlyUnsynced, setShowOnlyUnsynced] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
   const [exportingUsers, setExportingUsers] = useState(false);
@@ -188,17 +153,6 @@ export default function UsersSection() {
       setExportingUsers(false);
     }
   };
-
-  useEffect(() => {
-    if (!users.length) return;
-    setRoleDraft((prev) => {
-      const next = { ...prev };
-      for (const user of users) {
-        next[user.id] = user.role;
-      }
-      return next;
-    });
-  }, [users]);
 
   const filteredUsers = useMemo(() => {
     const q = search.toLowerCase().trim();
@@ -275,14 +229,14 @@ export default function UsersSection() {
     }
   };
 
-  const handleUpdateRole = async (user: (typeof users)[number], roleArg?: string) => {
-    const nextRole = roleArg || selectedRole || roleDraft[user.id] || user.role;
-    if (!nextRole || nextRole === user.role) {
+  const handleRoleChange = async (user: (typeof users)[number], nextRole: string) => {
+    if (!nextRole || nextRole === user.role) return;
+
+    if (user.id === currentUserId) {
       warning(
-        "Tidak Ada Perubahan",
-        "Role yang dipilih sama dengan role saat ini."
+        "Tidak Diizinkan",
+        "Anda tidak dapat mengubah role akun sendiri."
       );
-      setEditingRoleUser(null);
       return;
     }
 
@@ -295,7 +249,6 @@ export default function UsersSection() {
         "Role Diperbarui",
         `Role ${user.name} berhasil diubah menjadi ${nextRole}.`
       );
-      setEditingRoleUser(null);
     } catch (err) {
       const message =
         err instanceof Error ? err.message : "Gagal memperbarui role user";
@@ -307,6 +260,15 @@ export default function UsersSection() {
   };
 
   const currentUserId = session?.user?.id;
+
+  const handleToggleBan = (user: (typeof users)[number]) => {
+    if (user.id === currentUserId) {
+      warning("Tidak Diizinkan", "Anda tidak dapat memblokir akun sendiri.");
+      return;
+    }
+    setBanModalUser(user);
+    setBanReasonInput(user.banned ? "" : "Pelanggaran kebijakan sistem");
+  };
 
   const handleConfirmBanToggle = async () => {
     if (!banModalUser) return;
@@ -324,9 +286,9 @@ export default function UsersSection() {
       );
       await refetch();
       if (nextBanned) {
-        success("User Diblokir", `${user.name} berhasil diban.`);
+        success("User Diblokir", `${user.name} berhasil diblokir.`);
       } else {
-        success("User Diaktifkan", `${user.name} berhasil di-unban.`);
+        success("User Diaktifkan", `${user.name} berhasil diaktifkan kembali.`);
       }
       setBanModalUser(null);
     } catch (err) {
@@ -686,26 +648,14 @@ export default function UsersSection() {
                       )}
                       {visibleColumns.has("role") && (
                         <TableCell className="px-6 py-4 whitespace-nowrap">
-                          <button
-                            type="button"
-                            onClick={() => {
-                              if (user.id !== currentUserId) {
-                                openEditRoleModal(user);
-                              }
-                            }}
-                            disabled={user.id === currentUserId}
-                            className={`inline-flex items-center px-3 py-1 rounded-full text-[11px] font-bold border transition-all ${roleBadgeClass(user.role)} ${
-                              user.id !== currentUserId
-                                ? "cursor-pointer hover:opacity-80 hover:shadow-xs"
-                                : "cursor-default"
-                            }`}
-                            title={user.id !== currentUserId ? "Klik untuk ubah role" : undefined}
+                          <span
+                            className={`inline-flex items-center px-3 py-1 rounded-full text-[11px] font-bold border ${roleBadgeClass(user.role)}`}
                           >
                             {user.role === "super_admin" ? (
                               <ShieldCheck size={12} className="mr-1.5" />
                             ) : null}
                             {user.role}
-                          </button>
+                          </span>
                         </TableCell>
                       )}
                       {visibleColumns.has("status") && (
@@ -734,14 +684,6 @@ export default function UsersSection() {
                                 {user.cardNumber}
                               </span>
                             ) : null}
-                            {user.hasSyncedMember && (
-                              <span
-                                className="inline-flex items-center text-[10px] font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 px-2 py-0.5 rounded-full"
-                                title="Tersinkronisasi dengan data anggota perpustakaan"
-                              >
-                                Synced
-                              </span>
-                            )}
                           </div>
                           {user.cardRejectedReason ? (
                             <p className="max-w-[220px] text-[11px] text-rose-600 truncate mt-1">
@@ -763,138 +705,113 @@ export default function UsersSection() {
                       )}
                       {visibleColumns.has("aksi") && (
                         <TableCell className="px-6 py-4 text-right whitespace-nowrap">
-                          <div className="inline-flex items-center justify-end gap-1.5 whitespace-nowrap">
-                            {/* Catat Kunjungan */}
-                            <button
-                              type="button"
-                              onClick={() => void handleRecordVisit(user)}
-                              disabled={recordSavingId === user.id}
-                              className="inline-flex size-8 items-center justify-center rounded-lg border bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800 hover:bg-emerald-100 dark:hover:bg-emerald-900 transition-colors disabled:opacity-50 cursor-pointer"
-                              title="Catat Kunjungan Hari Ini"
-                              aria-label="Catat Kunjungan Hari Ini"
+                          <div className="inline-flex items-center justify-end gap-2 whitespace-nowrap">
+                            {/* Role Selector with auto-save */}
+                            <Select
+                              value={user.role}
+                              onValueChange={(value) => void handleRoleChange(user, value)}
+                              disabled={user.id === currentUserId || savingId === user.id}
                             >
-                              {recordSavingId === user.id ? (
-                                <Loader2 className="size-4 animate-spin" />
-                              ) : (
-                                <UserCheck className="size-4" />
-                              )}
-                            </button>
-
-                            {/* Ubah Role */}
-                            <button
-                              type="button"
-                              onClick={() => {
-                                if (user.id !== currentUserId) {
-                                  openEditRoleModal(user);
-                                }
-                              }}
-                              disabled={user.id === currentUserId}
-                              className="inline-flex size-8 items-center justify-center rounded-lg border bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-400 border-blue-200 dark:border-blue-800 hover:bg-blue-100 dark:hover:bg-blue-900 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
-                              title={
-                                user.id === currentUserId
-                                  ? "Tidak bisa mengubah role akun sendiri"
-                                  : "Ubah Role Pengguna"
-                              }
-                              aria-label="Ubah Role Pengguna"
-                            >
-                              <UserCog className="size-4" />
-                            </button>
-
-                            {/* Ban / Unban */}
-                            <button
-                              type="button"
-                              onClick={() => {
-                                if (user.id !== currentUserId) {
-                                  setBanModalUser(user);
-                                  setBanReasonInput(user.banned ? "" : "Pelanggaran kebijakan sistem");
-                                }
-                              }}
-                              disabled={
-                                user.id === currentUserId || banSavingId === user.id
-                              }
-                              className={`inline-flex size-8 items-center justify-center rounded-lg border transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer ${
-                                user.banned
-                                  ? "bg-green-50 dark:bg-green-950/60 text-green-700 dark:text-green-400 border-green-200 dark:border-green-800 hover:bg-green-100 dark:hover:bg-green-900"
-                                  : "bg-orange-50 dark:bg-orange-950/60 text-orange-700 dark:text-orange-400 border-orange-200 dark:border-orange-800 hover:bg-orange-100 dark:hover:bg-orange-900"
-                              }`}
-                              title={
-                                user.id === currentUserId
-                                  ? "Tidak bisa memblokir akun sendiri"
-                                  : user.banned
-                                    ? "Aktifkan User (Unban)"
-                                    : "Blokir User (Ban)"
-                              }
-                              aria-label={user.banned ? "Unban User" : "Ban User"}
-                            >
-                              {banSavingId === user.id ? (
-                                <Loader2 className="size-4 animate-spin" />
-                              ) : user.banned ? (
-                                <ShieldCheck className="size-4" />
-                              ) : (
-                                <UserX className="size-4" />
-                              )}
-                            </button>
-
-                            {/* Sync Member (jika belum tersinkronisasi) */}
-                            {!user.hasSyncedMember && (
-                              <button
-                                type="button"
-                                onClick={() => void handleSyncMember(user)}
-                                disabled={syncSavingId === user.id}
-                                className="inline-flex size-8 items-center justify-center rounded-lg border bg-sky-50 dark:bg-sky-950/60 text-sky-700 dark:text-sky-400 border-sky-200 dark:border-sky-800 hover:bg-sky-100 dark:hover:bg-sky-900 transition-colors disabled:opacity-50 cursor-pointer"
-                                title="Sinkronisasi ke Data Member"
-                                aria-label="Sinkronisasi ke Data Member"
-                              >
-                                {syncSavingId === user.id ? (
-                                  <Loader2 className="size-4 animate-spin" />
+                              <SelectTrigger className="w-[115px] h-8 text-xs font-semibold bg-background hover:bg-muted/50 transition-colors cursor-pointer">
+                                {savingId === user.id ? (
+                                  <span className="flex items-center gap-1.5 text-muted-foreground">
+                                    <Loader2 size={12} className="animate-spin" />
+                                    <span>Simpan...</span>
+                                  </span>
                                 ) : (
-                                  <Link className="size-4" />
+                                  <SelectValue />
                                 )}
-                              </button>
-                            )}
+                              </SelectTrigger>
+                              <SelectContent align="end">
+                                <SelectItem value="student" className="text-xs cursor-pointer">Mahasiswa</SelectItem>
+                                <SelectItem value="lecturer" className="text-xs cursor-pointer">Dosen</SelectItem>
+                                <SelectItem value="staff" className="text-xs cursor-pointer">Staff</SelectItem>
+                                <SelectItem value="super_admin" className="text-xs cursor-pointer">Super Admin</SelectItem>
+                              </SelectContent>
+                            </Select>
 
-                            {/* Terbitkan Kartu (jika sudah sync dan kartu belum aktif) */}
-                            {user.hasSyncedMember && user.cardStatus !== "active" && (
-                              <button
-                                type="button"
-                                onClick={() => void handleIssueCard(user)}
-                                disabled={issueSavingId === user.id}
-                                className="inline-flex size-8 items-center justify-center rounded-lg border bg-primary/10 text-primary border-primary/20 hover:bg-primary/20 transition-colors disabled:opacity-50 cursor-pointer"
-                                title="Terbitkan Kartu Member"
-                                aria-label="Terbitkan Kartu Member"
-                              >
-                                {issueSavingId === user.id ? (
-                                  <Loader2 className="size-4 animate-spin" />
-                                ) : (
-                                  <CreditCard className="size-4" />
-                                )}
-                              </button>
-                            )}
+                            {/* Dropdown Menu for Secondary & Administrative Actions */}
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <button
+                                  type="button"
+                                  className="size-8 inline-flex items-center justify-center rounded-lg border border-border bg-background hover:bg-muted text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+                                  title="Aksi Lainnya"
+                                >
+                                  <MoreHorizontal size={15} />
+                                  <span className="sr-only">Menu aksi user</span>
+                                </button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end" className="w-52">
+                                <DropdownMenuLabel className="text-[11px] font-semibold text-muted-foreground tracking-wider uppercase">
+                                  Operasional
+                                </DropdownMenuLabel>
+                                <DropdownMenuItem
+                                  onClick={() => void handleRecordVisit(user)}
+                                  disabled={recordSavingId === user.id}
+                                  className="cursor-pointer text-xs flex items-center gap-2"
+                                >
+                                  <UserCheck size={14} className="text-emerald-600 dark:text-emerald-400" />
+                                  <span>{recordSavingId === user.id ? "Mencatat..." : "Catat Kunjungan"}</span>
+                                </DropdownMenuItem>
 
-                            {/* Hapus User */}
-                            <button
-                              type="button"
-                              onClick={() => setDeleteConfirmUser(user)}
-                              disabled={
-                                user.id === currentUserId ||
-                                deletingId === user.id ||
-                                savingId === user.id ||
-                                banSavingId === user.id
-                              }
-                              className="inline-flex size-8 items-center justify-center rounded-lg border border-rose-200 dark:border-rose-900 bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-400 hover:bg-rose-100 dark:hover:bg-rose-900/80 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
-                              title={
-                                user.id === currentUserId
-                                  ? "Anda tidak bisa menghapus akun sendiri"
-                                  : "Hapus user"
-                              }
-                              aria-label="Hapus User"
-                            >
-                              {deletingId === user.id ? (
-                                <Loader2 className="size-4 animate-spin" />
-                              ) : (
-                                <Trash2 className="size-4" />
-                              )}
-                            </button>
+                                {!user.hasSyncedMember ? (
+                                  <DropdownMenuItem
+                                    onClick={() => void handleSyncMember(user)}
+                                    disabled={syncSavingId === user.id}
+                                    className="cursor-pointer text-xs flex items-center gap-2"
+                                  >
+                                    <RefreshCw size={14} className={`text-sky-600 dark:text-sky-400 ${syncSavingId === user.id ? "animate-spin" : ""}`} />
+                                    <span>{syncSavingId === user.id ? "Menyinkronkan..." : "Sinkronisasi Member"}</span>
+                                  </DropdownMenuItem>
+                                ) : user.cardStatus !== "active" ? (
+                                  <DropdownMenuItem
+                                    onClick={() => void handleIssueCard(user)}
+                                    disabled={issueSavingId === user.id}
+                                    className="cursor-pointer text-xs flex items-center gap-2"
+                                  >
+                                    <CreditCard size={14} className="text-blue-600 dark:text-blue-400" />
+                                    <span>{issueSavingId === user.id ? "Menerbitkan..." : "Terbitkan Kartu"}</span>
+                                  </DropdownMenuItem>
+                                ) : null}
+
+                                <DropdownMenuSeparator />
+
+                                <DropdownMenuLabel className="text-[11px] font-semibold text-muted-foreground tracking-wider uppercase">
+                                  Akses & Keamanan
+                                </DropdownMenuLabel>
+                                <DropdownMenuItem
+                                  onClick={() => void handleToggleBan(user)}
+                                  disabled={user.id === currentUserId || banSavingId === user.id}
+                                  className={`cursor-pointer text-xs flex items-center gap-2 ${
+                                    user.banned ? "text-emerald-600 dark:text-emerald-400" : "text-amber-600 dark:text-amber-400"
+                                  }`}
+                                >
+                                  {user.banned ? (
+                                    <>
+                                      <UserCheck size={14} />
+                                      <span>{banSavingId === user.id ? "Memproses..." : "Buka Blokir (Unban)"}</span>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <UserX size={14} />
+                                      <span>{banSavingId === user.id ? "Memproses..." : "Blokir User (Ban)"}</span>
+                                    </>
+                                  )}
+                                </DropdownMenuItem>
+
+                                <DropdownMenuSeparator />
+
+                                <DropdownMenuItem
+                                  onClick={() => setDeleteConfirmUser(user)}
+                                  disabled={user.id === currentUserId || deletingId === user.id}
+                                  className="cursor-pointer text-xs flex items-center gap-2 text-rose-600 dark:text-rose-400 focus:text-rose-600 focus:bg-rose-50 dark:focus:bg-rose-950/50"
+                                >
+                                  <Trash2 size={14} />
+                                  <span>Hapus Akun</span>
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
                           </div>
                         </TableCell>
                       )}
@@ -955,247 +872,32 @@ export default function UsersSection() {
         )}
       </div>
 
-      <ImportUserModal
-        isOpen={isImportModalOpen}
-        onClose={() => setIsImportModalOpen(false)}
-        onSuccess={() => {
-          void refetch();
-          success("Import Berhasil", "Data user telah diperbarui.");
-        }}
-      />
 
-      <Modal
-        isOpen={Boolean(deleteConfirmUser)}
-        onClose={() => {
-          if (!deletingId) setDeleteConfirmUser(null);
-        }}
-        title="Konfirmasi Hapus Pengguna"
-        size="sm"
-      >
-        <div className="space-y-4">
-          <div className="flex items-start gap-3.5">
-            <div className="w-10 h-10 rounded-full bg-rose-100 dark:bg-rose-950/80 text-rose-600 dark:text-rose-400 flex items-center justify-center shrink-0 border border-rose-200 dark:border-rose-900 mt-0.5">
-              <Trash2 className="w-5 h-5" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold text-foreground">
-                Apakah Anda yakin ingin menghapus akun ini?
-              </p>
-              <p className="text-xs text-muted-foreground mt-1">
-                Akun pengguna akan dinonaktifkan dan seluruh sesi login aktif akan dicabut dari sistem.
-              </p>
-            </div>
-          </div>
-
-          {deleteConfirmUser && (
-            <div className="rounded-xl bg-muted/60 border border-border p-3.5 text-xs space-y-1.5">
-              <div className="flex items-center justify-between">
-                <span className="text-muted-foreground">Nama:</span>
-                <span className="font-bold text-foreground">
-                  {deleteConfirmUser.name || "Tanpa Nama"}
-                </span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-muted-foreground">Email:</span>
-                <span className="font-mono text-foreground">
-                  {deleteConfirmUser.email}
-                </span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-muted-foreground">Role:</span>
-                <span className="font-bold uppercase text-foreground">
-                  {deleteConfirmUser.role}
-                </span>
-              </div>
-              {deleteConfirmUser.cardNumber ? (
-                <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground">No. Kartu:</span>
-                  <span className="font-mono text-foreground">
-                    {deleteConfirmUser.cardNumber}
-                  </span>
-                </div>
-              ) : null}
-            </div>
-          )}
-
-          <div className="flex items-center justify-end gap-3 pt-2">
-            <button
-              type="button"
-              onClick={() => setDeleteConfirmUser(null)}
-              disabled={Boolean(deletingId)}
-              className="h-9 rounded-lg border border-border px-4 text-sm font-medium text-muted-foreground hover:bg-muted"
-            >
-              Batal
-            </button>
-            <button
-              type="button"
-              onClick={() => void handleDeleteUser()}
-              disabled={Boolean(deletingId)}
-              className="inline-flex h-9 items-center gap-2 rounded-lg bg-destructive px-4 text-sm font-medium text-destructive-foreground hover:bg-destructive/90 disabled:opacity-50"
-            >
-              {deletingId ? (
-                <>
-                  <Loader2 className="size-4 animate-spin" />
-                  <span>Menghapus...</span>
-                </>
-              ) : (
-                <>
-                  <Trash2 className="size-4" />
-                  <span>Hapus Pengguna</span>
-                </>
-              )}
-            </button>
-          </div>
-        </div>
-      </Modal>
-
-      {/* Ubah Role Modal */}
-      <Modal
-        isOpen={Boolean(editingRoleUser)}
-        onClose={() => {
-          if (!savingId) setEditingRoleUser(null);
-        }}
-        title="Ubah Role Pengguna"
-        size="sm"
-      >
-        <div className="space-y-5">
-          {/* User Summary Card */}
-          <div className="flex items-center gap-3.5 p-3.5 bg-muted/40 rounded-xl border border-border">
-            <Avatar className="size-11 shrink-0 border border-border">
-              <AvatarImage
-                src={editingRoleUser?.image || ""}
-                alt={editingRoleUser?.name || "User"}
-              />
-              <AvatarFallback className="text-xs font-bold bg-muted text-muted-foreground">
-                {getFallbackInitials(editingRoleUser?.name)}
-              </AvatarFallback>
-            </Avatar>
-            <div className="min-w-0 flex-1">
-              <p className="text-sm font-bold text-foreground truncate">
-                {editingRoleUser?.name || "Tanpa Nama"}
-              </p>
-              <p className="text-xs text-muted-foreground truncate font-mono">
-                {editingRoleUser?.email}
-              </p>
-              <div className="flex items-center gap-2 mt-1">
-                <span className="text-[11px] text-muted-foreground">Role Saat Ini:</span>
-                <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold border ${roleBadgeClass(editingRoleUser?.role || "")}`}>
-                  {editingRoleUser?.role}
-                </span>
-              </div>
-            </div>
-          </div>
-
-          {/* Role Dropdown Selector Only */}
-          <div>
-            <label className="block text-xs font-bold text-muted-foreground uppercase mb-2">
-              Pilih Role Pengguna
-            </label>
-            <Select
-              value={selectedRole}
-              onValueChange={(value) => setSelectedRole(value)}
-              disabled={Boolean(savingId)}
-            >
-              <SelectTrigger className="w-full h-11 text-sm font-medium bg-background border border-border rounded-xl px-3.5 cursor-pointer focus:ring-2 focus:ring-primary/20">
-                <SelectValue placeholder="-- Pilih role pengguna --" />
-              </SelectTrigger>
-              <SelectContent className="z-[10005]">
-                {AVAILABLE_ROLES.map((r) => {
-                  const IconComponent = r.icon;
-                  return (
-                    <SelectItem key={r.value} value={r.value} className="text-sm cursor-pointer py-2.5">
-                      <div className="flex items-center gap-2.5">
-                        <IconComponent className="size-4 text-primary shrink-0" />
-                        <span className="font-bold text-foreground">{r.value}</span>
-                        <span className="text-xs text-muted-foreground">({r.label})</span>
-                      </div>
-                    </SelectItem>
-                  );
-                })}
-              </SelectContent>
-            </Select>
-            <p className="text-[11px] text-muted-foreground mt-1.5 leading-relaxed">
-              Role menentukan hak akses pengguna terhadap peminjaman buku dan administrasi perpustakaan.
-            </p>
-          </div>
-
-          {/* Footer Actions */}
-          <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-border">
-            <button
-              type="button"
-              onClick={() => setEditingRoleUser(null)}
-              disabled={Boolean(savingId)}
-              className="h-9 rounded-lg border border-border px-4 text-xs font-semibold text-muted-foreground hover:bg-muted transition-colors cursor-pointer"
-            >
-              Batal
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                if (editingRoleUser) {
-                  void handleUpdateRole(editingRoleUser, selectedRole);
-                }
-              }}
-              disabled={
-                Boolean(savingId) ||
-                !selectedRole ||
-                selectedRole === editingRoleUser?.role
-              }
-              className="inline-flex h-9 items-center gap-2 rounded-lg bg-primary px-4 text-xs font-bold text-white hover:bg-primary/90 disabled:opacity-50 transition-colors cursor-pointer shadow-xs"
-            >
-              {savingId ? (
-                <>
-                  <Loader2 className="size-4 animate-spin" />
-                  <span>Menyimpan...</span>
-                </>
-              ) : (
-                <>
-                  <Save className="size-4" />
-                  <span>Simpan Perubahan</span>
-                </>
-              )}
-            </button>
-          </div>
-        </div>
-      </Modal>
-
-      {/* Ban / Unban Confirmation Modal */}
+      {/* Modal Konfirmasi Ban / Unban User */}
       <Modal
         isOpen={Boolean(banModalUser)}
-        onClose={() => {
-          if (!banSavingId) setBanModalUser(null);
-        }}
-        title={
-          banModalUser?.banned
-            ? "Konfirmasi Aktifkan Pengguna (Unban)"
-            : "Konfirmasi Pemblokiran Pengguna (Ban)"
-        }
-        size="sm"
+        onClose={() => setBanModalUser(null)}
+        title={banModalUser?.banned ? "Buka Blokir Pengguna (Unban)" : "Blokir Pengguna (Ban)"}
+        size="md"
       >
         <div className="space-y-4">
-          <div className="flex items-start gap-3.5">
-            <div
-              className={`size-10 rounded-full flex items-center justify-center shrink-0 border mt-0.5 ${
-                banModalUser?.banned
-                  ? "bg-emerald-100 dark:bg-emerald-950/80 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800"
-                  : "bg-orange-100 dark:bg-orange-950/80 text-orange-600 dark:text-orange-400 border-orange-200 dark:border-orange-800"
-              }`}
-            >
-              {banModalUser?.banned ? (
-                <ShieldCheck className="size-5" />
-              ) : (
-                <UserX className="size-5" />
-              )}
+          <div className="flex items-start gap-3">
+            <div className={`p-2.5 rounded-xl shrink-0 ${
+              banModalUser?.banned
+                ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400"
+                : "bg-orange-100 text-orange-700 dark:bg-orange-950 dark:text-orange-400"
+            }`}>
+              {banModalUser?.banned ? <ShieldCheck className="size-5" /> : <UserX className="size-5" />}
             </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold text-foreground">
+            <div>
+              <h4 className="text-sm font-bold text-foreground">
                 {banModalUser?.banned
-                  ? `Aktifkan kembali akun ${banModalUser?.name || "pengguna"}?`
-                  : `Apakah Anda yakin ingin memblokir ${banModalUser?.name || "pengguna"}?`}
-              </p>
-              <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
+                  ? `Buka blokir akun ${banModalUser?.name || "pengguna"}?`
+                  : `Blokir akun ${banModalUser?.name || "pengguna"}?`}
+              </h4>
+              <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">
                 {banModalUser?.banned
-                  ? "Pengguna akan dapat kembali login ke sistem dan menggunakan seluruh fasilitas perpustakaan."
+                  ? "Pengguna akan dapat masuk kembali ke sistem dan mengakses seluruh layanan perpustakaan."
                   : "Pengguna yang diblokir tidak akan dapat login atau melakukan transaksi perpustakaan sampai statusnya diaktifkan kembali."}
               </p>
             </div>
@@ -1300,6 +1002,100 @@ export default function UsersSection() {
                 <>
                   <UserX className="size-4" />
                   <span>Blokir Pengguna</span>
+                </>
+              )}
+            </button>
+          </div>
+        </div>
+      </Modal>
+
+      <ImportUserModal
+        isOpen={isImportModalOpen}
+        onClose={() => setIsImportModalOpen(false)}
+        onSuccess={() => {
+          void refetch();
+          success("Import Berhasil", "Data user telah diperbarui.");
+        }}
+      />
+
+      <Modal
+        isOpen={Boolean(deleteConfirmUser)}
+        onClose={() => {
+          if (!deletingId) setDeleteConfirmUser(null);
+        }}
+        title="Konfirmasi Hapus Pengguna"
+        size="sm"
+      >
+        <div className="space-y-4">
+          <div className="flex items-start gap-3.5">
+            <div className="w-10 h-10 rounded-full bg-rose-100 dark:bg-rose-950/80 text-rose-600 dark:text-rose-400 flex items-center justify-center shrink-0 border border-rose-200 dark:border-rose-900 mt-0.5">
+              <Trash2 className="w-5 h-5" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold text-foreground">
+                Apakah Anda yakin ingin menghapus akun ini?
+              </p>
+              <p className="text-xs text-muted-foreground mt-1">
+                Akun pengguna akan dinonaktifkan dan seluruh sesi login aktif akan dicabut dari sistem.
+              </p>
+            </div>
+          </div>
+
+          {deleteConfirmUser && (
+            <div className="rounded-xl bg-muted/60 border border-border p-3.5 text-xs space-y-1.5">
+              <div className="flex items-center justify-between">
+                <span className="text-muted-foreground">Nama:</span>
+                <span className="font-bold text-foreground">
+                  {deleteConfirmUser.name || "Tanpa Nama"}
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-muted-foreground">Email:</span>
+                <span className="font-mono text-foreground">
+                  {deleteConfirmUser.email}
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-muted-foreground">Role:</span>
+                <span className="font-bold uppercase text-foreground">
+                  {deleteConfirmUser.role}
+                </span>
+              </div>
+              {deleteConfirmUser.cardNumber ? (
+                <div className="flex items-center justify-between">
+                  <span className="text-muted-foreground">No. Kartu:</span>
+                  <span className="font-mono text-foreground">
+                    {deleteConfirmUser.cardNumber}
+                  </span>
+                </div>
+              ) : null}
+            </div>
+          )}
+
+          <div className="flex items-center justify-end gap-3 pt-2">
+            <button
+              type="button"
+              onClick={() => setDeleteConfirmUser(null)}
+              disabled={Boolean(deletingId)}
+              className="h-9 rounded-lg border border-border px-4 text-sm font-medium text-muted-foreground hover:bg-muted"
+            >
+              Batal
+            </button>
+            <button
+              type="button"
+              onClick={() => void handleDeleteUser()}
+              disabled={Boolean(deletingId)}
+              className="inline-flex h-9 items-center gap-2 rounded-lg bg-destructive px-4 text-sm font-medium text-destructive-foreground hover:bg-destructive/90 disabled:opacity-50"
+            >
+              {deletingId ? (
+                <>
+                  <Loader2 className="size-4 animate-spin" />
+                  <span>Menghapus...</span>
+                </>
+              ) : (
+                <>
+                  <Trash2 className="size-4" />
+                  <span>Hapus Pengguna</span>
                 </>
               )}
             </button>

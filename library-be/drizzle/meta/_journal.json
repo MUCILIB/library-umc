@@ -64,6 +64,13 @@
       "when": 1791817093220,
       "tag": "0008_whole_nick_fury",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1792000000000,
+      "tag": "0009_add_is_popular",
+      "breakpoints": true
     }
   ]
 }
