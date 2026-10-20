@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { Loader2, AlertCircle, Camera, CheckCircle, ArrowLeft, X, Search, SwitchCamera, Barcode, Info, RefreshCw } from "lucide-react";
+import { Loader2, AlertCircle, Camera, CheckCircle, ArrowLeft, X, Search, SwitchCamera, Barcode, Info, RefreshCw, Clock } from "lucide-react";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import Modal from "@/components/ui/modal";
 import { BrowserMultiFormatReader, BarcodeFormat, DecodeHintType } from "@zxing/library";
@@ -489,6 +489,102 @@ export default function CirculationSection() {
     }
   };
 
+  const handleApproveExtension = async () => {
+    if (!itemResult?.activeLoan) return;
+    setLoading(true);
+    setError(null);
+    try {
+      const loanId = itemResult.activeLoan.id;
+      const res = await fetch(`${API_BASE_URL}/api/loans/${loanId}/approve-extension`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...getAuthHeaders(),
+        },
+        credentials: "include",
+      });
+
+      let data: any;
+      try {
+        data = await res.json();
+      } catch (_jsonErr) {
+        const text = typeof res.text === "function" ? await res.text().catch(() => "") : "";
+        setError(`Kesalahan server (${res.status}): ${text.substring(0, 100)}`);
+        return;
+      }
+
+      if (!data.success) {
+        setError(data.message || "Persetujuan perpanjangan gagal");
+        return;
+      }
+
+      const newDueDate = data.data?.newDueDate || itemResult.activeLoan.dueDate;
+      toast.success("Perpanjangan Disetujui!", data.message || `Masa pinjam diperpanjang hingga ${formatDateStr(newDueDate)}.`);
+
+      setItemResult({
+        ...itemResult,
+        activeLoan: {
+          ...itemResult.activeLoan,
+          dueDate: newDueDate,
+          status: "extended",
+          extensionStatus: "approved",
+          extendCount: (itemResult.activeLoan.extendCount ?? 0) + 1,
+        },
+        allowedActions: itemResult.allowedActions.filter((a) => a !== "approve_extension"),
+      });
+    } catch (err: any) {
+      setError(err.message || "Kesalahan jaringan");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleRejectExtension = async () => {
+    if (!itemResult?.activeLoan) return;
+    setLoading(true);
+    setError(null);
+    try {
+      const loanId = itemResult.activeLoan.id;
+      const res = await fetch(`${API_BASE_URL}/api/loans/${loanId}/reject-extension`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...getAuthHeaders(),
+        },
+        credentials: "include",
+      });
+
+      let data: any;
+      try {
+        data = await res.json();
+      } catch (_jsonErr) {
+        const text = typeof res.text === "function" ? await res.text().catch(() => "") : "";
+        setError(`Kesalahan server (${res.status}): ${text.substring(0, 100)}`);
+        return;
+      }
+
+      if (!data.success) {
+        setError(data.message || "Penolakan perpanjangan gagal");
+        return;
+      }
+
+      toast.success("Perpanjangan Ditolak", data.message || "Permintaan perpanjangan telah ditolak.");
+
+      setItemResult({
+        ...itemResult,
+        activeLoan: {
+          ...itemResult.activeLoan,
+          extensionStatus: "rejected",
+        },
+        allowedActions: itemResult.allowedActions.filter((a) => a !== "approve_extension"),
+      });
+    } catch (err: any) {
+      setError(err.message || "Kesalahan jaringan");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const reset = () => {
     setMode("scan");
     setScanInput("");
@@ -589,6 +685,12 @@ export default function CirculationSection() {
         const hasPendingRequest = Boolean(
           itemResult.activeLoan && itemResult.activeLoan.status === "pending"
         );
+        const hasPendingExtension = Boolean(
+          isLoaned &&
+          itemResult.activeLoan &&
+          (itemResult.activeLoan.extensionStatus === "pending" ||
+           itemResult.allowedActions?.includes("approve_extension"))
+        );
 
         return (
           <div className="rounded-3xl border border-border bg-card p-6 shadow-sm space-y-5">
@@ -622,13 +724,19 @@ export default function CirculationSection() {
               </div>
               <div>
                 <dt className="text-xs font-bold text-muted-foreground uppercase">Status</dt>
-                <dd className="text-sm font-bold flex items-center gap-2">
+                <dd className="text-sm font-bold flex flex-wrap items-center gap-2">
                   <span className={isLoaned ? "text-amber-600 dark:text-amber-400 capitalize" : hasPendingRequest ? "text-indigo-600 dark:text-indigo-400 capitalize" : "text-emerald-600 dark:text-emerald-400 capitalize"}>
                     {itemResult.item.status}
                   </span>
-                  {isLoaned && (
+                  {isLoaned && !hasPendingExtension && (
                     <span className="text-[11px] font-semibold px-2 py-0.5 rounded-md bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300">
                       Sedang Dipinjam
+                    </span>
+                  )}
+                  {hasPendingExtension && (
+                    <span className="text-[11px] font-semibold px-2 py-0.5 rounded-md bg-purple-100 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300 flex items-center gap-1">
+                      <Clock className="size-3" />
+                      Permintaan Perpanjangan (Pending)
                     </span>
                   )}
                   {hasPendingRequest && (
@@ -658,8 +766,10 @@ export default function CirculationSection() {
                     </dd>
                   </div>
                   <div className="sm:col-span-1 pt-2 border-t border-border/60">
-                    <dt className="text-xs font-bold text-muted-foreground uppercase">Jatuh Tempo Pengembalian</dt>
-                    <dd className="text-sm font-bold text-amber-600 dark:text-amber-400">
+                    <dt className="text-xs font-bold text-muted-foreground uppercase">
+                      {hasPendingExtension ? "Jatuh Tempo Saat Ini" : "Jatuh Tempo Pengembalian"}
+                    </dt>
+                    <dd className={`text-sm font-bold ${hasPendingExtension ? "text-purple-600 dark:text-purple-400" : "text-amber-600 dark:text-amber-400"}`}>
                       {formatDateStr(itemResult.activeLoan.dueDate)}
                     </dd>
                   </div>
@@ -686,16 +796,57 @@ export default function CirculationSection() {
             </div>
 
             {/* Bagian Tombol Aksi yang Disesuaikan dengan Tujuan Intent */}
-            <div className="pt-1">
+            <div className="pt-1 space-y-4">
               {/* KONDISI 1: BUKU SEDANG DIPINJAM */}
               {isLoaned && (
                 <>
-                  {/* 1A. Intent = RETURN (Tujuan memang ingin mengembalikan) */}
+                  {/* 1A. JIKA ADA PERMINTAAN PERPANJANGAN (PENDING EXTENSION) */}
+                  {hasPendingExtension && itemResult.activeLoan && (
+                    <div className="rounded-2xl border border-purple-200 dark:border-purple-900/60 bg-purple-50/70 dark:bg-purple-950/30 p-5 space-y-4 shadow-xs">
+                      <div className="flex items-start gap-3">
+                        <Clock className="size-5 text-purple-600 dark:text-purple-400 shrink-0 mt-0.5" />
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2">
+                            <h4 className="text-sm font-bold text-purple-950 dark:text-purple-200">
+                              Permintaan Perpanjangan Peminjaman Ditemukan!
+                            </h4>
+                            <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-purple-200 dark:bg-purple-900 text-purple-800 dark:text-purple-200">
+                              +7 Hari
+                            </span>
+                          </div>
+                          <p className="text-xs text-purple-800 dark:text-purple-300 leading-relaxed">
+                            Anggota <strong>{itemResult.activeLoan.memberName || "Peminjam"}</strong> telah mengajukan permohonan perpanjangan waktu peminjaman untuk buku ini. Jatuh tempo saat ini adalah <strong>{formatDateStr(itemResult.activeLoan.dueDate)}</strong>.
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="flex flex-wrap items-center gap-2.5 pt-2 border-t border-purple-200/60 dark:border-purple-900/40">
+                        <button
+                          onClick={handleApproveExtension}
+                          disabled={loading}
+                          className="flex items-center gap-2 rounded-xl bg-purple-600 hover:bg-purple-700 px-5 py-2.5 text-sm font-bold text-white transition-all active:scale-95 cursor-pointer shadow-xs disabled:opacity-50"
+                        >
+                          {loading ? <Loader2 className="size-4 animate-spin" /> : <CheckCircle className="size-4" />}
+                          <span>Setujui Perpanjangan (+7 Hari)</span>
+                        </button>
+                        <button
+                          onClick={handleRejectExtension}
+                          disabled={loading}
+                          className="flex items-center gap-1.5 rounded-xl border border-red-200 dark:border-red-900 bg-background hover:bg-red-50 dark:hover:bg-red-950/40 text-red-600 dark:text-red-400 px-4 py-2.5 text-xs font-bold transition-all active:scale-95 cursor-pointer disabled:opacity-50"
+                        >
+                          <X className="size-3.5" />
+                          <span>Tolak Perpanjangan</span>
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* 1B. Form Pengembalian Buku (jika intent === 'return') */}
                   {intent === "return" && (
                     <div className="rounded-2xl border border-emerald-200 dark:border-emerald-900/60 bg-emerald-50/50 dark:bg-emerald-950/20 p-4 space-y-4">
                       <div className="flex items-center gap-2 text-emerald-800 dark:text-emerald-300 text-sm font-bold">
                         <CheckCircle className="size-4 text-emerald-600 dark:text-emerald-400" />
-                        <span>Proses Pengembalian Buku</span>
+                        <span>{hasPendingExtension ? "Atau Proses Pengembalian Buku Fisik" : "Proses Pengembalian Buku"}</span>
                       </div>
 
                       <div className="flex flex-col sm:flex-row items-stretch sm:items-end gap-3">
@@ -733,8 +884,33 @@ export default function CirculationSection() {
                     </div>
                   )}
 
-                  {/* 1B. Intent = LOAN (Tujuan ingin pinjam, tapi buku sedang dipinjam) */}
-                  {intent === "loan" && (
+                  {/* 1C. Intent = INSPECT (Hanya periksa status jika tidak ada perpanjangan pending) */}
+                  {intent === "inspect" && !hasPendingExtension && (
+                    <div className="rounded-2xl border border-blue-200 dark:border-blue-900/60 bg-blue-50 dark:bg-blue-950/30 p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                      <div className="flex items-start gap-3">
+                        <Info className="size-5 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
+                        <div>
+                          <h4 className="text-sm font-bold text-blue-900 dark:text-blue-300">Status Pemeriksaan: Sedang Dipinjam</h4>
+                          <p className="text-xs text-blue-700 dark:text-blue-400 mt-0.5">
+                            Dipinjam oleh <strong>{itemResult.activeLoan?.memberName || "Anggota"}</strong> (Jatuh tempo: <strong>{formatDateStr(itemResult.activeLoan?.dueDate)}</strong>).
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => setIntent("return")}
+                          className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all active:scale-95 cursor-pointer flex items-center gap-1.5"
+                        >
+                          <CheckCircle className="size-3.5" />
+                          <span>Proses Pengembalian</span>
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* 1C. Intent = LOAN (Tujuan ingin pinjam, tapi buku sedang dipinjam) */}
+                  {intent === "loan" && !hasPendingExtension && (
                     <div className="rounded-2xl border border-amber-200 dark:border-amber-900/60 bg-amber-50 dark:bg-amber-950/30 p-4 space-y-3">
                       <div className="flex items-start gap-3">
                         <AlertCircle className="size-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
@@ -767,28 +943,23 @@ export default function CirculationSection() {
                     </div>
                   )}
 
-                  {/* 1C. Intent = INSPECT (Hanya periksa status) */}
-                  {intent === "inspect" && (
-                    <div className="rounded-2xl border border-blue-200 dark:border-blue-900/60 bg-blue-50 dark:bg-blue-950/30 p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                      <div className="flex items-start gap-3">
-                        <Info className="size-5 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
-                        <div>
-                          <h4 className="text-sm font-bold text-blue-900 dark:text-blue-300">Status Pemeriksaan: Sedang Dipinjam</h4>
-                          <p className="text-xs text-blue-700 dark:text-blue-400 mt-0.5">
-                            Dipinjam oleh <strong>{itemResult.activeLoan?.memberName || "Anggota"}</strong> (Jatuh tempo: <strong>{formatDateStr(itemResult.activeLoan?.dueDate)}</strong>).
-                          </p>
-                        </div>
+                  {/* 1D. Intent = INSPECT saat ada pending extension, sediakan opsi form pengembalian */}
+                  {intent === "inspect" && hasPendingExtension && (
+                    <div className="rounded-2xl border border-border bg-slate-50 dark:bg-slate-800/40 p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                      <div className="flex items-center gap-2">
+                        <Info className="size-4 text-muted-foreground" />
+                        <span className="text-xs font-medium text-foreground">
+                          Atau proses pengembalian jika anggota mengembalikan buku fisik:
+                        </span>
                       </div>
-                      <div className="flex items-center gap-2 shrink-0">
-                        <button
-                          type="button"
-                          onClick={() => setIntent("return")}
-                          className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all active:scale-95 cursor-pointer flex items-center gap-1.5"
-                        >
-                          <CheckCircle className="size-3.5" />
-                          <span>Proses Pengembalian</span>
-                        </button>
-                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setIntent("return")}
+                        className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all active:scale-95 cursor-pointer flex items-center gap-1.5 shrink-0"
+                      >
+                        <CheckCircle className="size-3.5" />
+                        <span>Form Pengembalian Buku</span>
+                      </button>
                     </div>
                   )}
                 </>

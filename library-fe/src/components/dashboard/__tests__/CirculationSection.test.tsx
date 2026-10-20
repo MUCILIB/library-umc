@@ -155,4 +155,53 @@ describe("CirculationSection", () => {
       expect(screen.queryByText("Kembalikan (Hilang)")).not.toBeInTheDocument();
     });
   });
+
+  it("shows pending extension request with approve and reject buttons when item has pending extension", async () => {
+    vi.mocked(fetch).mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        success: true,
+        data: {
+          item: { id: "4", itemCode: "ITEM-004", title: "Extended Book", status: "loaned", location: "Rak 4" },
+          activeLoan: {
+            id: "loan-ext-1",
+            memberName: "Dewi Sartika",
+            status: "approved",
+            dueDate: "2026-10-25",
+            extensionStatus: "pending",
+          },
+          allowedActions: ["return", "approve_extension"],
+        },
+      }),
+    } as any);
+
+    render(<CirculationSection />);
+    const input = screen.getByPlaceholderText(/kode item/i);
+    fireEvent.change(input, { target: { value: "ITEM-004" } });
+    fireEvent.click(screen.getByRole("button", { name: /lookup/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText("ITEM-004")).toBeInTheDocument();
+      expect(screen.getAllByText("Dewi Sartika").length).toBeGreaterThanOrEqual(1);
+      expect(screen.getByText(/Permintaan Perpanjangan Peminjaman Ditemukan/i)).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: /setujui perpanjangan/i })).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: /tolak perpanjangan/i })).toBeInTheDocument();
+    });
+
+    // Mock approve extension response
+    vi.mocked(fetch).mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        success: true,
+        message: "Peminjaman berhasil diperpanjang hingga 1 November 2026.",
+        data: { loanId: "loan-ext-1", newDueDate: "2026-11-01", extensionStatus: "approved" },
+      }),
+    } as any);
+
+    fireEvent.click(screen.getByRole("button", { name: /setujui perpanjangan/i }));
+
+    await waitFor(() => {
+      expect(screen.queryByRole("button", { name: /setujui perpanjangan/i })).not.toBeInTheDocument();
+    });
+  });
 });
