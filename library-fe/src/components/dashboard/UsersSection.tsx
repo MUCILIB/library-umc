@@ -5,8 +5,6 @@ import {
   Users2,
   ShieldCheck,
   UserX,
-  Save,
-  Link,
   ChevronLeft,
   ChevronRight,
   UserCheck,
@@ -18,7 +16,9 @@ import {
   X,
   Columns3,
   Check,
-  Trash2
+  Trash2,
+  MoreHorizontal,
+  CreditCard
 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
@@ -31,6 +31,14 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import Modal from "@/components/ui/modal";
 import { authClient } from "@/utils/auth-client";
 import { useToast } from "@/hooks/useToast";
@@ -119,7 +127,6 @@ export default function UsersSection() {
   const [search, setSearch] = useState("");
   const [recordSavingId, setRecordSavingId] = useState<string | null>(null);
   const [showOnlyUnsynced, setShowOnlyUnsynced] = useState(false);
-  const [roleDraft, setRoleDraft] = useState<Record<string, string>>({});
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
   const [exportingUsers, setExportingUsers] = useState(false);
@@ -136,17 +143,6 @@ export default function UsersSection() {
       setExportingUsers(false);
     }
   };
-
-  useEffect(() => {
-    if (!users.length) return;
-    setRoleDraft((prev) => {
-      const next = { ...prev };
-      for (const user of users) {
-        next[user.id] = user.role;
-      }
-      return next;
-    });
-  }, [users]);
 
   const filteredUsers = useMemo(() => {
     const q = search.toLowerCase().trim();
@@ -223,12 +219,13 @@ export default function UsersSection() {
     }
   };
 
-  const handleUpdateRole = async (user: (typeof users)[number]) => {
-    const nextRole = roleDraft[user.id] || user.role;
-    if (!nextRole || nextRole === user.role) {
+  const handleRoleChange = async (user: (typeof users)[number], nextRole: string) => {
+    if (!nextRole || nextRole === user.role) return;
+
+    if (user.id === currentUserId) {
       warning(
-        "Tidak Ada Perubahan",
-        "Role yang dipilih sama dengan role saat ini."
+        "Tidak Diizinkan",
+        "Anda tidak dapat mengubah role akun sendiri."
       );
       return;
     }
@@ -695,122 +692,114 @@ export default function UsersSection() {
                       )}
                       {visibleColumns.has("aksi") && (
                         <TableCell className="px-6 py-4 text-right whitespace-nowrap">
-                        <div className="inline-flex items-center gap-2 whitespace-nowrap">
-                          <button
-                            onClick={() => void handleRecordVisit(user)}
-                            disabled={recordSavingId === user.id}
-                            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold border bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-400 border-emerald-200 hover:bg-emerald-100 transition-colors disabled:opacity-50 cursor-pointer"
-                            title="Catat Kunjungan Hari Ini"
-                          >
-                            <UserCheck size={12} />
-                            {recordSavingId === user.id ? "..." : "Catat Kunjungan"}
-                          </button>
-
-                          <Select
-                            value={roleDraft[user.id] || user.role}
-                            onValueChange={(value) =>
-                              setRoleDraft((prev) => ({
-                                ...prev,
-                                [user.id]: value
-                              }))
-                            }
-                            disabled={
-                              user.id === currentUserId || savingId === user.id
-                            }
-                          >
-                            <SelectTrigger className="w-[120px] h-8 text-xs font-bold bg-background cursor-pointer">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="student" className="text-xs cursor-pointer">student</SelectItem>
-                              <SelectItem value="lecturer" className="text-xs cursor-pointer">lecturer</SelectItem>
-                              <SelectItem value="staff" className="text-xs cursor-pointer">staff</SelectItem>
-                              <SelectItem value="super_admin" className="text-xs cursor-pointer">super_admin</SelectItem>
-                            </SelectContent>
-                          </Select>
-
-                          <button
-                            onClick={() => void handleUpdateRole(user)}
-                            disabled={
-                              user.id === currentUserId ||
-                              savingId === user.id ||
-                              (roleDraft[user.id] || user.role) === user.role
-                            }
-                            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold bg-primary text-white hover:bg-primary/90 disabled:bg-muted disabled:text-muted-foreground cursor-pointer"
-                          >
-                            <Save size={12} />
-                            {savingId === user.id ? "Menyimpan..." : "Simpan"}
-                          </button>
-
-                          <button
-                            onClick={() => void handleToggleBan(user)}
-                            disabled={
-                              user.id === currentUserId || banSavingId === user.id
-                            }
-                            className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold border transition-colors disabled:bg-muted disabled:text-muted-foreground disabled:border-border cursor-pointer ${
-                              user.banned
-                                ? "bg-green-50 dark:bg-green-950 text-green-700 dark:text-green-400 border-green-200 dark:border-green-800 hover:bg-green-100 dark:bg-green-900"
-                                : "bg-orange-50 text-orange-700 border-orange-200 hover:bg-orange-100 dark:bg-orange-900"
-                            }`}
-                          >
-                            <UserX size={12} />
-                            {banSavingId === user.id
-                              ? "Memproses..."
-                              : user.banned
-                                ? "Unban"
-                                : "Ban"}
-                          </button>
-
-                          {!user.hasSyncedMember ? (
-                            <button
-                              onClick={() => void handleSyncMember(user)}
-                              disabled={syncSavingId === user.id}
-                              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold border bg-sky-50 text-sky-700 border-sky-200 hover:bg-sky-100 transition-colors disabled:bg-muted disabled:text-muted-foreground disabled:border-border cursor-pointer"
+                          <div className="inline-flex items-center justify-end gap-2 whitespace-nowrap">
+                            {/* Role Selector with auto-save */}
+                            <Select
+                              value={user.role}
+                              onValueChange={(value) => void handleRoleChange(user, value)}
+                              disabled={user.id === currentUserId || savingId === user.id}
                             >
-                              <Link size={12} />
-                              {syncSavingId === user.id
-                                ? "Sync..."
-                                : "Sync Member"}
-                            </button>
-                          ) : (
-                            <>
-                              <span className="inline-flex items-center px-3 py-2 rounded-lg text-xs font-bold bg-green-50 dark:bg-green-950 text-green-700 dark:text-green-400 border border-green-200 dark:border-green-800">
-                                Sudah Sync
-                              </span>
-                              {user.cardStatus !== "active" ? (
-                                <button
-                                  onClick={() => void handleIssueCard(user)}
-                                  disabled={issueSavingId === user.id}
-                                  className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold bg-primary text-white hover:bg-primary/90 disabled:bg-muted disabled:text-muted-foreground cursor-pointer"
-                                >
-                                  <ShieldCheck size={12} />
-                                  {issueSavingId === user.id
-                                    ? "Menerbitkan..."
-                                    : "Terbitkan Kartu"}
-                                </button>
-                              ) : null}
-                            </>
-                          )}
+                              <SelectTrigger className="w-[115px] h-8 text-xs font-semibold bg-background hover:bg-muted/50 transition-colors cursor-pointer">
+                                {savingId === user.id ? (
+                                  <span className="flex items-center gap-1.5 text-muted-foreground">
+                                    <Loader2 size={12} className="animate-spin" />
+                                    <span>Simpan...</span>
+                                  </span>
+                                ) : (
+                                  <SelectValue />
+                                )}
+                              </SelectTrigger>
+                              <SelectContent align="end">
+                                <SelectItem value="student" className="text-xs cursor-pointer">student</SelectItem>
+                                <SelectItem value="lecturer" className="text-xs cursor-pointer">lecturer</SelectItem>
+                                <SelectItem value="staff" className="text-xs cursor-pointer">staff</SelectItem>
+                                <SelectItem value="super_admin" className="text-xs cursor-pointer">super_admin</SelectItem>
+                              </SelectContent>
+                            </Select>
 
-                          <button
-                            onClick={() => setDeleteConfirmUser(user)}
-                            disabled={
-                              user.id === currentUserId ||
-                              deletingId === user.id ||
-                              savingId === user.id ||
-                              banSavingId === user.id
-                            }
-                            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold border border-rose-200 dark:border-rose-900 bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-400 hover:bg-rose-100 dark:hover:bg-rose-900/80 transition-colors disabled:bg-muted disabled:text-muted-foreground disabled:border-border cursor-pointer"
-                            title={
-                              user.id === currentUserId
-                                ? "Anda tidak bisa menghapus akun sendiri"
-                                : "Hapus user"
-                            }
-                          >
-                            <Trash2 size={12} />
-                            {deletingId === user.id ? "Menghapus..." : "Hapus"}
-                          </button>
-                        </div>
+                            {/* Dropdown Menu for Secondary & Administrative Actions */}
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <button
+                                  type="button"
+                                  className="size-8 inline-flex items-center justify-center rounded-lg border border-border bg-background hover:bg-muted text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+                                  title="Aksi Lainnya"
+                                >
+                                  <MoreHorizontal size={15} />
+                                  <span className="sr-only">Menu aksi user</span>
+                                </button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end" className="w-52">
+                                <DropdownMenuLabel className="text-[11px] font-semibold text-muted-foreground tracking-wider uppercase">
+                                  Operasional
+                                </DropdownMenuLabel>
+                                <DropdownMenuItem
+                                  onClick={() => void handleRecordVisit(user)}
+                                  disabled={recordSavingId === user.id}
+                                  className="cursor-pointer text-xs flex items-center gap-2"
+                                >
+                                  <UserCheck size={14} className="text-emerald-600 dark:text-emerald-400" />
+                                  <span>{recordSavingId === user.id ? "Mencatat..." : "Catat Kunjungan"}</span>
+                                </DropdownMenuItem>
+
+                                {!user.hasSyncedMember ? (
+                                  <DropdownMenuItem
+                                    onClick={() => void handleSyncMember(user)}
+                                    disabled={syncSavingId === user.id}
+                                    className="cursor-pointer text-xs flex items-center gap-2"
+                                  >
+                                    <RefreshCw size={14} className={`text-sky-600 dark:text-sky-400 ${syncSavingId === user.id ? "animate-spin" : ""}`} />
+                                    <span>{syncSavingId === user.id ? "Menyinkronkan..." : "Sinkronisasi Member"}</span>
+                                  </DropdownMenuItem>
+                                ) : user.cardStatus !== "active" ? (
+                                  <DropdownMenuItem
+                                    onClick={() => void handleIssueCard(user)}
+                                    disabled={issueSavingId === user.id}
+                                    className="cursor-pointer text-xs flex items-center gap-2"
+                                  >
+                                    <CreditCard size={14} className="text-blue-600 dark:text-blue-400" />
+                                    <span>{issueSavingId === user.id ? "Menerbitkan..." : "Terbitkan Kartu"}</span>
+                                  </DropdownMenuItem>
+                                ) : null}
+
+                                <DropdownMenuSeparator />
+
+                                <DropdownMenuLabel className="text-[11px] font-semibold text-muted-foreground tracking-wider uppercase">
+                                  Akses & Keamanan
+                                </DropdownMenuLabel>
+                                <DropdownMenuItem
+                                  onClick={() => void handleToggleBan(user)}
+                                  disabled={user.id === currentUserId || banSavingId === user.id}
+                                  className={`cursor-pointer text-xs flex items-center gap-2 ${
+                                    user.banned ? "text-emerald-600 dark:text-emerald-400" : "text-amber-600 dark:text-amber-400"
+                                  }`}
+                                >
+                                  {user.banned ? (
+                                    <>
+                                      <UserCheck size={14} />
+                                      <span>{banSavingId === user.id ? "Memproses..." : "Buka Blokir (Unban)"}</span>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <UserX size={14} />
+                                      <span>{banSavingId === user.id ? "Memproses..." : "Blokir User (Ban)"}</span>
+                                    </>
+                                  )}
+                                </DropdownMenuItem>
+
+                                <DropdownMenuSeparator />
+
+                                <DropdownMenuItem
+                                  onClick={() => setDeleteConfirmUser(user)}
+                                  disabled={user.id === currentUserId || deletingId === user.id}
+                                  className="cursor-pointer text-xs flex items-center gap-2 text-rose-600 dark:text-rose-400 focus:text-rose-600 focus:bg-rose-50 dark:focus:bg-rose-950/50"
+                                >
+                                  <Trash2 size={14} />
+                                  <span>Hapus Akun</span>
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </div>
                         </TableCell>
                       )}
                     </TableRow>
