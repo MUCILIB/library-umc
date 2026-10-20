@@ -1,4 +1,5 @@
 import { API_BASE_URL } from "@/utils/api-config";
+import { getAuthHeaders } from "@/api/client";
 
 export interface RepositoryProposal {
   id: string;
@@ -72,12 +73,15 @@ class RepositoryService {
     const response = await fetch(`${this.baseUrl}/api/repository/proposals`, {
       method: "GET",
       credentials: "include",
-      headers: { "Content-Type": "application/json" }
+      headers: {
+        "Content-Type": "application/json",
+        ...getAuthHeaders(),
+      }
     });
     return this.parseJsonResponse(response, "Gagal memuat proposal");
   }
 
-  async getAllProposals(status?: string): Promise<RepositoryProposal[]> {
+  async getAllProposals(status?: string, options?: RequestInit): Promise<RepositoryProposal[]> {
     const url = status
       ? `${this.baseUrl}/api/repository/proposals?status=${status}`
       : `${this.baseUrl}/api/repository/proposals`;
@@ -85,7 +89,12 @@ class RepositoryService {
     const response = await fetch(url, {
       method: "GET",
       credentials: "include",
-      headers: { "Content-Type": "application/json" }
+      headers: {
+        "Content-Type": "application/json",
+        ...getAuthHeaders(),
+        ...options?.headers,
+      },
+      signal: options?.signal,
     });
     return this.parseJsonResponse(response, "Gagal memuat daftar proposal");
   }
@@ -110,7 +119,10 @@ class RepositoryService {
     const response = await fetch(`${this.baseUrl}/api/repository/published${qs}`, {
       method: "GET",
       credentials: "include",
-      headers: { "Content-Type": "application/json" }
+      headers: {
+        "Content-Type": "application/json",
+        ...getAuthHeaders(),
+      }
     });
     return this.parseJsonResponse(response, "Gagal memuat repositori karya ilmiah publik");
   }
@@ -119,7 +131,10 @@ class RepositoryService {
     const response = await fetch(`${this.baseUrl}/api/repository/proposals/${id}`, {
       method: "GET",
       credentials: "include",
-      headers: { "Content-Type": "application/json" }
+      headers: {
+        "Content-Type": "application/json",
+        ...getAuthHeaders(),
+      }
     });
     return this.parseJsonResponse(response, "Gagal memuat detail proposal");
   }
@@ -140,6 +155,9 @@ class RepositoryService {
     const response = await fetch(`${this.baseUrl}/api/repository/proposals`, {
       method: "POST",
       credentials: "include",
+      headers: {
+        ...getAuthHeaders(),
+      },
       body: formData
     });
 
@@ -154,7 +172,10 @@ class RepositoryService {
     const response = await fetch(`${this.baseUrl}/api/repository/proposals/${id}/review`, {
       method: "PATCH",
       credentials: "include",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        ...getAuthHeaders(),
+      },
       body: JSON.stringify({ action, reviewNotes })
     });
     return this.parseJsonResponse(response, "Gagal memperbarui review proposal");
@@ -172,7 +193,10 @@ class RepositoryService {
     const response = await fetch(`${this.baseUrl}/api/repository/proposals/${id}/page-rules`, {
       method: "POST",
       credentials: "include",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        ...getAuthHeaders(),
+      },
       body: JSON.stringify(rule)
     });
     return this.parseJsonResponse(response, "Gagal menyimpan batasan halaman");
@@ -195,6 +219,9 @@ class RepositoryService {
     const response = await fetch(`${this.baseUrl}/api/repository/proposals/${id}`, {
       method: "PUT",
       credentials: "include",
+      headers: {
+        ...getAuthHeaders(),
+      },
       body: formData
     });
 
@@ -205,7 +232,10 @@ class RepositoryService {
     const response = await fetch(`${this.baseUrl}/api/repository/proposals/${id}`, {
       method: "DELETE",
       credentials: "include",
-      headers: { "Content-Type": "application/json" }
+      headers: {
+        "Content-Type": "application/json",
+        ...getAuthHeaders(),
+      }
     });
     return this.parseJsonResponse(response, "Gagal menghapus naskah proposal");
   }

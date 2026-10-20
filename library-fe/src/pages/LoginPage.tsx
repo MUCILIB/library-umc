@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router";
 import { authClient } from "@/utils/auth-client";
+import { setAuthToken } from "@/api/client";
 import { Mail, Lock, LogIn, UserCircle2, UserPlus, Eye, EyeOff, ShieldCheck } from "lucide-react";
 import { useToast } from "@/hooks/useToast";
 
@@ -69,6 +70,9 @@ const LoginPage = () => {
       }
 
       if (data?.user) {
+        if ((data as any).token) {
+          setAuthToken((data as any).token);
+        }
         success(
           "Login Berhasil!",
           `Selamat datang, ${data.user.name || data.user.email}! 🎉`,

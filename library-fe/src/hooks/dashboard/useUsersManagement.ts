@@ -16,11 +16,11 @@ export function useUsersManagement(enabled: boolean) {
     try {
       const data = await usersManagementService.getUsers();
       setUsers(data);
-      setHasLoaded(true);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Gagal memuat user");
       setUsers([]);
     } finally {
+      setHasLoaded(true);
       setLoading(false);
     }
   }, []);

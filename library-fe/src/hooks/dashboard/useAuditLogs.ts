@@ -29,13 +29,13 @@ export function useAuditLogs(
         const effectiveParams = nextParams || params;
         const data = await auditLogsService.getLogs(effectiveParams);
         setLogs(data);
-        setHasLoaded(true);
       } catch (err) {
         setError(
           err instanceof Error ? err.message : "Gagal memuat audit logs",
         );
         setLogs([]);
       } finally {
+        setHasLoaded(true);
         setLoading(false);
       }
     },

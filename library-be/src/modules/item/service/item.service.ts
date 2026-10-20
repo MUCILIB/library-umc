@@ -91,15 +91,17 @@ export class ItemService {
     }
 
     const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(rawVal);
+    const lowerVal = rawVal.toLowerCase();
 
-    // 1. Cari item berdasarkan itemCode, inventoryCode, qrToken, atau id
+    // 1. Cari item berdasarkan itemCode, inventoryCode, qrToken, atau id (case-insensitive)
     let item = await db.query.items.findFirst({
       where: and(
         isNull(items.deletedAt),
         or(
-          eq(items.itemCode, rawVal),
-          eq(items.inventoryCode, rawVal),
+          ilike(items.itemCode, rawVal),
+          ilike(items.inventoryCode, rawVal),
           eq(items.qrToken, rawVal),
+          eq(sql`lower(${items.qrToken})`, lowerVal),
           isUuid ? eq(items.id, rawVal) : undefined
         )
       ),
@@ -128,7 +130,10 @@ export class ItemService {
     if (!item) {
       const loanByToken = await db.query.loans.findFirst({
         where: and(
-          eq(loans.verificationToken, rawVal),
+          or(
+            eq(loans.verificationToken, rawVal),
+            ilike(loans.verificationToken, rawVal)
+          ),
           isNull(loans.deletedAt)
         ),
         with: {
