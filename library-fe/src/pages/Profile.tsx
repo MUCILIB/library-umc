@@ -298,7 +298,7 @@ const Profile = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background overflow-x-hidden">
       <Navbar />
 
       <style dangerouslySetInnerHTML={{__html: `
@@ -384,7 +384,7 @@ const Profile = () => {
         </div>
 
         {/* Tab Content */}
-        <div className="min-h-[500px]">
+        <div className="min-h-[500px] w-full">
           {activeTab === "peminjaman-aktif" && (
             <RiwayatPeminjaman type="active" view="grid" />
           )}
