@@ -299,7 +299,7 @@ export default function EResourcePage() {
 
       <main className="flex-1">
         {/* --- HERO SECTION --- */}
-        <section className="bg-gradient-to-r from-red-950 via-slate-900 to-red-900 pt-10 sm:pt-14 md:pt-18 pb-0 px-3 sm:px-4 shadow-lg relative">
+        <section className="bg-gradient-to-r from-red-950 via-slate-900 to-red-900 pt-10 sm:pt-14 md:pt-18 pb-8 sm:pb-10 md:pb-14 px-3 sm:px-4 shadow-lg">
           <div className="max-w-4xl mx-auto text-center">
             <div className="inline-flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1 rounded-full bg-red-500/20 text-red-200 border border-red-500/30 text-[11px] sm:text-xs font-semibold uppercase tracking-wider mb-3 md:mb-4">
               <GraduationCap className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
@@ -308,14 +308,14 @@ export default function EResourcePage() {
             <h1 className="text-2xl sm:text-3xl md:text-5xl font-black text-white mb-2.5 sm:mb-4 tracking-tight leading-tight">
               Repositori Karya Ilmiah Mahasiswa
             </h1>
-            <p className="text-slate-300 text-xs sm:text-base md:text-lg font-medium mb-5 sm:mb-6 md:mb-8 max-w-2xl mx-auto leading-relaxed px-2">
+            <p className="text-slate-300 text-xs sm:text-base md:text-lg font-medium mb-6 sm:mb-8 max-w-2xl mx-auto leading-relaxed px-2">
               Jelajahi dan baca karya ilmiah, draf proposal, laporan skripsi terverifikasi pustakawan, dan jurnal publikasi sivitas akademika Universitas Muhammadiyah Cirebon.
             </p>
 
-            {/* --- SEARCH BAR (Floating naturally via translateY, never overlaps text) --- */}
-            <div className="w-full max-w-4xl mx-auto translate-y-1/2 relative z-20">
+            {/* --- SEARCH BAR --- */}
+            <div className="w-full max-w-3xl mx-auto">
               <div className="bg-card flex items-center rounded-2xl shadow-xl p-1.5 sm:p-2 border border-border">
-                <div className="flex-1 flex items-center px-2 sm:px-3 md:px-4 min-w-0">
+                <div className="flex-1 flex items-center px-2.5 sm:px-3 md:px-4 min-w-0">
                   <Search className="text-muted-foreground w-4 h-4 md:w-5 md:h-5 mr-1.5 sm:mr-2.5 shrink-0" />
                   <input
                     type="text"
@@ -361,7 +361,7 @@ export default function EResourcePage() {
         </section>
 
         {/* --- MAIN CONTENT AREA --- */}
-        <section className="max-w-7xl mx-auto px-4 md:px-6 pt-10 sm:pt-14 md:pt-18 pb-12 sm:pb-16 md:pb-20">
+        <section className="max-w-7xl mx-auto px-4 md:px-6 pt-5 sm:pt-6 md:pt-8 pb-12 sm:pb-16 md:pb-20">
           {/* Mobile Filter Toggle */}
           <button
             onClick={() => setShowMobileFilter(!showMobileFilter)}
