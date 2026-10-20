@@ -299,8 +299,8 @@ export default function EResourcePage() {
 
       <main className="flex-1">
         {/* --- HERO SECTION --- */}
-        <section className="bg-gradient-to-r from-red-950 via-slate-900 to-red-900 pt-10 sm:pt-14 md:pt-20 pb-12 sm:pb-16 md:pb-28 px-3 sm:px-4 relative shadow-lg">
-          <div className="max-w-4xl mx-auto text-center relative z-10">
+        <section className="bg-gradient-to-r from-red-950 via-slate-900 to-red-900 pt-10 sm:pt-14 md:pt-18 pb-0 px-3 sm:px-4 shadow-lg relative">
+          <div className="max-w-4xl mx-auto text-center">
             <div className="inline-flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1 rounded-full bg-red-500/20 text-red-200 border border-red-500/30 text-[11px] sm:text-xs font-semibold uppercase tracking-wider mb-3 md:mb-4">
               <GraduationCap className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
               E-Resource & Repositori Digital UMC
@@ -308,12 +308,12 @@ export default function EResourcePage() {
             <h1 className="text-2xl sm:text-3xl md:text-5xl font-black text-white mb-2.5 sm:mb-4 tracking-tight leading-tight">
               Repositori Karya Ilmiah Mahasiswa
             </h1>
-            <p className="text-slate-300 text-xs sm:text-base md:text-lg font-medium mb-8 sm:mb-10 md:mb-12 max-w-2xl mx-auto leading-relaxed px-2">
+            <p className="text-slate-300 text-xs sm:text-base md:text-lg font-medium mb-5 sm:mb-6 md:mb-8 max-w-2xl mx-auto leading-relaxed px-2">
               Jelajahi dan baca karya ilmiah, draf proposal, laporan skripsi terverifikasi pustakawan, dan jurnal publikasi sivitas akademika Universitas Muhammadiyah Cirebon.
             </p>
 
-            {/* --- SEARCH BAR (Floating) --- */}
-            <div className="absolute left-1/2 -bottom-6 sm:-bottom-7 md:-bottom-8 -translate-x-1/2 w-full max-w-4xl px-3 sm:px-4">
+            {/* --- SEARCH BAR (Floating naturally via translateY, never overlaps text) --- */}
+            <div className="w-full max-w-4xl mx-auto translate-y-1/2 relative z-20">
               <div className="bg-card flex items-center rounded-2xl shadow-xl p-1.5 sm:p-2 border border-border">
                 <div className="flex-1 flex items-center px-2 sm:px-3 md:px-4 min-w-0">
                   <Search className="text-muted-foreground w-4 h-4 md:w-5 md:h-5 mr-1.5 sm:mr-2.5 shrink-0" />
@@ -333,11 +333,11 @@ export default function EResourcePage() {
                     onValueChange={(val) => setSearchType(val as "all" | "title" | "author")}
                   >
                     <SelectTrigger className="h-8 sm:h-9 md:h-10 border-0 bg-transparent text-[11px] sm:text-xs md:text-sm font-semibold text-muted-foreground hover:text-foreground focus:ring-0 shadow-none gap-1 sm:gap-1.5 md:gap-2 px-1.5 sm:px-2.5 md:px-3 cursor-pointer">
-                      <SelectValue placeholder="Pilih Bidang" />
+                      <SelectValue placeholder="Semua" />
                     </SelectTrigger>
-                    <SelectContent align="end" className="w-36 sm:w-40 md:w-44 bg-card border-border shadow-lg">
+                    <SelectContent align="end" className="w-32 sm:w-36 md:w-40 bg-card border-border shadow-lg">
                       <SelectItem value="all" className="text-xs md:text-sm font-medium cursor-pointer">
-                        Semua Bidang
+                        Semua
                       </SelectItem>
                       <SelectItem value="title" className="text-xs md:text-sm font-medium cursor-pointer">
                         Judul Naskah
@@ -361,7 +361,7 @@ export default function EResourcePage() {
         </section>
 
         {/* --- MAIN CONTENT AREA --- */}
-        <section className="max-w-7xl mx-auto px-4 md:px-6 pt-10 sm:pt-14 md:pt-24 pb-12 sm:pb-16 md:pb-20">
+        <section className="max-w-7xl mx-auto px-4 md:px-6 pt-10 sm:pt-14 md:pt-18 pb-12 sm:pb-16 md:pb-20">
           {/* Mobile Filter Toggle */}
           <button
             onClick={() => setShowMobileFilter(!showMobileFilter)}
