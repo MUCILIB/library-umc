@@ -16,12 +16,18 @@ import {
   CalendarDays,
   RotateCcw,
   Barcode,
-  ChevronDown,
 } from "lucide-react";
 import loanService, { type Loan } from "@/services/loanService";
 import { authClient } from "@/utils/auth-client";
 import { useToast } from "@/hooks/useToast";
 import { formatDateID, calcLateDays } from "@/utils/format";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -831,30 +837,36 @@ export default function MyLoansPage() {
                 />
               </div>
 
-              {/* Dropdown Filter untuk Tampilan HP (lg:hidden) */}
-              <div className="lg:hidden relative">
-                <div className="absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400 flex items-center gap-1.5">
-                  <Filter size={13} className="text-primary" />
-                </div>
-                <select
+              {/* Dropdown Filter Shadcn UI untuk Tampilan HP (lg:hidden) */}
+              <div className="lg:hidden w-full">
+                <Select
                   value={filterStatus}
-                  onChange={(e) => setFilterStatus(e.target.value)}
-                  aria-label="Filter status peminjaman"
-                  className="w-full pl-9 pr-9 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-primary/20 appearance-none cursor-pointer shadow-2xs"
+                  onValueChange={(val) => setFilterStatus(val)}
                 >
-                  {FILTER_OPTIONS.map((opt) => {
-                    const count =
-                      opt.value === "all"
-                        ? loans.length
-                        : loansWithStatus.filter((l) => l.status === opt.value).length;
-                    return (
-                      <option key={opt.value} value={opt.value}>
-                        {opt.label} ({count})
-                      </option>
-                    );
-                  })}
-                </select>
-                <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400" />
+                  <SelectTrigger className="w-full bg-slate-50 dark:bg-muted border border-slate-200 dark:border-border rounded-xl text-xs font-bold text-slate-800 dark:text-foreground h-10 shadow-2xs">
+                    <div className="flex items-center gap-2 truncate">
+                      <Filter size={13} className="text-primary shrink-0" />
+                      <SelectValue placeholder="Pilih status..." />
+                    </div>
+                  </SelectTrigger>
+                  <SelectContent className="rounded-xl border border-border bg-card shadow-lg z-50">
+                    {FILTER_OPTIONS.map((opt) => {
+                      const count =
+                        opt.value === "all"
+                          ? loans.length
+                          : loansWithStatus.filter((l) => l.status === opt.value).length;
+                      return (
+                        <SelectItem
+                          key={opt.value}
+                          value={opt.value}
+                          className="text-xs font-bold py-2 cursor-pointer focus:bg-primary/10 focus:text-primary rounded-lg"
+                        >
+                          {opt.label} ({count})
+                        </SelectItem>
+                      );
+                    })}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
           </div>

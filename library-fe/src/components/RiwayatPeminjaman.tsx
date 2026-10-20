@@ -19,7 +19,6 @@ import {
   Tag,
   MapPin,
   Barcode,
-  ChevronDown,
   Filter
 } from "lucide-react";
 import loanService, { type Loan as LoanData } from "@/services/loanService";
@@ -42,6 +41,13 @@ import {
   DialogFooter
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface RiwayatPeminjamanProps {
   type: "active" | "history";
@@ -289,22 +295,39 @@ const RiwayatPeminjaman = ({
 
         {/* Faceted Status Filters & Layout Toggle */}
         <div className="flex items-center justify-between sm:justify-end gap-2">
-          {/* Mobile Filter Dropdown (Tampilan HP) */}
-          <div className="sm:hidden relative flex-1 min-w-[140px]">
-            <div className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none text-muted-foreground flex items-center gap-1">
-              <Filter size={12} className="text-primary" />
-            </div>
-            <select
+          {/* Mobile Filter Dropdown Shadcn UI (Tampilan HP) */}
+          <div className="sm:hidden flex-1 min-w-[150px]">
+            <Select
               value={statusFilter}
-              onChange={(e) => handleStatusFilterChange(e.target.value)}
-              aria-label="Filter status riwayat peminjaman"
-              className="w-full pl-8 pr-7 py-2 bg-muted/60 border border-border rounded-xl text-xs font-bold text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 appearance-none cursor-pointer shadow-2xs"
+              onValueChange={(val) => handleStatusFilterChange(val)}
             >
-              <option value="all">Semua Status ({statusCounts.all})</option>
-              <option value="returned">Dikembalikan ({statusCounts.returned})</option>
-              <option value="rejected">Ditolak ({statusCounts.rejected})</option>
-            </select>
-            <ChevronDown size={13} className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-muted-foreground" />
+              <SelectTrigger className="w-full bg-muted/60 border-border rounded-xl text-xs font-bold text-foreground h-9 shadow-2xs">
+                <div className="flex items-center gap-2 truncate">
+                  <Filter size={12} className="text-primary shrink-0" />
+                  <SelectValue placeholder="Status Peminjaman" />
+                </div>
+              </SelectTrigger>
+              <SelectContent className="rounded-xl border border-border bg-card shadow-lg z-50">
+                <SelectItem
+                  value="all"
+                  className="text-xs font-bold py-2 cursor-pointer focus:bg-primary/10 focus:text-primary rounded-lg"
+                >
+                  Semua Status ({statusCounts.all})
+                </SelectItem>
+                <SelectItem
+                  value="returned"
+                  className="text-xs font-bold py-2 cursor-pointer focus:bg-primary/10 focus:text-primary rounded-lg"
+                >
+                  Dikembalikan ({statusCounts.returned})
+                </SelectItem>
+                <SelectItem
+                  value="rejected"
+                  className="text-xs font-bold py-2 cursor-pointer focus:bg-primary/10 focus:text-primary rounded-lg"
+                >
+                  Ditolak ({statusCounts.rejected})
+                </SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
           {/* Desktop Filter Chips */}

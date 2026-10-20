@@ -12,7 +12,6 @@ import {
   BookOpen,
   ShieldCheck,
   ChevronRight,
-  ChevronDown,
   Filter
 } from "lucide-react";
 import fineService, { type Fine } from "@/services/fineService";
@@ -34,6 +33,13 @@ import {
   DialogFooter
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 // Helper get fine title
 function getFineTitle(fine: Fine): string {
@@ -230,22 +236,39 @@ const FinesList = () => {
           )}
         </div>
 
-        {/* Mobile Filter Dropdown (Tampilan HP) */}
-        <div className="sm:hidden relative flex-1 min-w-[140px]">
-          <div className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none text-muted-foreground flex items-center gap-1">
-            <Filter size={12} className="text-primary" />
-          </div>
-          <select
+        {/* Mobile Filter Dropdown Shadcn UI (Tampilan HP) */}
+        <div className="sm:hidden flex-1 min-w-[150px]">
+          <Select
             value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value as "all" | "unpaid" | "paid")}
-            aria-label="Filter status tagihan denda"
-            className="w-full pl-8 pr-7 py-2 bg-muted/60 border border-border rounded-xl text-xs font-bold text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 appearance-none cursor-pointer shadow-2xs"
+            onValueChange={(val) => setStatusFilter(val as "all" | "unpaid" | "paid")}
           >
-            <option value="all">Semua Tagihan ({fines.length})</option>
-            <option value="unpaid">Belum Dibayar ({unpaidFines.length})</option>
-            <option value="paid">Lunas ({paidFines.length})</option>
-          </select>
-          <ChevronDown size={13} className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-muted-foreground" />
+            <SelectTrigger className="w-full bg-muted/60 border-border rounded-xl text-xs font-bold text-foreground h-9 shadow-2xs">
+              <div className="flex items-center gap-2 truncate">
+                <Filter size={12} className="text-primary shrink-0" />
+                <SelectValue placeholder="Status Denda" />
+              </div>
+            </SelectTrigger>
+            <SelectContent className="rounded-xl border border-border bg-card shadow-lg z-50">
+              <SelectItem
+                value="all"
+                className="text-xs font-bold py-2 cursor-pointer focus:bg-primary/10 focus:text-primary rounded-lg"
+              >
+                Semua Tagihan ({fines.length})
+              </SelectItem>
+              <SelectItem
+                value="unpaid"
+                className="text-xs font-bold py-2 cursor-pointer focus:bg-primary/10 focus:text-primary rounded-lg"
+              >
+                Belum Dibayar ({unpaidFines.length})
+              </SelectItem>
+              <SelectItem
+                value="paid"
+                className="text-xs font-bold py-2 cursor-pointer focus:bg-primary/10 focus:text-primary rounded-lg"
+              >
+                Lunas ({paidFines.length})
+              </SelectItem>
+            </SelectContent>
+          </Select>
         </div>
 
         {/* Status Filter Chips (Desktop / Tablet) */}
