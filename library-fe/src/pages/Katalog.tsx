@@ -5,7 +5,7 @@ import Navbar from "@/components/ui/navbar";
 import Footer from "@/components/Footer";
 import BookList from "@/components/BookList";
 import Background from "@/assets/bg1.jpeg";
-import { Search, Filter, X, ChevronDown, ChevronUp, ArrowRight } from "lucide-react";
+import { Search, Filter, X, ChevronDown, ChevronUp, ArrowRight, BookOpen, Smartphone, Layers } from "lucide-react";
 import { authClient } from "@/utils/auth-client";
 import { API_BASE_URL } from "@/utils/api-config";
 import {
@@ -38,9 +38,12 @@ const Katalog = () => {
   );
   const [availabilityFilter, setAvailabilityFilter] = useState<string[]>([]);
   const [yearRange, setYearRange] = useState({ start: "", end: "" });
-  const [collectionTypeFilter, setCollectionTypeFilter] = useState<string[]>([
-    "physical_book",
-  ]);
+  const [collectionTypeFilter, setCollectionTypeFilter] = useState<string[]>(() => {
+    const col = searchParams.get("collection");
+    if (col === "ebook") return ["ebook"];
+    if (col === "all") return ["physical_book", "ebook"];
+    return ["physical_book"];
+  });
   const [collectionCounts, setCollectionCounts] = useState({
     physical: 0,
     ebook: 0,
@@ -57,12 +60,28 @@ const Katalog = () => {
   const [openSections, setOpenSections] = useState({
     ketersediaan: true,
     tahun: true,
-    koleksi: true,
   });
 
   const toggleSection = (section: keyof typeof openSections) => {
     setOpenSections((prev) => ({ ...prev, [section]: !prev[section] }));
   };
+
+  // Helper status filter jenis koleksi untuk tab di atas
+  const isAllSelected =
+    collectionTypeFilter.length === 0 ||
+    (collectionTypeFilter.includes("physical_book") &&
+      collectionTypeFilter.includes("ebook"));
+
+  const isPhysicalSelected =
+    collectionTypeFilter.length === 1 &&
+    collectionTypeFilter.includes("physical_book");
+
+  const isEbookSelected =
+    collectionTypeFilter.length === 1 &&
+    collectionTypeFilter.includes("ebook");
+
+  const totalCollectionCount =
+    (collectionCounts.physical || 0) + (collectionCounts.ebook || 0);
 
   // Fetch faculties from backend for filter
   const [faculties, setFaculties] = useState<{ id: number; name: string }[]>([]);
@@ -249,18 +268,97 @@ const Katalog = () => {
       </div>
 
       {/* Main Content: Filter (Sidebar) & Hasil (Grid) */}
-      <main className="max-w-7xl mx-auto py-8 sm:py-10 px-4 sm:px-6 lg:px-8 grow w-full">
-        {/* Mobile Filter Toggle */}
-        <div className="lg:hidden flex justify-between items-center mb-5">
-          <span className="text-xs font-semibold text-slate-500">
-            Filter & Pengaturan Koleksi
-          </span>
-          <button
-            onClick={() => setIsSidebarOpen(true)}
-            className="flex items-center gap-1.5 bg-white px-3.5 py-2 rounded-xl border border-slate-200 text-xs font-bold text-slate-800 shadow-xs active:scale-95 transition-all"
-          >
-            <Filter size={14} className="text-[#9D171D]" /> Filter
-          </button>
+      <main className="max-w-7xl mx-auto py-6 sm:py-8 px-4 sm:px-6 lg:px-8 grow w-full">
+        {/* Top Bar: Filter Jenis Buku & Mobile Filter Toggle */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
+          {/* Tabs Filter Jenis Buku */}
+          <div className="inline-flex items-center p-1 bg-slate-100 dark:bg-muted/80 rounded-xl border border-slate-200/60 dark:border-border/60 overflow-x-auto max-w-full">
+            <button
+              type="button"
+              onClick={() => setCollectionTypeFilter(["physical_book", "ebook"])}
+              className={`flex items-center gap-1.5 px-3 sm:px-4 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer whitespace-nowrap ${
+                isAllSelected
+                  ? "bg-white dark:bg-card text-slate-900 dark:text-foreground shadow-xs font-bold"
+                  : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-foreground"
+              }`}
+            >
+              <Layers size={14} className={isAllSelected ? "text-[#9D171D]" : "text-slate-400"} />
+              <span>Semua Koleksi</span>
+              <span
+                className={`text-[10px] sm:text-[11px] px-1.5 py-0.5 rounded-full ${
+                  isAllSelected
+                    ? "bg-red-50 text-[#9D171D] dark:bg-red-950/60 dark:text-red-300 font-bold"
+                    : "bg-slate-200/70 text-slate-500 dark:bg-muted dark:text-slate-400"
+                }`}
+              >
+                {totalCollectionCount}
+              </span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setCollectionTypeFilter(["physical_book"])}
+              className={`flex items-center gap-1.5 px-3 sm:px-4 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer whitespace-nowrap ${
+                isPhysicalSelected
+                  ? "bg-white dark:bg-card text-slate-900 dark:text-foreground shadow-xs font-bold"
+                  : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-foreground"
+              }`}
+            >
+              <BookOpen size={14} className={isPhysicalSelected ? "text-[#9D171D]" : "text-slate-400"} />
+              <span>Buku Fisik</span>
+              <span
+                className={`text-[10px] sm:text-[11px] px-1.5 py-0.5 rounded-full ${
+                  isPhysicalSelected
+                    ? "bg-red-50 text-[#9D171D] dark:bg-red-950/60 dark:text-red-300 font-bold"
+                    : "bg-slate-200/70 text-slate-500 dark:bg-muted dark:text-slate-400"
+                }`}
+              >
+                {collectionCounts.physical || 0}
+              </span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setCollectionTypeFilter(["ebook"])}
+              className={`flex items-center gap-1.5 px-3 sm:px-4 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer whitespace-nowrap ${
+                isEbookSelected
+                  ? "bg-white dark:bg-card text-slate-900 dark:text-foreground shadow-xs font-bold"
+                  : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-foreground"
+              }`}
+            >
+              <Smartphone size={14} className={isEbookSelected ? "text-[#9D171D]" : "text-slate-400"} />
+              <span>E-Book</span>
+              <span
+                className={`text-[10px] sm:text-[11px] px-1.5 py-0.5 rounded-full ${
+                  isEbookSelected
+                    ? "bg-red-50 text-[#9D171D] dark:bg-red-950/60 dark:text-red-300 font-bold"
+                    : "bg-slate-200/70 text-slate-500 dark:bg-muted dark:text-slate-400"
+                }`}
+              >
+                {collectionCounts.ebook || 0}
+              </span>
+            </button>
+          </div>
+
+          {/* Mobile Filter Toggle */}
+          <div className="lg:hidden flex items-center justify-between sm:justify-end gap-2">
+            <span className="text-xs font-semibold text-slate-500 sm:hidden">
+              Filter Tambahan
+            </span>
+            <button
+              onClick={() => setIsSidebarOpen(true)}
+              className="flex items-center gap-1.5 bg-white dark:bg-card px-3.5 py-2 rounded-xl border border-slate-200 dark:border-border text-xs font-bold text-slate-800 dark:text-foreground shadow-xs active:scale-95 transition-all cursor-pointer"
+            >
+              <Filter size={14} className="text-[#9D171D]" /> Filter
+              {(availabilityFilter.length > 0 ||
+                yearRange.start ||
+                yearRange.end ||
+                selectedFaculty ||
+                selectedStudyProgram) && (
+                <span className="w-2 h-2 rounded-full bg-[#9D171D]" />
+              )}
+            </button>
+          </div>
         </div>
 
         <div className="flex flex-col lg:flex-row gap-6 lg:gap-8 items-start">
@@ -400,71 +498,7 @@ const Katalog = () => {
                 )}
               </div>
 
-              <div className="border-t border-slate-100 dark:border-border/60" />
 
-              {/* 3. Jenis Koleksi */}
-              <div className="space-y-2.5">
-                <button
-                  type="button"
-                  onClick={() => toggleSection("koleksi")}
-                  className="w-full flex items-center justify-between text-xs font-bold text-slate-900 dark:text-foreground cursor-pointer"
-                >
-                  <span>Jenis Koleksi</span>
-                  {openSections.koleksi ? (
-                    <ChevronUp size={16} className="text-slate-400" />
-                  ) : (
-                    <ChevronDown size={16} className="text-slate-400" />
-                  )}
-                </button>
-
-                {openSections.koleksi && (
-                  <div className="space-y-2 pt-1 pl-1">
-                    <label className="flex items-center gap-2.5 cursor-pointer text-xs text-slate-600 dark:text-slate-300">
-                      <input
-                        type="checkbox"
-                        checked={collectionTypeFilter.includes("physical_book")}
-                        onChange={(e) => {
-                          if (e.target.checked) {
-                            setCollectionTypeFilter([
-                              ...collectionTypeFilter,
-                              "physical_book",
-                            ]);
-                          } else {
-                            setCollectionTypeFilter(
-                              collectionTypeFilter.filter(
-                                (t) => t !== "physical_book"
-                              )
-                            );
-                          }
-                        }}
-                        className="w-4 h-4 rounded text-[#9D171D] border-slate-300 accent-[#9D171D] cursor-pointer"
-                      />
-                      <span>Buku Fisik ({collectionCounts.physical || 0})</span>
-                    </label>
-
-                    <label className="flex items-center gap-2.5 cursor-pointer text-xs text-slate-600 dark:text-slate-300">
-                      <input
-                        type="checkbox"
-                        checked={collectionTypeFilter.includes("ebook")}
-                        onChange={(e) => {
-                          if (e.target.checked) {
-                            setCollectionTypeFilter([
-                              ...collectionTypeFilter,
-                              "ebook",
-                            ]);
-                          } else {
-                            setCollectionTypeFilter(
-                              collectionTypeFilter.filter((t) => t !== "ebook")
-                            );
-                          }
-                        }}
-                        className="w-4 h-4 rounded text-[#9D171D] border-slate-300 accent-[#9D171D] cursor-pointer"
-                      />
-                      <span>E-Book ({collectionCounts.ebook || 0})</span>
-                    </label>
-                  </div>
-                )}
-              </div>
 
               {/* 4. Fakultas (Opsional) */}
               {faculties.length > 0 && (
