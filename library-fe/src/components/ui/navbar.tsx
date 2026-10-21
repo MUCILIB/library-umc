@@ -8,6 +8,7 @@ import {
   LayoutDashboard,
   BookOpen,
   GraduationCap,
+  BookMarked,
 } from "lucide-react";
 import { useNavigate, useLocation } from "react-router";
 import type { AuthUser } from "@/types/auth";
@@ -113,6 +114,7 @@ const Navbar = () => {
 
   const activeRole = sessionUser?.role ?? "student";
   const isSuperAdmin = activeRole === "super_admin";
+  const isLecturer = activeRole === "lecturer" || activeRole === "dosen";
 
   const roleAppearance = {
     super_admin: {
@@ -124,7 +126,11 @@ const Navbar = () => {
       className: "bg-amber-100 text-amber-700",
     },
     lecturer: {
-      label: "Lecturer",
+      label: "Dosen",
+      className: "bg-emerald-100 text-emerald-700",
+    },
+    dosen: {
+      label: "Dosen",
       className: "bg-emerald-100 text-emerald-700",
     },
     student: {
@@ -276,6 +282,22 @@ const Navbar = () => {
                             <span className="text-[10px] text-muted-foreground">Karya Ilmiah & Skripsi</span>
                           </div>
                         </button>
+
+                        {isLecturer && (
+                          <button
+                            onClick={() => {
+                              navigate("/rekomendasi-buku");
+                              setIsDropdownOpen(false);
+                            }}
+                            className="w-full flex items-center space-x-3 px-4 py-2.5 text-sm text-foreground hover:bg-muted hover:text-primary transition-colors group cursor-pointer"
+                          >
+                            <BookMarked className="w-4 h-4 text-emerald-600 dark:text-emerald-400 group-hover:text-primary transition-colors" />
+                            <div className="flex flex-col text-left">
+                              <span className="font-medium">Rekomendasi Buku</span>
+                              <span className="text-[10px] text-muted-foreground">Usulan Koleksi & Pengadaan</span>
+                            </div>
+                          </button>
+                        )}
                       </div>
                       <div className="border-t border-border my-1"></div>
                     </>
@@ -515,6 +537,19 @@ const Navbar = () => {
                         <GraduationCap className="w-4 h-4 text-red-600 dark:text-red-400" />
                         <span>Repositori Saya</span>
                       </button>
+
+                      {isLecturer && (
+                        <button
+                          onClick={() => {
+                            navigate("/rekomendasi-buku");
+                            setIsMenuOpen(false);
+                          }}
+                          className="w-full flex items-center space-x-3 px-4 py-2.5 text-xs font-medium text-muted-foreground hover:bg-muted rounded-xl transition-all cursor-pointer"
+                        >
+                          <BookMarked className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                          <span>Rekomendasi Buku</span>
+                        </button>
+                      )}
                     </>
                   )}
 

@@ -5,14 +5,14 @@ import { authClient } from "@/utils/auth-client";
 
 interface ProtectedRouteProps {
   children: ReactNode;
-  requiredRole?: string;
+  requiredRole?: string | string[];
   excludeRole?: string[];
 }
 
 export default function ProtectedRoute({
   children,
   requiredRole,
-  excludeRole
+  excludeRole,
 }: ProtectedRouteProps) {
   const { data: session, isPending } = authClient.useSession();
   const navigate = useNavigate();
@@ -33,9 +33,12 @@ export default function ProtectedRoute({
       }
 
       // Logged in but required role not met
-      if (requiredRole && userRole !== requiredRole) {
-        navigate("/");
-        return;
+      if (requiredRole) {
+        const allowed = Array.isArray(requiredRole) ? requiredRole : [requiredRole];
+        if (!allowed.includes(userRole)) {
+          navigate("/");
+          return;
+        }
       }
     }
   }, [session, isPending, navigate, requiredRole, excludeRole]);
@@ -50,7 +53,10 @@ export default function ProtectedRoute({
 
   const userRole = (session.user as any).role;
   if (excludeRole && excludeRole.includes(userRole)) return null;
-  if (requiredRole && userRole !== requiredRole) return null;
+  if (requiredRole) {
+    const allowed = Array.isArray(requiredRole) ? requiredRole : [requiredRole];
+    if (!allowed.includes(userRole)) return null;
+  }
 
   return <>{children}</>;
 }

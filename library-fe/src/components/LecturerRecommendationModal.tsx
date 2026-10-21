@@ -1,133 +1,137 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { BookMarked, X, Send, Loader2, Info } from "lucide-react";
-import { API_BASE_URL } from "@/utils/api-config";
 import { useToast } from "@/hooks/useToast";
+import recommendationService, {
+  type Recommendation,
+  type CreateRecommendationPayload,
+} from "@/services/recommendationService";
 
 interface Props {
   isOpen: boolean;
   onClose: () => void;
+  initialData?: {
+    title?: string;
+    author?: string;
+    publisher?: string;
+    isbn?: string;
+  };
+  onSuccess?: (createdRecommendation: Recommendation) => void;
 }
 
 export default function LecturerRecommendationModal({
   isOpen,
-  onClose
+  onClose,
+  initialData,
+  onSuccess,
 }: Props) {
   const [loading, setLoading] = useState(false);
   const toast = useToast();
 
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<CreateRecommendationPayload>({
     isbn: "",
     title: "",
     author: "",
     publisher: "",
-    reason: ""
+    reason: "",
   });
+
+  useEffect(() => {
+    if (isOpen) {
+      setFormData({
+        isbn: initialData?.isbn || "",
+        title: initialData?.title || "",
+        author: initialData?.author || "",
+        publisher: initialData?.publisher || "",
+        reason: "",
+      });
+    }
+  }, [isOpen, initialData]);
 
   if (!isOpen) return null;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.title || !formData.author || !formData.reason) {
+    if (!formData.title.trim() || !formData.author.trim() || !formData.reason.trim()) {
       toast.warning(
         "Data Belum Lengkap",
-        "Judul, Penulis, dan Alasan wajib diisi."
+        "Judul Buku, Penulis, dan Alasan Pengadaan wajib diisi."
       );
       return;
     }
 
     setLoading(true);
     try {
-      const response = await fetch(`${API_BASE_URL}/api/recommendations`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify(formData)
+      const created = await recommendationService.createRecommendation({
+        title: formData.title.trim(),
+        author: formData.author.trim(),
+        publisher: formData.publisher?.trim() || undefined,
+        isbn: formData.isbn?.trim() || undefined,
+        reason: formData.reason.trim(),
       });
 
-      const data = await response.json();
-      if (data.success) {
-        toast.success("Berhasil", "Usulan koleksi berhasil diajukan.");
-        setFormData({
-          isbn: "",
-          title: "",
-          author: "",
-          publisher: "",
-          reason: ""
-        });
-        onClose();
-      } else {
-        toast.error("Gagal", data.message || "Gagal mengajukan usulan.");
-      }
-    } catch (err) {
+      toast.success("Berhasil", "Usulan koleksi buku berhasil diajukan ke perpustakaan.");
+      setFormData({
+        isbn: "",
+        title: "",
+        author: "",
+        publisher: "",
+        reason: "",
+      });
+      onSuccess?.(created);
+      onClose();
+    } catch (err: any) {
       console.error(err);
-      toast.error("Error", "Gagal terhubung ke server.");
+      toast.error("Gagal", err.message || "Gagal mengajukan usulan buku.");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="bg-white w-full max-w-lg rounded-[32px] shadow-2xl overflow-hidden animate-in slide-in-from-bottom-4 duration-300">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-xs animate-in fade-in duration-200">
+      <div className="bg-card w-full max-w-lg rounded-[28px] shadow-2xl border border-border overflow-hidden animate-in zoom-in-95 duration-200">
         {/* Header */}
-        <div className="bg-primary p-6 text-white flex items-center justify-between">
+        <div className="bg-primary p-5 sm:p-6 text-white flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center">
+            <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center shrink-0">
               <BookMarked size={20} />
             </div>
             <div>
-              <h3 className="font-bold text-lg">Usulan Koleksi Baru</h3>
-              <p className="text-white/70 text-[11px] font-medium uppercase tracking-wider">
-                Hanya untuk Dosen
+              <h3 className="font-bold text-base sm:text-lg text-white">Usulan Koleksi Buku</h3>
+              <p className="text-white/80 text-[11px] font-semibold uppercase tracking-wider">
+                Fitur Khusus Dosen
               </p>
             </div>
           </div>
           <button
+            type="button"
             onClick={onClose}
-            className="p-2 hover:bg-white/10 rounded-full transition-colors"
+            className="p-2 hover:bg-white/20 rounded-full transition-colors cursor-pointer text-white"
+            aria-label="Tutup"
           >
             <X size={20} />
           </button>
         </div>
 
         {/* Form Body */}
-        <form onSubmit={handleSubmit} className="p-8 space-y-5">
-          <div className="bg-blue-50 p-4 rounded-2xl flex gap-3 border border-blue-100">
-            <Info className="text-blue-500 shrink-0 mt-0.5" size={16} />
-            <p className="text-[12px] text-blue-700 leading-relaxed font-medium">
-              Buku yang diusulkan akan direview oleh tim perpustakaan untuk
-              proses pengadaan selanjutnya.
+        <form onSubmit={handleSubmit} className="p-5 sm:p-6 space-y-4">
+          <div className="bg-blue-50 dark:bg-blue-950/40 p-3.5 rounded-2xl flex gap-3 border border-blue-100 dark:border-blue-900/50">
+            <Info className="text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" size={16} />
+            <p className="text-xs text-blue-800 dark:text-blue-300 leading-relaxed font-medium">
+              Buku yang diusulkan akan direview oleh tim perpustakaan UMC untuk pertimbangan pengadaan koleksi baru.
             </p>
           </div>
 
-          <div className="space-y-4">
+          <div className="space-y-3.5 max-h-[60vh] overflow-y-auto px-1">
             <div>
-              <label className="text-[12px] font-bold text-muted-foreground uppercase tracking-widest mb-1.5 block">
-                ISBN (Opsional)
-              </label>
-              <input
-                type="text"
-                placeholder="Contoh: 978-3-16-148410-0"
-                className="w-full px-4 py-3 bg-muted border border-border rounded-xl text-sm font-medium focus:ring-2 focus:ring-primary/10 focus:border-primary outline-none transition-all"
-                value={formData.isbn}
-                onChange={(e) =>
-                  setFormData({ ...formData, isbn: e.target.value })
-                }
-              />
-              <p className="text-[11px] text-muted-foreground font-medium mt-1">
-                Membantu identifikasi buku yang lebih akurat
-              </p>
-            </div>
-
-            <div>
-              <label className="text-[12px] font-bold text-muted-foreground uppercase tracking-widest mb-1.5 block">
-                Judul Buku *
+              <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1 block">
+                Judul Buku <span className="text-destructive">*</span>
               </label>
               <input
                 required
                 type="text"
-                placeholder="Contoh: Pemrograman Web Modern"
-                className="w-full px-4 py-3 bg-muted border border-border rounded-xl text-sm font-medium focus:ring-2 focus:ring-primary/10 focus:border-primary outline-none transition-all"
+                placeholder="Contoh: Machine Learning untuk Sains Data"
+                className="w-full px-3.5 py-2.5 bg-muted/60 dark:bg-muted border border-border rounded-xl text-sm font-medium focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all text-foreground"
                 value={formData.title}
                 onChange={(e) =>
                   setFormData({ ...formData, title: e.target.value })
@@ -135,31 +139,32 @@ export default function LecturerRecommendationModal({
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
               <div>
-                <label className="text-[12px] font-bold text-muted-foreground uppercase tracking-widest mb-1.5 block">
-                  Penulis *
+                <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1 block">
+                  Penulis <span className="text-destructive">*</span>
                 </label>
                 <input
                   required
                   type="text"
                   placeholder="Nama Penulis"
-                  className="w-full px-4 py-3 bg-muted border border-border rounded-xl text-sm font-medium focus:ring-2 focus:ring-primary/10 focus:border-primary outline-none transition-all"
+                  className="w-full px-3.5 py-2.5 bg-muted/60 dark:bg-muted border border-border rounded-xl text-sm font-medium focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all text-foreground"
                   value={formData.author}
                   onChange={(e) =>
                     setFormData({ ...formData, author: e.target.value })
                   }
                 />
               </div>
+
               <div>
-                <label className="text-[12px] font-bold text-muted-foreground uppercase tracking-widest mb-1.5 block">
-                  Penerbit
+                <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1 block">
+                  Penerbit <span className="text-[10px] font-normal text-muted-foreground">(Opsional)</span>
                 </label>
                 <input
                   type="text"
-                  placeholder="Opsional"
-                  className="w-full px-4 py-3 bg-muted border border-border rounded-xl text-sm font-medium focus:ring-2 focus:ring-primary/10 focus:border-primary outline-none transition-all"
-                  value={formData.publisher}
+                  placeholder="Contoh: Gramedia, Andi"
+                  className="w-full px-3.5 py-2.5 bg-muted/60 dark:bg-muted border border-border rounded-xl text-sm font-medium focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all text-foreground"
+                  value={formData.publisher || ""}
                   onChange={(e) =>
                     setFormData({ ...formData, publisher: e.target.value })
                   }
@@ -168,14 +173,32 @@ export default function LecturerRecommendationModal({
             </div>
 
             <div>
-              <label className="text-[12px] font-bold text-muted-foreground uppercase tracking-widest mb-1.5 block">
-                Alasan Pengadaan *
+              <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1 block">
+                ISBN <span className="text-[10px] font-normal text-muted-foreground">(Opsional)</span>
+              </label>
+              <input
+                type="text"
+                placeholder="Contoh: 978-602-03-2498-2"
+                className="w-full px-3.5 py-2.5 bg-muted/60 dark:bg-muted border border-border rounded-xl text-sm font-medium focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all text-foreground font-mono"
+                value={formData.isbn || ""}
+                onChange={(e) =>
+                  setFormData({ ...formData, isbn: e.target.value })
+                }
+              />
+              <p className="text-[11px] text-muted-foreground font-medium mt-1">
+                ISBN membantu pustakawan menemukan edisi cetak yang spesifik dan tepat.
+              </p>
+            </div>
+
+            <div>
+              <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1 block">
+                Alasan Pengadaan <span className="text-destructive">*</span>
               </label>
               <textarea
                 required
-                placeholder="Contoh: Digunakan sebagai referensi mata kuliah X semester gasal."
+                placeholder="Contoh: Digunakan sebagai referensi mata kuliah Struktur Data semester genap."
                 rows={3}
-                className="w-full px-4 py-3 bg-muted border border-border rounded-xl text-sm font-medium focus:ring-2 focus:ring-primary/10 focus:border-primary outline-none transition-all resize-none"
+                className="w-full px-3.5 py-2.5 bg-muted/60 dark:bg-muted border border-border rounded-xl text-sm font-medium focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all resize-none text-foreground"
                 value={formData.reason}
                 onChange={(e) =>
                   setFormData({ ...formData, reason: e.target.value })
@@ -184,25 +207,26 @@ export default function LecturerRecommendationModal({
             </div>
           </div>
 
-          <div className="flex gap-3 pt-4">
+          <div className="flex gap-3 pt-3 border-t border-border">
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 py-3.5 bg-muted text-foreground rounded-2xl text-[13px] font-bold hover:bg-muted transition-all"
+              disabled={loading}
+              className="flex-1 py-2.5 bg-muted hover:bg-muted/80 text-foreground rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer"
             >
               Batal
             </button>
             <button
               disabled={loading}
               type="submit"
-              className="flex-[2] py-3.5 bg-primary text-white rounded-2xl text-[13px] font-bold hover:bg-primary/90 transition-all shadow-lg shadow-primary flex items-center justify-center gap-2"
+              className="flex-1 py-2.5 bg-primary text-white rounded-xl text-xs sm:text-sm font-bold hover:bg-primary/90 transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer disabled:opacity-70"
             >
               {loading ? (
                 <Loader2 size={16} className="animate-spin" />
               ) : (
-                <Send size={16} />
+                <Send size={15} />
               )}
-              {loading ? "MENGIRIM..." : "KIRIM USULAN"}
+              <span>{loading ? "Mengirim..." : "Kirim Usulan"}</span>
             </button>
           </div>
         </form>

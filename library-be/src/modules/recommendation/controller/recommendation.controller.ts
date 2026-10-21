@@ -45,7 +45,6 @@ class RecommendationController {
       const user = (req as any).user;
       if (!user) return sendError(res, "Tidak terautentikasi", 401);
 
-
       let dosenId: string | undefined;
       // Jika bukan admin/staff, hanya bisa lihat miliknya sendiri
       if (user.role !== "super_admin" && user.role !== "staff") {
@@ -122,7 +121,12 @@ class RecommendationController {
   async deleteRecommendation(req: Request, res: Response, next: NextFunction) {
     try {
       const { id } = req.params;
-      const result = await recommendationService.deleteRecommendation(String(id));
+      const user = (req as any).user;
+      const result = await recommendationService.deleteRecommendation(
+        String(id),
+        user?.id,
+        user?.role
+      );
       sendSuccess(res, "Rekomendasi berhasil dihapus", result);
     } catch (error: unknown) {
       next(error);

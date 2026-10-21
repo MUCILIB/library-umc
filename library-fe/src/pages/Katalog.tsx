@@ -5,9 +5,10 @@ import Navbar from "@/components/ui/navbar";
 import Footer from "@/components/Footer";
 import BookList from "@/components/BookList";
 import Background from "@/assets/bg1.jpeg";
-import { Search, Filter, X, ChevronDown, ChevronUp, ArrowRight, BookOpen, Smartphone, Layers } from "lucide-react";
+import { Search, Filter, X, ChevronDown, ChevronUp, ArrowRight, BookOpen, Smartphone, Layers, BookMarked } from "lucide-react";
 import { authClient } from "@/utils/auth-client";
 import { API_BASE_URL } from "@/utils/api-config";
+import LecturerRecommendationModal from "@/components/LecturerRecommendationModal";
 import {
   Select,
   SelectContent,
@@ -28,6 +29,9 @@ const Katalog = () => {
         role: (session?.user as any)?.role ?? "member",
       }
     : null;
+
+  const isLecturer = currentUser?.role === "lecturer" || currentUser?.role === "dosen";
+  const [isRecommendModalOpen, setIsRecommendModalOpen] = useState(false);
 
   // Initialize state from URL parameters
   const [searchQuery, setSearchQuery] = useState(
@@ -344,24 +348,36 @@ const Katalog = () => {
             </button>
           </div>
 
-          {/* Mobile Filter Toggle */}
-          <div className="lg:hidden flex items-center justify-between sm:justify-end gap-2">
-            <span className="text-xs font-semibold text-slate-500 sm:hidden">
-              Filter Tambahan
-            </span>
-            <button
-              onClick={() => setIsSidebarOpen(true)}
-              className="flex items-center gap-1.5 bg-white dark:bg-card px-3.5 py-2 rounded-xl border border-slate-200 dark:border-border text-xs font-bold text-slate-800 dark:text-foreground shadow-xs active:scale-95 transition-all cursor-pointer"
-            >
-              <Filter size={14} className="text-[#9D171D]" /> Filter
-              {(availabilityFilter.length > 0 ||
-                yearRange.start ||
-                yearRange.end ||
-                selectedFaculty ||
-                selectedStudyProgram) && (
-                <span className="w-2 h-2 rounded-full bg-[#9D171D]" />
-              )}
-            </button>
+          {/* Right Action: Quick Recommend (Dosen) & Mobile Filter Toggle */}
+          <div className="flex items-center justify-between sm:justify-end gap-2.5">
+            {isLecturer && (
+              <button
+                type="button"
+                onClick={() => setIsRecommendModalOpen(true)}
+                className="flex items-center gap-1.5 bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/60 dark:hover:bg-emerald-900/80 text-emerald-700 dark:text-emerald-300 px-3.5 py-2 rounded-xl border border-emerald-200/80 dark:border-emerald-800/80 text-xs font-bold shadow-xs active:scale-95 transition-all cursor-pointer"
+                title="Usulkan pengadaan koleksi buku baru untuk perpustakaan"
+              >
+                <BookMarked size={14} />
+                <span>Usulkan Buku</span>
+              </button>
+            )}
+
+            {/* Mobile Filter Toggle */}
+            <div className="lg:hidden flex items-center gap-2">
+              <button
+                onClick={() => setIsSidebarOpen(true)}
+                className="flex items-center gap-1.5 bg-white dark:bg-card px-3.5 py-2 rounded-xl border border-slate-200 dark:border-border text-xs font-bold text-slate-800 dark:text-foreground shadow-xs active:scale-95 transition-all cursor-pointer"
+              >
+                <Filter size={14} className="text-[#9D171D]" /> Filter
+                {(availabilityFilter.length > 0 ||
+                  yearRange.start ||
+                  yearRange.end ||
+                  selectedFaculty ||
+                  selectedStudyProgram) && (
+                  <span className="w-2 h-2 rounded-full bg-[#9D171D]" />
+                )}
+              </button>
+            </div>
           </div>
         </div>
 
@@ -590,12 +606,22 @@ const Katalog = () => {
               selectedFaculty={selectedFaculty}
               selectedStudyProgram={selectedStudyProgram}
               onCountsChange={handleCountsChange}
+              onRecommendClick={() => setIsRecommendModalOpen(true)}
             />
           </section>
         </div>
       </main>
 
       <Footer />
+
+      {/* Modal Rekomendasi Buku Khusus Dosen */}
+      {isLecturer && (
+        <LecturerRecommendationModal
+          isOpen={isRecommendModalOpen}
+          onClose={() => setIsRecommendModalOpen(false)}
+          initialData={{ title: searchQuery }}
+        />
+      )}
     </div>
   );
 };

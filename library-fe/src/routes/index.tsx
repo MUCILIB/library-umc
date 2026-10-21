@@ -16,6 +16,7 @@ import RepositoryDetailPage from "../pages/RepositoryDetailPage";
 import Eresource from "../pages/EResoucePage";
 import MyLoans from "../pages/MyLoansPage";
 import MyRepositoryPage from "../pages/MyRepositoryPage";
+import LecturerRecommendationsPage from "../pages/LecturerRecommendationsPage";
 import NotFound from "../pages/NotFound";
 import ProtectedRoute from "../components/ProtectedRoute";
 import NonAdminRoute from "./NonAdminRoute"; 
@@ -62,6 +63,17 @@ const AppRoutes = () => {
             </ProtectedRoute>
           } 
         />
+
+        {/* Fitur Khusus Dosen: Rekomendasi Buku */}
+        <Route 
+          path="/rekomendasi-buku" 
+          element={
+            <ProtectedRoute requiredRole={["lecturer", "dosen", "super_admin"]}>
+              <LecturerRecommendationsPage />
+            </ProtectedRoute>
+          } 
+        />
+        <Route path="/usulan-buku" element={<Navigate to="/rekomendasi-buku" replace />} />
 
         {/* Auth Routes (Dibatasi agar tidak bisa diakses saat sudah login) */}
         <Route path="/login" element={
