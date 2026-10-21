@@ -15,6 +15,7 @@ interface BookListProps {
   collectionTypeFilter?: string[];
   currentUser?: LibraryUser | null;
   selectedFaculty?: string;
+  selectedStudyProgram?: string;
   onCountsChange?: (counts: { physical: number; ebook: number }) => void;
 }
 
@@ -26,6 +27,7 @@ const BookList = ({
   collectionTypeFilter = ["physical_book"],
   currentUser = null,
   selectedFaculty = "",
+  selectedStudyProgram = "",
   onCountsChange,
 }: BookListProps) => {
   const navigate = useNavigate();
@@ -82,7 +84,15 @@ const BookList = ({
   // Reset page saat filter berubah
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchQuery, searchType, availabilityFilter, yearRange, collectionTypeFilter, selectedFaculty]);
+  }, [
+    searchQuery,
+    searchType,
+    availabilityFilter,
+    yearRange,
+    collectionTypeFilter,
+    selectedFaculty,
+    selectedStudyProgram,
+  ]);
 
   // Helper status ketersediaan riil
   const getBookStatus = (bibliography: Bibliography): "available" | "borrowed" => {
@@ -185,17 +195,35 @@ const BookList = ({
 
   // Filter 5: Fakultas
   const filteredByFaculty = selectedFaculty
-    ? filteredByYear.filter((bib) =>
-        bib.faculties?.some((f) => String(f.id) === selectedFaculty)
+    ? filteredByYear.filter(
+        (bib) =>
+          bib.faculties?.some(
+            (f: any) => String(f.id || f.facultyId) === selectedFaculty
+          ) ||
+          bib.studyPrograms?.some(
+            (sp: any) =>
+              String(sp.facultyId || sp.faculty?.id) === selectedFaculty
+          )
       )
     : filteredByYear;
 
+  // Filter 6: Program Studi (Prodi)
+  const filteredByStudyProgram = selectedStudyProgram
+    ? filteredByFaculty.filter((bib) =>
+        bib.studyPrograms?.some(
+          (sp: any) =>
+            String(sp.id || sp.studyProgramId || sp.studyProgram?.id) ===
+            selectedStudyProgram
+        )
+      )
+    : filteredByFaculty;
+
   // Pagination
-  const totalItems = filteredByFaculty.length;
+  const totalItems = filteredByStudyProgram.length;
   const totalPages = Math.ceil(totalItems / itemsPerPage);
   const indexOfLastItem = currentPage * itemsPerPage;
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
-  const currentItems = filteredByFaculty.slice(indexOfFirstItem, indexOfLastItem);
+  const currentItems = filteredByStudyProgram.slice(indexOfFirstItem, indexOfLastItem);
 
   const handlePageChange = (pageNumber: number) => {
     setCurrentPage(pageNumber);

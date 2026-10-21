@@ -46,14 +46,20 @@ const Katalog = () => {
     ebook: 0,
   });
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [selectedFaculty, setSelectedFaculty] = useState<string>("");
+  const [selectedFaculty, setSelectedFaculty] = useState<string>(
+    searchParams.get("faculty") || ""
+  );
+  const [selectedStudyProgram, setSelectedStudyProgram] = useState<string>(
+    searchParams.get("prodi") || ""
+  );
 
   // Accordion state untuk filter sidebar
   const [openSections, setOpenSections] = useState({
     ketersediaan: true,
     tahun: true,
     koleksi: true,
-    fakultas: false,
+    fakultas: Boolean(searchParams.get("faculty")),
+    prodi: Boolean(searchParams.get("prodi")),
   });
 
   const toggleSection = (section: keyof typeof openSections) => {
@@ -76,6 +82,62 @@ const Katalog = () => {
     };
     fetchFaculties();
   }, []);
+
+  // Fetch study programs from backend for filter
+  const [studyPrograms, setStudyPrograms] = useState<
+    { id: number; name: string; facultyId?: number; faculty?: { id: number; name: string } }[]
+  >([]);
+  useEffect(() => {
+    const fetchStudyPrograms = async () => {
+      try {
+        const response = await fetch(`${API_BASE_URL}/api/study-programs`);
+        const json = await response.json();
+        if (json.success && Array.isArray(json.data)) {
+          setStudyPrograms(json.data);
+        }
+      } catch (error) {
+        console.error("Gagal mengambil program studi:", error);
+      }
+    };
+    fetchStudyPrograms();
+  }, []);
+
+  // Filter daftar prodi berdasarkan fakultas yang dipilih
+  const availableStudyPrograms = selectedFaculty
+    ? studyPrograms.filter(
+        (sp) =>
+          sp.facultyId === Number(selectedFaculty) ||
+          sp.faculty?.id === Number(selectedFaculty)
+      )
+    : studyPrograms;
+
+  const handleFacultyChange = (val: string) => {
+    const facultyId = val === "all" ? "" : val;
+    setSelectedFaculty(facultyId);
+    if (facultyId && selectedStudyProgram) {
+      const belongs = studyPrograms.some(
+        (sp) =>
+          String(sp.id) === selectedStudyProgram &&
+          (sp.facultyId === Number(facultyId) || sp.faculty?.id === Number(facultyId))
+      );
+      if (!belongs) {
+        setSelectedStudyProgram("");
+      }
+    }
+  };
+
+  const handleStudyProgramChange = (val: string) => {
+    const spId = val === "all" ? "" : val;
+    setSelectedStudyProgram(spId);
+    if (spId) {
+      const found = studyPrograms.find((sp) => String(sp.id) === spId);
+      const facId = found?.facultyId || found?.faculty?.id;
+      if (facId && (!selectedFaculty || Number(selectedFaculty) !== facId)) {
+        setSelectedFaculty(String(facId));
+        setOpenSections((prev) => ({ ...prev, fakultas: true, prodi: true }));
+      }
+    }
+  };
 
   // Update search query when URL changes
   useEffect(() => {
@@ -110,6 +172,7 @@ const Katalog = () => {
     setYearRange({ start: "", end: "" });
     setCollectionTypeFilter(["physical_book"]);
     setSelectedFaculty("");
+    setSelectedStudyProgram("");
     setSearchParams({});
   };
 
@@ -428,9 +491,7 @@ const Katalog = () => {
                       <div className="pt-1">
                         <Select
                           value={selectedFaculty || "all"}
-                          onValueChange={(val) => {
-                            setSelectedFaculty(val === "all" ? "" : val);
-                          }}
+                          onValueChange={handleFacultyChange}
                         >
                           <SelectTrigger className="w-full h-9 rounded-lg bg-slate-50 dark:bg-muted border border-slate-200 dark:border-border text-xs font-medium text-slate-700 dark:text-foreground focus:ring-0">
                             <SelectValue placeholder="Semua Fakultas" />
@@ -440,6 +501,48 @@ const Katalog = () => {
                             {faculties.map((fac) => (
                               <SelectItem key={fac.id} value={String(fac.id)}>
                                 {fac.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
+                  </div>
+                </>
+              )}
+
+              {/* 5. Program Studi (Opsional) */}
+              {studyPrograms.length > 0 && (
+                <>
+                  <div className="border-t border-slate-100 dark:border-border/60" />
+                  <div className="space-y-2.5">
+                    <button
+                      type="button"
+                      onClick={() => toggleSection("prodi")}
+                      className="w-full flex items-center justify-between text-xs font-bold text-slate-900 dark:text-foreground cursor-pointer"
+                    >
+                      <span>Program Studi</span>
+                      {openSections.prodi ? (
+                        <ChevronUp size={16} className="text-slate-400" />
+                      ) : (
+                        <ChevronDown size={16} className="text-slate-400" />
+                      )}
+                    </button>
+
+                    {openSections.prodi && (
+                      <div className="pt-1">
+                        <Select
+                          value={selectedStudyProgram || "all"}
+                          onValueChange={handleStudyProgramChange}
+                        >
+                          <SelectTrigger className="w-full h-9 rounded-lg bg-slate-50 dark:bg-muted border border-slate-200 dark:border-border text-xs font-medium text-slate-700 dark:text-foreground focus:ring-0">
+                            <SelectValue placeholder="Semua Program Studi" />
+                          </SelectTrigger>
+                          <SelectContent className="max-h-60">
+                            <SelectItem value="all">Semua Program Studi</SelectItem>
+                            {availableStudyPrograms.map((sp) => (
+                              <SelectItem key={sp.id} value={String(sp.id)}>
+                                {sp.name}
                               </SelectItem>
                             ))}
                           </SelectContent>
@@ -462,6 +565,7 @@ const Katalog = () => {
               collectionTypeFilter={collectionTypeFilter}
               currentUser={currentUser}
               selectedFaculty={selectedFaculty}
+              selectedStudyProgram={selectedStudyProgram}
               onCountsChange={handleCountsChange}
             />
           </section>
