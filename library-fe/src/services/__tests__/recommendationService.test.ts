@@ -14,22 +14,23 @@ describe("recommendationService", () => {
         title: "Clean Code",
         author: "Robert C. Martin",
         reason: "Buku wajib pemrograman",
-        status: "pending",
+        status: "pending" as const,
         createdAt: "2026-10-21T00:00:00.000Z",
       },
     ];
 
-    global.fetch = vi.fn().mockResolvedValue({
+    const mockFetch = vi.fn().mockResolvedValue({
       ok: true,
       json: async () => ({
         success: true,
         data: mockData,
       }),
-    } as any);
+    });
+    vi.stubGlobal("fetch", mockFetch);
 
     const result = await recommendationService.getMyRecommendations();
     expect(result).toEqual(mockData);
-    expect(global.fetch).toHaveBeenCalledWith(
+    expect(mockFetch).toHaveBeenCalledWith(
       expect.stringContaining("/api/recommendations/history"),
       expect.objectContaining({ method: "GET" })
     );
@@ -46,21 +47,22 @@ describe("recommendationService", () => {
     const mockResponse = {
       id: "rec-2",
       ...payload,
-      status: "pending",
+      status: "pending" as const,
       createdAt: "2026-10-21T00:00:00.000Z",
     };
 
-    global.fetch = vi.fn().mockResolvedValue({
+    const mockFetch = vi.fn().mockResolvedValue({
       ok: true,
       json: async () => ({
         success: true,
         data: mockResponse,
       }),
-    } as any);
+    });
+    vi.stubGlobal("fetch", mockFetch);
 
     const result = await recommendationService.createRecommendation(payload);
     expect(result).toEqual(mockResponse);
-    expect(global.fetch).toHaveBeenCalledWith(
+    expect(mockFetch).toHaveBeenCalledWith(
       expect.stringContaining("/api/recommendations"),
       expect.objectContaining({
         method: "POST",
@@ -70,30 +72,32 @@ describe("recommendationService", () => {
   });
 
   it("deleteMyRecommendation sends DELETE and returns true on success", async () => {
-    global.fetch = vi.fn().mockResolvedValue({
+    const mockFetch = vi.fn().mockResolvedValue({
       ok: true,
       json: async () => ({
         success: true,
         message: "Rekomendasi berhasil dihapus",
       }),
-    } as any);
+    });
+    vi.stubGlobal("fetch", mockFetch);
 
     const result = await recommendationService.deleteMyRecommendation("rec-1");
     expect(result).toBe(true);
-    expect(global.fetch).toHaveBeenCalledWith(
+    expect(mockFetch).toHaveBeenCalledWith(
       expect.stringContaining("/api/recommendations/rec-1"),
       expect.objectContaining({ method: "DELETE" })
     );
   });
 
   it("throws error when API returns failure", async () => {
-    global.fetch = vi.fn().mockResolvedValue({
+    const mockFetch = vi.fn().mockResolvedValue({
       ok: false,
       json: async () => ({
         success: false,
         message: "Buku sudah ada di koleksi perpustakaan",
       }),
-    } as any);
+    });
+    vi.stubGlobal("fetch", mockFetch);
 
     await expect(
       recommendationService.createRecommendation({

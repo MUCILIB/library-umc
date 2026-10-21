@@ -18,6 +18,30 @@ interface Props {
   onSuccess?: (createdRecommendation: Recommendation) => void;
 }
 
+/**
+ * Format string ISBN menjadi format ISBN-13 bertanda hubung
+ * Persis seperti pada form input Bibliografi (BibliographySection).
+ */
+const formatIsbn = (val: string): string => {
+  // Hanya ambil digit angka dan karakter x/X
+  let clean = val.replace(/^ISBN[:\s]*/i, "").replace(/[^0-9Xx]/g, "");
+
+  // Batas maksimal 13 karakter digit untuk ISBN-13
+  clean = clean.substring(0, 13);
+
+  if (clean.length <= 3) {
+    return clean;
+  } else if (clean.length <= 6) {
+    return `${clean.substring(0, 3)}-${clean.substring(3)}`;
+  } else if (clean.length <= 9) {
+    return `${clean.substring(0, 3)}-${clean.substring(3, 6)}-${clean.substring(6)}`;
+  } else if (clean.length <= 12) {
+    return `${clean.substring(0, 3)}-${clean.substring(3, 6)}-${clean.substring(6, 9)}-${clean.substring(9)}`;
+  } else {
+    return `${clean.substring(0, 3)}-${clean.substring(3, 6)}-${clean.substring(6, 9)}-${clean.substring(9, 12)}-${clean.substring(12)}`;
+  }
+};
+
 export default function LecturerRecommendationModal({
   isOpen,
   onClose,
@@ -38,7 +62,7 @@ export default function LecturerRecommendationModal({
   useEffect(() => {
     if (isOpen) {
       setFormData({
-        isbn: initialData?.isbn || "",
+        isbn: initialData?.isbn ? formatIsbn(initialData.isbn) : "",
         title: initialData?.title || "",
         author: initialData?.author || "",
         publisher: initialData?.publisher || "",
@@ -48,6 +72,12 @@ export default function LecturerRecommendationModal({
   }, [isOpen, initialData]);
 
   if (!isOpen) return null;
+
+  const handleIsbnChange = (val: string) => {
+    setFormData((prev) => ({ ...prev, isbn: formatIsbn(val) }));
+  };
+
+  const cleanIsbnDigits = (formData.isbn || "").replace(/[^0-9Xx]/g, "");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -173,20 +203,24 @@ export default function LecturerRecommendationModal({
             </div>
 
             <div>
-              <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1 block">
-                ISBN <span className="text-[10px] font-normal text-muted-foreground">(Opsional)</span>
-              </label>
+              <div className="flex items-center justify-between mb-1">
+                <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider block">
+                  ISBN <span className="text-[10px] font-normal text-muted-foreground">(Opsional)</span>
+                </label>
+                <span className="text-[11px] font-mono text-muted-foreground">
+                  Maks. 13 digit ({cleanIsbnDigits.length}/13)
+                </span>
+              </div>
               <input
                 type="text"
-                placeholder="Contoh: 978-602-03-2498-2"
-                className="w-full px-3.5 py-2.5 bg-muted/60 dark:bg-muted border border-border rounded-xl text-sm font-medium focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all text-foreground font-mono"
+                placeholder="Contoh: 978-090-231-122-6"
+                maxLength={17}
+                className="w-full px-3.5 py-2.5 bg-muted/60 dark:bg-muted border border-border rounded-xl text-sm font-medium focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all text-foreground font-mono tracking-wider"
                 value={formData.isbn || ""}
-                onChange={(e) =>
-                  setFormData({ ...formData, isbn: e.target.value })
-                }
+                onChange={(e) => handleIsbnChange(e.target.value)}
               />
               <p className="text-[11px] text-muted-foreground font-medium mt-1">
-                ISBN membantu pustakawan menemukan edisi cetak yang spesifik dan tepat.
+                Format otomatis ISBN-10 / ISBN-13 (maksimal 17 karakter termasuk tanda hubung).
               </p>
             </div>
 
