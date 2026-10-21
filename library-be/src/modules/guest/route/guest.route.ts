@@ -347,6 +347,8 @@ router.post(
  */
 router.post(
   "/guests",
+  isAuthenticated,
+  requireRole(["super_admin", "staff"]),
   guestController.createGuestLog
 );
 

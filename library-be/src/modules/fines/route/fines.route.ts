@@ -89,6 +89,7 @@ router.get(
 router.get(
   "/fines",
   isAuthenticated,
+  requireRole(["super_admin", "staff"]),
   publicApiLimiter,
   FinesController.getAllFines
 );
@@ -163,6 +164,7 @@ router.get(
 router.post(
   "/fines",
   isAuthenticated,
+  requireRole(["super_admin", "staff"]),
   publicApiLimiter,
   FinesController.createFineManual
 );
@@ -207,6 +209,7 @@ router.post(
 router.post(
   "/fines/:id/pay",
   isAuthenticated,
+  requireRole(["super_admin", "staff"]),
   publicApiLimiter,
   FinesController.payFine
 );
@@ -233,10 +236,13 @@ router.post(
  *         description: Unauthorized
  *       404:
  *         description: Fine not found
+ *     security:
+ *       - bearerAuth: []
  */
 router.delete(
   "/fines/:id",
   isAuthenticated,
+  requireRole(["super_admin"]),
   publicApiLimiter,
   FinesController.deleteFine
 );
