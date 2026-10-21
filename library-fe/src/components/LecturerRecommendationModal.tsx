@@ -113,17 +113,17 @@ export default function LecturerRecommendationModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-xs animate-in fade-in duration-200">
-      <div className="bg-card w-full max-w-lg rounded-2xl shadow-xl border border-border overflow-hidden animate-in zoom-in-95 duration-200">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/50 backdrop-blur-xs animate-in fade-in duration-200">
+      <div className="bg-card w-full max-w-lg rounded-xl sm:rounded-2xl shadow-xl border border-border overflow-hidden animate-in zoom-in-95 duration-200 max-h-[92vh] flex flex-col">
         {/* Header */}
-        <div className="bg-primary px-5 py-4 text-white flex items-center justify-between">
+        <div className="bg-primary px-4 sm:px-5 py-3.5 sm:py-4 text-white flex items-center justify-between shrink-0">
           <div className="flex items-center gap-2.5">
-            <div className="size-9 bg-white/20 rounded-lg flex items-center justify-center shrink-0">
-              <BookMarked size={18} />
+            <div className="size-8 sm:size-9 bg-white/20 rounded-lg flex items-center justify-center shrink-0">
+              <BookMarked className="size-4 sm:size-4.5" />
             </div>
             <div>
-              <h3 className="font-bold text-base text-white leading-tight">Usulan Buku Baru</h3>
-              <p className="text-white/80 text-xs mt-0.5">
+              <h3 className="font-bold text-sm sm:text-base text-white leading-tight">Usulan Buku Baru</h3>
+              <p className="text-white/80 text-[11px] sm:text-xs mt-0.5">
                 Rekomendasi pengadaan koleksi perpustakaan
               </p>
             </div>
@@ -139,10 +139,10 @@ export default function LecturerRecommendationModal({
         </div>
 
         {/* Form Body */}
-        <form onSubmit={handleSubmit} className="p-5 space-y-4">
-          <div className="space-y-3.5">
+        <form onSubmit={handleSubmit} className="p-4 sm:p-5 space-y-3.5 sm:space-y-4 overflow-y-auto">
+          <div className="space-y-3 sm:space-y-3.5">
             <div>
-              <label className="text-xs font-semibold text-foreground mb-1.5 block">
+              <label className="text-xs font-semibold text-foreground mb-1 block">
                 Judul Buku <span className="text-destructive">*</span>
               </label>
               <input
@@ -157,9 +157,9 @@ export default function LecturerRecommendationModal({
               />
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-3.5">
               <div>
-                <label className="text-xs font-semibold text-foreground mb-1.5 block">
+                <label className="text-xs font-semibold text-foreground mb-1 block">
                   Penulis <span className="text-destructive">*</span>
                 </label>
                 <input
@@ -175,7 +175,7 @@ export default function LecturerRecommendationModal({
               </div>
 
               <div>
-                <label className="text-xs font-semibold text-foreground mb-1.5 block">
+                <label className="text-xs font-semibold text-foreground mb-1 block">
                   Penerbit <span className="text-xs text-muted-foreground font-normal">(Opsional)</span>
                 </label>
                 <input
@@ -191,11 +191,11 @@ export default function LecturerRecommendationModal({
             </div>
 
             <div>
-              <div className="flex items-center justify-between mb-1.5">
+              <div className="flex items-center justify-between mb-1">
                 <label className="text-xs font-semibold text-foreground block">
                   ISBN <span className="text-xs text-muted-foreground font-normal">(Opsional)</span>
                 </label>
-                <span className="text-[11px] text-muted-foreground">
+                <span className="text-[10px] sm:text-[11px] text-muted-foreground">
                   Maks. 13 digit
                 </span>
               </div>
@@ -210,7 +210,7 @@ export default function LecturerRecommendationModal({
             </div>
 
             <div>
-              <label className="text-xs font-semibold text-foreground mb-1.5 block">
+              <label className="text-xs font-semibold text-foreground mb-1 block">
                 Alasan Pengadaan <span className="text-destructive">*</span>
               </label>
               <textarea
@@ -238,7 +238,7 @@ export default function LecturerRecommendationModal({
             <button
               disabled={loading}
               type="submit"
-              className="flex-1 py-2 bg-primary text-white rounded-lg text-xs sm:text-sm font-semibold hover:bg-primary/90 transition-all shadow-sm flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-70"
+              className="flex-1 py-2 bg-primary text-white rounded-lg text-xs sm:text-sm font-semibold hover:bg-primary/90 transition-all shadow-xs flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-70"
             >
               {loading ? (
                 <Loader2 size={15} className="animate-spin" />

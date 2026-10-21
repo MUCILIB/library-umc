@@ -7,7 +7,7 @@ export default function LecturerRecommendationsPage() {
     <div className="min-h-screen bg-background flex flex-col font-sans overflow-x-hidden">
       <Navbar />
 
-      <main className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-10 w-full">
+      <main className="flex-1 max-w-7xl mx-auto px-3.5 sm:px-6 lg:px-8 py-4 sm:py-8 w-full">
         <LecturerRecommendationList />
       </main>
 

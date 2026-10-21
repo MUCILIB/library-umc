@@ -90,22 +90,22 @@ export default function LecturerRecommendationList({ className = "" }: Props) {
     switch (status) {
       case "pending":
         return (
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-amber-50 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300 border border-amber-200/60 dark:border-amber-900/60">
-            <Clock size={12} className="shrink-0" />
+          <span className="inline-flex items-center gap-1 px-2 sm:px-2.5 py-0.5 rounded-full text-[10px] sm:text-[11px] font-bold bg-amber-50 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300 border border-amber-200/60 dark:border-amber-900/60 shrink-0 whitespace-nowrap">
+            <Clock size={11} className="shrink-0" />
             <span>Menunggu</span>
           </span>
         );
       case "approved":
         return (
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-200/60 dark:border-emerald-900/60">
-            <CheckCircle size={12} className="shrink-0" />
+          <span className="inline-flex items-center gap-1 px-2 sm:px-2.5 py-0.5 rounded-full text-[10px] sm:text-[11px] font-bold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-200/60 dark:border-emerald-900/60 shrink-0 whitespace-nowrap">
+            <CheckCircle size={11} className="shrink-0" />
             <span>Disetujui</span>
           </span>
         );
       case "rejected":
         return (
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-red-50 text-destructive dark:bg-red-950/60 dark:text-red-300 border border-red-200/60 dark:border-red-900/60">
-            <XCircle size={12} className="shrink-0" />
+          <span className="inline-flex items-center gap-1 px-2 sm:px-2.5 py-0.5 rounded-full text-[10px] sm:text-[11px] font-bold bg-red-50 text-destructive dark:bg-red-950/60 dark:text-red-300 border border-red-200/60 dark:border-red-900/60 shrink-0 whitespace-nowrap">
+            <XCircle size={11} className="shrink-0" />
             <span>Ditolak</span>
           </span>
         );
@@ -113,23 +113,23 @@ export default function LecturerRecommendationList({ className = "" }: Props) {
   };
 
   return (
-    <div className={`space-y-6 ${className}`}>
+    <div className={`space-y-4 sm:space-y-6 ${className}`}>
       {/* Top Banner / Hero Info */}
-      <div className="bg-card border border-border rounded-2xl p-5 sm:p-6 shadow-2xs flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div className="flex items-start gap-3.5">
-          <div className="size-11 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
-            <BookMarked size={22} />
+      <div className="bg-card border border-border rounded-xl sm:rounded-2xl p-3.5 sm:p-5 md:p-6 shadow-2xs flex flex-col md:flex-row md:items-center justify-between gap-3 sm:gap-4">
+        <div className="flex items-center sm:items-start gap-3">
+          <div className="size-10 sm:size-11 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
+            <BookMarked className="size-5 sm:size-5.5" />
           </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <h2 className="text-lg sm:text-xl font-bold text-foreground tracking-tight">
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+              <h2 className="text-base sm:text-xl font-bold text-foreground tracking-tight">
                 Rekomendasi Buku Dosen
               </h2>
-              <span className="bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase">
+              <span className="bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 text-[9px] sm:text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider shrink-0 whitespace-nowrap">
                 Role Dosen
               </span>
             </div>
-            <p className="text-xs sm:text-sm text-muted-foreground font-medium mt-0.5">
+            <p className="text-[11px] sm:text-xs md:text-sm text-muted-foreground font-medium mt-0.5 leading-snug">
               Usulkan buku teks atau referensi ke perpustakaan untuk mendukung perkuliahan.
             </p>
           </div>
@@ -138,56 +138,64 @@ export default function LecturerRecommendationList({ className = "" }: Props) {
         <button
           type="button"
           onClick={() => setIsModalOpen(true)}
-          className="inline-flex items-center justify-center gap-2 bg-primary text-white px-4 py-2.5 rounded-xl font-bold text-xs sm:text-sm shadow-sm hover:bg-primary/90 transition-all cursor-pointer shrink-0"
+          className="inline-flex items-center justify-center gap-2 bg-primary text-white h-9 sm:h-10 px-4 rounded-xl font-bold text-xs sm:text-sm shadow-xs hover:bg-primary/90 active:scale-98 transition-all cursor-pointer shrink-0 w-full md:w-auto"
         >
-          <Plus size={16} />
+          <Plus size={15} />
           <span>Usulkan Buku Baru</span>
         </button>
       </div>
 
       {/* Summary Stat Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-        <div className="bg-card border border-border rounded-xl p-3.5 shadow-2xs">
-          <div className="flex items-center justify-between">
-            <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Total Usulan</p>
-            <BookOpen size={15} className="text-primary" />
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4">
+        <div className="bg-card border border-border rounded-xl p-2.5 sm:p-3.5 shadow-2xs">
+          <div className="flex items-center justify-between gap-1">
+            <p className="text-[10px] sm:text-[11px] font-semibold text-muted-foreground uppercase tracking-wider truncate">
+              Total Usulan
+            </p>
+            <BookOpen size={14} className="text-primary shrink-0" />
           </div>
-          <p className="text-xl sm:text-2xl font-bold text-foreground mt-1.5">{totalCount}</p>
+          <p className="text-lg sm:text-2xl font-bold text-foreground mt-1 sm:mt-1.5">{totalCount}</p>
         </div>
 
-        <div className="bg-card border border-border rounded-xl p-3.5 shadow-2xs">
-          <div className="flex items-center justify-between">
-            <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Menunggu</p>
-            <Clock size={15} className="text-amber-500" />
+        <div className="bg-card border border-border rounded-xl p-2.5 sm:p-3.5 shadow-2xs">
+          <div className="flex items-center justify-between gap-1">
+            <p className="text-[10px] sm:text-[11px] font-semibold text-muted-foreground uppercase tracking-wider truncate">
+              Menunggu
+            </p>
+            <Clock size={14} className="text-amber-500 shrink-0" />
           </div>
-          <p className="text-xl sm:text-2xl font-bold text-amber-600 dark:text-amber-400 mt-1.5">{pendingCount}</p>
+          <p className="text-lg sm:text-2xl font-bold text-amber-600 dark:text-amber-400 mt-1 sm:mt-1.5">{pendingCount}</p>
         </div>
 
-        <div className="bg-card border border-border rounded-xl p-3.5 shadow-2xs">
-          <div className="flex items-center justify-between">
-            <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Disetujui</p>
-            <CheckCircle size={15} className="text-emerald-500" />
+        <div className="bg-card border border-border rounded-xl p-2.5 sm:p-3.5 shadow-2xs">
+          <div className="flex items-center justify-between gap-1">
+            <p className="text-[10px] sm:text-[11px] font-semibold text-muted-foreground uppercase tracking-wider truncate">
+              Disetujui
+            </p>
+            <CheckCircle size={14} className="text-emerald-500 shrink-0" />
           </div>
-          <p className="text-xl sm:text-2xl font-bold text-emerald-600 dark:text-emerald-400 mt-1.5">{approvedCount}</p>
+          <p className="text-lg sm:text-2xl font-bold text-emerald-600 dark:text-emerald-400 mt-1 sm:mt-1.5">{approvedCount}</p>
         </div>
 
-        <div className="bg-card border border-border rounded-xl p-3.5 shadow-2xs">
-          <div className="flex items-center justify-between">
-            <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Ditolak</p>
-            <XCircle size={15} className="text-destructive" />
+        <div className="bg-card border border-border rounded-xl p-2.5 sm:p-3.5 shadow-2xs">
+          <div className="flex items-center justify-between gap-1">
+            <p className="text-[10px] sm:text-[11px] font-semibold text-muted-foreground uppercase tracking-wider truncate">
+              Ditolak
+            </p>
+            <XCircle size={14} className="text-destructive shrink-0" />
           </div>
-          <p className="text-xl sm:text-2xl font-bold text-destructive mt-1.5">{rejectedCount}</p>
+          <p className="text-lg sm:text-2xl font-bold text-destructive mt-1 sm:mt-1.5">{rejectedCount}</p>
         </div>
       </div>
 
       {/* Filters & Search Toolbar */}
-      <div className="bg-card border border-border rounded-2xl p-4 flex flex-col md:flex-row gap-3 items-stretch md:items-center justify-between">
-        {/* Status Tabs */}
-        <div className="grid grid-cols-4 sm:flex items-center p-1 bg-muted/80 rounded-xl gap-1">
+      <div className="bg-card border border-border rounded-xl sm:rounded-2xl p-3 sm:p-4 flex flex-col md:flex-row gap-2.5 sm:gap-3 items-stretch md:items-center justify-between">
+        {/* Status Tabs: Smooth horizontal scroll on mobile, flex on larger screens */}
+        <div className="flex items-center p-1 bg-muted/80 rounded-xl gap-1 overflow-x-auto no-scrollbar scroll-smooth">
           <button
             type="button"
             onClick={() => setFilter("all")}
-            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer text-center ${
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 text-center ${
               filter === "all"
                 ? "bg-card text-foreground shadow-xs"
                 : "text-muted-foreground hover:text-foreground"
@@ -198,7 +206,7 @@ export default function LecturerRecommendationList({ className = "" }: Props) {
           <button
             type="button"
             onClick={() => setFilter("pending")}
-            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer text-center ${
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 text-center ${
               filter === "pending"
                 ? "bg-card text-foreground shadow-xs"
                 : "text-muted-foreground hover:text-foreground"
@@ -209,7 +217,7 @@ export default function LecturerRecommendationList({ className = "" }: Props) {
           <button
             type="button"
             onClick={() => setFilter("approved")}
-            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer text-center ${
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 text-center ${
               filter === "approved"
                 ? "bg-card text-foreground shadow-xs"
                 : "text-muted-foreground hover:text-foreground"
@@ -220,7 +228,7 @@ export default function LecturerRecommendationList({ className = "" }: Props) {
           <button
             type="button"
             onClick={() => setFilter("rejected")}
-            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer text-center ${
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 text-center ${
               filter === "rejected"
                 ? "bg-card text-foreground shadow-xs"
                 : "text-muted-foreground hover:text-foreground"
@@ -233,40 +241,40 @@ export default function LecturerRecommendationList({ className = "" }: Props) {
         {/* Search & Refresh */}
         <div className="flex items-center gap-2">
           <div className="relative grow md:w-64">
-            <Search size={14} className="absolute left-3 top-3 text-muted-foreground" />
+            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
             <input
               type="text"
               placeholder="Cari judul, penulis, ISBN..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-9 pr-3 py-2 text-xs bg-muted/50 border border-border rounded-xl font-medium focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all text-foreground"
+              className="w-full pl-9 pr-3 h-9 sm:h-10 text-xs bg-muted/50 border border-border rounded-xl font-medium focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all text-foreground"
             />
           </div>
 
           <button
             type="button"
             onClick={fetchRecommendations}
-            className="p-2 bg-muted hover:bg-muted/80 text-muted-foreground hover:text-foreground rounded-xl transition-all cursor-pointer shrink-0"
+            className="size-9 sm:size-10 flex items-center justify-center bg-muted hover:bg-muted/80 text-muted-foreground hover:text-foreground rounded-xl transition-all cursor-pointer shrink-0"
             title="Refresh Data"
             aria-label="Refresh Data"
           >
-            <RotateCcw size={16} />
+            <RotateCcw size={15} />
           </button>
         </div>
       </div>
 
       {/* Main Content: Responsive Card Grid */}
       {loading ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5 sm:gap-5">
           {[1, 2, 3].map((i) => (
-            <div key={i} className="bg-card border border-border rounded-2xl p-5 space-y-4">
+            <div key={i} className="bg-card border border-border rounded-xl sm:rounded-2xl p-4 sm:p-5 space-y-3.5">
               <div className="flex justify-between items-center">
-                <Skeleton className="size-9 rounded-xl" />
-                <Skeleton className="h-6 w-20 rounded-full" />
+                <Skeleton className="size-8 sm:size-9 rounded-lg sm:rounded-xl" />
+                <Skeleton className="h-5 sm:h-6 w-20 rounded-full" />
               </div>
               <Skeleton className="h-5 w-3/4" />
               <Skeleton className="h-4 w-1/2" />
-              <Skeleton className="h-16 w-full rounded-xl" />
+              <Skeleton className="h-14 sm:h-16 w-full rounded-lg sm:rounded-xl" />
               <div className="flex justify-between pt-2 border-t border-border">
                 <Skeleton className="h-4 w-20" />
                 <Skeleton className="h-6 w-16 rounded-lg" />
@@ -275,18 +283,18 @@ export default function LecturerRecommendationList({ className = "" }: Props) {
           ))}
         </div>
       ) : filteredData.length === 0 ? (
-        <div className="bg-card border border-border border-dashed rounded-2xl p-8 sm:p-12 text-center flex flex-col items-center justify-center">
-          <div className="size-14 rounded-full bg-primary/10 text-primary flex items-center justify-center mb-3">
-            <Sparkles size={24} />
+        <div className="bg-card border border-border border-dashed rounded-xl sm:rounded-2xl p-6 sm:p-12 text-center flex flex-col items-center justify-center">
+          <div className="size-12 sm:size-14 rounded-full bg-primary/10 text-primary flex items-center justify-center mb-3">
+            <Sparkles className="size-5 sm:size-6" />
           </div>
-          <h3 className="text-base font-bold text-foreground">
+          <h3 className="text-sm sm:text-base font-bold text-foreground">
             {searchQuery
               ? "Tidak ada usulan yang cocok"
               : filter !== "all"
               ? `Belum ada usulan dengan status "${filter}"`
               : "Belum Ada Usulan Koleksi Buku"}
           </h3>
-          <p className="text-xs text-muted-foreground max-w-md mt-1 mb-5 leading-relaxed">
+          <p className="text-xs text-muted-foreground max-w-md mt-1 mb-4 sm:mb-5 leading-relaxed">
             {searchQuery
               ? "Coba sesuaikan kata kunci pencarian atau ubah tab status filter."
               : "Sebagai Dosen, Anda dapat mengusulkan pengadaan buku referensi baru untuk perpustakaan UMC kapan saja."}
@@ -294,24 +302,24 @@ export default function LecturerRecommendationList({ className = "" }: Props) {
           <button
             type="button"
             onClick={() => setIsModalOpen(true)}
-            className="inline-flex items-center gap-2 bg-primary text-white px-4 py-2 rounded-xl font-semibold text-xs shadow-sm hover:bg-primary/90 transition-all cursor-pointer"
+            className="inline-flex items-center gap-2 bg-primary text-white h-9 px-4 rounded-xl font-semibold text-xs shadow-xs hover:bg-primary/90 transition-all cursor-pointer"
           >
             <Plus size={15} />
             <span>Usulkan Buku Sekarang</span>
           </button>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5 sm:gap-5">
           {filteredData.map((item) => (
             <div
               key={item.id}
-              className="bg-card border border-border hover:border-primary/40 rounded-2xl p-5 shadow-2xs hover:shadow-md transition-all flex flex-col justify-between gap-3.5 h-full"
+              className="bg-card border border-border hover:border-primary/40 rounded-xl sm:rounded-2xl p-4 sm:p-5 shadow-2xs hover:shadow-md transition-all flex flex-col justify-between gap-3 h-full"
             >
-              <div className="space-y-3">
+              <div className="space-y-2.5 sm:space-y-3">
                 {/* Header: Icon & Status Badge */}
-                <div className="flex items-start justify-between gap-2">
-                  <div className="size-9 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
-                    <BookOpen size={18} />
+                <div className="flex items-center justify-between gap-2">
+                  <div className="size-8 sm:size-9 rounded-lg sm:rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                    <BookOpen size={16} />
                   </div>
                   <div>{getStatusBadge(item.status)}</div>
                 </div>
@@ -335,14 +343,14 @@ export default function LecturerRecommendationList({ className = "" }: Props) {
                 </div>
 
                 {item.isbn && (
-                  <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-muted text-muted-foreground font-mono text-[11px]">
+                  <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg bg-muted text-muted-foreground font-mono text-[11px]">
                     <span className="font-sans text-[10px] font-bold text-muted-foreground uppercase">ISBN</span>
                     <span className="font-semibold text-foreground">{item.isbn}</span>
                   </div>
                 )}
 
                 {/* Reason Callout Box */}
-                <div className="bg-muted/50 rounded-xl p-3 border border-border/60">
+                <div className="bg-muted/50 rounded-lg sm:rounded-xl p-2.5 sm:p-3 border border-border/60">
                   <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-1">
                     Alasan Pengadaan:
                   </p>
@@ -356,7 +364,7 @@ export default function LecturerRecommendationList({ className = "" }: Props) {
               </div>
 
               {/* Footer: Date & Cancel Action */}
-              <div className="pt-3 border-t border-border flex items-center justify-between gap-2 text-xs">
+              <div className="pt-2.5 sm:pt-3 border-t border-border flex items-center justify-between gap-2 text-xs">
                 <span className="text-[11px] text-muted-foreground font-medium">
                   {formatDateID(item.createdAt)}
                 </span>
