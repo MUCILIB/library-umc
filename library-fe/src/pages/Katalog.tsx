@@ -58,8 +58,6 @@ const Katalog = () => {
     ketersediaan: true,
     tahun: true,
     koleksi: true,
-    fakultas: Boolean(searchParams.get("faculty")),
-    prodi: Boolean(searchParams.get("prodi")),
   });
 
   const toggleSection = (section: keyof typeof openSections) => {
@@ -134,7 +132,6 @@ const Katalog = () => {
       const facId = found?.facultyId || found?.faculty?.id;
       if (facId && (!selectedFaculty || Number(selectedFaculty) !== facId)) {
         setSelectedFaculty(String(facId));
-        setOpenSections((prev) => ({ ...prev, fakultas: true, prodi: true }));
       }
     }
   };
@@ -473,40 +470,34 @@ const Katalog = () => {
               {faculties.length > 0 && (
                 <>
                   <div className="border-t border-slate-100 dark:border-border/60" />
-                  <div className="space-y-2.5">
-                    <button
-                      type="button"
-                      onClick={() => toggleSection("fakultas")}
-                      className="w-full flex items-center justify-between text-xs font-bold text-slate-900 dark:text-foreground cursor-pointer"
+                  <div className="space-y-1.5">
+                    <label
+                      htmlFor="filter-faculty"
+                      className="block text-xs font-bold text-slate-900 dark:text-foreground cursor-pointer"
                     >
-                      <span>Fakultas</span>
-                      {openSections.fakultas ? (
-                        <ChevronUp size={16} className="text-slate-400" />
-                      ) : (
-                        <ChevronDown size={16} className="text-slate-400" />
-                      )}
-                    </button>
-
-                    {openSections.fakultas && (
-                      <div className="pt-1">
-                        <Select
-                          value={selectedFaculty || "all"}
-                          onValueChange={handleFacultyChange}
-                        >
-                          <SelectTrigger className="w-full h-9 rounded-lg bg-slate-50 dark:bg-muted border border-slate-200 dark:border-border text-xs font-medium text-slate-700 dark:text-foreground focus:ring-0">
-                            <SelectValue placeholder="Semua Fakultas" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="all">Semua Fakultas</SelectItem>
-                            {faculties.map((fac) => (
-                              <SelectItem key={fac.id} value={String(fac.id)}>
-                                {fac.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    )}
+                      Fakultas
+                    </label>
+                    <Select
+                      value={selectedFaculty || "all"}
+                      onValueChange={handleFacultyChange}
+                    >
+                      <SelectTrigger
+                        id="filter-faculty"
+                        className="w-full h-9 rounded-lg bg-slate-50 dark:bg-muted border border-slate-200 dark:border-border text-xs font-medium text-slate-700 dark:text-foreground focus:ring-0 cursor-pointer"
+                      >
+                        <SelectValue placeholder="Semua Fakultas" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all" className="cursor-pointer">
+                          Semua Fakultas
+                        </SelectItem>
+                        {faculties.map((fac) => (
+                          <SelectItem key={fac.id} value={String(fac.id)} className="cursor-pointer">
+                            {fac.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                 </>
               )}
@@ -515,40 +506,34 @@ const Katalog = () => {
               {studyPrograms.length > 0 && (
                 <>
                   <div className="border-t border-slate-100 dark:border-border/60" />
-                  <div className="space-y-2.5">
-                    <button
-                      type="button"
-                      onClick={() => toggleSection("prodi")}
-                      className="w-full flex items-center justify-between text-xs font-bold text-slate-900 dark:text-foreground cursor-pointer"
+                  <div className="space-y-1.5">
+                    <label
+                      htmlFor="filter-prodi"
+                      className="block text-xs font-bold text-slate-900 dark:text-foreground cursor-pointer"
                     >
-                      <span>Program Studi</span>
-                      {openSections.prodi ? (
-                        <ChevronUp size={16} className="text-slate-400" />
-                      ) : (
-                        <ChevronDown size={16} className="text-slate-400" />
-                      )}
-                    </button>
-
-                    {openSections.prodi && (
-                      <div className="pt-1">
-                        <Select
-                          value={selectedStudyProgram || "all"}
-                          onValueChange={handleStudyProgramChange}
-                        >
-                          <SelectTrigger className="w-full h-9 rounded-lg bg-slate-50 dark:bg-muted border border-slate-200 dark:border-border text-xs font-medium text-slate-700 dark:text-foreground focus:ring-0">
-                            <SelectValue placeholder="Semua Program Studi" />
-                          </SelectTrigger>
-                          <SelectContent className="max-h-60">
-                            <SelectItem value="all">Semua Program Studi</SelectItem>
-                            {availableStudyPrograms.map((sp) => (
-                              <SelectItem key={sp.id} value={String(sp.id)}>
-                                {sp.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    )}
+                      Program Studi
+                    </label>
+                    <Select
+                      value={selectedStudyProgram || "all"}
+                      onValueChange={handleStudyProgramChange}
+                    >
+                      <SelectTrigger
+                        id="filter-prodi"
+                        className="w-full h-9 rounded-lg bg-slate-50 dark:bg-muted border border-slate-200 dark:border-border text-xs font-medium text-slate-700 dark:text-foreground focus:ring-0 cursor-pointer"
+                      >
+                        <SelectValue placeholder="Semua Program Studi" />
+                      </SelectTrigger>
+                      <SelectContent className="max-h-60">
+                        <SelectItem value="all" className="cursor-pointer">
+                          Semua Program Studi
+                        </SelectItem>
+                        {availableStudyPrograms.map((sp) => (
+                          <SelectItem key={sp.id} value={String(sp.id)} className="cursor-pointer">
+                            {sp.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                 </>
               )}
