@@ -205,7 +205,7 @@ const Katalog = () => {
   );
 
   return (
-    <div className="bg-[#F8FAFC] dark:bg-muted min-h-screen flex flex-col">
+    <div className="bg-[#F8FAFC] dark:bg-muted min-h-screen flex flex-col overflow-x-hidden">
       <Navbar />
 
       {/* Hero Search Section */}
@@ -271,21 +271,23 @@ const Katalog = () => {
       <main className="max-w-7xl mx-auto py-6 sm:py-8 px-4 sm:px-6 lg:px-8 grow w-full">
         {/* Top Bar: Filter Jenis Buku & Mobile Filter Toggle */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
-          {/* Tabs Filter Jenis Buku */}
-          <div className="inline-flex items-center p-1 bg-slate-100 dark:bg-muted/80 rounded-xl border border-slate-200/60 dark:border-border/60 overflow-x-auto max-w-full">
+          {/* Tabs Filter Jenis Buku: Grid 3 kolom 100% pas di HP, inline-flex di layar besar */}
+          <div className="grid grid-cols-3 w-full sm:w-auto sm:inline-flex items-center p-1 bg-slate-100 dark:bg-muted/80 rounded-xl border border-slate-200/60 dark:border-border/60">
             <button
               type="button"
               onClick={() => setCollectionTypeFilter(["physical_book", "ebook"])}
-              className={`flex items-center gap-1.5 px-3 sm:px-4 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer whitespace-nowrap ${
+              className={`flex items-center justify-center gap-1 sm:gap-1.5 px-1.5 sm:px-4 py-1.5 rounded-lg text-[11px] sm:text-xs font-semibold transition-all cursor-pointer min-w-0 ${
                 isAllSelected
                   ? "bg-white dark:bg-card text-slate-900 dark:text-foreground shadow-xs font-bold"
                   : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-foreground"
               }`}
             >
-              <Layers size={14} className={isAllSelected ? "text-[#9D171D]" : "text-slate-400"} />
-              <span>Semua Koleksi</span>
+              <Layers size={13} className="shrink-0 hidden xs:inline sm:inline" />
+              <span className="truncate">
+                Semua<span className="hidden sm:inline"> Koleksi</span>
+              </span>
               <span
-                className={`text-[10px] sm:text-[11px] px-1.5 py-0.5 rounded-full ${
+                className={`text-[10px] sm:text-[11px] px-1 sm:px-1.5 py-0.2 rounded-full shrink-0 ${
                   isAllSelected
                     ? "bg-red-50 text-[#9D171D] dark:bg-red-950/60 dark:text-red-300 font-bold"
                     : "bg-slate-200/70 text-slate-500 dark:bg-muted dark:text-slate-400"
@@ -298,16 +300,18 @@ const Katalog = () => {
             <button
               type="button"
               onClick={() => setCollectionTypeFilter(["physical_book"])}
-              className={`flex items-center gap-1.5 px-3 sm:px-4 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer whitespace-nowrap ${
+              className={`flex items-center justify-center gap-1 sm:gap-1.5 px-1.5 sm:px-4 py-1.5 rounded-lg text-[11px] sm:text-xs font-semibold transition-all cursor-pointer min-w-0 ${
                 isPhysicalSelected
                   ? "bg-white dark:bg-card text-slate-900 dark:text-foreground shadow-xs font-bold"
                   : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-foreground"
               }`}
             >
-              <BookOpen size={14} className={isPhysicalSelected ? "text-[#9D171D]" : "text-slate-400"} />
-              <span>Buku Fisik</span>
+              <BookOpen size={13} className="shrink-0 hidden xs:inline sm:inline" />
+              <span className="truncate">
+                <span className="hidden sm:inline">Buku </span>Fisik
+              </span>
               <span
-                className={`text-[10px] sm:text-[11px] px-1.5 py-0.5 rounded-full ${
+                className={`text-[10px] sm:text-[11px] px-1 sm:px-1.5 py-0.2 rounded-full shrink-0 ${
                   isPhysicalSelected
                     ? "bg-red-50 text-[#9D171D] dark:bg-red-950/60 dark:text-red-300 font-bold"
                     : "bg-slate-200/70 text-slate-500 dark:bg-muted dark:text-slate-400"
@@ -320,16 +324,16 @@ const Katalog = () => {
             <button
               type="button"
               onClick={() => setCollectionTypeFilter(["ebook"])}
-              className={`flex items-center gap-1.5 px-3 sm:px-4 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer whitespace-nowrap ${
+              className={`flex items-center justify-center gap-1 sm:gap-1.5 px-1.5 sm:px-4 py-1.5 rounded-lg text-[11px] sm:text-xs font-semibold transition-all cursor-pointer min-w-0 ${
                 isEbookSelected
                   ? "bg-white dark:bg-card text-slate-900 dark:text-foreground shadow-xs font-bold"
                   : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-foreground"
               }`}
             >
-              <Smartphone size={14} className={isEbookSelected ? "text-[#9D171D]" : "text-slate-400"} />
-              <span>E-Book</span>
+              <Smartphone size={13} className="shrink-0 hidden xs:inline sm:inline" />
+              <span className="truncate">E-Book</span>
               <span
-                className={`text-[10px] sm:text-[11px] px-1.5 py-0.5 rounded-full ${
+                className={`text-[10px] sm:text-[11px] px-1 sm:px-1.5 py-0.2 rounded-full shrink-0 ${
                   isEbookSelected
                     ? "bg-red-50 text-[#9D171D] dark:bg-red-950/60 dark:text-red-300 font-bold"
                     : "bg-slate-200/70 text-slate-500 dark:bg-muted dark:text-slate-400"
