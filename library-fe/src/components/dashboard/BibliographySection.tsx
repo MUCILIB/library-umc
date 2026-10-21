@@ -41,7 +41,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import Modal from "@/components/ui/modal";
 import { cleanIsbn } from "@/utils/format";
 import {
   bibliographyApi,
@@ -1077,13 +1076,6 @@ function BibliographyForm({ bib, onClose, onSuccess }: BibliographyFormProps) {
   const [step3Error, setStep3Error] = useState<string | null>(null);
   const [generatingCode, setGeneratingCode] = useState(false);
 
-  // Location modal states
-  const [showLocationModal, setShowLocationModal] = useState(false);
-  const [locationForm, setLocationForm] = useState({ room: "", rack: "", shelf: "" });
-  const [locationSaving, setLocationSaving] = useState(false);
-  const [locationError, setLocationError] = useState<string | null>(null);
-  const [editingLocationId, setEditingLocationId] = useState<number | null>(null);
-
   const loadLocationsList = async () => {
     try {
       const result = await locationApi.list();
@@ -1098,56 +1090,6 @@ function BibliographyForm({ bib, onClose, onSuccess }: BibliographyFormProps) {
       }
     } catch (err) {
       console.error("Gagal memuat lokasi", err);
-    }
-  };
-
-  const handleSaveLocation = async () => {
-    if (!locationForm.room.trim() || !locationForm.rack.trim() || !locationForm.shelf.trim()) {
-      setLocationError("Ruang, Rak, dan Shelf wajib diisi");
-      return;
-    }
-    setLocationSaving(true);
-    setLocationError(null);
-    try {
-      if (editingLocationId) {
-        await locationApi.update(editingLocationId, {
-          room: locationForm.room.trim(),
-          rack: locationForm.rack.trim(),
-          shelf: locationForm.shelf.trim(),
-        });
-      } else {
-        const res = await locationApi.create({
-          room: locationForm.room.trim(),
-          rack: locationForm.rack.trim(),
-          shelf: locationForm.shelf.trim(),
-        });
-        if (res.data?.id) setSelectedLocationId(res.data.id.toString());
-      }
-      await loadLocationsList();
-      setLocationForm({ room: "", rack: "", shelf: "" });
-      setEditingLocationId(null);
-      setShowLocationModal(false);
-    } catch (err) {
-      setLocationError(err instanceof Error ? err.message : "Gagal menyimpan lokasi");
-    } finally {
-      setLocationSaving(false);
-    }
-  };
-
-  const handleEditLocation = (loc: Location) => {
-    setEditingLocationId(loc.id);
-    setLocationForm({ room: loc.room, rack: loc.rack, shelf: loc.shelf });
-    setLocationError(null);
-    setShowLocationModal(true);
-  };
-
-  const handleDeleteLocation = async (id: number) => {
-    if (!confirm("Hapus lokasi ini?")) return;
-    try {
-      await locationApi.delete(id);
-      await loadLocationsList();
-    } catch (err) {
-      alert(err instanceof Error ? err.message : "Gagal menghapus lokasi");
     }
   };
 
@@ -2104,18 +2046,9 @@ function BibliographyForm({ bib, onClose, onSuccess }: BibliographyFormProps) {
                 </div>
 
                 <div>
-                  <div className="mb-2 flex items-center justify-between">
-                    <label className="block text-xs font-medium text-muted-foreground uppercase">
-                      Tipe Koleksi / Lokasi
-                    </label>
-                    <button
-                      type="button"
-                      onClick={() => setShowLocationModal(true)}
-                      className="text-xs font-bold text-primary hover:underline"
-                    >
-                      + Kelola Lokasi
-                    </button>
-                  </div>
+                  <label className="mb-2 block text-xs font-medium text-muted-foreground uppercase">
+                    Tipe Koleksi / Lokasi
+                  </label>
                   <Select
                     value={selectedLocationId}
                     onValueChange={(val) => setSelectedLocationId(val)}
@@ -2124,7 +2057,7 @@ function BibliographyForm({ bib, onClose, onSuccess }: BibliographyFormProps) {
                       <SelectValue
                         placeholder={
                           locations.length === 0
-                            ? "Belum ada lokasi — klik Kelola Lokasi"
+                            ? "Belum ada data lokasi"
                             : "Pilih lokasi"
                         }
                       />
@@ -2617,150 +2550,6 @@ function BibliographyForm({ bib, onClose, onSuccess }: BibliographyFormProps) {
         </div>
       </form>
 
-      {/* Location Management Modal */}
-      <Modal
-        isOpen={showLocationModal}
-        onClose={() => {
-          setShowLocationModal(false);
-          setEditingLocationId(null);
-          setLocationForm({ room: "", rack: "", shelf: "" });
-          setLocationError(null);
-        }}
-        title={editingLocationId ? "Edit Lokasi Buku" : "Kelola Lokasi Buku"}
-        size="lg"
-      >
-        <div className="space-y-4">
-          {locationError && (
-            <div className="rounded-lg bg-red-50 dark:bg-red-950/30 p-3 text-sm font-medium text-red-600 dark:text-red-400">
-              {locationError}
-            </div>
-          )}
-
-          <div className="grid gap-4 sm:grid-cols-3">
-            <div>
-              <label className="mb-2 block text-xs font-bold text-foreground uppercase">
-                Ruang / Lokasi *
-              </label>
-              <input
-                type="text"
-                placeholder="Contoh: Perpustakaan Pusat"
-                value={locationForm.room}
-                onChange={(e) => setLocationForm({ ...locationForm, room: e.target.value })}
-                className="w-full rounded-lg border border-border px-3 py-2.5 text-sm bg-background focus:outline-none focus:ring-1 focus:ring-primary"
-              />
-            </div>
-            <div>
-              <label className="mb-2 block text-xs font-bold text-foreground uppercase">
-                Rak *
-              </label>
-              <input
-                type="text"
-                placeholder="Contoh: Rak A1"
-                value={locationForm.rack}
-                onChange={(e) => setLocationForm({ ...locationForm, rack: e.target.value })}
-                className="w-full rounded-lg border border-border px-3 py-2.5 text-sm bg-background focus:outline-none focus:ring-1 focus:ring-primary"
-              />
-            </div>
-            <div>
-              <label className="mb-2 block text-xs font-bold text-foreground uppercase">
-                Shelf / Rak Kecil *
-              </label>
-              <input
-                type="text"
-                placeholder="Contoh: Baris 1"
-                value={locationForm.shelf}
-                onChange={(e) => setLocationForm({ ...locationForm, shelf: e.target.value })}
-                className="w-full rounded-lg border border-border px-3 py-2.5 text-sm bg-background focus:outline-none focus:ring-1 focus:ring-primary"
-              />
-            </div>
-          </div>
-
-          <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={handleSaveLocation}
-              disabled={locationSaving}
-              className="flex-1 rounded-lg bg-primary px-4 py-2.5 text-sm font-bold text-white hover:bg-primary/95 disabled:opacity-50 transition-all cursor-pointer flex items-center justify-center gap-2"
-            >
-              {locationSaving && <Loader2 className="size-4 animate-spin" />}
-              {locationSaving ? "Menyimpan..." : editingLocationId ? "Perbarui Lokasi" : "Simpan Lokasi"}
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setShowLocationModal(false);
-                setEditingLocationId(null);
-                setLocationForm({ room: "", rack: "", shelf: "" });
-                setLocationError(null);
-              }}
-              className="flex-1 rounded-lg border border-border bg-card px-4 py-2.5 text-sm font-bold text-muted-foreground hover:bg-muted transition-all cursor-pointer"
-            >
-              Batal
-            </button>
-          </div>
-
-          {/* List Lokasi Existing */}
-          <div className="border-t border-border pt-4 space-y-2">
-            <div className="flex items-center justify-between">
-              <h4 className="text-xs font-bold text-muted-foreground uppercase">
-                Daftar Lokasi Tersedia ({locations.length})
-              </h4>
-              {editingLocationId && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setEditingLocationId(null);
-                    setLocationForm({ room: "", rack: "", shelf: "" });
-                    setLocationError(null);
-                  }}
-                  className="text-xs font-semibold text-primary hover:underline cursor-pointer"
-                >
-                  + Tambah Lokasi Baru
-                </button>
-              )}
-            </div>
-            <div className="max-h-48 overflow-y-auto space-y-1.5 pr-1">
-              {locations.length === 0 ? (
-                <p className="text-xs text-muted-foreground py-2 text-center">Belum ada lokasi tersimpan</p>
-              ) : (
-                locations.map((loc) => (
-                  <div
-                    key={loc.id}
-                    className={`flex items-center justify-between rounded-lg border p-2.5 text-xs transition-colors ${
-                      editingLocationId === loc.id
-                        ? "border-primary bg-primary/5"
-                        : "border-border bg-card hover:bg-muted/30"
-                    }`}
-                  >
-                    <div className="flex items-center gap-2">
-                      <span className="font-semibold text-foreground">
-                        {loc.room}
-                      </span>
-                      <span className="text-muted-foreground">• Rak {loc.rack} • {loc.shelf}</span>
-                    </div>
-                    <div className="flex gap-1">
-                      <button
-                        type="button"
-                        onClick={() => handleEditLocation(loc)}
-                        className="px-2.5 py-1 text-primary hover:bg-primary/10 rounded font-medium transition-all cursor-pointer"
-                      >
-                        Edit
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleDeleteLocation(loc.id)}
-                        className="px-2.5 py-1 text-destructive hover:bg-destructive/10 rounded font-medium transition-all cursor-pointer"
-                      >
-                        Hapus
-                      </button>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
-        </div>
-      </Modal>
     </div>
   );
 }
