@@ -58,6 +58,12 @@ export const requireRole = (allowedRoles: string[]) => {
 
       const userRole = session.user.role || "";
 
+      // Super Admin bypass: super_admin has universal access to all endpoints
+      if (userRole === "super_admin") {
+        next();
+        return;
+      }
+
       if (!allowedRoles.includes(userRole)) {
         res.status(403).json({
           success: false,

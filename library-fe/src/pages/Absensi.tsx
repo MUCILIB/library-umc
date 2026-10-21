@@ -81,6 +81,7 @@ export default function Absensi() {
     name: string;
     nim?: string;
     major?: string;
+    isMember?: boolean;
     alreadyCheckedIn?: boolean;
   } | null>(null);
   const [countdown, setCountdown] = useState(4);
@@ -176,35 +177,39 @@ export default function Absensi() {
       // Step 1: Attempt standard member scan first
       let recorded = false;
       let isAlreadyCheckedIn = false;
+      let isMember = false;
 
       try {
         const scanRes = await guestApi.scan(trimmedNim);
         if (scanRes.data) {
           recorded = true;
+          isMember = true;
           isAlreadyCheckedIn = Boolean(scanRes.data.alreadyCheckedIn);
         }
       } catch {
-        // Not registered as member, fall back to direct absensi creation
+        // Not registered as member, fall back to non-member attendance
       }
 
-      // Step 2: Fallback to createAbsensi or createNonMember if scan did not catch it
+      // Step 2: Fallback to non-member if not found in member database
       if (!recorded) {
-        try {
-          await guestApi.createAbsensi({
-            name: trimmedName,
-            major: selectedProdi,
-          });
-          recorded = true;
-        } catch {
-          // Alternative fallback to non-member guest record
-          await guestApi.createNonMember({
-            fullName: trimmedName,
-            institution: "Universitas Muhammadiyah Cirebon",
-            purpose: "Kunjungan Perpustakaan",
-            phone: trimmedNim,
-          });
-          recorded = true;
-        }
+        // Find matching study program ID if available
+        const matchedProdi = studyProgramsList.find(
+          (sp) => sp.name.toLowerCase() === selectedProdi.toLowerCase()
+        );
+        const prodiId =
+          matchedProdi && typeof matchedProdi.id === "number"
+            ? matchedProdi.id
+            : null;
+
+        await guestApi.createNonMember({
+          fullName: trimmedName,
+          institution: "Universitas Muhammadiyah Cirebon",
+          purpose: "Kunjungan Perpustakaan",
+          phone: trimmedNim, // Stored as identifier
+          studyProgramId: prodiId,
+        });
+        recorded = true;
+        isMember = false;
       }
 
       playKioskBeep();
@@ -212,6 +217,7 @@ export default function Absensi() {
         name: trimmedName,
         nim: trimmedNim,
         major: selectedProdi,
+        isMember,
         alreadyCheckedIn: isAlreadyCheckedIn,
       });
 
@@ -506,9 +512,20 @@ export default function Absensi() {
 
             {/* Visitor Details Card */}
             <div className="bg-slate-50 dark:bg-muted/40 border border-slate-200/80 dark:border-border rounded-2xl p-4 sm:p-5 text-left my-4">
-              <p className="text-xs text-slate-400 font-bold uppercase tracking-wider">
-                Pengunjung Terdaftar
-              </p>
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-xs text-slate-400 font-bold uppercase tracking-wider">
+                  Pengunjung Terdaftar
+                </p>
+                <span
+                  className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
+                    successData.isMember
+                      ? "bg-emerald-500/10 text-emerald-600 border border-emerald-500/20"
+                      : "bg-blue-500/10 text-blue-600 border border-blue-500/20"
+                  }`}
+                >
+                  {successData.isMember ? "Member" : "Non-Member"}
+                </span>
+              </div>
               <p className="text-lg font-bold text-slate-900 dark:text-foreground mt-0.5 truncate">
                 {successData.name}
               </p>

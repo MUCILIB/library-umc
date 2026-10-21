@@ -1,4 +1,5 @@
 import { API_BASE_URL } from "@/utils/api-config";
+import { getAuthHeaders } from "@/api/client";
 
 export interface DashboardUser {
   id: string;
@@ -55,7 +56,10 @@ const jsonOrThrow = async (res: Response) => {
 export const usersManagementService = {
   async getUsers(): Promise<DashboardUser[]> {
     const res = await fetch(`${API_BASE_URL}/api/users/all`, {
-      credentials: "include"
+      credentials: "include",
+      headers: {
+        ...getAuthHeaders(),
+      },
     });
     const data = await jsonOrThrow(res);
     return data.success && Array.isArray(data.data) ? data.data : [];
@@ -64,7 +68,10 @@ export const usersManagementService = {
   async updateRole(userId: string, role: string) {
     const res = await fetch(`${API_BASE_URL}/api/users/${userId}/role`, {
       method: "PATCH",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        ...getAuthHeaders(),
+      },
       credentials: "include",
       body: JSON.stringify({ role })
     });
@@ -74,7 +81,10 @@ export const usersManagementService = {
   async updateBanStatus(userId: string, banned: boolean, banReason?: string) {
     const res = await fetch(`${API_BASE_URL}/api/users/${userId}/ban`, {
       method: "PATCH",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        ...getAuthHeaders(),
+      },
       credentials: "include",
       body: JSON.stringify({ banned, banReason })
     });
@@ -84,7 +94,10 @@ export const usersManagementService = {
   async deleteUser(userId: string) {
     const res = await fetch(`${API_BASE_URL}/api/users/${userId}`, {
       method: "DELETE",
-      credentials: "include"
+      credentials: "include",
+      headers: {
+        ...getAuthHeaders(),
+      },
     });
     return jsonOrThrow(res);
   },
@@ -93,7 +106,10 @@ export const usersManagementService = {
     const res = await fetch(`${API_BASE_URL}/api/users/${userId}/sync-member`, {
       method: "POST",
       credentials: "include",
-      headers: { "Content-Type": "application/json" }
+      headers: {
+        "Content-Type": "application/json",
+        ...getAuthHeaders(),
+      }
     });
     return jsonOrThrow(res);
   },
@@ -103,7 +119,10 @@ export const usersManagementService = {
       `${API_BASE_URL}/api/members/${userId}/card/issue`,
       {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...getAuthHeaders(),
+        },
         credentials: "include",
         body: JSON.stringify({ cardNumber })
       }
@@ -118,7 +137,10 @@ export const usersManagementService = {
     const res = await fetch(
       `${API_BASE_URL}/api/members/cards/pending?${query.toString()}`,
       {
-        credentials: "include"
+        credentials: "include",
+        headers: {
+          ...getAuthHeaders(),
+        },
       }
     );
     const data = await jsonOrThrow(res);
@@ -130,7 +152,10 @@ export const usersManagementService = {
       `${API_BASE_URL}/api/members/${memberId}/card/approve`,
       {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...getAuthHeaders(),
+        },
         credentials: "include",
         body: JSON.stringify({ cardNumber })
       }
@@ -143,7 +168,10 @@ export const usersManagementService = {
       `${API_BASE_URL}/api/members/${memberId}/card/reject`,
       {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...getAuthHeaders(),
+        },
         credentials: "include",
         body: JSON.stringify({ reason })
       }
@@ -153,7 +181,10 @@ export const usersManagementService = {
 
   async getMembers(): Promise<any[]> {
     const res = await fetch(`${API_BASE_URL}/api/members`, {
-      credentials: "include"
+      credentials: "include",
+      headers: {
+        ...getAuthHeaders(),
+      },
     });
     const data = await jsonOrThrow(res);
     return data.success && Array.isArray(data.data) ? data.data : [];

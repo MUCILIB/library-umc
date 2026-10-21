@@ -28,10 +28,10 @@ export function useDashboardStatsLazy(enabled: boolean) {
     try {
       const data = await dashboardDataService.getStats();
       setStats(data);
-      setHasLoaded(true);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Gagal memuat statistik");
     } finally {
+      setHasLoaded(true);
       setLoading(false);
     }
   }, []);

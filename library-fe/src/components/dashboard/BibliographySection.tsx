@@ -198,7 +198,8 @@ export default function BibliographySection({
       pageNum: number,
       query?: string,
       facultyId?: string,
-      studyProgramId?: string
+      studyProgramId?: string,
+      signal?: AbortSignal
     ) => {
       setLoading(true);
       setError(null);
@@ -207,10 +208,13 @@ export default function BibliographySection({
         if (query) params.q = query;
         if (facultyId) params.facultyId = Number(facultyId);
         if (studyProgramId) params.studyProgramId = Number(studyProgramId);
-        const result = await bibliographyApi.list(params);
+        const result = await bibliographyApi.list(params, { signal });
         console.log("Bibliography data:", result);
         setData(result.data);
       } catch (err: unknown) {
+        if (err instanceof Error && err.name === "AbortError") {
+          return;
+        }
         setError(err instanceof Error ? err.message : "Gagal memuat data");
       } finally {
         setLoading(false);
@@ -220,12 +224,17 @@ export default function BibliographySection({
   );
 
   useEffect(() => {
+    const controller = new AbortController();
     fetchData(
       page,
       searchTerm || undefined,
       selectedFacultyId || undefined,
-      selectedStudyProgramId || undefined
+      selectedStudyProgramId || undefined,
+      controller.signal
     );
+    return () => {
+      controller.abort();
+    };
   }, [page, searchTerm, selectedFacultyId, selectedStudyProgramId, fetchData]);
 
   const handleSearch = () => {

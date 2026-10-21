@@ -26,12 +26,12 @@ export function useGuestsData(enabled: boolean) {
       ]);
       setGuests(guestsData);
       setMembers(membersData);
-      setHasLoaded(true);
     } catch (err) {
       setError(
         err instanceof Error ? err.message : "Gagal memuat data pengunjung",
       );
     } finally {
+      setHasLoaded(true);
       setLoading(false);
     }
   }, []);

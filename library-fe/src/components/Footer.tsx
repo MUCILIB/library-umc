@@ -13,7 +13,7 @@ const Footer = () => {
     <footer className="bg-[#8E0C17] text-white pt-12 sm:pt-16 pb-6 px-4 sm:px-8 lg:px-14 w-full">
       <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 sm:gap-10 lg:gap-12">
         {/* Kolom 1: Logo, Nama Kampus, Motto & Media Sosial */}
-        <div className="flex flex-col">
+        <div className="flex flex-col md:order-1 lg:order-1">
           <div className="flex items-center gap-3.5 sm:gap-4">
             <img
               src={LogoUmc}
@@ -82,62 +82,69 @@ const Footer = () => {
           </div>
         </div>
 
-        {/* Kolom 2: Lembaga dan Pusat */}
-        <div>
+        {/* Kolom 2: Lembaga dan Pusat (2 Kolom Berdampingan pada Layar Tablet) */}
+        <div className="md:col-span-2 lg:col-span-1 md:order-3 lg:order-2">
           <h4 className="font-bold text-sm sm:text-base text-white mb-5 sm:mb-6">
             Lembaga dan Pusat
           </h4>
-          <ul className="space-y-3.5 sm:space-y-4 text-xs sm:text-[13px] font-bold text-white">
-            <li>
-              <a href="#" className="hover:underline">
-                Lembaga Penjamin Mutu (LPM) UMC
-              </a>
-            </li>
-            <li>
-              <a href="#" className="hover:underline">
-                Lembaga Pengembangan Kurikulum dan Pembelajaran
-              </a>
-            </li>
-            <li>
-              <a href="#" className="hover:underline">
-                Lembaga Penelitian dan Pengabdian Masyarakat (LPPM)
-              </a>
-            </li>
-            <li>
-              <a href="#" className="hover:underline">
-                Kantor Urusan Kerjasama dan Internasional (KUI)
-              </a>
-            </li>
-            <li>
-              <a href="#" className="hover:underline">
-                Lembaga Pengembangan dan Kajian Al-Islam (LPAIK)
-              </a>
-            </li>
-            <li>
-              <a href="#" className="hover:underline">
-                Career Development Center (CDC)
-              </a>
-            </li>
-            <li>
-              <a href="#" className="hover:underline">
-                Lembaga Pengembangan Unit Usaha (LPUU)
-              </a>
-            </li>
-            <li>
-              <a href="#" className="hover:underline">
-                Alumni UMC
-              </a>
-            </li>
-            <li>
-              <a href="#" className="hover:underline">
-                Kemahasiswaan UMC
-              </a>
-            </li>
-          </ul>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-x-8 gap-y-3.5 sm:gap-y-4 text-xs sm:text-[13px] font-bold text-white">
+            {/* Kolom Kiri: Lembaga */}
+            <ul className="space-y-3.5 sm:space-y-4">
+              <li>
+                <a href="#" className="hover:underline">
+                  Lembaga Penjamin Mutu (LPM) UMC
+                </a>
+              </li>
+              <li>
+                <a href="#" className="hover:underline">
+                  Lembaga Pengembangan Kurikulum dan Pembelajaran
+                </a>
+              </li>
+              <li>
+                <a href="#" className="hover:underline">
+                  Lembaga Penelitian dan Pengabdian Masyarakat (LPPM)
+                </a>
+              </li>
+              <li>
+                <a href="#" className="hover:underline">
+                  Lembaga Pengembangan dan Kajian Al-Islam (LPAIK)
+                </a>
+              </li>
+              <li>
+                <a href="#" className="hover:underline">
+                  Lembaga Pengembangan Unit Usaha (LPUU)
+                </a>
+              </li>
+            </ul>
+
+            {/* Kolom Kanan: Pusat & Biro */}
+            <ul className="space-y-3.5 sm:space-y-4">
+              <li>
+                <a href="#" className="hover:underline">
+                  Kantor Urusan Kerjasama dan Internasional (KUI)
+                </a>
+              </li>
+              <li>
+                <a href="#" className="hover:underline">
+                  Career Development Center (CDC)
+                </a>
+              </li>
+              <li>
+                <a href="#" className="hover:underline">
+                  Alumni UMC
+                </a>
+              </li>
+              <li>
+                <a href="#" className="hover:underline">
+                  Kemahasiswaan UMC
+                </a>
+              </li>
+            </ul>
+          </div>
         </div>
 
         {/* Kolom 3: Hubungi Kami */}
-        <div>
+        <div className="md:order-2 lg:order-3">
           <h4 className="font-bold text-sm sm:text-base text-white mb-5 sm:mb-6">
             Hubungi Kami
           </h4>
