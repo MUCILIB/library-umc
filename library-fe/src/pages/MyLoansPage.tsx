@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import loanService, { type Loan } from "@/services/loanService";
 import { authClient } from "@/utils/auth-client";
+import { getUserAvatar } from "@/lib/avatar";
 import { useToast } from "@/hooks/useToast";
 import { formatDateID, calcLateDays } from "@/utils/format";
 import {
@@ -785,16 +786,12 @@ export default function MyLoansPage() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 mb-6">
           {/* User Card (Paling Atas pada Tampilan HP: order-1) */}
           <div className="order-1 lg:order-2 bg-card p-4 sm:p-6 rounded-2xl border border-slate-100 shadow-sm flex items-center gap-3.5 sm:gap-4">
-            <div className="w-12 h-12 sm:w-14 sm:h-14 bg-linear-to-br from-red-500 to-red-700 rounded-full shrink-0 flex items-center justify-center text-white font-bold text-base sm:text-lg overflow-hidden border border-white/20 shadow-xs">
-              {user?.image ? (
-                <img
-                  src={user.image}
-                  alt={user.name || "User"}
-                  className="w-full h-full object-cover"
-                />
-              ) : (
-                user?.name?.split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase()
-              )}
+            <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-full shrink-0 flex items-center justify-center text-white font-bold text-base sm:text-lg overflow-hidden border border-white/20 shadow-xs bg-muted">
+              <img
+                src={getUserAvatar(user)}
+                alt={user?.name || "User"}
+                className="w-full h-full object-cover"
+              />
             </div>
             <div className="flex-1 min-w-0">
               <h3 className="font-bold text-slate-900 truncate text-sm sm:text-base leading-snug">{user?.name}</h3>
