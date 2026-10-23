@@ -161,14 +161,18 @@ export default function UsersSection() {
       ? users.filter((u) => !u.hasSyncedMember)
       : users;
 
-    if (!q) return list;
+    const baseList = !q
+      ? list
+      : list.filter((u) => {
+          const name = (u.name || "").toLowerCase();
+          const email = (u.email || "").toLowerCase();
+          const role = (u.role || "").toLowerCase();
+          return name.includes(q) || email.includes(q) || role.includes(q);
+        });
 
-    return list.filter((u) => {
-      const name = (u.name || "").toLowerCase();
-      const email = (u.email || "").toLowerCase();
-      const role = (u.role || "").toLowerCase();
-      return name.includes(q) || email.includes(q) || role.includes(q);
-    });
+    return [...baseList].sort(
+      (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    );
   }, [users, search, showOnlyUnsynced]);
 
   // Pagination Logic
