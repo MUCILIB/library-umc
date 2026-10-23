@@ -1,6 +1,6 @@
 import { db } from "../../../db";
 import { loans, members, session, Users } from "../../../db/schema";
-import { and, eq, inArray, isNull, ne } from "drizzle-orm";
+import { and, desc, eq, inArray, isNull, ne } from "drizzle-orm";
 
 const ALLOWED_ROLES = ["super_admin", "staff", "student", "lecturer"] as const;
 
@@ -29,7 +29,8 @@ export const UserService = {
         })
         .from(Users)
         .leftJoin(members, eq(members.userId, Users.id))
-        .where(isNull(Users.deletedAt));
+        .where(isNull(Users.deletedAt))
+        .orderBy(desc(Users.createdAt));
 
       const users = userRows.map((row) => ({
         id: row.id,
