@@ -19,5 +19,5 @@ export function getUserAvatar(user?: AvatarUserLike | null): string {
   const normalizedSeed = rawSeed.trim().toLowerCase();
   const safeSeed = normalizedSeed.length > 0 ? normalizedSeed : "library-user";
 
-  return `https://api.dicebear.com/9.x/waves/svg?seed=${encodeURIComponent(safeSeed)}`;
+  return `https://api.dicebear.com/10.x/waves/svg?seed=${encodeURIComponent(safeSeed)}`;
 }
