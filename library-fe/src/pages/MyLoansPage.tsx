@@ -21,6 +21,13 @@ import loanService, { type Loan } from "@/services/loanService";
 import { authClient } from "@/utils/auth-client";
 import { useToast } from "@/hooks/useToast";
 import { formatDateID, calcLateDays } from "@/utils/format";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -351,173 +358,248 @@ function DetailModal({ loan, status, isExtending, isReturning, isCanceling, onEx
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto">
-      <div className="fixed inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative min-h-screen flex items-center justify-center p-4">
-        <div className="relative bg-card rounded-3xl w-full max-w-lg shadow-2xl">
+      <div className="fixed inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative min-h-screen flex items-center justify-center p-3 sm:p-4">
+        <div className="relative bg-card rounded-3xl w-full max-w-2xl shadow-2xl border border-border overflow-hidden animate-in fade-in zoom-in-95 duration-200">
           {/* Header */}
-          <div className="flex items-center justify-between p-6 border-b border-slate-100">
-            <h2 className="text-lg font-bold text-slate-900">Detail Peminjaman</h2>
-            <button onClick={onClose} className="p-2 hover:bg-slate-50 rounded-xl transition-colors">
-              <XCircle size={20} className="text-slate-400" />
+          <div className="flex items-center justify-between px-5 py-4 border-b border-border/80">
+            <h2 className="text-base sm:text-lg font-bold text-foreground">Detail Peminjaman</h2>
+            <button onClick={onClose} className="p-1.5 hover:bg-muted rounded-xl transition-colors text-muted-foreground hover:text-foreground cursor-pointer">
+              <XCircle size={20} />
             </button>
           </div>
 
           {/* Content */}
-          <div className="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
-            <div className="flex gap-4">
-              <div className="w-16 h-24 rounded-xl overflow-hidden shrink-0 bg-linear-to-br from-slate-200 to-slate-300 flex items-center justify-center">
-                {loan.item?.bibliography?.image ? (
-                  <img src={loan.item.bibliography.image} alt={title} className="w-full h-full object-cover" />
-                ) : (
-                  <BookOpen className="w-6 h-6 text-slate-400" />
-                )}
-              </div>
-              <div>
-                <h3 className="font-bold text-slate-900 mb-1">{title}</h3>
-                <p className="text-sm text-slate-500 mb-2">{author}</p>
-                <StatusBadge status={status} />
-              </div>
-            </div>
+          <div className="p-5 sm:p-6 space-y-4">
+            {loan.qrCodeUrl ? (
+              <div className="flex flex-col sm:flex-row gap-5 items-stretch">
+                {/* Kolom Kiri: Detail Buku & Status */}
+                <div className="flex-1 space-y-3.5 flex flex-col justify-between">
+                  {/* Info Buku */}
+                  <div className="flex items-start gap-3.5">
+                    <div className="w-14 h-20 sm:w-16 sm:h-22 rounded-xl overflow-hidden shrink-0 bg-linear-to-br from-slate-200 to-slate-300 dark:from-slate-700 dark:to-slate-800 flex items-center justify-center border border-border shadow-xs">
+                      {loan.item?.bibliography?.image ? (
+                        <img src={loan.item.bibliography.image} alt={title} className="w-full h-full object-cover" />
+                      ) : (
+                        <BookOpen className="w-6 h-6 text-muted-foreground" />
+                      )}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <h3 className="font-bold text-foreground text-sm sm:text-base leading-snug line-clamp-2">{title}</h3>
+                      <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">{author}</p>
+                      <div className="mt-2">
+                        <StatusBadge status={status} />
+                      </div>
+                    </div>
+                  </div>
 
-            {/* Info Kode Buku & Call Number */}
-            <div className="grid grid-cols-2 gap-3">
-              <div className="p-3 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-100 dark:border-slate-700">
-                <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">Kode Buku / Item</p>
-                <p className="font-mono font-bold text-slate-900 dark:text-slate-100 text-sm">{itemCode}</p>
-              </div>
-              <div className="p-3 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-100 dark:border-slate-700">
-                <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">Call Number / Rak</p>
-                <p className="font-mono font-bold text-slate-900 dark:text-slate-100 text-sm">{bib?.callNumber || (loan.item?.location as any)?.rack || "-"}</p>
-              </div>
-            </div>
+                  {/* Grid Rincian 2x2 */}
+                  <div className="grid grid-cols-2 gap-2.5">
+                    <div className="p-2.5 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-100 dark:border-slate-700/60">
+                      <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-0.5">Kode Buku / Item</p>
+                      <p className="font-mono font-bold text-foreground text-xs sm:text-sm truncate">{itemCode}</p>
+                    </div>
+                    <div className="p-2.5 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-100 dark:border-slate-700/60">
+                      <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-0.5">Call Number / Rak</p>
+                      <p className="font-mono font-bold text-foreground text-xs sm:text-sm truncate">{bib?.callNumber || (loan.item?.location as any)?.rack || "-"}</p>
+                    </div>
+                    <div className="p-2.5 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-100 dark:border-slate-700/60">
+                      <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-0.5">Tanggal Pinjam</p>
+                      <p className="font-bold text-foreground text-xs sm:text-sm">{formatDateID(loan.loanDate)}</p>
+                    </div>
+                    <div className="p-2.5 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-100 dark:border-slate-700/60">
+                      <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-0.5">Jatuh Tempo</p>
+                      <p className={`font-bold text-xs sm:text-sm ${status === "late" ? "text-primary" : "text-foreground"}`}>
+                        {formatDateID(loan.dueDate)}
+                      </p>
+                    </div>
+                  </div>
 
-            {/* Dates Grid */}
-            <div className="grid grid-cols-2 gap-3">
-              <div className="p-3 bg-slate-50 rounded-xl">
-                <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">Tanggal Pinjam</p>
-                <p className="font-bold text-slate-900 text-sm">{formatDateID(loan.loanDate)}</p>
-              </div>
-              <div className="p-3 bg-slate-50 rounded-xl">
-                <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">Jatuh Tempo</p>
-                <p className={`font-bold text-sm ${status === "late" ? "text-primary" : "text-slate-900"}`}>
-                  {formatDateID(loan.dueDate)}
-                </p>
-              </div>
-              {loan.returnDate && (
-                <div className="p-3 bg-green-50 rounded-xl col-span-2">
-                  <p className="text-[10px] font-bold text-green-400 uppercase mb-1">Tanggal Dikembalikan</p>
-                  <p className="font-bold text-green-700 text-sm">{formatDateID(loan.returnDate)}</p>
+                  {/* Info Tambahan jika ada */}
+                  {loan.returnDate && (
+                    <div className="p-2 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-100 dark:border-emerald-900/40 rounded-xl">
+                      <p className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 uppercase">Tanggal Dikembalikan</p>
+                      <p className="font-bold text-emerald-700 dark:text-emerald-300 text-xs">{formatDateID(loan.returnDate)}</p>
+                    </div>
+                  )}
+
+                  {(loan.fine ?? 0) > 0 && (
+                    <div className="p-2.5 bg-red-50 dark:bg-red-950/40 border border-red-100 dark:border-red-900/40 rounded-xl flex items-center gap-2">
+                      <AlertCircle className="text-primary w-4 h-4 shrink-0" />
+                      <div className="text-xs">
+                        <span className="font-bold text-primary">Denda: Rp {(loan.fine ?? 0).toLocaleString("id-ID")}</span>
+                        {lateDays > 0 && <span className="text-muted-foreground ml-1">({lateDays} hari × Rp 2.000)</span>}
+                      </div>
+                    </div>
+                  )}
+
+                  {loan.notes && (
+                    <div className="p-2 bg-muted/60 rounded-xl text-xs">
+                      <span className="font-bold text-muted-foreground uppercase text-[10px] block">Catatan</span>
+                      <span className="text-muted-foreground">{loan.notes}</span>
+                    </div>
+                  )}
+
+                  {loan.rejectReason && (
+                    <div className="p-2 bg-red-50 dark:bg-red-950/40 rounded-xl text-xs">
+                      <span className="font-bold text-red-500 uppercase text-[10px] block">Alasan Penolakan</span>
+                      <span className="text-primary">{loan.rejectReason}</span>
+                    </div>
+                  )}
                 </div>
-              )}
-            </div>
 
-            {/* Fine */}
-            {(loan.fine ?? 0) > 0 && (
-              <div className="p-4 bg-red-50 rounded-xl flex items-start gap-3">
-                <AlertCircle className="text-primary w-5 h-5 shrink-0 mt-0.5" />
-                <div>
-                  <p className="font-bold text-primary text-sm">Denda Keterlambatan</p>
-                  <p className="text-primary text-sm mt-0.5">
-                    Rp {(loan.fine ?? 0).toLocaleString("id-ID")}
-                    {lateDays > 0 && ` (${lateDays} hari × Rp 2.000)`}
+                {/* Kolom Kanan: Card QR Code Peminjaman */}
+                <div className="w-full sm:w-48 md:w-52 shrink-0 flex flex-col items-center justify-center p-3.5 bg-slate-50 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-700/60 rounded-2xl text-center">
+                  <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-2">QR Peminjaman</p>
+                  <div className="bg-white p-2 rounded-xl border border-slate-200/80 shadow-xs">
+                    <img src={loan.qrCodeUrl} alt="QR Code Peminjaman" className="w-32 h-32 sm:w-36 sm:h-36 object-contain" />
+                  </div>
+                  <p className="text-[11px] font-mono font-bold text-primary bg-primary/10 px-2.5 py-0.5 rounded-full mt-2.5 truncate max-w-full">
+                    {itemCode}
                   </p>
+                  <p className="text-[10px] text-muted-foreground mt-1">Tunjukkan ke petugas</p>
                 </div>
               </div>
-            )}
-
-            {/* Notes */}
-            {loan.notes && (
-              <div className="p-3 bg-slate-50 rounded-xl">
-                <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">Catatan</p>
-                <p className="text-xs text-slate-600">{loan.notes}</p>
-              </div>
-            )}
-
-            {/* Reject Reason */}
-            {loan.rejectReason && (
-              <div className="p-3 bg-red-50 rounded-xl">
-                <p className="text-[10px] font-bold text-red-400 uppercase mb-1">Alasan Penolakan</p>
-                <p className="text-xs text-primary">{loan.rejectReason}</p>
-              </div>
-            )}
-
-            {/* QR Code */}
-            {loan.qrCodeUrl && (
-              <div className="p-4 bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700 rounded-2xl flex flex-col items-center text-center">
-                <p className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase mb-2">Kode QR Peminjaman (Tunjukkan ke Petugas)</p>
-                <div className="bg-white p-3 rounded-2xl border border-slate-200 shadow-xs">
-                  <img src={loan.qrCodeUrl} alt="QR Code Peminjaman" className="w-44 h-44 object-contain" />
+            ) : (
+              <div className="space-y-4">
+                {/* Info Buku */}
+                <div className="flex items-start gap-3.5">
+                  <div className="w-14 h-20 sm:w-16 sm:h-22 rounded-xl overflow-hidden shrink-0 bg-linear-to-br from-slate-200 to-slate-300 dark:from-slate-700 dark:to-slate-800 flex items-center justify-center border border-border shadow-xs">
+                    {loan.item?.bibliography?.image ? (
+                      <img src={loan.item.bibliography.image} alt={title} className="w-full h-full object-cover" />
+                    ) : (
+                      <BookOpen className="w-6 h-6 text-muted-foreground" />
+                    )}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <h3 className="font-bold text-foreground text-sm sm:text-base leading-snug line-clamp-2">{title}</h3>
+                    <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">{author}</p>
+                    <div className="mt-2">
+                      <StatusBadge status={status} />
+                    </div>
+                  </div>
                 </div>
-                <p className="text-xs font-mono font-bold text-primary bg-primary/10 px-3 py-1 rounded-full mt-2">
-                  {itemCode}
-                </p>
+
+                {/* Grid Rincian 4 Kolom */}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                  <div className="p-2.5 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-100 dark:border-slate-700/60">
+                    <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-0.5">Kode Buku / Item</p>
+                    <p className="font-mono font-bold text-foreground text-xs sm:text-sm truncate">{itemCode}</p>
+                  </div>
+                  <div className="p-2.5 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-100 dark:border-slate-700/60">
+                    <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-0.5">Call Number / Rak</p>
+                    <p className="font-mono font-bold text-foreground text-xs sm:text-sm truncate">{bib?.callNumber || (loan.item?.location as any)?.rack || "-"}</p>
+                  </div>
+                  <div className="p-2.5 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-100 dark:border-slate-700/60">
+                    <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-0.5">Tanggal Pinjam</p>
+                    <p className="font-bold text-foreground text-xs sm:text-sm">{formatDateID(loan.loanDate)}</p>
+                  </div>
+                  <div className="p-2.5 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-100 dark:border-slate-700/60">
+                    <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-0.5">Jatuh Tempo</p>
+                    <p className={`font-bold text-xs sm:text-sm ${status === "late" ? "text-primary" : "text-foreground"}`}>
+                      {formatDateID(loan.dueDate)}
+                    </p>
+                  </div>
+                </div>
+
+                {loan.returnDate && (
+                  <div className="p-2.5 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-100 dark:border-emerald-900/40 rounded-xl">
+                    <p className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 uppercase">Tanggal Dikembalikan</p>
+                    <p className="font-bold text-emerald-700 dark:text-emerald-300 text-xs">{formatDateID(loan.returnDate)}</p>
+                  </div>
+                )}
+
+                {(loan.fine ?? 0) > 0 && (
+                  <div className="p-2.5 bg-red-50 dark:bg-red-950/40 border border-red-100 dark:border-red-900/40 rounded-xl flex items-center gap-2">
+                    <AlertCircle className="text-primary w-4 h-4 shrink-0" />
+                    <div className="text-xs">
+                      <span className="font-bold text-primary">Denda: Rp {(loan.fine ?? 0).toLocaleString("id-ID")}</span>
+                      {lateDays > 0 && <span className="text-muted-foreground ml-1">({lateDays} hari × Rp 2.000)</span>}
+                    </div>
+                  </div>
+                )}
+
+                {loan.notes && (
+                  <div className="p-2 bg-muted/60 rounded-xl text-xs">
+                    <span className="font-bold text-muted-foreground uppercase text-[10px] block">Catatan</span>
+                    <span className="text-muted-foreground">{loan.notes}</span>
+                  </div>
+                )}
+
+                {loan.rejectReason && (
+                  <div className="p-2 bg-red-50 dark:bg-red-950/40 rounded-xl text-xs">
+                    <span className="font-bold text-red-500 uppercase text-[10px] block">Alasan Penolakan</span>
+                    <span className="text-primary">{loan.rejectReason}</span>
+                  </div>
+                )}
               </div>
             )}
           </div>
 
-          {/* Footer */}
-          <div className="p-6 border-t border-slate-100 flex flex-col gap-2">
-            <div className="flex gap-3">
-              <button
-                onClick={onClose}
-                className="flex-1 px-4 py-3 bg-slate-100 text-slate-700 rounded-xl font-bold text-sm hover:bg-slate-200 transition-all"
-              >
-                Tutup
-              </button>
+          {/* Footer: 1 Baris Sejajar & Pas */}
+          <div className="px-5 py-3.5 sm:px-6 sm:py-4 border-t border-border bg-slate-50/50 dark:bg-slate-900/30 flex flex-wrap items-center justify-between gap-2.5">
+            <button
+              onClick={onClose}
+              className="px-4 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-xl font-bold text-xs sm:text-sm transition-all cursor-pointer"
+            >
+              Tutup
+            </button>
 
+            <div className="flex flex-wrap items-center gap-2 ml-auto">
               {status === "pending" && (
                 <button
                   onClick={() => { onCancel(loan.id); onClose(); }}
                   disabled={isCanceling}
-                  className="flex-1 px-4 py-3 bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2"
+                  className="px-4 py-2 bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 dark:border-red-900/60 dark:bg-red-950/40 rounded-xl font-bold text-xs sm:text-sm transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
                 >
                   <XCircle size={15} />
-                  {isCanceling ? "Membatalkan..." : "Batalkan Pemesanan"}
+                  <span>{isCanceling ? "Membatalkan..." : "Batalkan Pemesanan"}</span>
                 </button>
               )}
-              
+
+              {/* Perpanjang Button / Badge */}
+              {!loan.returnRequests?.some(r => r.status === "pending") && (status === "active" || status === "warning" || status === "late") && (
+                <>
+                  {loan.extensionStatus === "pending" ? (
+                    <div className="px-3 py-2 bg-purple-50 dark:bg-purple-950/40 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-900/60 rounded-xl font-bold text-xs flex items-center gap-1.5">
+                      <Clock size={14} />
+                      <span>Menunggu Perpanjangan</span>
+                    </div>
+                  ) : loan.extendCount >= 1 ? (
+                    <div className="px-3 py-2 bg-slate-100 dark:bg-slate-800 text-slate-500 rounded-xl font-bold text-xs flex items-center gap-1.5">
+                      <CheckCircle size={14} />
+                      <span>Sudah Diperpanjang</span>
+                    </div>
+                  ) : status !== "late" ? (
+                    <button
+                      onClick={() => { onExtend(loan.id); onClose(); }}
+                      disabled={isExtending || isReturning}
+                      className="px-4 py-2 bg-primary hover:bg-primary/90 disabled:opacity-50 text-white rounded-xl font-bold text-xs sm:text-sm transition-all flex items-center gap-1.5 cursor-pointer shadow-xs active:scale-95"
+                    >
+                      <RotateCcw size={14} />
+                      <span>Perpanjang Buku</span>
+                    </button>
+                  ) : null}
+                </>
+              )}
+
+              {/* Kembalikan Button / Badge */}
               {loan.returnRequests?.some(r => r.status === "pending") ? (
-                <div className="flex-1 px-4 py-3 bg-yellow-50 text-yellow-700 rounded-xl font-bold text-sm flex items-center justify-center gap-2 border border-yellow-200">
-                  <Clock size={15} />
-                  Menunggu Pengembalian
+                <div className="px-3 py-2 bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 rounded-xl font-bold text-xs flex items-center gap-1.5 border border-amber-200 dark:border-amber-900/60">
+                  <Clock size={14} />
+                  <span>Menunggu Pengembalian</span>
                 </div>
               ) : (status === "active" || status === "warning" || status === "late") ? (
                 <button
                   onClick={() => { onReturn(loan.id); onClose(); }}
                   disabled={isReturning || isExtending}
-                  className="flex-1 px-4 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-200 text-white rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2"
+                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded-xl font-bold text-xs sm:text-sm transition-all flex items-center gap-1.5 cursor-pointer shadow-xs active:scale-95"
                 >
-                  <RotateCcw size={15} />
-                  Kembalikan
+                  <RotateCcw size={14} />
+                  <span>Kembalikan</span>
                 </button>
               ) : null}
             </div>
-
-            {/* Perpanjang Row */}
-            {!loan.returnRequests?.some(r => r.status === "pending") && (status === "active" || status === "warning" || status === "late") && (
-              <div className="w-full">
-                {loan.extensionStatus === "pending" ? (
-                  <div className="w-full px-4 py-3 bg-purple-50 text-purple-700 rounded-xl font-bold text-sm flex items-center justify-center gap-2">
-                    <Clock size={15} />
-                    Menunggu Perpanjangan
-                  </div>
-                ) : loan.extendCount >= 1 ? (
-                  <div className="w-full px-4 py-3 bg-slate-100 text-slate-500 rounded-xl font-bold text-sm flex items-center justify-center gap-2">
-                    <CheckCircle size={15} />
-                    Sudah Diperpanjang
-                  </div>
-                ) : status !== "late" ? (
-                  <button
-                    onClick={() => { onExtend(loan.id); onClose(); }}
-                    disabled={isExtending || isReturning}
-                    className="w-full px-4 py-3 bg-primary hover:bg-primary/90 disabled:bg-slate-200 text-white rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2"
-                  >
-                    <RotateCcw size={15} />
-                    Perpanjang Buku
-                  </button>
-                ) : null}
-              </div>
-            )}
           </div>
         </div>
       </div>
@@ -538,7 +620,6 @@ export default function MyLoansPage() {
   const [extendingId, setExtendingId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
-  const [showFilters, setShowFilters] = useState(false);
   const [selectedLoan, setSelectedLoan] = useState<Loan | null>(null);
 
   // ─── Auth guard ──────────────────────────────────────────────────────────────
@@ -679,8 +760,8 @@ export default function MyLoansPage() {
         <Navbar />
         <main className="flex-1 max-w-7xl mx-auto px-4 md:px-6 py-10 w-full">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-            <Skeleton className="lg:col-span-2 h-40 rounded-2xl" />
-            <Skeleton className="h-40 rounded-2xl" />
+            <Skeleton className="order-2 lg:order-1 lg:col-span-2 h-36 sm:h-40 rounded-2xl" />
+            <Skeleton className="order-1 lg:order-2 h-28 sm:h-40 rounded-2xl" />
           </div>
           <Skeleton className="h-14 rounded-xl mb-6" />
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -701,55 +782,98 @@ export default function MyLoansPage() {
       <main className="flex-1 max-w-7xl mx-auto px-4 md:px-6 py-10 w-full">
 
         {/* ── TOP SECTION ── */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-          {/* Search */}
-          <div className="lg:col-span-2 bg-card p-6 rounded-2xl border border-slate-100 shadow-sm">
-            <div className="flex items-center justify-between mb-5">
-              <h2 className="font-bold text-slate-800">Cari Pinjaman</h2>
-              <button
-                onClick={() => setShowFilters(!showFilters)}
-                className="lg:hidden text-slate-400 hover:text-primary transition-colors"
-              >
-                <Filter size={18} />
-              </button>
-            </div>
-            <div className="relative">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 w-5 h-5" />
-              <input
-                type="text"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                placeholder="Ketik judul atau penulis..."
-                className="w-full pl-12 pr-4 py-3 bg-card border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/10 focus:border-primary text-sm text-slate-900 placeholder:text-slate-400"
-              />
-            </div>
-          </div>
-
-          {/* User Card */}
-          <div className="bg-card p-6 rounded-2xl border border-slate-100 shadow-sm flex items-center gap-4">
-            <div className="w-14 h-14 bg-linear-to-br from-red-500 to-red-700 rounded-full shrink-0 flex items-center justify-center text-white font-bold text-lg">
-              {user?.name?.split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase()}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 mb-6">
+          {/* User Card (Paling Atas pada Tampilan HP: order-1) */}
+          <div className="order-1 lg:order-2 bg-card p-4 sm:p-6 rounded-2xl border border-slate-100 shadow-sm flex items-center gap-3.5 sm:gap-4">
+            <div className="w-12 h-12 sm:w-14 sm:h-14 bg-linear-to-br from-red-500 to-red-700 rounded-full shrink-0 flex items-center justify-center text-white font-bold text-base sm:text-lg overflow-hidden border border-white/20 shadow-xs">
+              {user?.image ? (
+                <img
+                  src={user.image}
+                  alt={user.name || "User"}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                user?.name?.split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase()
+              )}
             </div>
             <div className="flex-1 min-w-0">
-              <h3 className="font-bold text-slate-900 truncate">{user?.name}</h3>
-              <p className="text-xs text-slate-400 mb-3 truncate">{user?.email}</p>
+              <h3 className="font-bold text-slate-900 truncate text-sm sm:text-base leading-snug">{user?.name}</h3>
+              <p className="text-xs text-slate-400 mb-2 sm:mb-3 truncate">{user?.email}</p>
               <div className="space-y-1">
                 <div className="flex justify-between text-[10px] font-bold">
                   <span className="text-slate-400 uppercase tracking-widest">Pinjaman Aktif</span>
                   <span className="text-primary">{stats.active + stats.warning + stats.late} buku</span>
                 </div>
                 {stats.totalFine > 0 && (
-                  <p className="text-[10px] text-primary font-medium pt-1">
+                  <p className="text-[10px] text-primary font-medium pt-0.5">
                     ⚠ Denda: Rp {stats.totalFine.toLocaleString("id-ID")}
                   </p>
                 )}
               </div>
             </div>
           </div>
+
+          {/* Search & Mobile Filter (Di Bawah Identitas User pada HP: order-2) */}
+          <div className="order-2 lg:order-1 lg:col-span-2 bg-card p-4 sm:p-6 rounded-2xl border border-slate-100 shadow-sm space-y-3 sm:space-y-3.5">
+            <div className="flex items-center justify-between">
+              <h2 className="font-bold text-slate-800 text-sm sm:text-base">Cari Pinjaman</h2>
+              {filterStatus !== "all" && (
+                <span className="lg:hidden text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-primary/10 text-primary">
+                  {FILTER_OPTIONS.find((o) => o.value === filterStatus)?.label}
+                </span>
+              )}
+            </div>
+
+            <div className="flex flex-col sm:flex-row gap-2.5">
+              {/* Search Bar */}
+              <div className="relative flex-1">
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
+                <input
+                  type="text"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  placeholder="Ketik judul atau penulis..."
+                  className="w-full pl-11 pr-4 py-2.5 sm:py-3 bg-card border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/10 focus:border-primary text-xs sm:text-sm text-slate-900 placeholder:text-slate-400 font-medium"
+                />
+              </div>
+
+              {/* Dropdown Filter Shadcn UI untuk Tampilan HP (lg:hidden) */}
+              <div className="lg:hidden w-full">
+                <Select
+                  value={filterStatus}
+                  onValueChange={(val) => setFilterStatus(val)}
+                >
+                  <SelectTrigger className="w-full bg-slate-50 dark:bg-muted border border-slate-200 dark:border-border rounded-xl text-xs font-bold text-slate-800 dark:text-foreground h-10 shadow-2xs">
+                    <div className="flex items-center gap-2 truncate">
+                      <Filter size={13} className="text-primary shrink-0" />
+                      <SelectValue placeholder="Pilih status..." />
+                    </div>
+                  </SelectTrigger>
+                  <SelectContent className="rounded-xl border border-border bg-card shadow-lg z-50">
+                    {FILTER_OPTIONS.map((opt) => {
+                      const count =
+                        opt.value === "all"
+                          ? loans.length
+                          : loansWithStatus.filter((l) => l.status === opt.value).length;
+                      return (
+                        <SelectItem
+                          key={opt.value}
+                          value={opt.value}
+                          className="text-xs font-bold py-2 cursor-pointer focus:bg-primary/10 focus:text-primary rounded-lg"
+                        >
+                          {opt.label} ({count})
+                        </SelectItem>
+                      );
+                    })}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          </div>
         </div>
 
-        {/* ── FILTER BAR ── */}
-        <div className={`mb-6 transition-all duration-300 ${showFilters ? "block" : "hidden lg:block"}`}>
+        {/* ── FILTER BAR (Desktop / Layar Lebar) ── */}
+        <div className="hidden lg:block mb-6">
           <div className="bg-card rounded-xl border border-slate-100 p-4">
             <div className="flex flex-wrap items-center gap-2">
               <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Filter:</span>

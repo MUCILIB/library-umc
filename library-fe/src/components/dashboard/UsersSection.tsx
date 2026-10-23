@@ -47,6 +47,13 @@ import { usersManagementService } from "@/services/dashboard/usersManagementServ
 import { dashboardDataService } from "@/services/dashboard/dashboardDataService";
 import { exportApi, importApi } from "@/api/client";
 
+const BAN_PRESET_REASONS = [
+  "Pelanggaran kebijakan sistem",
+  "Keterlambatan pengembalian buku berulang",
+  "Penyalahgunaan kartu anggota perpustakaan",
+  "Akun tidak aktif / verifikasi identitas",
+];
+
 export default function UsersSection() {
   const { data: session } = authClient.useSession();
   const { success, error: showErrorToast, warning } = useToast();
@@ -126,6 +133,9 @@ export default function UsersSection() {
   const [deleteConfirmUser, setDeleteConfirmUser] = useState<(typeof users)[number] | null>(null);
   const [search, setSearch] = useState("");
   const [recordSavingId, setRecordSavingId] = useState<string | null>(null);
+  const [banModalUser, setBanModalUser] = useState<(typeof users)[number] | null>(null);
+  const [banReasonInput, setBanReasonInput] = useState("Pelanggaran kebijakan sistem");
+
   const [showOnlyUnsynced, setShowOnlyUnsynced] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
@@ -251,18 +261,20 @@ export default function UsersSection() {
 
   const currentUserId = session?.user?.id;
 
-  const handleToggleBan = async (user: (typeof users)[number]) => {
-    const nextBanned = !user.banned;
-    let banReason: string | undefined;
-
-    if (nextBanned) {
-      const reason = window.prompt(
-        "Alasan ban user (opsional):",
-        "Pelanggaran kebijakan sistem"
-      );
-      if (reason === null) return;
-      banReason = reason.trim() || undefined;
+  const handleToggleBan = (user: (typeof users)[number]) => {
+    if (user.id === currentUserId) {
+      warning("Tidak Diizinkan", "Anda tidak dapat memblokir akun sendiri.");
+      return;
     }
+    setBanModalUser(user);
+    setBanReasonInput(user.banned ? "" : "Pelanggaran kebijakan sistem");
+  };
+
+  const handleConfirmBanToggle = async () => {
+    if (!banModalUser) return;
+    const user = banModalUser;
+    const nextBanned = !user.banned;
+    const banReason = nextBanned ? (banReasonInput.trim() || undefined) : undefined;
 
     setBanSavingId(user.id);
     setPageError(null);
@@ -274,10 +286,11 @@ export default function UsersSection() {
       );
       await refetch();
       if (nextBanned) {
-        success("User Diblokir", `${user.name} berhasil diban.`);
+        success("User Diblokir", `${user.name} berhasil diblokir.`);
       } else {
-        success("User Diaktifkan", `${user.name} berhasil di-unban.`);
+        success("User Diaktifkan", `${user.name} berhasil diaktifkan kembali.`);
       }
+      setBanModalUser(null);
     } catch (err) {
       const message =
         err instanceof Error
@@ -710,10 +723,10 @@ export default function UsersSection() {
                                 )}
                               </SelectTrigger>
                               <SelectContent align="end">
-                                <SelectItem value="student" className="text-xs cursor-pointer">student</SelectItem>
-                                <SelectItem value="lecturer" className="text-xs cursor-pointer">lecturer</SelectItem>
-                                <SelectItem value="staff" className="text-xs cursor-pointer">staff</SelectItem>
-                                <SelectItem value="super_admin" className="text-xs cursor-pointer">super_admin</SelectItem>
+                                <SelectItem value="student" className="text-xs cursor-pointer">Mahasiswa</SelectItem>
+                                <SelectItem value="lecturer" className="text-xs cursor-pointer">Dosen</SelectItem>
+                                <SelectItem value="staff" className="text-xs cursor-pointer">Staff</SelectItem>
+                                <SelectItem value="super_admin" className="text-xs cursor-pointer">Super Admin</SelectItem>
                               </SelectContent>
                             </Select>
 
@@ -858,6 +871,143 @@ export default function UsersSection() {
           </>
         )}
       </div>
+
+
+      {/* Modal Konfirmasi Ban / Unban User */}
+      <Modal
+        isOpen={Boolean(banModalUser)}
+        onClose={() => setBanModalUser(null)}
+        title={banModalUser?.banned ? "Buka Blokir Pengguna (Unban)" : "Blokir Pengguna (Ban)"}
+        size="md"
+      >
+        <div className="space-y-4">
+          <div className="flex items-start gap-3">
+            <div className={`p-2.5 rounded-xl shrink-0 ${
+              banModalUser?.banned
+                ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400"
+                : "bg-orange-100 text-orange-700 dark:bg-orange-950 dark:text-orange-400"
+            }`}>
+              {banModalUser?.banned ? <ShieldCheck className="size-5" /> : <UserX className="size-5" />}
+            </div>
+            <div>
+              <h4 className="text-sm font-bold text-foreground">
+                {banModalUser?.banned
+                  ? `Buka blokir akun ${banModalUser?.name || "pengguna"}?`
+                  : `Blokir akun ${banModalUser?.name || "pengguna"}?`}
+              </h4>
+              <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">
+                {banModalUser?.banned
+                  ? "Pengguna akan dapat masuk kembali ke sistem dan mengakses seluruh layanan perpustakaan."
+                  : "Pengguna yang diblokir tidak akan dapat login atau melakukan transaksi perpustakaan sampai statusnya diaktifkan kembali."}
+              </p>
+            </div>
+          </div>
+
+          {banModalUser && (
+            <div className="rounded-xl bg-muted/60 border border-border p-3.5 text-xs space-y-1.5">
+              <div className="flex items-center justify-between">
+                <span className="text-muted-foreground">Nama:</span>
+                <span className="font-bold text-foreground">
+                  {banModalUser.name || "Tanpa Nama"}
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-muted-foreground">Email:</span>
+                <span className="font-mono text-foreground">
+                  {banModalUser.email}
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-muted-foreground">Role:</span>
+                <span className="font-bold uppercase text-foreground">
+                  {banModalUser.role}
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-muted-foreground">Status Saat Ini:</span>
+                <span
+                  className={`font-bold ${
+                    banModalUser.banned
+                      ? "text-orange-600 dark:text-orange-400"
+                      : "text-emerald-600 dark:text-emerald-400"
+                  }`}
+                >
+                  {banModalUser.banned ? "Diblokir (Banned)" : "Aktif"}
+                </span>
+              </div>
+            </div>
+          )}
+
+          {!banModalUser?.banned && (
+            <div className="space-y-2">
+              <label className="block text-xs font-bold text-muted-foreground uppercase">
+                Alasan Pemblokiran (Opsional)
+              </label>
+              <textarea
+                rows={2}
+                value={banReasonInput}
+                onChange={(e) => setBanReasonInput(e.target.value)}
+                placeholder="Tulis alasan pemblokiran pengguna..."
+                className="w-full rounded-xl border border-border bg-background px-3 py-2 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 resize-none"
+              />
+              <div className="flex flex-wrap gap-1.5 pt-1">
+                {BAN_PRESET_REASONS.map((preset) => (
+                  <button
+                    key={preset}
+                    type="button"
+                    onClick={() => setBanReasonInput(preset)}
+                    className={`text-[10px] px-2 py-0.5 rounded-md border transition-colors cursor-pointer ${
+                      banReasonInput === preset
+                        ? "bg-orange-50 text-orange-700 border-orange-300 dark:bg-orange-950 dark:text-orange-300 dark:border-orange-800 font-bold"
+                        : "bg-muted/60 text-muted-foreground border-border hover:bg-muted"
+                    }`}
+                  >
+                    {preset}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-border">
+            <button
+              type="button"
+              onClick={() => setBanModalUser(null)}
+              disabled={Boolean(banSavingId)}
+              className="h-9 rounded-lg border border-border px-4 text-xs font-semibold text-muted-foreground hover:bg-muted transition-colors cursor-pointer"
+            >
+              Batal
+            </button>
+            <button
+              type="button"
+              onClick={() => void handleConfirmBanToggle()}
+              disabled={Boolean(banSavingId)}
+              className={`inline-flex h-9 items-center gap-2 rounded-lg px-4 text-xs font-bold text-white transition-colors cursor-pointer ${
+                banModalUser?.banned
+                  ? "bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50"
+                  : "bg-orange-600 hover:bg-orange-700 disabled:opacity-50"
+              }`}
+            >
+              {banSavingId ? (
+                <>
+                  <Loader2 className="size-4 animate-spin" />
+                  <span>Memproses...</span>
+                </>
+              ) : banModalUser?.banned ? (
+                <>
+                  <ShieldCheck className="size-4" />
+                  <span>Aktifkan Pengguna</span>
+                </>
+              ) : (
+                <>
+                  <UserX className="size-4" />
+                  <span>Blokir Pengguna</span>
+                </>
+              )}
+            </button>
+          </div>
+        </div>
+      </Modal>
 
       <ImportUserModal
         isOpen={isImportModalOpen}

@@ -7,7 +7,7 @@ export interface AuthUser {
   image?: string | null;
   createdAt: Date;
   updatedAt: Date;
-  role: "student" | "lecturer" | "super_admin" | "staff";
+  role: "student" | "lecturer" | "super_admin" | "staff" | "dosen" | string;
 }
 
 /**
@@ -21,7 +21,7 @@ export interface LibraryUser {
   memberId?: string;
   name: string;
   email: string;
-  role: "admin" | "mahasiswa";
+  role: "student" | "lecturer" | "super_admin" | "staff" | "dosen" | "admin" | "mahasiswa" | string;
   /** NIM mahasiswa jika ada */
   nim?: string;
 }

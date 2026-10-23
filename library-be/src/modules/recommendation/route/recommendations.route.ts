@@ -53,7 +53,7 @@ router.post(
   "/recommendations",
   publicApiLimiter,
   isAuthenticated,
-  requireRole(["lecturer", "super_admin", "staff"]), // Provide leeway if needed or isolate just lecturer
+  requireRole(["lecturer", "dosen", "super_admin", "staff"]), // Provide leeway if needed or isolate just lecturer
   recommendationsController.createRecommendation.bind(
     recommendationsController,
   ),
@@ -164,12 +164,12 @@ router.patch(
   ),
 );
 
-// Admin: Soft Delete
+// Soft Delete (Admin/Staff, or Lecturer if pending)
 router.delete(
   "/recommendations/:id",
   publicApiLimiter,
   isAuthenticated,
-  requireRole(["super_admin", "staff"]),
+  requireRole(["super_admin", "staff", "lecturer", "dosen"]),
   recommendationsController.deleteRecommendation.bind(
     recommendationsController,
   ),

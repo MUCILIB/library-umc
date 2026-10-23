@@ -163,6 +163,8 @@ export class ItemService {
           loanDate: loanByToken.loanDate,
           dueDate: loanByToken.dueDate,
           returnDate: loanByToken.returnDate,
+          extensionStatus: (loanByToken as any).extensionStatus || "none",
+          extendCount: (loanByToken as any).extendCount ?? 0,
         };
       }
     }
@@ -200,6 +202,8 @@ export class ItemService {
           loanDate: activeLoan.loanDate,
           dueDate: activeLoan.dueDate,
           returnDate: activeLoan.returnDate,
+          extensionStatus: (activeLoan as any).extensionStatus || "none",
+          extendCount: (activeLoan as any).extendCount ?? 0,
         };
       }
     }
@@ -212,6 +216,9 @@ export class ItemService {
       allowedActions.push("loan");
     } else if (isLoaned) {
       allowedActions.push("return");
+      if (activeLoanData?.extensionStatus === "pending") {
+        allowedActions.push("approve_extension");
+      }
     }
 
     // Format location string

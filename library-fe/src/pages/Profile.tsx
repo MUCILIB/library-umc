@@ -13,10 +13,10 @@ import RiwayatPeminjaman from "@/components/RiwayatPeminjaman";
 import FinesList from "@/components/FinesList";
 import MemberCard from "@/components/MemberCard";
 import SavedBooksTab from "@/components/SavedBooksTab";
+import LecturerRecommendationList from "@/components/LecturerRecommendationList";
 import { useToast } from "@/hooks/useToast";
-import { API_BASE_URL } from "@/utils/api-config";
 import { getSavedBookIds } from "@/utils/bookmarks";
-import { Settings, Mail, BookMarked, Send, Loader2, Info, BookOpen } from "lucide-react";
+import { Settings, Mail, BookOpen } from "lucide-react";
 import type { AuthUser } from "@/types/auth";
 
 const Profile = () => {
@@ -45,14 +45,6 @@ const Profile = () => {
     originRegion: "",
     institution: "",
     phone: ""
-  });
-  const [recommendationLoading, setRecommendationLoading] = useState(false);
-  const [recommendationForm, setRecommendationForm] = useState({
-    isbn: "",
-    title: "",
-    author: "",
-    publisher: "",
-    reason: ""
   });
 
   useEffect(() => {
@@ -201,58 +193,6 @@ const Profile = () => {
     }
   };
 
-  const handleSubmitRecommendation = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    if (
-      !recommendationForm.title ||
-      !recommendationForm.author ||
-      !recommendationForm.reason
-    ) {
-      error(
-        "Data Belum Lengkap",
-        "Judul, Penulis, dan Alasan wajib diisi.",
-        4000
-      );
-      return;
-    }
-
-    try {
-      setRecommendationLoading(true);
-
-      const response = await fetch(`${API_BASE_URL}/api/recommendations`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify(recommendationForm)
-      });
-
-      const data = await response.json();
-      if (!data.success) {
-        error(
-          "Gagal",
-          data.message || "Gagal mengajukan usulan koleksi.",
-          5000
-        );
-        return;
-      }
-
-      success("Berhasil", "Usulan koleksi berhasil diajukan.", 3000);
-      setRecommendationForm({
-        isbn: "",
-        title: "",
-        author: "",
-        publisher: "",
-        reason: ""
-      });
-    } catch (err) {
-      console.error("Submit recommendation error:", err);
-      error("Error", "Gagal terhubung ke server.", 5000);
-    } finally {
-      setRecommendationLoading(false);
-    }
-  };
-
   if (sessionLoading || loading) {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center">
@@ -269,7 +209,7 @@ const Profile = () => {
       .join("")
       .toUpperCase()
       .substring(0, 2);
-  const isLecturerOnly = authUser?.role === "lecturer";
+  const isLecturerOnly = authUser?.role === "lecturer" || authUser?.role === "dosen";
   const isExternal = profile?.memberType === "external" || profile?.isExternal;
 
   const tabs = [
@@ -298,7 +238,7 @@ const Profile = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background overflow-x-hidden">
       <Navbar />
 
       <style dangerouslySetInnerHTML={{__html: `
@@ -384,7 +324,7 @@ const Profile = () => {
         </div>
 
         {/* Tab Content */}
-        <div className="min-h-[500px]">
+        <div className="min-h-[500px] w-full">
           {activeTab === "peminjaman-aktif" && (
             <RiwayatPeminjaman type="active" view="grid" />
           )}
@@ -403,141 +343,9 @@ const Profile = () => {
             </div>
           )}
           {activeTab === "usulan-koleksi" && isLecturerOnly && (
-            <section className="bg-card border border-red-100 rounded-[28px] p-6 md:p-8 shadow-sm">
-              <div className="flex items-start gap-4 mb-6">
-                <div className="w-12 h-12 rounded-2xl bg-red-50 text-primary flex items-center justify-center shrink-0">
-                  <BookMarked size={22} />
-                </div>
-                <div>
-                  <h3 className="text-lg md:text-xl font-black text-slate-900">
-                    Usul Koleksi Baru
-                  </h3>
-                  <p className="text-sm text-slate-500 font-medium mt-1">
-                    Form ini hanya tersedia untuk dosen (lecturer).
-                  </p>
-                </div>
-              </div>
-
-              <div className="bg-blue-50 border border-blue-100 rounded-2xl p-4 mb-6 flex gap-3">
-                <Info className="text-blue-500 shrink-0 mt-0.5" size={16} />
-                <p className="text-[13px] text-blue-700 font-medium leading-relaxed">
-                  Buku yang diusulkan akan direview oleh tim perpustakaan
-                  sebelum diproses menjadi pengadaan koleksi.
-                </p>
-              </div>
-
-              <form onSubmit={handleSubmitRecommendation} className="space-y-5">
-                <div className="grid md:grid-cols-2 gap-4">
-                  <div className="md:col-span-2">
-                    <label className="text-[11px] font-black uppercase tracking-widest text-slate-400 ml-2">
-                      Judul Buku *
-                    </label>
-                    <input
-                      required
-                      type="text"
-                      value={recommendationForm.title}
-                      onChange={(e) =>
-                        setRecommendationForm({
-                          ...recommendationForm,
-                          title: e.target.value
-                        })
-                      }
-                      placeholder="Contoh: Pemrograman Web Modern"
-                      className="mt-2 w-full bg-card border border-slate-200 rounded-2xl py-3 px-4 text-sm font-semibold text-slate-900 focus:ring-4 focus:ring-primary/10 focus:border-primary/30 outline-none"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="text-[11px] font-black uppercase tracking-widest text-slate-400 ml-2">
-                      Penulis *
-                    </label>
-                    <input
-                      required
-                      type="text"
-                      value={recommendationForm.author}
-                      onChange={(e) =>
-                        setRecommendationForm({
-                          ...recommendationForm,
-                          author: e.target.value
-                        })
-                      }
-                      placeholder="Nama Penulis"
-                      className="mt-2 w-full bg-card border border-slate-200 rounded-2xl py-3 px-4 text-sm font-semibold text-slate-900 focus:ring-4 focus:ring-primary/10 focus:border-primary/30 outline-none"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="text-[11px] font-black uppercase tracking-widest text-slate-400 ml-2">
-                      Penerbit
-                    </label>
-                    <input
-                      type="text"
-                      value={recommendationForm.publisher}
-                      onChange={(e) =>
-                        setRecommendationForm({
-                          ...recommendationForm,
-                          publisher: e.target.value
-                        })
-                      }
-                      placeholder="Opsional"
-                      className="mt-2 w-full bg-card border border-slate-200 rounded-2xl py-3 px-4 text-sm font-semibold text-slate-900 focus:ring-4 focus:ring-primary/10 focus:border-primary/30 outline-none"
-                    />
-                  </div>
-
-                  <div className="md:col-span-2">
-                    <label className="text-[11px] font-black uppercase tracking-widest text-slate-400 ml-2">
-                      ISBN (Opsional)
-                    </label>
-                    <input
-                      type="text"
-                      value={recommendationForm.isbn}
-                      onChange={(e) =>
-                        setRecommendationForm({
-                          ...recommendationForm,
-                          isbn: e.target.value
-                        })
-                      }
-                      placeholder="Contoh: 978-3-16-148410-0"
-                      className="mt-2 w-full bg-card border border-slate-200 rounded-2xl py-3 px-4 text-sm font-semibold text-slate-900 focus:ring-4 focus:ring-primary/10 focus:border-primary/30 outline-none"
-                    />
-                  </div>
-
-                  <div className="md:col-span-2">
-                    <label className="text-[11px] font-black uppercase tracking-widest text-slate-400 ml-2">
-                      Alasan Pengadaan *
-                    </label>
-                    <textarea
-                      required
-                      rows={4}
-                      value={recommendationForm.reason}
-                      onChange={(e) =>
-                        setRecommendationForm({
-                          ...recommendationForm,
-                          reason: e.target.value
-                        })
-                      }
-                      placeholder="Contoh: Digunakan sebagai referensi mata kuliah semester ini."
-                      className="mt-2 w-full bg-card border border-slate-200 rounded-2xl py-3 px-4 text-sm font-semibold text-slate-900 focus:ring-4 focus:ring-primary/10 focus:border-primary/30 outline-none resize-y"
-                    />
-                  </div>
-                </div>
-
-                <div className="pt-2">
-                  <button
-                    type="submit"
-                    disabled={recommendationLoading}
-                    className="inline-flex items-center justify-center gap-2 bg-primary text-white px-8 py-3 rounded-2xl font-black text-xs uppercase tracking-[0.18em] shadow-lg shadow-red-200 hover:bg-primary/90 disabled:bg-slate-300 transition-all active:scale-95"
-                  >
-                    {recommendationLoading ? (
-                      <Loader2 size={15} className="animate-spin" />
-                    ) : (
-                      <Send size={15} />
-                    )}
-                    {recommendationLoading ? "Mengirim..." : "Kirim Usulan"}
-                  </button>
-                </div>
-              </form>
-            </section>
+            <div className="bg-card border border-border rounded-[28px] p-6 md:p-8 shadow-xs">
+              <LecturerRecommendationList />
+            </div>
           )}
           {activeTab === "edit-profil" && (
             <div className="bg-slate-50/50 rounded-3xl sm:rounded-[40px] p-6 sm:p-10 max-w-3xl border border-slate-100 shadow-sm">

@@ -1,7 +1,7 @@
 import { db } from "../../../db";
 import { recommendations, bibliographies } from "../../../db/schema";
 import { eq, and, isNull, desc, ilike } from "drizzle-orm";
-import { NotFoundError, BadRequestError } from "../../../exceptions/AppError";
+import { NotFoundError, BadRequestError, ForbiddenError } from "../../../exceptions/AppError";
 
 class RecommendationService {
   /**
@@ -115,16 +115,26 @@ class RecommendationService {
 
     return updated;
   }
+
   /**
-   * 4. Soft Delete (Admin)
+   * 4. Soft Delete (Admin/Staff, atau Dosen pemilik usulan dengan status pending)
    */
-  async deleteRecommendation(id: string) {
+  async deleteRecommendation(id: string, actorUserId?: string, actorRole?: string) {
     const rec = await db.query.recommendations.findFirst({
       where: and(eq(recommendations.id, id), isNull(recommendations.deletedAt))
     });
 
     if (!rec) {
       throw new NotFoundError("Rekomendasi tidak ditemukan");
+    }
+
+    if (actorRole && actorRole !== "super_admin" && actorRole !== "staff") {
+      if (rec.dosenId !== actorUserId) {
+        throw new ForbiddenError("Anda tidak memiliki izin untuk menghapus usulan ini");
+      }
+      if (rec.status !== "pending") {
+        throw new BadRequestError("Hanya usulan dengan status 'Menunggu' yang dapat dibatalkan");
+      }
     }
 
     const [deleted] = await db
