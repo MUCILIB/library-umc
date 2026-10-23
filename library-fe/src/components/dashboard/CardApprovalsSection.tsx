@@ -1,6 +1,7 @@
 import { useEffect, useState, Fragment } from "react";
 import { BadgeCheck, RefreshCw, UserCheck, UserX, IdCard, ChevronLeft, ChevronRight } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { getUserAvatar } from "@/lib/avatar";
 import { useToast } from "@/hooks/useToast";
 import {
   usersManagementService,
@@ -157,8 +158,12 @@ export default function CardApprovalsSection() {
                 className="p-6 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-5 hover:bg-surface-hover/40 transition-colors"
               >
                 <div className="flex items-start gap-4">
-                  <div className="w-14 h-14 rounded-2xl bg-warning-bg text-destructive flex items-center justify-center font-black">
-                    {item.user.name?.charAt(0)?.toUpperCase() || "U"}
+                  <div className="w-14 h-14 rounded-2xl overflow-hidden bg-muted border border-border shrink-0">
+                    <img
+                      src={getUserAvatar(item.user)}
+                      alt={item.user.name || "User Avatar"}
+                      className="w-full h-full object-cover"
+                    />
                   </div>
                   <div>
                     <div className="flex items-center gap-2 flex-wrap">

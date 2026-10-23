@@ -1,6 +1,17 @@
 import { db } from "../../../db";
-import { loans, members, session, Users } from "../../../db/schema";
-import { and, eq, inArray, isNull, ne } from "drizzle-orm";
+import {
+  account,
+  bibliographyViews,
+  guestLogs,
+  loans,
+  logs,
+  members,
+  reservations,
+  session,
+  Users,
+  webTraffic,
+} from "../../../db/schema";
+import { and, desc, eq, inArray, isNull, ne } from "drizzle-orm";
 
 const ALLOWED_ROLES = ["super_admin", "staff", "student", "lecturer"] as const;
 
@@ -29,7 +40,8 @@ export const UserService = {
         })
         .from(Users)
         .leftJoin(members, eq(members.userId, Users.id))
-        .where(isNull(Users.deletedAt));
+        .where(isNull(Users.deletedAt))
+        .orderBy(desc(Users.createdAt));
 
       const users = userRows.map((row) => ({
         id: row.id,
@@ -359,44 +371,50 @@ export const UserService = {
         }
       }
 
-      const now = new Date();
+      // Execute Hard Delete inside a Database Transaction
+      await db.transaction(async (tx) => {
+        // 1. If user has members profile, clean up associated reservation and guest logs
+        if (memberRecord) {
+          await tx
+            .delete(reservations)
+            .where(eq(reservations.memberId, memberRecord.id));
+          await tx
+            .delete(guestLogs)
+            .where(eq(guestLogs.memberId, memberRecord.id));
+          await tx.delete(members).where(eq(members.id, memberRecord.id));
+        }
 
-      // 1. Soft delete user and mark banned so token/credentials are blocked
-      const [deleted] = await db
-        .update(Users)
-        .set({
-          deletedAt: now,
-          banned: true,
-          banReason: "Akun dihapus oleh super admin",
-          updatedAt: now
-        })
-        .where(eq(Users.id, targetUserId))
-        .returning({
-          id: Users.id,
-          name: Users.name,
-          email: Users.email,
-          role: Users.role,
-          deletedAt: Users.deletedAt
-        });
+        // 2. Revoke and delete credentials & active sessions
+        await tx.delete(session).where(eq(session.userId, targetUserId));
+        await tx.delete(account).where(eq(account.userId, targetUserId));
 
-      // 2. Revoke all active sessions for this user
-      await db.delete(session).where(eq(session.userId, targetUserId));
+        // 3. Nullify references in history logs to preserve analytical records safely
+        await tx
+          .update(logs)
+          .set({ userId: null })
+          .where(eq(logs.userId, targetUserId));
+        await tx
+          .update(bibliographyViews)
+          .set({ userId: null })
+          .where(eq(bibliographyViews.userId, targetUserId));
+        await tx
+          .update(webTraffic)
+          .set({ userId: null })
+          .where(eq(webTraffic.userId, targetUserId));
 
-      // 3. If there is a linked member, soft delete the member as well
-      if (memberRecord) {
-        await db
-          .update(members)
-          .set({
-            deletedAt: now,
-            updatedAt: now
-          })
-          .where(eq(members.id, memberRecord.id));
-      }
+        // 4. Permanently delete the user record
+        await tx.delete(Users).where(eq(Users.id, targetUserId));
+      });
 
       return {
         success: true,
-        message: "User berhasil dihapus",
-        data: deleted ?? null
+        message: "User berhasil dihapus secara permanen",
+        data: {
+          id: targetUser.id,
+          name: targetUser.name,
+          email: targetUser.email,
+          role: targetUser.role
+        }
       };
     } catch (err) {
       console.error("[UserService] Error deleting user:", err);

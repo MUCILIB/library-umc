@@ -1,5 +1,6 @@
 import { Camera, Mail, Phone, MapPin, ShieldCheck, User as UserIcon } from 'lucide-react';
 import { type MemberProfile } from '@/services/memberService';
+import { getUserAvatar } from '@/lib/avatar';
 
 interface ProfileHeaderProps {
   profile: MemberProfile | null;
@@ -10,7 +11,6 @@ const ProfileHeader = ({ profile, onEditClick }: ProfileHeaderProps) => {
   if (!profile) return null;
 
   const user = profile.user;
-  const initials = user?.name?.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2) || 'U';
 
   return (
     <div className="relative mb-8 pt-4">
@@ -21,13 +21,7 @@ const ProfileHeader = ({ profile, onEditClick }: ProfileHeaderProps) => {
         {/* Avatar Section */}
         <div className="relative group">
           <div className="w-32 h-32 md:w-40 md:h-40 bg-card rounded-[40px] shadow-2xl shadow-primary/10 flex items-center justify-center border-4 border-white overflow-hidden ring-4 ring-primary/10 transition-all group-hover:scale-105 duration-500">
-            {user?.image ? (
-              <img src={user.image} alt={user.name} className="w-full h-full object-cover" />
-            ) : (
-              <div className="w-full h-full bg-gradient-to-br from-primary to-primary/90 flex items-center justify-center text-white text-5xl font-black">
-                {initials}
-              </div>
-            )}
+            <img src={getUserAvatar(user)} alt={user?.name || "Member"} className="w-full h-full object-cover" />
           </div>
           <button 
             className="absolute bottom-2 right-2 bg-foreground text-white p-3 rounded-2xl shadow-lg hover:bg-foreground/90 transition-all active:scale-90"
