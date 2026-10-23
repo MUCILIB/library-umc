@@ -18,6 +18,7 @@ import { useToast } from "@/hooks/useToast";
 import { getSavedBookIds } from "@/utils/bookmarks";
 import { Settings, Mail, BookOpen } from "lucide-react";
 import type { AuthUser } from "@/types/auth";
+import { getUserAvatar } from "@/lib/avatar";
 
 const Profile = () => {
   const navigate = useNavigate();
@@ -202,13 +203,6 @@ const Profile = () => {
   }
 
   const authUser = session?.user as AuthUser | undefined;
-  const userName = profile?.user?.name || authUser?.name || "User";
-  const initials = userName
-      .split(" ")
-      .map((n) => n[0])
-      .join("")
-      .toUpperCase()
-      .substring(0, 2);
   const isLecturerOnly = authUser?.role === "lecturer" || authUser?.role === "dosen";
   const isExternal = profile?.memberType === "external" || profile?.isExternal;
 
@@ -266,17 +260,11 @@ const Profile = () => {
         <div className="px-6 md:px-10 -mt-20 flex flex-col md:flex-row items-center md:items-end gap-6 md:gap-8 mb-12 relative z-10">
           <div className="w-40 h-48 md:w-48 md:h-56 bg-card rounded-[32px] shadow-xl border border-slate-50 overflow-hidden flex items-center justify-center p-1 shrink-0">
             <div className="w-full h-full bg-slate-100 rounded-[28px] overflow-hidden flex items-center justify-center">
-              {profile?.user?.image ? (
-                <img
-                  src={profile.user.image}
-                  alt={profile.user.name}
-                  className="w-full h-full object-cover"
-                />
-              ) : (
-                <div className="w-full h-full bg-slate-200 flex items-center justify-center text-slate-400 font-bold text-5xl">
-                  {initials}
-                </div>
-              )}
+              <img
+                src={getUserAvatar(profile?.user || authUser)}
+                alt={profile?.user?.name || authUser?.name || "User"}
+                className="w-full h-full object-cover"
+              />
             </div>
           </div>
           <div className="flex-1 pb-4 text-center md:text-left flex flex-col items-center md:items-start w-full">

@@ -1,6 +1,7 @@
 import { authClient } from "@/utils/auth-client";
 import { clearAuthToken } from "@/api/client";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { getUserAvatar } from "@/lib/avatar";
 import { useNavigate } from "react-router";
 
 const HandleLogout = () => {
@@ -65,7 +66,7 @@ const HandleLogout = () => {
           <div className="flex flex-col items-center gap-4 p-6 bg-white rounded-xl shadow-sm border">
             <Avatar className="h-20 w-20">
               <AvatarImage
-                src={session.user.image || ""}
+                src={getUserAvatar(session.user)}
                 alt={session.user.name}
               />
               <AvatarFallback>{session.user.name?.charAt(0)}</AvatarFallback>

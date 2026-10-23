@@ -18,6 +18,7 @@ import {
   ExternalLink
 } from "lucide-react";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
+import { getUserAvatar } from "@/lib/avatar";
 import { dashboardDataService } from "@/services/dashboard/dashboardDataService";
 import { useToast } from "@/hooks/useToast";
 import { exportApi, importApi, facultyApi, studyProgramApi, type Faculty, type StudyProgram } from "@/api/client";
@@ -389,16 +390,12 @@ export default function GuestsSection({
                         }
                         className="w-full px-4 py-3 flex items-center gap-3 hover:bg-warning-bg transition-colors text-left group disabled:opacity-50 disabled:cursor-wait"
                       >
-                        <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center text-muted-foreground shrink-0">
-                          {member.user?.image ? (
-                            <img
-                              src={member.user.image}
-                              alt={member.user.name}
-                              className="w-full h-full rounded-full object-cover"
-                            />
-                          ) : (
-                            <Users size={16} />
-                          )}
+                        <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center overflow-hidden shrink-0">
+                          <img
+                            src={getUserAvatar(member.user)}
+                            alt={member.user?.name || "Member"}
+                            className="w-full h-full rounded-full object-cover"
+                          />
                         </div>
                         <div className="flex-1 min-w-0">
                           <p className="text-[13px] font-bold text-slate-800 group-hover:text-primary truncate transition-colors">
@@ -677,16 +674,12 @@ export default function GuestsSection({
                   >
                     <td className="px-8 py-5">
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-muted overflow-hidden flex items-center justify-center text-muted-foreground">
-                          {member.user?.image ? (
-                            <img
-                              src={member.user.image}
-                              alt={member.user.name}
-                              className="w-full h-full object-cover"
-                            />
-                          ) : (
-                            <Users size={20} />
-                          )}
+                        <div className="w-10 h-10 rounded-full bg-muted overflow-hidden flex items-center justify-center">
+                          <img
+                            src={getUserAvatar(member.user)}
+                            alt={member.user?.name || "Member"}
+                            className="w-full h-full object-cover"
+                          />
                         </div>
                         <div>
                           <p className="text-[14px] font-bold text-foreground group-hover:text-primary transition-colors">
