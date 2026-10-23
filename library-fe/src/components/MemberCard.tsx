@@ -8,6 +8,7 @@ import {
   UserRound
 } from "lucide-react";
 import { type MemberProfile } from "@/services/memberService";
+import { getUserAvatar } from "@/lib/avatar";
 
 interface MemberCardProps {
   profile: MemberProfile | null;
@@ -78,13 +79,6 @@ const MemberCard = ({
   const user = profile.user;
   const status = statusConfig[profile.cardStatus] ?? statusConfig.not_requested;
   const StatusIcon = status.icon;
-  const initials =
-    user?.name
-      ?.split(" ")
-      .map((part) => part[0])
-      .join("")
-      .toUpperCase()
-      .slice(0, 2) || "U";
 
   const canRequest =
     profile.cardStatus === "not_requested" ||
@@ -169,15 +163,11 @@ const MemberCard = ({
             <div className="rounded-[28px] border border-white/10 bg-white/10 p-5 backdrop-blur">
               <div className="flex items-start gap-4">
                 <div className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-[24px] border border-white/10 bg-white/10 text-2xl font-black text-white shadow-inner">
-                  {user?.image ? (
-                    <img
-                      src={user.image}
-                      alt={user?.name || "Member"}
-                      className="h-full w-full object-cover"
-                    />
-                  ) : (
-                    initials
-                  )}
+                  <img
+                    src={getUserAvatar(user)}
+                    alt={user?.name || "Member"}
+                    className="h-full w-full object-cover"
+                  />
                 </div>
                 <div className="min-w-0 space-y-2">
                   <div>
