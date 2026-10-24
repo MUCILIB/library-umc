@@ -23,6 +23,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { getUserAvatar } from "@/lib/avatar";
 import {
   Table,
   TableBody,
@@ -160,14 +161,18 @@ export default function UsersSection() {
       ? users.filter((u) => !u.hasSyncedMember)
       : users;
 
-    if (!q) return list;
+    const baseList = !q
+      ? list
+      : list.filter((u) => {
+          const name = (u.name || "").toLowerCase();
+          const email = (u.email || "").toLowerCase();
+          const role = (u.role || "").toLowerCase();
+          return name.includes(q) || email.includes(q) || role.includes(q);
+        });
 
-    return list.filter((u) => {
-      const name = (u.name || "").toLowerCase();
-      const email = (u.email || "").toLowerCase();
-      const role = (u.role || "").toLowerCase();
-      return name.includes(q) || email.includes(q) || role.includes(q);
-    });
+    return [...baseList].sort(
+      (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    );
   }, [users, search, showOnlyUnsynced]);
 
   // Pagination Logic
@@ -628,7 +633,7 @@ export default function UsersSection() {
                           <div className="flex items-center gap-3">
                             <Avatar className="size-9">
                               <AvatarImage
-                                src={user.image || ""}
+                                src={getUserAvatar(user)}
                                 alt={user.name || "User"}
                               />
                               <AvatarFallback className="text-xs font-bold bg-muted text-muted-foreground">

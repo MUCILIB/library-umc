@@ -4,6 +4,7 @@ import { db } from "../db";
 import * as schema from "../db/schema";
 import { AuthService } from "../modules/auth/service/auth.service";
 import { NotificationService } from "../modules/notification/service/notification.service";
+import { generateDefaultAvatar } from "../utils/avatar";
 
 const authService = new AuthService();
 
@@ -80,6 +81,11 @@ export const auth = betterAuth({
         before: async (user) => {
           console.log("[HOOK] User Create BEFORE:", user.email);
 
+          const avatarImage =
+            user.image && user.image.trim() !== ""
+              ? user.image
+              : generateDefaultAvatar(user.email || user.name);
+
           try {
             await authService.getCampusUser(user.email);
             console.log("[HOOK] Campus Verification PASSED.");
@@ -88,7 +94,7 @@ export const auth = betterAuth({
               "[HOOK] Campus user not found or API error — proceeding as regular registration.",
             );
           }
-          return { data: user };
+          return { data: { ...user, image: avatarImage } };
         },
         after: async (user) => {
           console.log("[HOOK] User Create AFTER Triggered. ID:", user.id);

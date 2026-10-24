@@ -52,6 +52,7 @@ import {
 } from "@/components/ui/command";
 import { Skeleton } from "@/components/ui/skeleton";
 import ThemeToggle from "@/components/ui/theme-toggle";
+import { getUserAvatar } from "@/lib/avatar";
 import {
   Sidebar,
   SidebarContent,
@@ -447,9 +448,11 @@ export default function SuperAdminDashboard() {
                 </p>
               </div>
               <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-full border-2 border-background bg-muted shadow-sm">
-                <span className="text-sm font-bold text-muted-foreground">
-                  {session?.user?.name?.charAt(0) || "A"}
-                </span>
+                <img
+                  src={getUserAvatar(session?.user)}
+                  alt={session?.user?.name || "User Avatar"}
+                  className="h-full w-full object-cover"
+                />
               </div>
             </div>
           </div>

@@ -13,6 +13,7 @@ import {
 import { useNavigate, useLocation } from "react-router";
 import type { AuthUser } from "@/types/auth";
 import ThemeToggle from "@/components/ui/theme-toggle";
+import { getUserAvatar } from "@/lib/avatar";
 
 const Navbar = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -97,15 +98,6 @@ const Navbar = () => {
     navigate("/my-repository");
     setIsDropdownOpen(false);
     setIsMenuOpen(false);
-  };
-
-  const getInitials = (name: string | null | undefined) => {
-    if (!name) return "U";
-    const names = name.split(" ");
-    if (names.length >= 2) {
-      return `${names[0][0]}${names[1][0]}`.toUpperCase();
-    }
-    return name.substring(0, 2).toUpperCase();
   };
 
   const sessionUser = session?.user as AuthUser | undefined;
@@ -210,18 +202,12 @@ const Navbar = () => {
                 className="flex items-center space-x-3 bg-background border border-border rounded-full px-3 py-1.5 hover:shadow-md transition-all duration-200 group"
               >
                 {/* Avatar */}
-                <div className="w-9 h-9 rounded-full bg-gradient-to-br from-primary to-primary/90 flex items-center justify-center text-white border-2 border-white shadow-sm overflow-hidden">
-                  {activeUser?.image ? (
-                    <img
-                      src={activeUser.image}
-                      alt={displayName || "User"}
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <span className="text-white font-bold text-sm">
-                      {getInitials(displayName)}
-                    </span>
-                  )}
+                <div className="w-9 h-9 rounded-full bg-muted flex items-center justify-center text-white border-2 border-white shadow-sm overflow-hidden">
+                  <img
+                    src={getUserAvatar(activeUser)}
+                    alt={displayName || "User"}
+                    className="w-full h-full object-cover"
+                  />
                 </div>
                 {/* Name */}
                 <span className="text-sm font-semibold text-foreground max-w-[120px] truncate hidden sm:block">
@@ -475,18 +461,12 @@ const Navbar = () => {
                   className="w-full flex items-center justify-between p-3 bg-muted hover:bg-muted/80 rounded-2xl transition-all text-left"
                 >
                   <div className="flex items-center space-x-3 overflow-hidden">
-                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary to-primary/90 flex items-center justify-center text-white border border-white flex-shrink-0 overflow-hidden">
-                      {activeUser?.image ? (
-                        <img
-                          src={activeUser.image}
-                          alt={displayName || "User"}
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        <span className="text-white font-bold text-sm">
-                          {getInitials(displayName)}
-                        </span>
-                      )}
+                    <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center text-white border border-white flex-shrink-0 overflow-hidden">
+                      <img
+                        src={getUserAvatar(activeUser)}
+                        alt={displayName || "User"}
+                        className="w-full h-full object-cover"
+                      />
                     </div>
                     <div className="overflow-hidden">
                       <p className="text-xs font-bold text-foreground truncate">
