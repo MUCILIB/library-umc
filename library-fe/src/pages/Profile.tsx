@@ -16,7 +16,7 @@ import SavedBooksTab from "@/components/SavedBooksTab";
 import LecturerRecommendationList from "@/components/LecturerRecommendationList";
 import { useToast } from "@/hooks/useToast";
 import { getSavedBookIds } from "@/utils/bookmarks";
-import { Settings, Mail, BookOpen } from "lucide-react";
+import { Settings, Mail, BookOpen, Clock, AlertCircle, Bookmark, CreditCard, Sparkles, ChevronRight } from "lucide-react";
 import type { AuthUser } from "@/types/auth";
 import { getUserAvatar } from "@/lib/avatar";
 
@@ -210,25 +210,42 @@ const Profile = () => {
     {
       id: "peminjaman-aktif",
       label: "Peminjaman Aktif",
-      icon: <BookOpen size={14} className="shrink-0" />,
+      icon: <BookOpen size={16} className="shrink-0" />,
       count: activeLoanCount > 0 ? activeLoanCount : null
     },
-    { id: "riwayat-peminjaman", label: "Riwayat Peminjaman", count: null },
+    {
+      id: "riwayat-peminjaman",
+      label: "Riwayat Peminjaman",
+      icon: <Clock size={16} className="shrink-0" />,
+      count: null
+    },
     {
       id: "tagihan-denda",
       label: "Tagihan & Denda",
+      icon: <AlertCircle size={16} className="shrink-0" />,
       count: unpaidFineCount > 0 ? unpaidFineCount : null
     },
     {
       id: "buku-disimpan",
       label: "Buku Disimpan",
+      icon: <Bookmark size={16} className="shrink-0" />,
       count: savedCount > 0 ? savedCount : null
     },
-    { id: "kartu-member", label: "Kartu Member", count: null },
+    {
+      id: "kartu-member",
+      label: "Kartu Member",
+      icon: <CreditCard size={16} className="shrink-0" />,
+      count: null
+    },
     ...(isLecturerOnly
-      ? [{ id: "usulan-koleksi", label: "Usulan Koleksi", count: null }]
+      ? [{ id: "usulan-koleksi", label: "Usulan Koleksi", icon: <Sparkles size={16} className="shrink-0" />, count: null }]
       : []),
-    { id: "edit-profil", label: "Pengaturan", icon: <Settings size={14} /> }
+    {
+      id: "edit-profil",
+      label: "Pengaturan Akun",
+      icon: <Settings size={16} className="shrink-0" />,
+      count: null
+    }
   ];
 
   return (
@@ -245,21 +262,19 @@ const Profile = () => {
         }
       `}} />
 
-      <main className="w-full max-w-7xl mx-auto md:px-8 px-4 pt-10 pb-16">
-        {/* Banner with Wavy Pattern placeholder */}
-        <div className="relative rounded-t-[24px] overflow-hidden h-36 md:h-44 bg-red-900 shadow-sm">
-          <div
-            className="absolute inset-0 opacity-30"
-            style={{
-              backgroundImage: `url("data:image/svg+xml,%3Csvg width='100' height='20' viewBox='0 0 100 20' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M21.184 20c.357-.13.72-.264 1.088-.402l1.768-.661C33.64 15.347 39.647 14 50 14c10.271 0 15.362 1.222 24.629 4.928l2.105.842c.399.16.812.32 1.25.48a12.82 12.82 0 0 0 4.19.75h14.195a14.28 14.28 0 0 0 3.631-.469L100 20H21.184zM100 0h-5.263l-1.052.42c-10.272 4.11-15.363 5.333-24.63 9.038l-2.105.842c-.399.16-.812.32-1.25.48A12.82 12.82 0 0 1 62.5 11.533H48.305a14.28 14.28 0 0 1-3.631-.469L41.184 10c-.357-.13-.72-.264-1.088-.402l-1.768-.661C28.36 5.347 22.353 4 12 4 1.729 4-3.362 5.222-12.629 8.928l-2.105.842c-.399.16-.812.32-1.25.48A12.82 12.82 0 0 0-20.174 11H-100V0h100z' fill='%23ffffff' fill-opacity='1' fill-rule='evenodd'/%3E%3C/svg%3E")`
-            }}
-          />
+      <main className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 pb-20">
+        {/* Banner with Refined Architectural Grid */}
+        <div className="relative rounded-xl overflow-hidden h-32 sm:h-40 bg-neutral-900 border border-border shadow-xs">
+          <div className="absolute inset-0 bg-[radial-gradient(#ffffff0d_1px,transparent_1px)] [background-size:16px_16px]" />
+          <div className="absolute bottom-3 left-4 sm:left-6 text-[11px] font-mono tracking-widest text-neutral-400 uppercase">
+            Identitas Anggota Perpustakaan
+          </div>
         </div>
 
-        {/* Profile Card Section */}
-        <div className="px-6 md:px-10 -mt-20 flex flex-col md:flex-row items-center md:items-end gap-6 md:gap-8 mb-12 relative z-10">
-          <div className="w-40 h-48 md:w-48 md:h-56 bg-card rounded-[32px] shadow-xl border border-slate-50 overflow-hidden flex items-center justify-center p-1 shrink-0">
-            <div className="w-full h-full bg-slate-100 rounded-[28px] overflow-hidden flex items-center justify-center">
+        {/* Master Identity Card */}
+        <div className="px-3 sm:px-6 -mt-12 sm:-mt-16 flex flex-col sm:flex-row items-center sm:items-end gap-4 sm:gap-6 mb-8 relative z-10">
+          <div className="w-24 h-32 sm:w-32 sm:h-40 bg-card rounded-lg shadow-md border border-border overflow-hidden flex items-center justify-center p-1 shrink-0">
+            <div className="w-full h-full bg-muted rounded-md overflow-hidden flex items-center justify-center">
               <img
                 src={getUserAvatar(profile?.user || authUser)}
                 alt={profile?.user?.name || authUser?.name || "User"}
@@ -267,170 +282,254 @@ const Profile = () => {
               />
             </div>
           </div>
-          <div className="flex-1 pb-4 text-center md:text-left flex flex-col items-center md:items-start w-full">
-            <h2 className="text-3xl md:text-4xl font-black text-slate-900 tracking-tight mb-2 underline decoration-red-600/10 underline-offset-8">
-              {profile?.user?.name || authUser?.name}
-            </h2>
-            <p className="text-base md:text-lg text-slate-500 font-bold mb-2">
+          <div className="flex-1 pb-1 text-center sm:text-left flex flex-col items-center sm:items-start w-full">
+            <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2.5 mb-1">
+              <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-foreground">
+                {profile?.user?.name || authUser?.name}
+              </h1>
+              <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-mono uppercase tracking-wider border border-border bg-muted text-muted-foreground">
+                {profile?.memberType || authUser?.role || "Member"}
+              </span>
+            </div>
+            <p className="text-xs sm:text-sm text-muted-foreground font-medium mb-2">
               {isExternal
                 ? profile?.institution || profile?.originRegion || "Umum"
-                : profile?.faculty || "Teknik Informatika"}
+                : profile?.faculty || "Fakultas Belum Diatur"}
             </p>
-            <div className="flex items-center gap-2 text-xs text-slate-400 font-bold uppercase tracking-widest justify-center md:justify-start">
-              <Mail size={14} className="text-primary shrink-0" />
-              {profile?.user?.email || authUser?.email}
+            <div className="flex items-center gap-1.5 text-xs text-muted-foreground font-mono">
+              <Mail size={12} className="text-primary shrink-0" />
+              <span>{profile?.user?.email || authUser?.email}</span>
             </div>
           </div>
         </div>
 
-        {/* Custom Navigation Tabs */}
-        <div className="border-b border-slate-100 mb-10 px-2 overflow-x-auto no-scrollbar">
-          <div className="flex gap-6 md:gap-10 min-w-max">
-            {tabs.map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`relative pb-5 text-xs font-black uppercase tracking-[0.15em] transition-all flex items-center gap-1.5 ${
-                  activeTab === tab.id
-                    ? "text-primary scale-105"
-                    : "text-slate-400 hover:text-slate-600"
-                }`}
-              >
-                {tab.icon}
-                <span>{tab.label}</span>
-                {tab.count !== null && (
-                  <sup className="ml-0.5 text-[8px] font-black px-1.5 py-0.5 rounded-full bg-red-100 text-primary dark:bg-red-950 dark:text-red-300">
-                    {tab.count}
-                  </sup>
-                )}
-                {activeTab === tab.id && (
-                  <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary rounded-full" />
-                )}
-              </button>
-            ))}
+        {/* MOBILE NAVIGATION: 2-Column Responsive Card Grid (Zero Horizontal Scroll) */}
+        <div className="block lg:hidden mb-6">
+          <div className="text-[11px] font-mono uppercase tracking-wider text-muted-foreground mb-2 px-1">
+            Menu Anggota
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            {tabs.map((tab) => {
+              const isActive = activeTab === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`p-3 rounded-lg border text-left flex flex-col justify-between transition-all active:scale-[0.98] ${
+                    isActive
+                      ? "border-primary bg-primary/5 text-foreground shadow-xs ring-1 ring-primary/20"
+                      : "border-border bg-card text-muted-foreground hover:border-neutral-400 hover:text-foreground"
+                  }`}
+                >
+                  <div className="flex items-center justify-between w-full mb-2">
+                    <span className={isActive ? "text-primary" : "text-muted-foreground"}>
+                      {tab.icon}
+                    </span>
+                    {tab.count !== null && (
+                      <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-primary text-primary-foreground font-mono">
+                        {tab.count}
+                      </span>
+                    )}
+                  </div>
+                  <span className={`text-xs font-semibold tracking-tight ${isActive ? "text-foreground font-bold" : ""}`}>
+                    {tab.label}
+                  </span>
+                </button>
+              );
+            })}
           </div>
         </div>
 
-        {/* Tab Content */}
-        <div className="min-h-[500px] w-full">
-          {activeTab === "peminjaman-aktif" && (
-            <RiwayatPeminjaman type="active" view="grid" />
-          )}
-          {activeTab === "riwayat-peminjaman" && (
-            <RiwayatPeminjaman type="history" view="table" />
-          )}
-          {activeTab === "tagihan-denda" && <FinesList />}
-          {activeTab === "buku-disimpan" && <SavedBooksTab />}
-          {activeTab === "kartu-member" && (
-            <div className="flex justify-center">
-              <MemberCard
-                profile={profile}
-                requestLoading={cardActionLoading}
-                onRequestCard={handleRequestCard}
-              />
+        {/* TWO-COLUMN LAYOUT FOR DESKTOP (Master-Detail Structure) */}
+        <div className="grid lg:grid-cols-12 gap-8 items-start">
+          {/* DESKTOP SIDEBAR NAVIGATION (Col 4 of 12) */}
+          <aside className="hidden lg:block lg:col-span-4 bg-card border border-border rounded-xl p-3 shadow-xs sticky top-20">
+            <div className="px-3 py-2 text-[11px] font-mono uppercase tracking-widest text-muted-foreground border-b border-border/60 mb-2">
+              Navigasi Keanggotaan
             </div>
-          )}
-          {activeTab === "usulan-koleksi" && isLecturerOnly && (
-            <div className="bg-card border border-border rounded-[28px] p-6 md:p-8 shadow-xs">
-              <LecturerRecommendationList />
-            </div>
-          )}
-          {activeTab === "edit-profil" && (
-            <div className="bg-slate-50/50 rounded-3xl sm:rounded-[40px] p-6 sm:p-10 max-w-3xl border border-slate-100 shadow-sm">
-              <h3 className="text-xl font-black text-slate-900 mb-8 flex items-center gap-3">
-                <div className="w-10 h-10 bg-red-50 rounded-2xl flex items-center justify-center text-primary">
-                  <Settings size={20} />
-                </div>
-                Pengaturan Profil
-              </h3>
-              <form onSubmit={handleUpdateProfile} className="space-y-8">
-                <div className="grid md:grid-cols-2 gap-8">
-                  {isExternal ? (
-                    <>
-                      <div className="space-y-2">
-                        <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-4">
-                          Institusi
-                        </label>
-                        <input
-                          type="text"
-                          value={formData.institution || ""}
-                          onChange={(e) =>
-                            setFormData({ ...formData, institution: e.target.value })
-                          }
-                      className="w-full bg-card border border-slate-200 rounded-[20px] py-4 px-6 text-sm font-bold text-slate-900 focus:ring-4 focus:ring-primary/10 focus:border-primary/20 transition-all outline-none"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-4">
-                      Asal Daerah
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.originRegion || ""}
-                      onChange={(e) =>
-                        setFormData({ ...formData, originRegion: e.target.value })
-                      }
-                      className="w-full bg-card border border-slate-200 rounded-[20px] py-4 px-6 text-sm font-bold text-slate-900 focus:ring-4 focus:ring-primary/10 focus:border-primary/20 transition-all outline-none"
-                        />
-                      </div>
-                    </>
-                  ) : (
-                    <>
-                      <div className="space-y-2">
-                        <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-4">
-                          NIM / NIDN
-                        </label>
-                        <input
-                          type="text"
-                          value={formData.nimNidn || ""}
-                          onChange={(e) =>
-                            setFormData({ ...formData, nimNidn: e.target.value })
-                          }
-                      className="w-full bg-card border border-slate-200 rounded-[20px] py-4 px-6 text-sm font-bold text-slate-900 focus:ring-4 focus:ring-primary/10 focus:border-primary/20 transition-all outline-none"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-4">
-                      Fakultas
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.faculty || ""}
-                      onChange={(e) =>
-                        setFormData({ ...formData, faculty: e.target.value })
-                      }
-                      className="w-full bg-card border border-slate-200 rounded-[20px] py-4 px-6 text-sm font-bold text-slate-900 focus:ring-4 focus:ring-primary/10 focus:border-primary/20 transition-all outline-none"
-                        />
-                      </div>
-                    </>
-                  )}
-                </div>
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-4">
-                    WhatsApp
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.phone || ""}
-                    onChange={(e) =>
-                      setFormData({ ...formData, phone: e.target.value })
-                    }
-                    className="w-full bg-card border border-slate-200 rounded-[20px] py-4 px-6 text-sm font-bold text-slate-900 focus:ring-4 focus:ring-primary/10 focus:border-primary/20 transition-all outline-none"
-                    placeholder="081234567890"
-                  />
-                </div>
-                <div className="pt-4">
+            <nav className="space-y-1">
+              {tabs.map((tab) => {
+                const isActive = activeTab === tab.id;
+                return (
                   <button
-                    type="submit"
-                    disabled={updateLoading}
-                    className="bg-primary text-white px-12 py-4 rounded-[20px] font-black text-xs uppercase tracking-[0.2em] shadow-xl shadow-red-200 hover:bg-primary/90 disabled:bg-slate-300 transition-all active:scale-95"
+                    key={tab.id}
+                    onClick={() => setActiveTab(tab.id)}
+                    className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-lg text-xs font-semibold tracking-wide transition-all cursor-pointer ${
+                      isActive
+                        ? "bg-primary text-primary-foreground shadow-xs font-bold"
+                        : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                    }`}
                   >
-                    {updateLoading ? "Menyimpan..." : "Simpan Perubahan"}
+                    <div className="flex items-center gap-3">
+                      <span className={isActive ? "text-primary-foreground" : "text-muted-foreground"}>
+                        {tab.icon}
+                      </span>
+                      <span>{tab.label}</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      {tab.count !== null && (
+                        <span
+                          className={`text-[10px] font-mono font-bold px-1.5 py-0.2 rounded ${
+                            isActive
+                              ? "bg-background text-foreground"
+                              : "bg-primary/10 text-primary border border-primary/20"
+                          }`}
+                        >
+                          {tab.count}
+                        </span>
+                      )}
+                      <ChevronRight
+                        size={14}
+                        className={`transition-transform ${
+                          isActive ? "translate-x-0.5 opacity-100" : "opacity-40"
+                        }`}
+                      />
+                    </div>
                   </button>
+                );
+              })}
+            </nav>
+          </aside>
+
+          {/* MAIN CONTENT AREA (Col 8 of 12 on Desktop, Full on Mobile) */}
+          <section className="lg:col-span-8 w-full min-h-[500px]">
+            {activeTab === "peminjaman-aktif" && (
+              <RiwayatPeminjaman type="active" view="grid" />
+            )}
+            {activeTab === "riwayat-peminjaman" && (
+              <RiwayatPeminjaman type="history" view="table" />
+            )}
+            {activeTab === "tagihan-denda" && <FinesList />}
+            {activeTab === "buku-disimpan" && <SavedBooksTab />}
+            {activeTab === "kartu-member" && (
+              <div className="flex justify-center">
+                <MemberCard
+                  profile={profile}
+                  requestLoading={cardActionLoading}
+                  onRequestCard={handleRequestCard}
+                />
+              </div>
+            )}
+            {activeTab === "usulan-koleksi" && isLecturerOnly && (
+              <div className="bg-card border border-border rounded-xl p-6 md:p-8 shadow-xs">
+                <LecturerRecommendationList />
+              </div>
+            )}
+            {activeTab === "edit-profil" && (
+              <div className="bg-card rounded-xl p-6 sm:p-8 border border-border shadow-xs">
+                <div className="flex items-center justify-between pb-6 mb-6 border-b border-border">
+                  <div>
+                    <h3 className="text-lg font-bold text-foreground">
+                      Pengaturan Profil
+                    </h3>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      Perbarui data identitas keanggotaan dan nomor kontak aktif Anda
+                    </p>
+                  </div>
+                  <div className="p-2 bg-muted rounded-md text-foreground">
+                    <Settings size={18} />
+                  </div>
                 </div>
-              </form>
-            </div>
-          )}
+
+                <form onSubmit={handleUpdateProfile} className="space-y-6">
+                  <div className="grid md:grid-cols-2 gap-5">
+                    {isExternal ? (
+                      <>
+                        <div className="space-y-1.5">
+                          <label className="text-xs font-semibold text-foreground">
+                            Institusi / Asal
+                          </label>
+                          <input
+                            type="text"
+                            value={formData.institution || ""}
+                            onChange={(e) =>
+                              setFormData({ ...formData, institution: e.target.value })
+                            }
+                            className="w-full bg-background border border-input rounded-md py-2.5 px-3.5 text-sm text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring transition-all placeholder:text-muted-foreground"
+                            placeholder="Universitas / Instansi"
+                          />
+                        </div>
+                        <div className="space-y-1.5">
+                          <label className="text-xs font-semibold text-foreground">
+                            Asal Daerah
+                          </label>
+                          <input
+                            type="text"
+                            value={formData.originRegion || ""}
+                            onChange={(e) =>
+                              setFormData({ ...formData, originRegion: e.target.value })
+                            }
+                            className="w-full bg-background border border-input rounded-md py-2.5 px-3.5 text-sm text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring transition-all placeholder:text-muted-foreground"
+                            placeholder="Kota / Kabupaten"
+                          />
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <div className="space-y-1.5">
+                          <label className="text-xs font-semibold text-foreground flex items-center justify-between">
+                            <span>NIM / NIDN</span>
+                            <span className="text-[10px] text-muted-foreground font-mono">Min 4 karakter</span>
+                          </label>
+                          <input
+                            type="text"
+                            value={formData.nimNidn || ""}
+                            onChange={(e) =>
+                              setFormData({ ...formData, nimNidn: e.target.value })
+                            }
+                            className="w-full bg-background border border-input rounded-md py-2.5 px-3.5 text-sm font-mono text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring transition-all placeholder:text-muted-foreground"
+                            placeholder="22010199"
+                          />
+                        </div>
+                        <div className="space-y-1.5">
+                          <label className="text-xs font-semibold text-foreground">
+                            Fakultas
+                          </label>
+                          <input
+                            type="text"
+                            value={formData.faculty || ""}
+                            onChange={(e) =>
+                              setFormData({ ...formData, faculty: e.target.value })
+                            }
+                            className="w-full bg-background border border-input rounded-md py-2.5 px-3.5 text-sm text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring transition-all placeholder:text-muted-foreground"
+                            placeholder="Fakultas Teknik"
+                          />
+                        </div>
+                      </>
+                    )}
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-semibold text-foreground">
+                      Nomor WhatsApp / Telepon
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.phone || ""}
+                      onChange={(e) =>
+                        setFormData({ ...formData, phone: e.target.value })
+                      }
+                      className="w-full bg-background border border-input rounded-md py-2.5 px-3.5 text-sm font-mono text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring transition-all placeholder:text-muted-foreground"
+                      placeholder="081234567890"
+                    />
+                  </div>
+
+                  <div className="pt-2 flex items-center justify-between border-t border-border">
+                    <p className="text-[11px] text-muted-foreground">
+                      Pastikan nomor kontak dan NIM/NIDN sesuai dengan data kampus.
+                    </p>
+                    <button
+                      type="submit"
+                      disabled={updateLoading}
+                      className="inline-flex items-center justify-center bg-primary text-primary-foreground px-5 py-2.5 rounded-md font-semibold text-xs tracking-wide hover:bg-primary/90 disabled:opacity-50 transition-all active:scale-[0.98] shadow-xs cursor-pointer"
+                    >
+                      {updateLoading ? "Menyimpan..." : "Simpan Perubahan"}
+                    </button>
+                  </div>
+                </form>
+              </div>
+            )}
+          </section>
         </div>
       </main>
 
