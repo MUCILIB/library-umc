@@ -1,4 +1,5 @@
 import { API_BASE_URL } from "@/utils/api-config";
+import { getAuthHeaders } from "@/api/client";
 
 export interface MemberProfile {
   id: string;
@@ -39,10 +40,14 @@ class MemberService {
   private baseUrl = API_BASE_URL;
 
   async getMyProfile(): Promise<MemberProfile> {
+    const authHeaders = getAuthHeaders();
     const response = await fetch(`${this.baseUrl}/api/members/me`, {
       method: "GET",
       credentials: "include",
-      headers: { "Content-Type": "application/json" }
+      headers: {
+        "Content-Type": "application/json",
+        ...authHeaders,
+      }
     });
 
     const result = await response.json();
@@ -53,10 +58,14 @@ class MemberService {
   }
 
   async updateMyProfile(payload: UpdateProfilePayload): Promise<MemberProfile> {
+    const authHeaders = getAuthHeaders();
     const response = await fetch(`${this.baseUrl}/api/members/me`, {
       method: "PATCH",
       credentials: "include",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        ...authHeaders,
+      },
       body: JSON.stringify(payload)
     });
 
@@ -68,12 +77,16 @@ class MemberService {
   }
 
   async requestMyMemberCard(): Promise<MemberProfile> {
+    const authHeaders = getAuthHeaders();
     const response = await fetch(
       `${this.baseUrl}/api/members/me/card/request`,
       {
         method: "POST",
         credentials: "include",
-        headers: { "Content-Type": "application/json" }
+        headers: {
+          "Content-Type": "application/json",
+          ...authHeaders,
+        }
       }
     );
 

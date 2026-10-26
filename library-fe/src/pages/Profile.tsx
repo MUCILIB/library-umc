@@ -246,20 +246,18 @@ const Profile = () => {
       `}} />
 
       <main className="w-full max-w-7xl mx-auto md:px-8 px-4 pt-10 pb-16">
-        {/* Banner with Wavy Pattern placeholder */}
-        <div className="relative rounded-t-[24px] overflow-hidden h-36 md:h-44 bg-red-900 shadow-sm">
-          <div
-            className="absolute inset-0 opacity-30"
-            style={{
-              backgroundImage: `url("data:image/svg+xml,%3Csvg width='100' height='20' viewBox='0 0 100 20' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M21.184 20c.357-.13.72-.264 1.088-.402l1.768-.661C33.64 15.347 39.647 14 50 14c10.271 0 15.362 1.222 24.629 4.928l2.105.842c.399.16.812.32 1.25.48a12.82 12.82 0 0 0 4.19.75h14.195a14.28 14.28 0 0 0 3.631-.469L100 20H21.184zM100 0h-5.263l-1.052.42c-10.272 4.11-15.363 5.333-24.63 9.038l-2.105.842c-.399.16-.812.32-1.25.48A12.82 12.82 0 0 1 62.5 11.533H48.305a14.28 14.28 0 0 1-3.631-.469L41.184 10c-.357-.13-.72-.264-1.088-.402l-1.768-.661C28.36 5.347 22.353 4 12 4 1.729 4-3.362 5.222-12.629 8.928l-2.105.842c-.399.16-.812.32-1.25.48A12.82 12.82 0 0 0-20.174 11H-100V0h100z' fill='%23ffffff' fill-opacity='1' fill-rule='evenodd'/%3E%3C/svg%3E")`
-            }}
-          />
+        {/* Banner with Subtle Architectural Gradient */}
+        <div className="relative rounded-t-xl overflow-hidden h-36 md:h-44 bg-neutral-900 border-x border-t border-border shadow-xs">
+          <div className="absolute inset-0 bg-[radial-gradient(#ffffff0a_1px,transparent_1px)] [background-size:16px_16px]" />
+          <div className="absolute bottom-4 left-6 md:left-10 text-xs font-mono tracking-widest text-neutral-400 uppercase">
+            Identitas Anggota Perpustakaan
+          </div>
         </div>
 
         {/* Profile Card Section */}
-        <div className="px-6 md:px-10 -mt-20 flex flex-col md:flex-row items-center md:items-end gap-6 md:gap-8 mb-12 relative z-10">
-          <div className="w-40 h-48 md:w-48 md:h-56 bg-card rounded-[32px] shadow-xl border border-slate-50 overflow-hidden flex items-center justify-center p-1 shrink-0">
-            <div className="w-full h-full bg-slate-100 rounded-[28px] overflow-hidden flex items-center justify-center">
+        <div className="px-6 md:px-10 -mt-16 flex flex-col md:flex-row items-center md:items-end gap-6 md:gap-8 mb-10 relative z-10">
+          <div className="w-32 h-40 md:w-36 md:h-44 bg-card rounded-lg shadow-md border border-border overflow-hidden flex items-center justify-center p-1 shrink-0">
+            <div className="w-full h-full bg-muted rounded-md overflow-hidden flex items-center justify-center">
               <img
                 src={getUserAvatar(profile?.user || authUser)}
                 alt={profile?.user?.name || authUser?.name || "User"}
@@ -267,44 +265,49 @@ const Profile = () => {
               />
             </div>
           </div>
-          <div className="flex-1 pb-4 text-center md:text-left flex flex-col items-center md:items-start w-full">
-            <h2 className="text-3xl md:text-4xl font-black text-slate-900 tracking-tight mb-2 underline decoration-red-600/10 underline-offset-8">
-              {profile?.user?.name || authUser?.name}
-            </h2>
-            <p className="text-base md:text-lg text-slate-500 font-bold mb-2">
+          <div className="flex-1 pb-2 text-center md:text-left flex flex-col items-center md:items-start w-full">
+            <div className="flex items-center gap-3 mb-1">
+              <h2 className="text-2xl md:text-3xl font-bold text-foreground tracking-tight">
+                {profile?.user?.name || authUser?.name}
+              </h2>
+              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border border-border bg-muted text-muted-foreground uppercase tracking-wider">
+                {profile?.memberType || authUser?.role || "Member"}
+              </span>
+            </div>
+            <p className="text-sm md:text-base text-muted-foreground font-medium mb-3">
               {isExternal
                 ? profile?.institution || profile?.originRegion || "Umum"
-                : profile?.faculty || "Teknik Informatika"}
+                : profile?.faculty || "Fakultas Belum Diatur"}
             </p>
-            <div className="flex items-center gap-2 text-xs text-slate-400 font-bold uppercase tracking-widest justify-center md:justify-start">
-              <Mail size={14} className="text-primary shrink-0" />
-              {profile?.user?.email || authUser?.email}
+            <div className="flex items-center gap-2 text-xs text-muted-foreground font-mono justify-center md:justify-start">
+              <Mail size={13} className="text-primary shrink-0" />
+              <span>{profile?.user?.email || authUser?.email}</span>
             </div>
           </div>
         </div>
 
         {/* Custom Navigation Tabs */}
-        <div className="border-b border-slate-100 mb-10 px-2 overflow-x-auto no-scrollbar">
-          <div className="flex gap-6 md:gap-10 min-w-max">
+        <div className="border-b border-border mb-8 px-2 overflow-x-auto no-scrollbar">
+          <div className="flex gap-6 md:gap-8 min-w-max">
             {tabs.map((tab) => (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`relative pb-5 text-xs font-black uppercase tracking-[0.15em] transition-all flex items-center gap-1.5 ${
+                className={`relative pb-3 text-xs font-semibold tracking-wider transition-colors flex items-center gap-2 ${
                   activeTab === tab.id
-                    ? "text-primary scale-105"
-                    : "text-slate-400 hover:text-slate-600"
+                    ? "text-foreground font-bold"
+                    : "text-muted-foreground hover:text-foreground"
                 }`}
               >
                 {tab.icon}
                 <span>{tab.label}</span>
                 {tab.count !== null && (
-                  <sup className="ml-0.5 text-[8px] font-black px-1.5 py-0.5 rounded-full bg-red-100 text-primary dark:bg-red-950 dark:text-red-300">
+                  <span className="text-[10px] font-bold px-1.5 py-0.2 rounded-full bg-primary/10 text-primary border border-primary/20">
                     {tab.count}
-                  </sup>
+                  </span>
                 )}
                 {activeTab === tab.id && (
-                  <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary rounded-full" />
+                  <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />
                 )}
               </button>
             ))}
@@ -331,25 +334,33 @@ const Profile = () => {
             </div>
           )}
           {activeTab === "usulan-koleksi" && isLecturerOnly && (
-            <div className="bg-card border border-border rounded-[28px] p-6 md:p-8 shadow-xs">
+            <div className="bg-card border border-border rounded-lg p-6 md:p-8 shadow-xs">
               <LecturerRecommendationList />
             </div>
           )}
           {activeTab === "edit-profil" && (
-            <div className="bg-slate-50/50 rounded-3xl sm:rounded-[40px] p-6 sm:p-10 max-w-3xl border border-slate-100 shadow-sm">
-              <h3 className="text-xl font-black text-slate-900 mb-8 flex items-center gap-3">
-                <div className="w-10 h-10 bg-red-50 rounded-2xl flex items-center justify-center text-primary">
-                  <Settings size={20} />
+            <div className="bg-card rounded-xl p-6 sm:p-8 max-w-2xl border border-border shadow-xs">
+              <div className="flex items-center justify-between pb-6 mb-6 border-b border-border">
+                <div>
+                  <h3 className="text-lg font-bold text-foreground">
+                    Pengaturan Profil
+                  </h3>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Perbarui data identitas keanggotaan dan nomor kontak aktif Anda
+                  </p>
                 </div>
-                Pengaturan Profil
-              </h3>
-              <form onSubmit={handleUpdateProfile} className="space-y-8">
-                <div className="grid md:grid-cols-2 gap-8">
+                <div className="p-2 bg-muted rounded-md text-foreground">
+                  <Settings size={18} />
+                </div>
+              </div>
+
+              <form onSubmit={handleUpdateProfile} className="space-y-6">
+                <div className="grid md:grid-cols-2 gap-5">
                   {isExternal ? (
                     <>
-                      <div className="space-y-2">
-                        <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-4">
-                          Institusi
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-semibold text-foreground">
+                          Institusi / Asal
                         </label>
                         <input
                           type="text"
@@ -357,28 +368,31 @@ const Profile = () => {
                           onChange={(e) =>
                             setFormData({ ...formData, institution: e.target.value })
                           }
-                      className="w-full bg-card border border-slate-200 rounded-[20px] py-4 px-6 text-sm font-bold text-slate-900 focus:ring-4 focus:ring-primary/10 focus:border-primary/20 transition-all outline-none"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-4">
-                      Asal Daerah
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.originRegion || ""}
-                      onChange={(e) =>
-                        setFormData({ ...formData, originRegion: e.target.value })
-                      }
-                      className="w-full bg-card border border-slate-200 rounded-[20px] py-4 px-6 text-sm font-bold text-slate-900 focus:ring-4 focus:ring-primary/10 focus:border-primary/20 transition-all outline-none"
+                          className="w-full bg-background border border-input rounded-md py-2.5 px-3.5 text-sm text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring transition-all placeholder:text-muted-foreground"
+                          placeholder="Universitas / Instansi"
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-semibold text-foreground">
+                          Asal Daerah
+                        </label>
+                        <input
+                          type="text"
+                          value={formData.originRegion || ""}
+                          onChange={(e) =>
+                            setFormData({ ...formData, originRegion: e.target.value })
+                          }
+                          className="w-full bg-background border border-input rounded-md py-2.5 px-3.5 text-sm text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring transition-all placeholder:text-muted-foreground"
+                          placeholder="Kota / Kabupaten"
                         />
                       </div>
                     </>
                   ) : (
                     <>
-                      <div className="space-y-2">
-                        <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-4">
-                          NIM / NIDN
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-semibold text-foreground flex items-center justify-between">
+                          <span>NIM / NIDN</span>
+                          <span className="text-[10px] text-muted-foreground font-mono">Min 4 karakter</span>
                         </label>
                         <input
                           type="text"
@@ -386,28 +400,31 @@ const Profile = () => {
                           onChange={(e) =>
                             setFormData({ ...formData, nimNidn: e.target.value })
                           }
-                      className="w-full bg-card border border-slate-200 rounded-[20px] py-4 px-6 text-sm font-bold text-slate-900 focus:ring-4 focus:ring-primary/10 focus:border-primary/20 transition-all outline-none"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-4">
-                      Fakultas
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.faculty || ""}
-                      onChange={(e) =>
-                        setFormData({ ...formData, faculty: e.target.value })
-                      }
-                      className="w-full bg-card border border-slate-200 rounded-[20px] py-4 px-6 text-sm font-bold text-slate-900 focus:ring-4 focus:ring-primary/10 focus:border-primary/20 transition-all outline-none"
+                          className="w-full bg-background border border-input rounded-md py-2.5 px-3.5 text-sm font-mono text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring transition-all placeholder:text-muted-foreground"
+                          placeholder="22010199"
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-semibold text-foreground">
+                          Fakultas
+                        </label>
+                        <input
+                          type="text"
+                          value={formData.faculty || ""}
+                          onChange={(e) =>
+                            setFormData({ ...formData, faculty: e.target.value })
+                          }
+                          className="w-full bg-background border border-input rounded-md py-2.5 px-3.5 text-sm text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring transition-all placeholder:text-muted-foreground"
+                          placeholder="Fakultas Teknik"
                         />
                       </div>
                     </>
                   )}
                 </div>
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-4">
-                    WhatsApp
+
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold text-foreground">
+                    Nomor WhatsApp / Telepon
                   </label>
                   <input
                     type="text"
@@ -415,15 +432,19 @@ const Profile = () => {
                     onChange={(e) =>
                       setFormData({ ...formData, phone: e.target.value })
                     }
-                    className="w-full bg-card border border-slate-200 rounded-[20px] py-4 px-6 text-sm font-bold text-slate-900 focus:ring-4 focus:ring-primary/10 focus:border-primary/20 transition-all outline-none"
+                    className="w-full bg-background border border-input rounded-md py-2.5 px-3.5 text-sm font-mono text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring transition-all placeholder:text-muted-foreground"
                     placeholder="081234567890"
                   />
                 </div>
-                <div className="pt-4">
+
+                <div className="pt-2 flex items-center justify-between border-t border-border">
+                  <p className="text-[11px] text-muted-foreground">
+                    Pastikan nomor kontak dan NIM/NIDN sesuai dengan data kampus.
+                  </p>
                   <button
                     type="submit"
                     disabled={updateLoading}
-                    className="bg-primary text-white px-12 py-4 rounded-[20px] font-black text-xs uppercase tracking-[0.2em] shadow-xl shadow-red-200 hover:bg-primary/90 disabled:bg-slate-300 transition-all active:scale-95"
+                    className="inline-flex items-center justify-center bg-primary text-primary-foreground px-5 py-2.5 rounded-md font-semibold text-xs tracking-wide hover:bg-primary/90 disabled:opacity-50 transition-all active:scale-[0.98] shadow-xs cursor-pointer"
                   >
                     {updateLoading ? "Menyimpan..." : "Simpan Perubahan"}
                   </button>
