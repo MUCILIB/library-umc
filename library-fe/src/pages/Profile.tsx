@@ -16,7 +16,7 @@ import SavedBooksTab from "@/components/SavedBooksTab";
 import LecturerRecommendationList from "@/components/LecturerRecommendationList";
 import { useToast } from "@/hooks/useToast";
 import { getSavedBookIds } from "@/utils/bookmarks";
-import { Settings, Mail, BookOpen } from "lucide-react";
+import { Settings, Mail, BookOpen, Clock, AlertCircle, Bookmark, CreditCard, Sparkles, ChevronRight } from "lucide-react";
 import type { AuthUser } from "@/types/auth";
 import { getUserAvatar } from "@/lib/avatar";
 
@@ -210,25 +210,42 @@ const Profile = () => {
     {
       id: "peminjaman-aktif",
       label: "Peminjaman Aktif",
-      icon: <BookOpen size={14} className="shrink-0" />,
+      icon: <BookOpen size={16} className="shrink-0" />,
       count: activeLoanCount > 0 ? activeLoanCount : null
     },
-    { id: "riwayat-peminjaman", label: "Riwayat Peminjaman", count: null },
+    {
+      id: "riwayat-peminjaman",
+      label: "Riwayat Peminjaman",
+      icon: <Clock size={16} className="shrink-0" />,
+      count: null
+    },
     {
       id: "tagihan-denda",
       label: "Tagihan & Denda",
+      icon: <AlertCircle size={16} className="shrink-0" />,
       count: unpaidFineCount > 0 ? unpaidFineCount : null
     },
     {
       id: "buku-disimpan",
       label: "Buku Disimpan",
+      icon: <Bookmark size={16} className="shrink-0" />,
       count: savedCount > 0 ? savedCount : null
     },
-    { id: "kartu-member", label: "Kartu Member", count: null },
+    {
+      id: "kartu-member",
+      label: "Kartu Member",
+      icon: <CreditCard size={16} className="shrink-0" />,
+      count: null
+    },
     ...(isLecturerOnly
-      ? [{ id: "usulan-koleksi", label: "Usulan Koleksi", count: null }]
+      ? [{ id: "usulan-koleksi", label: "Usulan Koleksi", icon: <Sparkles size={16} className="shrink-0" />, count: null }]
       : []),
-    { id: "edit-profil", label: "Pengaturan", icon: <Settings size={14} /> }
+    {
+      id: "edit-profil",
+      label: "Pengaturan Akun",
+      icon: <Settings size={16} className="shrink-0" />,
+      count: null
+    }
   ];
 
   return (
@@ -245,18 +262,18 @@ const Profile = () => {
         }
       `}} />
 
-      <main className="w-full max-w-7xl mx-auto md:px-8 px-4 pt-10 pb-16">
-        {/* Banner with Subtle Architectural Gradient */}
-        <div className="relative rounded-t-xl overflow-hidden h-36 md:h-44 bg-neutral-900 border-x border-t border-border shadow-xs">
-          <div className="absolute inset-0 bg-[radial-gradient(#ffffff0a_1px,transparent_1px)] [background-size:16px_16px]" />
-          <div className="absolute bottom-4 left-6 md:left-10 text-xs font-mono tracking-widest text-neutral-400 uppercase">
+      <main className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 pb-20">
+        {/* Banner with Refined Architectural Grid */}
+        <div className="relative rounded-xl overflow-hidden h-32 sm:h-40 bg-neutral-900 border border-border shadow-xs">
+          <div className="absolute inset-0 bg-[radial-gradient(#ffffff0d_1px,transparent_1px)] [background-size:16px_16px]" />
+          <div className="absolute bottom-3 left-4 sm:left-6 text-[11px] font-mono tracking-widest text-neutral-400 uppercase">
             Identitas Anggota Perpustakaan
           </div>
         </div>
 
-        {/* Profile Card Section */}
-        <div className="px-6 md:px-10 -mt-16 flex flex-col md:flex-row items-center md:items-end gap-6 md:gap-8 mb-10 relative z-10">
-          <div className="w-32 h-40 md:w-36 md:h-44 bg-card rounded-lg shadow-md border border-border overflow-hidden flex items-center justify-center p-1 shrink-0">
+        {/* Master Identity Card */}
+        <div className="px-3 sm:px-6 -mt-12 sm:-mt-16 flex flex-col sm:flex-row items-center sm:items-end gap-4 sm:gap-6 mb-8 relative z-10">
+          <div className="w-24 h-32 sm:w-32 sm:h-40 bg-card rounded-lg shadow-md border border-border overflow-hidden flex items-center justify-center p-1 shrink-0">
             <div className="w-full h-full bg-muted rounded-md overflow-hidden flex items-center justify-center">
               <img
                 src={getUserAvatar(profile?.user || authUser)}
@@ -265,193 +282,254 @@ const Profile = () => {
               />
             </div>
           </div>
-          <div className="flex-1 pb-2 text-center md:text-left flex flex-col items-center md:items-start w-full">
-            <div className="flex items-center gap-3 mb-1">
-              <h2 className="text-2xl md:text-3xl font-bold text-foreground tracking-tight">
+          <div className="flex-1 pb-1 text-center sm:text-left flex flex-col items-center sm:items-start w-full">
+            <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2.5 mb-1">
+              <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-foreground">
                 {profile?.user?.name || authUser?.name}
-              </h2>
-              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border border-border bg-muted text-muted-foreground uppercase tracking-wider">
+              </h1>
+              <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-mono uppercase tracking-wider border border-border bg-muted text-muted-foreground">
                 {profile?.memberType || authUser?.role || "Member"}
               </span>
             </div>
-            <p className="text-sm md:text-base text-muted-foreground font-medium mb-3">
+            <p className="text-xs sm:text-sm text-muted-foreground font-medium mb-2">
               {isExternal
                 ? profile?.institution || profile?.originRegion || "Umum"
                 : profile?.faculty || "Fakultas Belum Diatur"}
             </p>
-            <div className="flex items-center gap-2 text-xs text-muted-foreground font-mono justify-center md:justify-start">
-              <Mail size={13} className="text-primary shrink-0" />
+            <div className="flex items-center gap-1.5 text-xs text-muted-foreground font-mono">
+              <Mail size={12} className="text-primary shrink-0" />
               <span>{profile?.user?.email || authUser?.email}</span>
             </div>
           </div>
         </div>
 
-        {/* Custom Navigation Tabs */}
-        <div className="border-b border-border mb-8 px-2 overflow-x-auto no-scrollbar">
-          <div className="flex gap-6 md:gap-8 min-w-max">
-            {tabs.map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`relative pb-3 text-xs font-semibold tracking-wider transition-colors flex items-center gap-2 ${
-                  activeTab === tab.id
-                    ? "text-foreground font-bold"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                {tab.icon}
-                <span>{tab.label}</span>
-                {tab.count !== null && (
-                  <span className="text-[10px] font-bold px-1.5 py-0.2 rounded-full bg-primary/10 text-primary border border-primary/20">
-                    {tab.count}
+        {/* MOBILE NAVIGATION: 2-Column Responsive Card Grid (Zero Horizontal Scroll) */}
+        <div className="block lg:hidden mb-6">
+          <div className="text-[11px] font-mono uppercase tracking-wider text-muted-foreground mb-2 px-1">
+            Menu Anggota
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            {tabs.map((tab) => {
+              const isActive = activeTab === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`p-3 rounded-lg border text-left flex flex-col justify-between transition-all active:scale-[0.98] ${
+                    isActive
+                      ? "border-primary bg-primary/5 text-foreground shadow-xs ring-1 ring-primary/20"
+                      : "border-border bg-card text-muted-foreground hover:border-neutral-400 hover:text-foreground"
+                  }`}
+                >
+                  <div className="flex items-center justify-between w-full mb-2">
+                    <span className={isActive ? "text-primary" : "text-muted-foreground"}>
+                      {tab.icon}
+                    </span>
+                    {tab.count !== null && (
+                      <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-primary text-primary-foreground font-mono">
+                        {tab.count}
+                      </span>
+                    )}
+                  </div>
+                  <span className={`text-xs font-semibold tracking-tight ${isActive ? "text-foreground font-bold" : ""}`}>
+                    {tab.label}
                   </span>
-                )}
-                {activeTab === tab.id && (
-                  <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />
-                )}
-              </button>
-            ))}
+                </button>
+              );
+            })}
           </div>
         </div>
 
-        {/* Tab Content */}
-        <div className="min-h-[500px] w-full">
-          {activeTab === "peminjaman-aktif" && (
-            <RiwayatPeminjaman type="active" view="grid" />
-          )}
-          {activeTab === "riwayat-peminjaman" && (
-            <RiwayatPeminjaman type="history" view="table" />
-          )}
-          {activeTab === "tagihan-denda" && <FinesList />}
-          {activeTab === "buku-disimpan" && <SavedBooksTab />}
-          {activeTab === "kartu-member" && (
-            <div className="flex justify-center">
-              <MemberCard
-                profile={profile}
-                requestLoading={cardActionLoading}
-                onRequestCard={handleRequestCard}
-              />
+        {/* TWO-COLUMN LAYOUT FOR DESKTOP (Master-Detail Structure) */}
+        <div className="grid lg:grid-cols-12 gap-8 items-start">
+          {/* DESKTOP SIDEBAR NAVIGATION (Col 4 of 12) */}
+          <aside className="hidden lg:block lg:col-span-4 bg-card border border-border rounded-xl p-3 shadow-xs sticky top-20">
+            <div className="px-3 py-2 text-[11px] font-mono uppercase tracking-widest text-muted-foreground border-b border-border/60 mb-2">
+              Navigasi Keanggotaan
             </div>
-          )}
-          {activeTab === "usulan-koleksi" && isLecturerOnly && (
-            <div className="bg-card border border-border rounded-lg p-6 md:p-8 shadow-xs">
-              <LecturerRecommendationList />
-            </div>
-          )}
-          {activeTab === "edit-profil" && (
-            <div className="bg-card rounded-xl p-6 sm:p-8 max-w-2xl border border-border shadow-xs">
-              <div className="flex items-center justify-between pb-6 mb-6 border-b border-border">
-                <div>
-                  <h3 className="text-lg font-bold text-foreground">
-                    Pengaturan Profil
-                  </h3>
-                  <p className="text-xs text-muted-foreground mt-0.5">
-                    Perbarui data identitas keanggotaan dan nomor kontak aktif Anda
-                  </p>
-                </div>
-                <div className="p-2 bg-muted rounded-md text-foreground">
-                  <Settings size={18} />
-                </div>
-              </div>
-
-              <form onSubmit={handleUpdateProfile} className="space-y-6">
-                <div className="grid md:grid-cols-2 gap-5">
-                  {isExternal ? (
-                    <>
-                      <div className="space-y-1.5">
-                        <label className="text-xs font-semibold text-foreground">
-                          Institusi / Asal
-                        </label>
-                        <input
-                          type="text"
-                          value={formData.institution || ""}
-                          onChange={(e) =>
-                            setFormData({ ...formData, institution: e.target.value })
-                          }
-                          className="w-full bg-background border border-input rounded-md py-2.5 px-3.5 text-sm text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring transition-all placeholder:text-muted-foreground"
-                          placeholder="Universitas / Instansi"
-                        />
-                      </div>
-                      <div className="space-y-1.5">
-                        <label className="text-xs font-semibold text-foreground">
-                          Asal Daerah
-                        </label>
-                        <input
-                          type="text"
-                          value={formData.originRegion || ""}
-                          onChange={(e) =>
-                            setFormData({ ...formData, originRegion: e.target.value })
-                          }
-                          className="w-full bg-background border border-input rounded-md py-2.5 px-3.5 text-sm text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring transition-all placeholder:text-muted-foreground"
-                          placeholder="Kota / Kabupaten"
-                        />
-                      </div>
-                    </>
-                  ) : (
-                    <>
-                      <div className="space-y-1.5">
-                        <label className="text-xs font-semibold text-foreground flex items-center justify-between">
-                          <span>NIM / NIDN</span>
-                          <span className="text-[10px] text-muted-foreground font-mono">Min 4 karakter</span>
-                        </label>
-                        <input
-                          type="text"
-                          value={formData.nimNidn || ""}
-                          onChange={(e) =>
-                            setFormData({ ...formData, nimNidn: e.target.value })
-                          }
-                          className="w-full bg-background border border-input rounded-md py-2.5 px-3.5 text-sm font-mono text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring transition-all placeholder:text-muted-foreground"
-                          placeholder="22010199"
-                        />
-                      </div>
-                      <div className="space-y-1.5">
-                        <label className="text-xs font-semibold text-foreground">
-                          Fakultas
-                        </label>
-                        <input
-                          type="text"
-                          value={formData.faculty || ""}
-                          onChange={(e) =>
-                            setFormData({ ...formData, faculty: e.target.value })
-                          }
-                          className="w-full bg-background border border-input rounded-md py-2.5 px-3.5 text-sm text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring transition-all placeholder:text-muted-foreground"
-                          placeholder="Fakultas Teknik"
-                        />
-                      </div>
-                    </>
-                  )}
-                </div>
-
-                <div className="space-y-1.5">
-                  <label className="text-xs font-semibold text-foreground">
-                    Nomor WhatsApp / Telepon
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.phone || ""}
-                    onChange={(e) =>
-                      setFormData({ ...formData, phone: e.target.value })
-                    }
-                    className="w-full bg-background border border-input rounded-md py-2.5 px-3.5 text-sm font-mono text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring transition-all placeholder:text-muted-foreground"
-                    placeholder="081234567890"
-                  />
-                </div>
-
-                <div className="pt-2 flex items-center justify-between border-t border-border">
-                  <p className="text-[11px] text-muted-foreground">
-                    Pastikan nomor kontak dan NIM/NIDN sesuai dengan data kampus.
-                  </p>
+            <nav className="space-y-1">
+              {tabs.map((tab) => {
+                const isActive = activeTab === tab.id;
+                return (
                   <button
-                    type="submit"
-                    disabled={updateLoading}
-                    className="inline-flex items-center justify-center bg-primary text-primary-foreground px-5 py-2.5 rounded-md font-semibold text-xs tracking-wide hover:bg-primary/90 disabled:opacity-50 transition-all active:scale-[0.98] shadow-xs cursor-pointer"
+                    key={tab.id}
+                    onClick={() => setActiveTab(tab.id)}
+                    className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-lg text-xs font-semibold tracking-wide transition-all cursor-pointer ${
+                      isActive
+                        ? "bg-primary text-primary-foreground shadow-xs font-bold"
+                        : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                    }`}
                   >
-                    {updateLoading ? "Menyimpan..." : "Simpan Perubahan"}
+                    <div className="flex items-center gap-3">
+                      <span className={isActive ? "text-primary-foreground" : "text-muted-foreground"}>
+                        {tab.icon}
+                      </span>
+                      <span>{tab.label}</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      {tab.count !== null && (
+                        <span
+                          className={`text-[10px] font-mono font-bold px-1.5 py-0.2 rounded ${
+                            isActive
+                              ? "bg-background text-foreground"
+                              : "bg-primary/10 text-primary border border-primary/20"
+                          }`}
+                        >
+                          {tab.count}
+                        </span>
+                      )}
+                      <ChevronRight
+                        size={14}
+                        className={`transition-transform ${
+                          isActive ? "translate-x-0.5 opacity-100" : "opacity-40"
+                        }`}
+                      />
+                    </div>
                   </button>
+                );
+              })}
+            </nav>
+          </aside>
+
+          {/* MAIN CONTENT AREA (Col 8 of 12 on Desktop, Full on Mobile) */}
+          <section className="lg:col-span-8 w-full min-h-[500px]">
+            {activeTab === "peminjaman-aktif" && (
+              <RiwayatPeminjaman type="active" view="grid" />
+            )}
+            {activeTab === "riwayat-peminjaman" && (
+              <RiwayatPeminjaman type="history" view="table" />
+            )}
+            {activeTab === "tagihan-denda" && <FinesList />}
+            {activeTab === "buku-disimpan" && <SavedBooksTab />}
+            {activeTab === "kartu-member" && (
+              <div className="flex justify-center">
+                <MemberCard
+                  profile={profile}
+                  requestLoading={cardActionLoading}
+                  onRequestCard={handleRequestCard}
+                />
+              </div>
+            )}
+            {activeTab === "usulan-koleksi" && isLecturerOnly && (
+              <div className="bg-card border border-border rounded-xl p-6 md:p-8 shadow-xs">
+                <LecturerRecommendationList />
+              </div>
+            )}
+            {activeTab === "edit-profil" && (
+              <div className="bg-card rounded-xl p-6 sm:p-8 border border-border shadow-xs">
+                <div className="flex items-center justify-between pb-6 mb-6 border-b border-border">
+                  <div>
+                    <h3 className="text-lg font-bold text-foreground">
+                      Pengaturan Profil
+                    </h3>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      Perbarui data identitas keanggotaan dan nomor kontak aktif Anda
+                    </p>
+                  </div>
+                  <div className="p-2 bg-muted rounded-md text-foreground">
+                    <Settings size={18} />
+                  </div>
                 </div>
-              </form>
-            </div>
-          )}
+
+                <form onSubmit={handleUpdateProfile} className="space-y-6">
+                  <div className="grid md:grid-cols-2 gap-5">
+                    {isExternal ? (
+                      <>
+                        <div className="space-y-1.5">
+                          <label className="text-xs font-semibold text-foreground">
+                            Institusi / Asal
+                          </label>
+                          <input
+                            type="text"
+                            value={formData.institution || ""}
+                            onChange={(e) =>
+                              setFormData({ ...formData, institution: e.target.value })
+                            }
+                            className="w-full bg-background border border-input rounded-md py-2.5 px-3.5 text-sm text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring transition-all placeholder:text-muted-foreground"
+                            placeholder="Universitas / Instansi"
+                          />
+                        </div>
+                        <div className="space-y-1.5">
+                          <label className="text-xs font-semibold text-foreground">
+                            Asal Daerah
+                          </label>
+                          <input
+                            type="text"
+                            value={formData.originRegion || ""}
+                            onChange={(e) =>
+                              setFormData({ ...formData, originRegion: e.target.value })
+                            }
+                            className="w-full bg-background border border-input rounded-md py-2.5 px-3.5 text-sm text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring transition-all placeholder:text-muted-foreground"
+                            placeholder="Kota / Kabupaten"
+                          />
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <div className="space-y-1.5">
+                          <label className="text-xs font-semibold text-foreground flex items-center justify-between">
+                            <span>NIM / NIDN</span>
+                            <span className="text-[10px] text-muted-foreground font-mono">Min 4 karakter</span>
+                          </label>
+                          <input
+                            type="text"
+                            value={formData.nimNidn || ""}
+                            onChange={(e) =>
+                              setFormData({ ...formData, nimNidn: e.target.value })
+                            }
+                            className="w-full bg-background border border-input rounded-md py-2.5 px-3.5 text-sm font-mono text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring transition-all placeholder:text-muted-foreground"
+                            placeholder="22010199"
+                          />
+                        </div>
+                        <div className="space-y-1.5">
+                          <label className="text-xs font-semibold text-foreground">
+                            Fakultas
+                          </label>
+                          <input
+                            type="text"
+                            value={formData.faculty || ""}
+                            onChange={(e) =>
+                              setFormData({ ...formData, faculty: e.target.value })
+                            }
+                            className="w-full bg-background border border-input rounded-md py-2.5 px-3.5 text-sm text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring transition-all placeholder:text-muted-foreground"
+                            placeholder="Fakultas Teknik"
+                          />
+                        </div>
+                      </>
+                    )}
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-semibold text-foreground">
+                      Nomor WhatsApp / Telepon
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.phone || ""}
+                      onChange={(e) =>
+                        setFormData({ ...formData, phone: e.target.value })
+                      }
+                      className="w-full bg-background border border-input rounded-md py-2.5 px-3.5 text-sm font-mono text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring transition-all placeholder:text-muted-foreground"
+                      placeholder="081234567890"
+                    />
+                  </div>
+
+                  <div className="pt-2 flex items-center justify-between border-t border-border">
+                    <p className="text-[11px] text-muted-foreground">
+                      Pastikan nomor kontak dan NIM/NIDN sesuai dengan data kampus.
+                    </p>
+                    <button
+                      type="submit"
+                      disabled={updateLoading}
+                      className="inline-flex items-center justify-center bg-primary text-primary-foreground px-5 py-2.5 rounded-md font-semibold text-xs tracking-wide hover:bg-primary/90 disabled:opacity-50 transition-all active:scale-[0.98] shadow-xs cursor-pointer"
+                    >
+                      {updateLoading ? "Menyimpan..." : "Simpan Perubahan"}
+                    </button>
+                  </div>
+                </form>
+              </div>
+            )}
+          </section>
         </div>
       </main>
 
