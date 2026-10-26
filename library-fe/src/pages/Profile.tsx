@@ -16,7 +16,7 @@ import SavedBooksTab from "@/components/SavedBooksTab";
 import LecturerRecommendationList from "@/components/LecturerRecommendationList";
 import { useToast } from "@/hooks/useToast";
 import { getSavedBookIds } from "@/utils/bookmarks";
-import { Settings, Mail, BookOpen, Clock, AlertCircle, Bookmark, CreditCard, Sparkles, ChevronRight } from "lucide-react";
+import { Settings, Mail, BookOpen, Clock, AlertCircle, Bookmark, CreditCard, Sparkles, ChevronRight, ChevronDown, Check, SlidersHorizontal } from "lucide-react";
 import type { AuthUser } from "@/types/auth";
 import { getUserAvatar } from "@/lib/avatar";
 
@@ -32,6 +32,7 @@ const Profile = () => {
       ? "riwayat-peminjaman"
       : tabParam || "peminjaman-aktif"
   );
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [updateLoading, setUpdateLoading] = useState(false);
   const [cardActionLoading, setCardActionLoading] = useState(false);
   const [activeLoanCount, setActiveLoanCount] = useState(0);
@@ -248,6 +249,8 @@ const Profile = () => {
     }
   ];
 
+  const currentTab = tabs.find((t) => t.id === activeTab) || tabs[0];
+
   return (
     <div className="min-h-screen bg-background overflow-x-hidden">
       <Navbar />
@@ -303,40 +306,92 @@ const Profile = () => {
           </div>
         </div>
 
-        {/* MOBILE NAVIGATION: 2-Column Responsive Card Grid (Zero Horizontal Scroll) */}
-        <div className="block lg:hidden mb-6">
-          <div className="text-[11px] font-mono uppercase tracking-wider text-muted-foreground mb-2 px-1">
-            Menu Anggota
-          </div>
-          <div className="grid grid-cols-2 gap-2">
-            {tabs.map((tab) => {
-              const isActive = activeTab === tab.id;
-              return (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
-                  className={`p-3 rounded-lg border text-left flex flex-col justify-between transition-all active:scale-[0.98] ${
-                    isActive
-                      ? "border-primary bg-primary/5 text-foreground shadow-xs ring-1 ring-primary/20"
-                      : "border-border bg-card text-muted-foreground hover:border-neutral-400 hover:text-foreground"
-                  }`}
-                >
-                  <div className="flex items-center justify-between w-full mb-2">
-                    <span className={isActive ? "text-primary" : "text-muted-foreground"}>
-                      {tab.icon}
+        {/* MOBILE NAVIGATION: Simple Collapsible Menu (Muncul ketika diklik) */}
+        <div className="block lg:hidden mb-5">
+          <div className="bg-card border border-border rounded-2xl p-2 shadow-2xs">
+            <button
+              type="button"
+              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+              className="w-full flex items-center justify-between gap-3 p-1.5 rounded-xl hover:bg-muted/50 transition-colors text-left cursor-pointer"
+              aria-expanded={isMobileMenuOpen}
+            >
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className="w-8 h-8 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                  {currentTab.icon}
+                </div>
+                <div className="min-w-0">
+                  <div className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground leading-none mb-1">
+                    Menu Anggota
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-bold text-foreground truncate">
+                      {currentTab.label}
                     </span>
-                    {tab.count !== null && (
-                      <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-primary text-primary-foreground font-mono">
-                        {tab.count}
+                    {currentTab.count !== null && (
+                      <span className="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded-full bg-primary text-primary-foreground">
+                        {currentTab.count}
                       </span>
                     )}
                   </div>
-                  <span className={`text-xs font-semibold tracking-tight ${isActive ? "text-foreground font-bold" : ""}`}>
-                    {tab.label}
-                  </span>
-                </button>
-              );
-            })}
+                </div>
+              </div>
+
+              <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-muted/80 text-foreground border border-border/80 text-xs font-bold shrink-0">
+                <SlidersHorizontal size={12} className="text-primary" />
+                <span>{isMobileMenuOpen ? "Tutup" : "Pilih Menu"}</span>
+                <ChevronDown
+                  size={13}
+                  className={`transition-transform duration-200 text-muted-foreground ${
+                    isMobileMenuOpen ? "rotate-180" : ""
+                  }`}
+                />
+              </div>
+            </button>
+
+            {/* Menu List: Muncul simpel hanya ketika diklik */}
+            {isMobileMenuOpen && (
+              <div className="mt-2 pt-2 border-t border-border/70 space-y-1 animate-fade-in">
+                {tabs.map((tab) => {
+                  const isActive = activeTab === tab.id;
+                  return (
+                    <button
+                      key={tab.id}
+                      type="button"
+                      onClick={() => {
+                        setActiveTab(tab.id);
+                        setIsMobileMenuOpen(false);
+                      }}
+                      className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs transition-all cursor-pointer ${
+                        isActive
+                          ? "bg-primary text-primary-foreground font-bold shadow-2xs"
+                          : "text-muted-foreground hover:bg-muted hover:text-foreground font-medium"
+                      }`}
+                    >
+                      <div className="flex items-center gap-2.5">
+                        <span className={isActive ? "text-primary-foreground" : "text-muted-foreground"}>
+                          {tab.icon}
+                        </span>
+                        <span>{tab.label}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {tab.count !== null && (
+                          <span
+                            className={`text-[10px] font-mono font-bold px-1.5 py-0.2 rounded-full ${
+                              isActive
+                                ? "bg-background text-foreground"
+                                : "bg-primary/10 text-primary border border-primary/20"
+                            }`}
+                          >
+                            {tab.count}
+                          </span>
+                        )}
+                        {isActive && <Check size={14} className="shrink-0" />}
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
           </div>
         </div>
 
