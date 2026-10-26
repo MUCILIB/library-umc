@@ -25,6 +25,9 @@ async function seed() {
     console.log("Created admin user");
   } else {
     adminId = existingAdmin.id;
+    if (existingAdmin.role !== "super_admin") {
+      await db.update(Users).set({ role: "super_admin" }).where(eq(Users.id, adminId));
+    }
     console.log("Admin user already exists");
   }
 
