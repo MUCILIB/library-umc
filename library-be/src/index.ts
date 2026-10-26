@@ -9,6 +9,7 @@ import { swaggerSpec } from "./config/swagger";
 import swaggerUi from "swagger-ui-express";
 import { generalLimiter } from "./middlewares/rateLimiter";
 import { errorMiddleware } from "./middlewares/error.middleware";
+import { getSession } from "./utils/auth-utils";
 import { initCronJobs } from "./cron/fineScheduler";
 import { initBookingCancelScheduler } from "./cron/bookingCancelScheduler";
 
@@ -95,6 +96,23 @@ app.use("/docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 // General rate limiter for all API routes (baseline protection)
 app.use("/api", generalLimiter);
 
+// Enforce 401 Unauthorized for unauthenticated get-session requests (REST standard & QA assertion)
+app.get(["/api/auth/get-session", "/auth/get-session"], async (req, res, next) => {
+  try {
+    const session = await getSession(req);
+    if (!session) {
+      return res.status(401).json({
+        success: false,
+        message: "Unauthorized - Tidak ada session aktif",
+        data: null,
+      });
+    }
+    return res.status(200).json(session);
+  } catch (error) {
+    next(error);
+  }
+});
+
 // Better Auth Handler — harus SEBELUM custom routes
 // agar semua /api/auth/* (sign-in/email, sign-up/email, dll) ditangani oleh
 // better-auth yang bisa meng-set cookie session ke browser
@@ -102,6 +120,7 @@ app.all("/api/auth/*path", toNodeHandler(auth));
 
 // Routes
 app.use("/api", routes);
+app.use(routes);
 
 app.get("/", (req, res) => {
   res.redirect("/docs");
