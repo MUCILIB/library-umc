@@ -65,6 +65,14 @@ export default function EbookSection() {
   // Preview State
   const [previewItem, setPreviewItem] = useState<EbookItem | null>(null);
 
+  const getCleanErrorMessage = (err: any, fallback: string) => {
+    const msg = err?.message;
+    if (!msg || typeof msg !== "string" || msg.length > 120 || msg.includes("Failed query")) {
+      return fallback;
+    }
+    return msg;
+  };
+
   const fetchEbooks = async () => {
     try {
       setLoading(true);
@@ -78,7 +86,7 @@ export default function EbookSection() {
       setTotalPages(res.meta.totalPages || 1);
       setTotalCount(res.meta.total || 0);
     } catch (err: any) {
-      error(err?.message || "Gagal memuat data e-book");
+      error(getCleanErrorMessage(err, "Gagal memuat data e-book"));
     } finally {
       setLoading(false);
     }
@@ -179,7 +187,7 @@ export default function EbookSection() {
       setIsFormOpen(false);
       fetchEbooks();
     } catch (err: any) {
-      error(err?.message || "Gagal menyimpan e-book");
+      error(getCleanErrorMessage(err, "Gagal menyimpan e-book"));
     } finally {
       setSubmitting(false);
     }
@@ -194,7 +202,7 @@ export default function EbookSection() {
       setDeletingItem(null);
       fetchEbooks();
     } catch (err: any) {
-      error(err?.message || "Gagal menghapus e-book");
+      error(getCleanErrorMessage(err, "Gagal menghapus e-book"));
     } finally {
       setIsDeleting(false);
     }
