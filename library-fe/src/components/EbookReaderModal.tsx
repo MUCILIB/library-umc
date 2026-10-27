@@ -30,7 +30,12 @@ export default function EbookReaderModal({
   const [fullscreen, setFullscreen] = useState(false);
 
   const isAuthenticated = Boolean(session?.user);
-  const streamUrl = `${API_BASE_URL}/api/ebooks/${ebookId}/stream#toolbar=0&navpanes=0&scrollbar=1`;
+  const sessionToken =
+    (session as any)?.session?.token ||
+    (session as any)?.token ||
+    (typeof window !== "undefined" ? localStorage.getItem("better_auth_token") : null);
+  const tokenParam = sessionToken ? `?token=${encodeURIComponent(sessionToken)}` : "";
+  const streamUrl = `${API_BASE_URL}/api/ebooks/${ebookId}/stream${tokenParam}#toolbar=0&navpanes=0&scrollbar=1`;
 
   if (!isOpen) return null;
 
