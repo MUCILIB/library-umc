@@ -466,27 +466,6 @@ const swaggerDefinition = {
         },
       },
     },
-    "/auth/users": {
-      get: {
-        summary: "Get All Users (Super Admin Only)",
-        tags: ["Auth"],
-        security: [{ bearerAuth: [] }],
-        responses: {
-          200: {
-            description: "List of all users",
-            content: {
-              "application/json": {
-                schema: {
-                  $ref: "#/components/schemas/ApiResponse",
-                },
-              },
-            },
-          },
-          401: { description: "Unauthorized" },
-          403: { description: "Forbidden - Super Admin only" },
-        },
-      },
-    },
     "/members/me": {
       get: {
         summary: "Get Current Member Profile",
@@ -955,6 +934,40 @@ const swaggerDefinition = {
         },
       },
     },
+    "/bibliographies/{bibliographyId}/items": {
+      post: {
+        summary: "Create Single Item Under Bibliography",
+        description: "Add a single physical copy under a specific bibliography.",
+        tags: ["Items"],
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { name: "bibliographyId", in: "path", required: true, schema: { type: "string", format: "uuid" } },
+        ],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                required: ["itemCode"],
+                properties: {
+                  itemCode: { type: "string", maxLength: 50 },
+                  barcode: { type: "string", maxLength: 50 },
+                  locationId: { type: "integer" },
+                  callNumber: { type: "string", maxLength: 100 },
+                  inventoryCode: { type: "string", maxLength: 50 },
+                  status: { type: "string", enum: ["available", "repair", "damaged", "lost"], default: "available" },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          201: { description: "Item created" },
+          400: { description: "Validation error" },
+        },
+      },
+    },
     "/bibliographies/{bibliographyId}/items/bulk": {
       post: {
         summary: "Bulk Create Items",
@@ -1259,6 +1272,86 @@ const swaggerDefinition = {
         },
       },
     },
+    "/qr/lookup": {
+      post: {
+        summary: "Lookup Item by Code / QR for Circulation",
+        description: "Lookup copy of book by itemCode during loan or return workflow.",
+        tags: ["Items"],
+        security: [{ bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                required: ["itemCode"],
+                properties: {
+                  itemCode: { type: "string" },
+                  intent: { type: "string", enum: ["loan", "return", "check"] },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          200: { description: "Item found" },
+          404: { description: "Item not found" },
+        },
+      },
+      get: {
+        summary: "Lookup Item by Query Param",
+        tags: ["Items"],
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { name: "itemCode", in: "query", required: true, schema: { type: "string" } },
+          { name: "intent", in: "query", schema: { type: "string" } },
+        ],
+        responses: {
+          200: { description: "Item found" },
+          404: { description: "Item not found" },
+        },
+      },
+    },
+    "/qr/scan": {
+      post: {
+        summary: "Scan and Resolve Barcode or QR",
+        description: "Process hardware barcode/QR scanner payload for circulation.",
+        tags: ["Items"],
+        security: [{ bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                required: ["token"],
+                properties: {
+                  token: { type: "string" },
+                  intent: { type: "string" },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          200: { description: "Item resolved" },
+          404: { description: "Invalid token or not found" },
+        },
+      },
+      get: {
+        summary: "Scan and Resolve Barcode or QR (GET)",
+        tags: ["Items"],
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { name: "token", in: "query", required: true, schema: { type: "string" } },
+          { name: "intent", in: "query", schema: { type: "string" } },
+        ],
+        responses: {
+          200: { description: "Item resolved" },
+          404: { description: "Invalid token or not found" },
+        },
+      },
+    },
     "/items/bulk-labels": {
       get: {
         summary: "Get Bulk Label Data",
@@ -1445,7 +1538,7 @@ const swaggerDefinition = {
       },
     },
     "/loans/{loanId}/approve-extension": {
-      patch: {
+      post: {
         summary: "Approve Loan Extension (Staff / Admin)",
         tags: ["Loans"],
         security: [{ bearerAuth: [] }],
@@ -1454,7 +1547,7 @@ const swaggerDefinition = {
       },
     },
     "/loans/{loanId}/reject-extension": {
-      patch: {
+      post: {
         summary: "Reject Loan Extension (Staff / Admin)",
         tags: ["Loans"],
         security: [{ bearerAuth: [] }],
@@ -1845,6 +1938,23 @@ const swaggerDefinition = {
         }
       }
     },
+    "/import/batches/{batchId}/validate": {
+      post: {
+        summary: "Validate staging rows in batch",
+        description: "Validates all staged rows before approval and returns valid/invalid row counts.",
+        operationId: "validateBatch",
+        tags: ["Import"],
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { name: "batchId", in: "path", required: true, schema: { type: "string", format: "uuid" } }
+        ],
+        responses: {
+          "200": { description: "Batch validated successfully" },
+          "400": { description: "Invalid state" },
+          "404": { description: "Batch not found" }
+        }
+      }
+    },
     "/import/batches/{batchId}/errors": {
       get: {
         summary: "Get import errors",
@@ -1856,6 +1966,25 @@ const swaggerDefinition = {
         ],
         responses: {
           "200": { description: "Errors retrieved" }
+        }
+      }
+    },
+    "/import/batches/{batchId}/errors.csv": {
+      get: {
+        summary: "Download import batch errors as CSV",
+        description: "Downloads errors encountered during parsing/validation as CSV file.",
+        operationId: "downloadErrorsCsv",
+        tags: ["Import"],
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { name: "batchId", in: "path", required: true, schema: { type: "string", format: "uuid" } }
+        ],
+        responses: {
+          "200": {
+            description: "CSV file with error details",
+            content: { "text/csv": { schema: { type: "string" } } }
+          },
+          "404": { description: "Batch not found" }
         }
       }
     },
@@ -2072,6 +2201,20 @@ const swaggerDefinition = {
           { in: "query", name: "author", schema: { type: "string" }, description: "Author name for fuzzy matching" },
         ],
         responses: { 200: { description: "Duplicate check result with hasExactMatch and duplicates array" }, 400: { description: "At least one param required" } },
+      },
+    },
+    "/health": {
+      get: {
+        summary: "API Health Check",
+        description: "Returns server health status.",
+        tags: ["System"],
+        security: [],
+        responses: {
+          200: {
+            description: "API is healthy",
+            content: { "text/plain": { schema: { type: "string", example: "API IS OK" } } },
+          },
+        },
       },
     },
   },

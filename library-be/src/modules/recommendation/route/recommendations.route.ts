@@ -164,6 +164,31 @@ router.patch(
   ),
 );
 
+/**
+ * @swagger
+ * /recommendations/{id}:
+ *   delete:
+ *     summary: Delete recommendation (Lecturer if pending, or Staff/Admin)
+ *     tags: [Recommendations]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Recommendation ID
+ *     responses:
+ *       200:
+ *         description: Rekomendasi berhasil dihapus
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden
+ *       404:
+ *         description: Recommendation not found
+ */
 // Soft Delete (Admin/Staff, or Lecturer if pending)
 router.delete(
   "/recommendations/:id",
