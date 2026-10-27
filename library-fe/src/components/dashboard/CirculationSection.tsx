@@ -6,7 +6,6 @@ import { BrowserMultiFormatReader, BarcodeFormat, DecodeHintType } from "@zxing/
 import { API_BASE_URL } from "@/utils/api-config";
 import { getAuthHeaders } from "@/api/client";
 import { useToast } from "@/hooks/useToast";
-
 interface ItemResult {
   item: {
     id: string;
@@ -616,7 +615,7 @@ export default function CirculationSection() {
           <h3 className="mb-4 text-sm font-bold text-muted-foreground uppercase tracking-wider">Scan / Lookup Item</h3>
           <div className="flex flex-col gap-4">
             <div className="flex flex-wrap gap-3">
-              <div className="flex flex-col gap-1 flex-1 min-w-[140px]">
+              <div className="flex flex-col gap-1 flex-1 min-w-35">
                 <label className="text-xs font-bold text-muted-foreground">Tipe Scan</label>
                 <Select value={scanType} onValueChange={(val) => setScanType(val as "qr" | "code")}>
                   <SelectTrigger className="w-full text-sm font-bold">
@@ -628,7 +627,7 @@ export default function CirculationSection() {
                   </SelectContent>
                 </Select>
               </div>
-              <div className="flex flex-col gap-1 flex-1 min-w-[140px]">
+              <div className="flex flex-col gap-1 flex-1 min-w-35">
                 <label className="text-xs font-bold text-muted-foreground">Tujuan (Intent)</label>
                 <Select value={intent} onValueChange={(val) => setIntent(val as "inspect" | "loan" | "return")}>
                   <SelectTrigger className="w-full text-sm font-bold">
@@ -850,7 +849,7 @@ export default function CirculationSection() {
                       </div>
 
                       <div className="flex flex-col sm:flex-row items-stretch sm:items-end gap-3">
-                        <div className="flex-1 min-w-[200px] space-y-1">
+                <div className="flex-1 min-w-50 space-y-1">
                           <label className="text-xs font-bold text-muted-foreground">Pilih Kondisi Buku</label>
                           <Select value={returnCondition} onValueChange={(val) => setReturnCondition(val as any)}>
                             <SelectTrigger className="w-full text-sm font-bold bg-background">
