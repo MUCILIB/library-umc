@@ -20,9 +20,11 @@ import {
   Clock,
   Heart,
   X,
+  BookOpen
 } from "lucide-react";
 import { generateColorFromSeed, cleanIsbn } from "@/utils/format";
 import { isBookSaved, saveBook, removeBook } from "@/utils/bookmarks";
+import EbookReaderModal from "@/components/EbookReaderModal";
 
 const KatalogDetail = () => {
   const { id } = useParams<{ id: string }>();
@@ -30,6 +32,7 @@ const KatalogDetail = () => {
   const { error: toastError, success: toastSuccess, info: toastInfo } = useToast();
 
   const [showQrModal, setShowQrModal] = useState(false);
+  const [showEbookReader, setShowEbookReader] = useState(false);
   const [selectedItemForQr, setSelectedItemForQr] = useState<{ id: string; itemCode?: string; status: string } | null>(null);
   const [isSaved, setIsSaved] = useState(false);
   const [similarSavedMap, setSimilarSavedMap] = useState<Record<string, boolean>>({});
@@ -63,6 +66,8 @@ const KatalogDetail = () => {
     setUserReservation,
     setPendingRequests,
   } = useKatalogDetail(id, currentUser, sessionLoading);
+
+  const isEbook = bibliography?.type === "ebook";
 
   const {
     showReservationList,
@@ -497,7 +502,12 @@ const KatalogDetail = () => {
           <div className="md:w-[65%] p-5 sm:p-8 md:p-10 flex flex-col">
             <div className="flex gap-2 mb-4 flex-wrap">
               {/* Status Badge */}
-              {isBorrowing ? (
+              {isEbook ? (
+                <span className="px-2.5 sm:px-3 py-0.5 sm:py-1 rounded-full text-[9px] sm:text-[10px] font-bold flex items-center gap-1.5 bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                  E-Book Digital (Baca Online)
+                </span>
+              ) : isBorrowing ? (
                 <span className="px-2.5 sm:px-3 py-0.5 sm:py-1 rounded-full text-[9px] sm:text-[10px] font-bold flex items-center gap-1.5 bg-purple-50 text-purple-600">
                   <span className="w-1.5 h-1.5 rounded-full bg-purple-500"></span>
                   Sedang Anda Pinjam
@@ -612,50 +622,63 @@ const KatalogDetail = () => {
             )}
 
             {/* Tombol Aksi */}
-            <div className="flex flex-col sm:flex-row gap-2.5 sm:gap-3 mt-6 sm:mt-auto">
-              <button
-                onClick={handleBorrow}
-                disabled={borrowLoading || isBorrowing}
-                className="w-full sm:flex-1 bg-primary hover:bg-primary/90 disabled:bg-slate-200 disabled:cursor-not-allowed text-white py-3 sm:py-3.5 rounded-xl font-bold flex items-center justify-center gap-2 text-xs sm:text-sm transition-all active:scale-[0.98]"
-              >
-                {borrowLoading ? (
-                  <>
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
-                    Memproses...
-                  </>
-                ) : isBorrowing ? (
-                  <>
-                    <CheckCircle size={16} className="sm:size-[18px]" /> Sedang Anda Pinjam
-                  </>
-                ) : isPending ? (
-                  <>
-                    <Clock size={16} className="sm:size-[18px]" /> Menunggu Persetujuan
-                  </>
-                ) : isUserReserved() ? (
-                  <>
-                    <Calendar size={16} className="sm:size-[18px]" /> Sudah Reservasi
-                  </>
-                ) : bookStatus === "borrowed" || bookStatus === "empty" ? (
-                  <>
-                    <Calendar size={16} className="sm:size-[18px]" /> Reservasi Buku
-                  </>
-                ) : (
-                  <>
-                    <Bookmark size={16} className="sm:size-[18px]" /> Pinjam Buku
-                  </>
-                )}
-              </button>
-
-              {currentUser && (
+            {isEbook ? (
+              <div className="flex flex-col sm:flex-row gap-2.5 sm:gap-3 mt-6 sm:mt-auto">
                 <button
-                  onClick={onCheckStatusClick}
-                  className="w-full sm:w-auto sm:px-6 bg-card border border-border hover:bg-muted text-foreground py-3 sm:py-3.5 rounded-xl font-bold flex items-center justify-center gap-2 text-xs sm:text-sm transition-all active:scale-[0.98]"
+                  type="button"
+                  onClick={() => setShowEbookReader(true)}
+                  className="w-full sm:flex-1 bg-primary hover:bg-primary/90 text-white py-3 sm:py-3.5 rounded-xl font-bold flex items-center justify-center gap-2 text-xs sm:text-sm transition-all active:scale-[0.98] min-h-[44px] shadow-sm"
                 >
-                  <Bell size={16} className="sm:size-[18px]" />
-                  Cek Status
+                  <BookOpen size={16} className="sm:size-[18px]" />
+                  Baca E-Book
                 </button>
-              )}
-            </div>
+              </div>
+            ) : (
+              <div className="flex flex-col sm:flex-row gap-2.5 sm:gap-3 mt-6 sm:mt-auto">
+                <button
+                  onClick={handleBorrow}
+                  disabled={borrowLoading || isBorrowing}
+                  className="w-full sm:flex-1 bg-primary hover:bg-primary/90 disabled:bg-slate-200 disabled:cursor-not-allowed text-white py-3 sm:py-3.5 rounded-xl font-bold flex items-center justify-center gap-2 text-xs sm:text-sm transition-all active:scale-[0.98]"
+                >
+                  {borrowLoading ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
+                      Memproses...
+                    </>
+                  ) : isBorrowing ? (
+                    <>
+                      <CheckCircle size={16} className="sm:size-[18px]" /> Sedang Anda Pinjam
+                    </>
+                  ) : isPending ? (
+                    <>
+                      <Clock size={16} className="sm:size-[18px]" /> Menunggu Persetujuan
+                    </>
+                  ) : isUserReserved() ? (
+                    <>
+                      <Calendar size={16} className="sm:size-[18px]" /> Sudah Reservasi
+                    </>
+                  ) : bookStatus === "borrowed" || bookStatus === "empty" ? (
+                    <>
+                      <Calendar size={16} className="sm:size-[18px]" /> Reservasi Buku
+                    </>
+                  ) : (
+                    <>
+                      <Bookmark size={16} className="sm:size-[18px]" /> Pinjam Buku
+                    </>
+                  )}
+                </button>
+
+                {currentUser && (
+                  <button
+                    onClick={onCheckStatusClick}
+                    className="w-full sm:w-auto sm:px-6 bg-card border border-border hover:bg-muted text-foreground py-3 sm:py-3.5 rounded-xl font-bold flex items-center justify-center gap-2 text-xs sm:text-sm transition-all active:scale-[0.98]"
+                  >
+                    <Bell size={16} className="sm:size-[18px]" />
+                    Cek Status
+                  </button>
+                )}
+              </div>
+            )}
 
             {!currentUser && (
               <p className="text-xs text-center text-slate-400 mt-4">
@@ -882,6 +905,17 @@ const KatalogDetail = () => {
           isOpen={showReservationList}
           onClose={() => setShowReservationList(false)}
           memberId={currentUser.memberId}
+        />
+      )}
+
+      {/* Reader Modal untuk E-Book */}
+      {bibliography && isEbook && (
+        <EbookReaderModal
+          isOpen={showEbookReader}
+          onClose={() => setShowEbookReader(false)}
+          ebookId={bibliography.id}
+          title={bibliography.title}
+          author={bibliography.author}
         />
       )}
 

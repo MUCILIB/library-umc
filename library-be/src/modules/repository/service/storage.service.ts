@@ -13,8 +13,9 @@ export class StorageService {
   private bucket: string = "";
   private basePrefix: string = "library/proposals";
 
-  constructor() {
-    this.uploadDir = path.join(process.cwd(), "storage", "proposals");
+  constructor(subfolder: string = "proposals") {
+    this.uploadDir = path.join(process.cwd(), "storage", subfolder);
+    this.basePrefix = `library/${subfolder}`;
     if (!fs.existsSync(this.uploadDir)) {
       fs.mkdirSync(this.uploadDir, { recursive: true });
     }

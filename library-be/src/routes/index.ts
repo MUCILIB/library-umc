@@ -19,6 +19,7 @@ import { collectionRoutes } from "../modules/collection/route/collection.route";
 import importRoutes from "../modules/import/route/import.route";
 import exportRoutes from "../modules/export/route/export.route";
 import { repositoryRoutes } from "../modules/repository/route/proposal.route";
+import { ebookRoutes } from "../modules/ebook/route/ebook.route";
 
 const router = Router();
 
@@ -48,6 +49,9 @@ router.use(exportRoutes);
 
 // Digital Repository & Page-Level PDF ACL
 router.use(repositoryRoutes);
+
+// E-Book Management & Secure Reader
+router.use(ebookRoutes);
 
 // Guests
 router.use(guestRoutes);
