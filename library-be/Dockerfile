@@ -37,6 +37,7 @@ RUN npm install --omit=dev
 # Copy hasil build dari stage 1
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/drizzle ./drizzle
+COPY --from=builder /app/src ./src
 
 # Expose port aplikasi
 # Cloud Run akan override PORT env var ke 8080 secara otomatis
