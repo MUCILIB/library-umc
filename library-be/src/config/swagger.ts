@@ -279,6 +279,7 @@ const swaggerDefinition = {
     { name: "Fines", description: "Fine management" },
     { name: "Locations", description: "Location/room/rack management" },
     { name: "Recommendations", description: "Book recommendation from lecturers" },
+    { name: "Digital Repository", description: "Theses and proposals repository management & public catalog" },
     { name: "Import", description: "CSV import (bibliographies & items)" },
     { name: "Export", description: "CSV export (bibliographies & items)" },
     { name: "Faculties", description: "Faculty management (Super Admin)" },
@@ -463,27 +464,6 @@ const swaggerDefinition = {
         parameters: [{ in: "path", name: "id", required: true, schema: { type: "string" } }],
         responses: {
           200: { description: "Member synced" },
-        },
-      },
-    },
-    "/auth/users": {
-      get: {
-        summary: "Get All Users (Super Admin Only)",
-        tags: ["Auth"],
-        security: [{ bearerAuth: [] }],
-        responses: {
-          200: {
-            description: "List of all users",
-            content: {
-              "application/json": {
-                schema: {
-                  $ref: "#/components/schemas/ApiResponse",
-                },
-              },
-            },
-          },
-          401: { description: "Unauthorized" },
-          403: { description: "Forbidden - Super Admin only" },
         },
       },
     },
@@ -790,7 +770,7 @@ const swaggerDefinition = {
       get: {
         summary: "Get Guest Logs",
         description: "Retrieve list of guest visits (Admin Only).",
-        tags: ["Guests (Pengunjung)"],
+        tags: ["Guests"],
         security: [{ bearerAuth: [] }],
         parameters: [
           {
@@ -822,7 +802,7 @@ const swaggerDefinition = {
       post: {
         summary: "Create Guest Log",
         description: "Record a new visitor/guest (Admin Only).",
-        tags: ["Guests (Pengunjung)"],
+        tags: ["Guests"],
         security: [{ bearerAuth: [] }],
         requestBody: {
           required: true,
@@ -860,7 +840,7 @@ const swaggerDefinition = {
       get: {
         summary: "Get Guest Statistics",
         description: "Get analytics about visitors by Faculty and Major.",
-        tags: ["Guests (Pengunjung)"],
+        tags: ["Guests"],
         security: [{ bearerAuth: [] }],
         responses: {
           200: {
@@ -873,6 +853,168 @@ const swaggerDefinition = {
               },
             },
           },
+        },
+      },
+    },
+    "/guests/scan": {
+      post: {
+        summary: "Kiosk scan presensi member",
+        description: "Scan QR/Barcode KTM atau masukkan NIM/Email member untuk absensi cepat.",
+        tags: ["Guests"],
+        security: [],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                required: ["memberIdentifier"],
+                properties: {
+                  memberIdentifier: {
+                    type: "string",
+                    description: "NIM, Card Number / Barcode, atau Email member",
+                  },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          200: { description: "Member found and attendance recorded" },
+          400: { description: "Validation error" },
+          404: { description: "Member not found" },
+        },
+      },
+    },
+    "/guests/non-member": {
+      post: {
+        summary: "Presensi pengunjung non-member (tamu umum)",
+        description: "Catat kehadiran tamu umum non-member.",
+        tags: ["Guests"],
+        security: [],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                required: ["fullName", "institution", "purpose", "phone"],
+                properties: {
+                  fullName: { type: "string" },
+                  institution: { type: "string" },
+                  purpose: { type: "string" },
+                  phone: { type: "string" },
+                  studyProgramId: { type: "integer" },
+                  facultyId: { type: "integer" },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          201: { description: "Guest attendance registered successfully" },
+          400: { description: "Validation error" },
+        },
+      },
+    },
+    "/guests/absensi": {
+      post: {
+        summary: "Catat absensi pengunjung (alias /guests/absensi)",
+        tags: ["Guests"],
+        security: [],
+        requestBody: {
+          required: false,
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                properties: {
+                  memberIdentifier: { type: "string" },
+                  fullName: { type: "string" },
+                  institution: { type: "string" },
+                  purpose: { type: "string" },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          200: { description: "Absensi recorded successfully" },
+          400: { description: "Validation error" },
+        },
+      },
+    },
+    "/guest/absensi": {
+      post: {
+        summary: "Catat absensi pengunjung (alias /guest/absensi)",
+        tags: ["Guests"],
+        security: [],
+        requestBody: {
+          required: false,
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                properties: {
+                  memberIdentifier: { type: "string" },
+                  fullName: { type: "string" },
+                  institution: { type: "string" },
+                  purpose: { type: "string" },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          200: { description: "Absensi recorded successfully" },
+          400: { description: "Validation error" },
+        },
+      },
+    },
+    "/guests/search": {
+      get: {
+        summary: "Search users from Campus API",
+        description: "Search for users by name, faculty, major, or email from external Campus API.",
+        tags: ["Guests"],
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { in: "query", name: "name", schema: { type: "string" }, description: "Search by user name" },
+          { in: "query", name: "faculty", schema: { type: "string" }, description: "Search by faculty" },
+          { in: "query", name: "major", schema: { type: "string" }, description: "Search by major/prodi" },
+          { in: "query", name: "email", schema: { type: "string" }, description: "Search by email" },
+        ],
+        responses: {
+          200: { description: "Users found from Campus API" },
+          400: { description: "At least one search param required" },
+          401: { description: "Unauthorized" },
+        },
+      },
+    },
+    "/guests/campus": {
+      get: {
+        summary: "Get all users from Campus API",
+        description: "Fetch all users from external Campus API for admin browsing and check-in.",
+        tags: ["Guests"],
+        security: [{ bearerAuth: [] }],
+        responses: {
+          200: { description: "All campus users fetched successfully" },
+          401: { description: "Unauthorized" },
+        },
+      },
+    },
+    "/guests/{id}": {
+      delete: {
+        summary: "Delete guest log by ID",
+        description: "Hapus log kunjungan tamu berdasarkan ID (Super Admin / Staff only).",
+        tags: ["Guests"],
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { in: "path", name: "id", required: true, schema: { type: "string" }, description: "Guest Log ID" },
+        ],
+        responses: {
+          200: { description: "Guest log deleted successfully" },
+          401: { description: "Unauthorized" },
+          404: { description: "Guest log not found" },
         },
       },
     },
@@ -952,6 +1094,40 @@ const swaggerDefinition = {
         responses: {
           200: { description: "List of items", content: { "application/json": { schema: { $ref: "#/components/schemas/ApiResponse" } } } },
           404: { description: "Bibliography not found" },
+        },
+      },
+    },
+    "/bibliographies/{bibliographyId}/items": {
+      post: {
+        summary: "Create Single Item Under Bibliography",
+        description: "Add a single physical copy under a specific bibliography.",
+        tags: ["Items"],
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { name: "bibliographyId", in: "path", required: true, schema: { type: "string", format: "uuid" } },
+        ],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                required: ["itemCode"],
+                properties: {
+                  itemCode: { type: "string", maxLength: 50 },
+                  barcode: { type: "string", maxLength: 50 },
+                  locationId: { type: "integer" },
+                  callNumber: { type: "string", maxLength: 100 },
+                  inventoryCode: { type: "string", maxLength: 50 },
+                  status: { type: "string", enum: ["available", "repair", "damaged", "lost"], default: "available" },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          201: { description: "Item created" },
+          400: { description: "Validation error" },
         },
       },
     },
@@ -1259,6 +1435,86 @@ const swaggerDefinition = {
         },
       },
     },
+    "/qr/lookup": {
+      post: {
+        summary: "Lookup Item by Code / QR for Circulation",
+        description: "Lookup copy of book by itemCode during loan or return workflow.",
+        tags: ["Items"],
+        security: [{ bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                required: ["itemCode"],
+                properties: {
+                  itemCode: { type: "string" },
+                  intent: { type: "string", enum: ["loan", "return", "check"] },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          200: { description: "Item found" },
+          404: { description: "Item not found" },
+        },
+      },
+      get: {
+        summary: "Lookup Item by Query Param",
+        tags: ["Items"],
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { name: "itemCode", in: "query", required: true, schema: { type: "string" } },
+          { name: "intent", in: "query", schema: { type: "string" } },
+        ],
+        responses: {
+          200: { description: "Item found" },
+          404: { description: "Item not found" },
+        },
+      },
+    },
+    "/qr/scan": {
+      post: {
+        summary: "Scan and Resolve Barcode or QR",
+        description: "Process hardware barcode/QR scanner payload for circulation.",
+        tags: ["Items"],
+        security: [{ bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                required: ["token"],
+                properties: {
+                  token: { type: "string" },
+                  intent: { type: "string" },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          200: { description: "Item resolved" },
+          404: { description: "Invalid token or not found" },
+        },
+      },
+      get: {
+        summary: "Scan and Resolve Barcode or QR (GET)",
+        tags: ["Items"],
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { name: "token", in: "query", required: true, schema: { type: "string" } },
+          { name: "intent", in: "query", schema: { type: "string" } },
+        ],
+        responses: {
+          200: { description: "Item resolved" },
+          404: { description: "Invalid token or not found" },
+        },
+      },
+    },
     "/items/bulk-labels": {
       get: {
         summary: "Get Bulk Label Data",
@@ -1445,7 +1701,7 @@ const swaggerDefinition = {
       },
     },
     "/loans/{loanId}/approve-extension": {
-      patch: {
+      post: {
         summary: "Approve Loan Extension (Staff / Admin)",
         tags: ["Loans"],
         security: [{ bearerAuth: [] }],
@@ -1454,7 +1710,7 @@ const swaggerDefinition = {
       },
     },
     "/loans/{loanId}/reject-extension": {
-      patch: {
+      post: {
         summary: "Reject Loan Extension (Staff / Admin)",
         tags: ["Loans"],
         security: [{ bearerAuth: [] }],
@@ -1845,6 +2101,23 @@ const swaggerDefinition = {
         }
       }
     },
+    "/import/batches/{batchId}/validate": {
+      post: {
+        summary: "Validate staging rows in batch",
+        description: "Validates all staged rows before approval and returns valid/invalid row counts.",
+        operationId: "validateBatch",
+        tags: ["Import"],
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { name: "batchId", in: "path", required: true, schema: { type: "string", format: "uuid" } }
+        ],
+        responses: {
+          "200": { description: "Batch validated successfully" },
+          "400": { description: "Invalid state" },
+          "404": { description: "Batch not found" }
+        }
+      }
+    },
     "/import/batches/{batchId}/errors": {
       get: {
         summary: "Get import errors",
@@ -1856,6 +2129,25 @@ const swaggerDefinition = {
         ],
         responses: {
           "200": { description: "Errors retrieved" }
+        }
+      }
+    },
+    "/import/batches/{batchId}/errors.csv": {
+      get: {
+        summary: "Download import batch errors as CSV",
+        description: "Downloads errors encountered during parsing/validation as CSV file.",
+        operationId: "downloadErrorsCsv",
+        tags: ["Import"],
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { name: "batchId", in: "path", required: true, schema: { type: "string", format: "uuid" } }
+        ],
+        responses: {
+          "200": {
+            description: "CSV file with error details",
+            content: { "text/csv": { schema: { type: "string" } } }
+          },
+          "404": { description: "Batch not found" }
         }
       }
     },
@@ -2072,6 +2364,323 @@ const swaggerDefinition = {
           { in: "query", name: "author", schema: { type: "string" }, description: "Author name for fuzzy matching" },
         ],
         responses: { 200: { description: "Duplicate check result with hasExactMatch and duplicates array" }, 400: { description: "At least one param required" } },
+      },
+    },
+    "/health": {
+      get: {
+        summary: "API Health Check",
+        description: "Returns server health status.",
+        tags: ["System"],
+        security: [],
+        responses: {
+          200: {
+            description: "API is healthy",
+            content: { "text/plain": { schema: { type: "string", example: "API IS OK" } } },
+          },
+        },
+      },
+    },
+    "/recommendations": {
+      post: {
+        summary: "Request a book recommendation (Lecturer only)",
+        tags: ["Recommendations"],
+        security: [{ bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                required: ["title"],
+                properties: {
+                  title: { type: "string" },
+                  author: { type: "string" },
+                  publisher: { type: "string" },
+                  reason: { type: "string" },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          201: { description: "Recommendation created successfully" },
+          400: { description: "Bad request" },
+          401: { description: "Unauthorized" },
+        },
+      },
+      get: {
+        summary: "Get all recommendations (Admin only)",
+        tags: ["Recommendations"],
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            in: "query",
+            name: "status",
+            schema: { type: "string", enum: ["pending", "approved", "rejected"] },
+            description: "Filter recommendations by status",
+          },
+        ],
+        responses: {
+          200: { description: "All recommendations retrieved successfully" },
+          401: { description: "Unauthorized" },
+        },
+      },
+    },
+    "/recommendations/history": {
+      get: {
+        summary: "Get my recommendations (Lecturer)",
+        tags: ["Recommendations"],
+        security: [{ bearerAuth: [] }],
+        responses: {
+          200: { description: "My recommendations retrieved successfully" },
+          401: { description: "Unauthorized" },
+        },
+      },
+    },
+    "/recommendations/{id}/status": {
+      patch: {
+        summary: "Update recommendation status",
+        tags: ["Recommendations"],
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { in: "path", name: "id", required: true, schema: { type: "string" }, description: "Recommendation ID" },
+        ],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                required: ["status"],
+                properties: {
+                  status: { type: "string", enum: ["approved", "rejected"] },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          200: { description: "Status updated successfully" },
+          400: { description: "Invalid status" },
+          401: { description: "Unauthorized" },
+          404: { description: "Recommendation not found" },
+        },
+      },
+    },
+    "/recommendations/{id}": {
+      delete: {
+        summary: "Delete recommendation",
+        tags: ["Recommendations"],
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { in: "path", name: "id", required: true, schema: { type: "string" }, description: "Recommendation ID" },
+        ],
+        responses: {
+          200: { description: "Recommendation deleted successfully" },
+          401: { description: "Unauthorized" },
+          403: { description: "Forbidden" },
+          404: { description: "Recommendation not found" },
+        },
+      },
+    },
+    "/repository/published": {
+      get: {
+        summary: "Get published documents catalog (Public)",
+        description: "Mengambil daftar karya ilmiah dan proposal yang telah disetujui (APPROVED) untuk akses publik.",
+        tags: ["Digital Repository"],
+        parameters: [
+          { in: "query", name: "search", schema: { type: "string" }, description: "Kata kunci judul, abstrak, atau pembimbing" },
+          { in: "query", name: "category", schema: { type: "string", enum: ["PROPOSAL", "THESIS", "REPORT"] } },
+          { in: "query", name: "studyProgramId", schema: { type: "integer" } },
+          { in: "query", name: "facultyId", schema: { type: "integer" } },
+          { in: "query", name: "yearStart", schema: { type: "integer" } },
+          { in: "query", name: "yearEnd", schema: { type: "integer" } },
+        ],
+        responses: {
+          200: { description: "Berhasil mengambil katalog publik" },
+          500: { description: "Internal server error" },
+        },
+      },
+    },
+    "/repository/proposals": {
+      post: {
+        summary: "Submit a new proposal or thesis document (Mahasiswa)",
+        tags: ["Digital Repository"],
+        security: [{ bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            "multipart/form-data": {
+              schema: {
+                type: "object",
+                required: ["title", "advisorName1", "studyProgramId", "documentCategory", "file"],
+                properties: {
+                  title: { type: "string" },
+                  abstract: { type: "string" },
+                  advisorName1: { type: "string" },
+                  advisorName2: { type: "string" },
+                  studyProgramId: { type: "integer" },
+                  documentCategory: { type: "string", enum: ["PROPOSAL", "THESIS", "REPORT"] },
+                  file: { type: "string", format: "binary" },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          201: { description: "Proposal successfully submitted" },
+          400: { description: "Validation error or duplicate content" },
+          401: { description: "Unauthorized" },
+        },
+      },
+      get: {
+        summary: "Get proposals list (Authenticated)",
+        description: "Mahasiswa hanya melihat proposal miliknya; Staff dan Admin melihat seluruh proposal.",
+        tags: ["Digital Repository"],
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { in: "query", name: "status", schema: { type: "string", enum: ["DRAFT", "SUBMITTED", "UNDER_REVIEW", "REVISION_REQUIRED", "APPROVED", "REJECTED"] } },
+          { in: "query", name: "studyProgramId", schema: { type: "integer" } },
+        ],
+        responses: {
+          200: { description: "Daftar proposal berhasil diambil" },
+          401: { description: "Unauthorized" },
+        },
+      },
+    },
+    "/repository/proposals/{id}": {
+      get: {
+        summary: "Get proposal detail by ID",
+        tags: ["Digital Repository"],
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { in: "path", name: "id", required: true, schema: { type: "string" }, description: "Proposal UUID" },
+        ],
+        responses: {
+          200: { description: "Detail proposal ditemukan" },
+          401: { description: "Unauthorized" },
+          404: { description: "Proposal tidak ditemukan" },
+        },
+      },
+      put: {
+        summary: "Update proposal and upload revised document (Mahasiswa)",
+        tags: ["Digital Repository"],
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { in: "path", name: "id", required: true, schema: { type: "string" }, description: "Proposal UUID" },
+        ],
+        requestBody: {
+          required: false,
+          content: {
+            "multipart/form-data": {
+              schema: {
+                type: "object",
+                properties: {
+                  title: { type: "string" },
+                  abstract: { type: "string" },
+                  advisorName1: { type: "string" },
+                  advisorName2: { type: "string" },
+                  studyProgramId: { type: "integer" },
+                  documentCategory: { type: "string", enum: ["PROPOSAL", "THESIS", "REPORT"] },
+                  file: { type: "string", format: "binary" },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          200: { description: "Proposal berhasil diperbarui" },
+          400: { description: "Validation error" },
+          401: { description: "Unauthorized" },
+        },
+      },
+      delete: {
+        summary: "Delete proposal document",
+        tags: ["Digital Repository"],
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { in: "path", name: "id", required: true, schema: { type: "string" }, description: "Proposal UUID" },
+        ],
+        responses: {
+          200: { description: "Proposal berhasil dihapus" },
+          401: { description: "Unauthorized" },
+          404: { description: "Proposal tidak ditemukan" },
+        },
+      },
+    },
+    "/repository/proposals/{id}/review": {
+      patch: {
+        summary: "Review proposal (Staff / Dosen / Admin)",
+        tags: ["Digital Repository"],
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { in: "path", name: "id", required: true, schema: { type: "string" }, description: "Proposal UUID" },
+        ],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                required: ["action"],
+                properties: {
+                  action: { type: "string", enum: ["APPROVE", "REJECT", "REQUEST_REVISION"] },
+                  notes: { type: "string" },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          200: { description: "Proposal review status updated" },
+          400: { description: "Invalid review action" },
+          401: { description: "Unauthorized" },
+        },
+      },
+    },
+    "/repository/proposals/{id}/page-rules": {
+      post: {
+        summary: "Set Page Access Rules (Staff / Admin)",
+        tags: ["Digital Repository"],
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { in: "path", name: "id", required: true, schema: { type: "string" }, description: "Proposal UUID" },
+        ],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                required: ["visiblePages"],
+                properties: {
+                  visiblePages: { type: "string", example: "1-10,15,20-25" },
+                  blurRemainingPages: { type: "boolean", default: true },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          200: { description: "Page rules configured successfully" },
+          400: { description: "Invalid page range syntax" },
+          401: { description: "Unauthorized" },
+        },
+      },
+    },
+    "/repository/proposals/{id}/view-pdf": {
+      get: {
+        summary: "View / stream proposal PDF with Page-Level Access Control",
+        tags: ["Digital Repository"],
+        security: [],
+        parameters: [
+          { in: "path", name: "id", required: true, schema: { type: "string" }, description: "Proposal UUID" },
+        ],
+        responses: {
+          200: { description: "PDF binary stream", content: { "application/pdf": {} } },
+          401: { description: "Unauthorized" },
+          404: { description: "File PDF tidak ditemukan" },
+        },
       },
     },
   },

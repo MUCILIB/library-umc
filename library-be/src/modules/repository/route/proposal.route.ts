@@ -89,7 +89,7 @@ router.delete(
 
 /**
  * @swagger
- * /api/repository/proposals:
+ * /repository/proposals:
  *   post:
  *     summary: Submit a new proposal or thesis document (Mahasiswa)
  *     tags: [Digital Repository]
@@ -137,6 +137,296 @@ router.delete(
  *         description: Validation error or duplicate file content
  *       401:
  *         description: Unauthorized
+ *   get:
+ *     summary: Get proposals list (Authenticated)
+ *     description: Mahasiswa hanya melihat proposal miliknya; Staff dan Admin melihat seluruh proposal.
+ *     tags: [Digital Repository]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: status
+ *         schema:
+ *           type: string
+ *           enum: [DRAFT, SUBMITTED, UNDER_REVIEW, REVISION_REQUIRED, APPROVED, REJECTED]
+ *         description: Filter berdasarkan status
+ *       - in: query
+ *         name: studyProgramId
+ *         schema:
+ *           type: integer
+ *         description: Filter program studi
+ *     responses:
+ *       200:
+ *         description: Daftar proposal berhasil diambil
+ *       401:
+ *         description: Unauthorized
+ *
+ * /repository/published:
+ *   get:
+ *     summary: Get published documents catalog (Public)
+ *     description: Mengambil daftar karya ilmiah dan proposal yang telah disetujui (APPROVED) untuk akses publik.
+ *     tags: [Digital Repository]
+ *     parameters:
+ *       - in: query
+ *         name: search
+ *         schema:
+ *           type: string
+ *         description: Kata kunci judul, abstrak, atau nama pembimbing
+ *       - in: query
+ *         name: category
+ *         schema:
+ *           type: string
+ *           enum: [PROPOSAL, THESIS, REPORT]
+ *         description: Filter kategori dokumen
+ *       - in: query
+ *         name: studyProgramId
+ *         schema:
+ *           type: integer
+ *         description: Filter program studi
+ *       - in: query
+ *         name: facultyId
+ *         schema:
+ *           type: integer
+ *         description: Filter fakultas
+ *       - in: query
+ *         name: yearStart
+ *         schema:
+ *           type: integer
+ *         description: Filter tahun awal
+ *       - in: query
+ *         name: yearEnd
+ *         schema:
+ *           type: integer
+ *         description: Filter tahun akhir
+ *     responses:
+ *       200:
+ *         description: Berhasil mengambil katalog publik
+ *       500:
+ *         description: Internal server error
+ *
+ * /repository/proposals/{id}:
+ *   get:
+ *     summary: Get proposal detail by ID
+ *     description: Publik hanya dapat melihat jika status APPROVED; pemilik atau admin dapat melihat status apapun.
+ *     tags: [Digital Repository]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: UUID proposal
+ *     responses:
+ *       200:
+ *         description: Detail proposal ditemukan
+ *       403:
+ *         description: Dokumen ini belum dipublikasikan untuk umum
+ *       404:
+ *         description: Dokumen tidak ditemukan
+ *   put:
+ *     summary: Update proposal document or metadata
+ *     description: Pemilik proposal atau staff/admin memperbarui metadata dan/atau mengunggah revisi PDF baru.
+ *     tags: [Digital Repository]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: UUID proposal
+ *     requestBody:
+ *       required: false
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               title:
+ *                 type: string
+ *               abstract:
+ *                 type: string
+ *               advisorName1:
+ *                 type: string
+ *               advisorName2:
+ *                 type: string
+ *               studyProgramId:
+ *                 type: integer
+ *               documentCategory:
+ *                 type: string
+ *                 enum: [PROPOSAL, THESIS, REPORT]
+ *               file:
+ *                 type: string
+ *                 format: binary
+ *     responses:
+ *       200:
+ *         description: Proposal berhasil diperbarui
+ *       400:
+ *         description: Validasi gagal
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden
+ *       404:
+ *         description: Proposal tidak ditemukan
+ *   delete:
+ *     summary: Delete proposal document
+ *     description: Hapus proposal dari repository (pemilik atau staff/admin).
+ *     tags: [Digital Repository]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: UUID proposal
+ *     responses:
+ *       200:
+ *         description: Proposal berhasil dihapus
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden
+ *       404:
+ *         description: Proposal tidak ditemukan
+ *
+ * /repository/proposals/{id}/review:
+ *   patch:
+ *     summary: Review and transition proposal status (Staff / Admin)
+ *     description: Menyetujui atau meminta revisi proposal yang diajukan mahasiswa.
+ *     tags: [Digital Repository]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: UUID proposal
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - action
+ *             properties:
+ *               action:
+ *                 type: string
+ *                 enum: [APPROVE, REVISION_REQUIRED, UNDER_REVIEW]
+ *                 example: APPROVE
+ *               reviewNotes:
+ *                 type: string
+ *                 example: Dokumen disetujui untuk publikasi repositori
+ *     responses:
+ *       200:
+ *         description: Status proposal berhasil diperbarui
+ *       400:
+ *         description: Transisi status tidak valid
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden - Khusus Staff/Admin
+ *       404:
+ *         description: Proposal tidak ditemukan
+ *
+ * /repository/proposals/{id}/page-rules:
+ *   post:
+ *     summary: Configure page-level slicing rules for PDF (Staff / Admin)
+ *     description: Mengatur batas halaman yang boleh diakses publik vs member terdaftar.
+ *     tags: [Digital Repository]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: UUID proposal
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - allowedStartPage
+ *               - allowedEndPage
+ *             properties:
+ *               roleScope:
+ *                 type: string
+ *                 enum: [PUBLIC, STUDENT, MEMBER, ALL]
+ *                 default: PUBLIC
+ *               allowedStartPage:
+ *                 type: integer
+ *                 example: 1
+ *               allowedEndPage:
+ *                 type: integer
+ *                 example: 15
+ *               allowDownloadFull:
+ *                 type: boolean
+ *                 default: false
+ *     responses:
+ *       200:
+ *         description: Aturan halaman PDF berhasil dikonfigurasi
+ *       400:
+ *         description: Parameter halaman tidak valid
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden - Khusus Staff/Admin
+ *       404:
+ *         description: Proposal tidak ditemukan
+ *
+ * /repository/proposals/{id}/view-pdf:
+ *   get:
+ *     summary: Stream or download PDF with Page-Level Access Control
+ *     description: Streaming dokumen PDF. Tamu publik hanya menerima halaman terpotong (misal hal 1-15), user terotorisasi menerima full dokumen.
+ *     tags: [Digital Repository]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: UUID proposal
+ *       - in: query
+ *         name: download
+ *         schema:
+ *           type: boolean
+ *         description: Set true untuk mengunduh berkas
+ *       - in: query
+ *         name: mode
+ *         schema:
+ *           type: string
+ *           enum: [download, public]
+ *       - in: query
+ *         name: preview
+ *         schema:
+ *           type: string
+ *           enum: [public]
+ *       - in: query
+ *         name: forcePublic
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Binary PDF stream
+ *         content:
+ *           application/pdf:
+ *             schema:
+ *               type: string
+ *               format: binary
+ *       403:
+ *         description: Dokumen terkunci atau belum dipublikasikan
+ *       404:
+ *         description: Dokumen PDF tidak ditemukan
  */
 export const repositoryRoutes = router;
 

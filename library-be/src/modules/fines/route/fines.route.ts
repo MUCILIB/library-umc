@@ -236,8 +236,6 @@ router.post(
  *         description: Unauthorized
  *       404:
  *         description: Fine not found
- *     security:
- *       - bearerAuth: []
  */
 router.delete(
   "/fines/:id",

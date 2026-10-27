@@ -144,11 +144,17 @@ export class AuthService {
 
       const memberPayload = this.mapCampusRoleToMemberType(campusUser);
 
-      // Sync Users.role with memberType for consistent RBAC
-      await db
-        .update(UserTable)
-        .set({ role: memberPayload.memberType })
-        .where(eq(UserTable.id, userId));
+      // Preserve super_admin role: never downgrade via campus sync
+      const targetUser = await db.query.Users.findFirst({
+        where: eq(UserTable.id, userId),
+      });
+
+      if (targetUser?.role !== "super_admin") {
+        await db
+          .update(UserTable)
+          .set({ role: memberPayload.memberType })
+          .where(eq(UserTable.id, userId));
+      }
 
       const [newMember] = await db
         .insert(MemberTable)
@@ -210,11 +216,13 @@ export class AuthService {
     }
 
     if (!existingMember) {
-      // Sync Users.role with memberType
-      await db
-        .update(UserTable)
-        .set({ role: memberPayload.memberType })
-        .where(eq(UserTable.id, userId));
+      // Sync Users.role with memberType (preserve super_admin)
+      if (user.role !== "super_admin") {
+        await db
+          .update(UserTable)
+          .set({ role: memberPayload.memberType })
+          .where(eq(UserTable.id, userId));
+      }
 
       const [newMember] = await db
         .insert(MemberTable)
@@ -236,11 +244,13 @@ export class AuthService {
       };
     }
 
-    // Sync Users.role with memberType
-    await db
-      .update(UserTable)
-      .set({ role: memberPayload.memberType })
-      .where(eq(UserTable.id, userId));
+    // Sync Users.role with memberType (preserve super_admin)
+    if (user.role !== "super_admin") {
+      await db
+        .update(UserTable)
+        .set({ role: memberPayload.memberType })
+        .where(eq(UserTable.id, userId));
+    }
 
     const [updatedMember] = await db
       .update(MemberTable)

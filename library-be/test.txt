@@ -1,0 +1,34 @@
+
+// Parse response body menjadi JSON
+const responseJson = pm.response.json();
+
+// 1. Validasi HTTP Status Code untuk Error
+// Catatan: Ubah angka 400 menjadi 409 atau kode lain jika API Anda menggunakan status berbeda untuk error ini.
+pm.test("Status code is 400 (Bad Request)", function () {
+    pm.response.to.have.status(400); 
+});
+
+// 2. Validasi struktur balasan Error
+pm.test("Response memiliki format error yang benar", function () {
+    // Memastikan success bernilai false
+    pm.expect(responseJson).to.have.property("success").that.is.a("boolean");
+    pm.expect(responseJson.success).to.be.false;
+
+    // Memastikan message berupa string
+    pm.expect(responseJson).to.have.property("message").that.is.a("string");
+
+    // Memastikan terdapat stack trace (biasanya muncul saat mode Development)
+    pm.expect(responseJson).to.have.property("stack").that.is.a("string");
+});
+
+// 3. Validasi isi pesan (Message) agar sesuai dengan aturan bisnis (Business Logic)
+pm.test("Pesan error sesuai dengan kondisi (User sudah sinkron)", function () {
+    const expectedMessage = "User sudah tersinkronisasi. Sync manual hanya untuk user yang belum sinkron.";
+    pm.expect(responseJson.message).to.eql(expectedMessage);
+});
+
+// 4. (Opsional) Validasi Stack Trace berasal dari file yang relevan
+pm.test("Stack trace mengandung informasi AuthService", function () {
+    // Memastikan error benar-benar dilempar dari service yang menangani Auth/Sync
+    pm.expect(responseJson.stack).to.include("AuthService.syncUserMemberByUserId");
+});
