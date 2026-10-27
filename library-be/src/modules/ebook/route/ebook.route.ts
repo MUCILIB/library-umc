@@ -11,6 +11,16 @@ const upload = multer({
   storage: multer.memoryStorage(),
   limits: {
     fileSize: 100 * 1024 * 1024 // 100 MB max limit untuk e-book
+  },
+  fileFilter: (_req, file, cb) => {
+    if (
+      file.mimetype === "application/pdf" ||
+      file.originalname.toLowerCase().endsWith(".pdf")
+    ) {
+      cb(null, true);
+    } else {
+      cb(new Error("Hanya berkas format PDF yang diperbolehkan"));
+    }
   }
 });
 
