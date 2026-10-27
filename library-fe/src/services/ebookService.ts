@@ -52,7 +52,14 @@ class EbookService {
       );
     }
     if (!result.success) {
-      throw new Error(result.message || defaultErrorMessage);
+      let msg = result.message || defaultErrorMessage;
+      if (
+        typeof msg === "string" &&
+        (msg.includes("Failed query") || msg.includes("select \"") || msg.length > 200)
+      ) {
+        msg = defaultErrorMessage;
+      }
+      throw new Error(msg);
     }
     return result;
   }

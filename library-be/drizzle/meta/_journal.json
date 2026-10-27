@@ -71,6 +71,13 @@
       "when": 1792000000000,
       "tag": "0009_add_is_popular",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1793143403751,
+      "tag": "0010_vengeful_forgotten_one",
+      "breakpoints": true
     }
   ]
 }
