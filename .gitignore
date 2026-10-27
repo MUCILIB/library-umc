@@ -26,6 +26,9 @@ Thumbs.db
 .idea/
 *.swp
 *.swo
+.agents/
+.claude/
+skills-lock.json
 
 # Docker
 .dockerignore
