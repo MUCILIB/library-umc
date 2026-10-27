@@ -284,6 +284,7 @@ const swaggerDefinition = {
     { name: "Export", description: "CSV export (bibliographies & items)" },
     { name: "Faculties", description: "Faculty management (Super Admin)" },
     { name: "Study Programs", description: "Study program management (Super Admin)" },
+    { name: "E-Books", description: "Digital book (E-Book) cataloging, S3 Dahono storage, PDF streaming, and dynamic page slicing reader" },
   ],
   paths: {
     "/auth/sign-in/email": {
@@ -2680,6 +2681,141 @@ const swaggerDefinition = {
           200: { description: "PDF binary stream", content: { "application/pdf": {} } },
           401: { description: "Unauthorized" },
           404: { description: "File PDF tidak ditemukan" },
+        },
+      },
+    },
+    "/ebooks": {
+      get: {
+        summary: "Get All E-Books",
+        description: "Retrieve a paginated list of digital books (e-books) with search and category filtering.",
+        tags: ["E-Books"],
+        security: [],
+        parameters: [
+          { in: "query", name: "search", schema: { type: "string" }, description: "Search by title, author, or publisher" },
+          { in: "query", name: "categoryId", schema: { type: "integer" }, description: "Filter by category ID" },
+          { in: "query", name: "page", schema: { type: "integer", default: 1 }, description: "Page number" },
+          { in: "query", name: "limit", schema: { type: "integer", default: 10 }, description: "Items per page" },
+        ],
+        responses: {
+          200: { description: "List of e-books retrieved successfully" },
+        },
+      },
+      post: {
+        summary: "Upload and Create New E-Book",
+        description: "Upload PDF and cover image to S3 Dahono and register e-book metadata with access control (Full Access vs Slicing Preview).",
+        tags: ["E-Books"],
+        security: [{ bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            "multipart/form-data": {
+              schema: {
+                type: "object",
+                required: ["title", "pdf"],
+                properties: {
+                  title: { type: "string", description: "Judul E-Book" },
+                  author: { type: "string", description: "Nama Penulis" },
+                  publisher: { type: "string", description: "Penerbit" },
+                  publicationYear: { type: "string", description: "Tahun Terbit (YYYY)" },
+                  isbn: { type: "string", description: "Nomor ISBN" },
+                  categoryId: { type: "integer", description: "ID Kategori" },
+                  description: { type: "string", description: "Deskripsi / Sinopsis" },
+                  isFullAccess: { type: "boolean", default: true, description: "Akses penuh atau pratinjau halaman terbatas untuk tamu" },
+                  previewStartPage: { type: "integer", default: 1, description: "Halaman awal pratinjau tamu" },
+                  previewEndPage: { type: "integer", default: 10, description: "Halaman akhir pratinjau tamu" },
+                  allowDownload: { type: "boolean", default: false, description: "Izinkan tamu/pengguna mengunduh PDF secara langsung" },
+                  pdf: { type: "string", format: "binary", description: "File PDF E-Book (maks 50MB)" },
+                  cover: { type: "string", format: "binary", description: "File Gambar Cover (opsional, JPEG/PNG/WebP, maks 5MB)" },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          201: { description: "E-Book berhasil ditambahkan" },
+          400: { description: "Validasi gagal / file tidak sesuai" },
+          401: { description: "Unauthorized" },
+        },
+      },
+    },
+    "/ebooks/{id}": {
+      get: {
+        summary: "Get E-Book Detail",
+        description: "Retrieve comprehensive e-book metadata, content info, and access configuration.",
+        tags: ["E-Books"],
+        security: [],
+        parameters: [
+          { in: "path", name: "id", required: true, schema: { type: "string" }, description: "ID Bibliografi E-Book" },
+        ],
+        responses: {
+          200: { description: "Detail e-book berhasil diambil" },
+          404: { description: "E-Book tidak ditemukan" },
+        },
+      },
+      put: {
+        summary: "Update E-Book",
+        description: "Update e-book metadata or replace PDF/cover files.",
+        tags: ["E-Books"],
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { in: "path", name: "id", required: true, schema: { type: "string" }, description: "ID Bibliografi E-Book" },
+        ],
+        requestBody: {
+          content: {
+            "multipart/form-data": {
+              schema: {
+                type: "object",
+                properties: {
+                  title: { type: "string" },
+                  author: { type: "string" },
+                  publisher: { type: "string" },
+                  publicationYear: { type: "string" },
+                  isbn: { type: "string" },
+                  categoryId: { type: "integer" },
+                  description: { type: "string" },
+                  isFullAccess: { type: "boolean" },
+                  previewStartPage: { type: "integer" },
+                  previewEndPage: { type: "integer" },
+                  allowDownload: { type: "boolean" },
+                  pdf: { type: "string", format: "binary" },
+                  cover: { type: "string", format: "binary" },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          200: { description: "E-Book berhasil diperbarui" },
+          404: { description: "E-Book tidak ditemukan" },
+        },
+      },
+      delete: {
+        summary: "Delete E-Book",
+        description: "Delete e-book metadata and remove associated files from S3 storage.",
+        tags: ["E-Books"],
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { in: "path", name: "id", required: true, schema: { type: "string" }, description: "ID Bibliografi E-Book" },
+        ],
+        responses: {
+          200: { description: "E-Book berhasil dihapus" },
+          404: { description: "E-Book tidak ditemukan" },
+        },
+      },
+    },
+    "/ebooks/{id}/stream": {
+      get: {
+        summary: "Stream E-Book PDF with Dynamic Page Slicing",
+        description: "Stream the e-book PDF directly in-browser. Authenticated civitas UMC receive the full PDF. Guests receive only preview pages if access restriction is configured.",
+        tags: ["E-Books"],
+        security: [],
+        parameters: [
+          { in: "path", name: "id", required: true, schema: { type: "string" }, description: "ID Bibliografi E-Book" },
+          { in: "query", name: "download", schema: { type: "boolean" }, description: "Set header Content-Disposition ke attachment jika diizinkan" },
+        ],
+        responses: {
+          200: { description: "PDF binary stream", content: { "application/pdf": {} } },
+          404: { description: "File PDF E-Book tidak ditemukan" },
         },
       },
     },

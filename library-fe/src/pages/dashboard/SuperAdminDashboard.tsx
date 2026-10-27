@@ -18,7 +18,8 @@ import {
   Package,
   Building2,
   GraduationCap,
-  MapPin
+  MapPin,
+  Tablet
 } from "lucide-react";
 
 import Logo from "@/assets/logo_umc.png";
@@ -38,6 +39,7 @@ import UsersSection from "@/components/dashboard/UsersSection";
 import ReturnApprovalsSection from "@/components/dashboard/ReturnApprovalsSection";
 import RecommendationsSection from "@/components/dashboard/RecommendationsSection";
 import RepositorySection from "@/components/dashboard/RepositorySection";
+import EbookSection from "@/components/dashboard/EbookSection";
 import FakultasSection from "@/components/dashboard/FakultasSection";
 import ProdiSection from "@/components/dashboard/ProdiSection";
 import LocationSection from "@/components/dashboard/LocationSection";
@@ -78,6 +80,7 @@ type ActiveMenu =
   | "bibliographies"
   | "items"
   | "repository"
+  | "ebooks"
   | "importData"
   | "exportData"
   | "guests"
@@ -106,6 +109,7 @@ const MENU_CONFIG: MenuConfig[] = [
   { key: "circulation", label: "Sirkulasi & Scan", icon: ScanLine },
   { key: "bibliographies", label: "Bibliografi", icon: Book, group: "Manajemen Koleksi" },
   { key: "items", label: "Item Buku", icon: Package, group: "Manajemen Koleksi" },
+  { key: "ebooks", label: "E-Book", icon: Tablet, group: "Manajemen Koleksi" },
   { key: "repository", label: "Repositori Skripsi", icon: GraduationCap, group: "Manajemen Koleksi" },
   { key: "importData", label: "Import Data", icon: FileUp, group: "Manajemen Koleksi" },
   { key: "exportData", label: "Export Data", icon: FileDown, group: "Manajemen Koleksi" },
@@ -331,6 +335,8 @@ export default function SuperAdminDashboard() {
         return <ItemSection />;
       case "repository":
         return <RepositorySection />;
+      case "ebooks":
+        return <EbookSection />;
       case "importData":
         return <ImportSection />;
       case "exportData":

@@ -350,14 +350,23 @@ export const bibliographySubjects = pgTable("bibliography_subjects", {
 
 export const bibliographyContents = pgTable("bibliography_contents", {
   id: uuid("id").primaryKey().defaultRandom(),
-  bibliographyId: uuid("bibliography_id").references(() => bibliographies.id),
-  contentType: contentTypeEnum("content_type"),
+  bibliographyId: uuid("bibliography_id").references(() => bibliographies.id, { onDelete: "cascade" }),
+  contentType: contentTypeEnum("content_type").default("pdf"),
   content: text("content"),
-  contentUrl: varchar("content_url", { length: 255 }),
+  contentUrl: text("content_url"),
+  fileSize: integer("file_size").default(0),
+  pageCount: integer("page_count").default(0),
+  isFullAccess: boolean("is_full_access").default(true),
+  previewStartPage: integer("preview_start_page").default(1),
+  previewEndPage: integer("preview_end_page").default(10),
+  allowDownload: boolean("allow_download").default(false),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
   deletedAt: timestamp("deleted_at")
-});
+}, (table) => ({
+  bibIdx: index("bc_bibliography_idx").on(table.bibliographyId),
+  deletedAtIdx: index("bc_deleted_at_idx").on(table.deletedAt)
+}));
 
 export const bibliographyViews = pgTable("bibliography_views", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -678,6 +687,10 @@ export const bibliographyAuthorsRelations = relations(bibliographyAuthors, ({ on
 export const bibliographySubjectsRelations = relations(bibliographySubjects, ({ one }) => ({
   bibliography: one(bibliographies, { fields: [bibliographySubjects.bibliographyId], references: [bibliographies.id] }),
   subject: one(subjects, { fields: [bibliographySubjects.subjectId], references: [subjects.id] })
+}));
+
+export const bibliographyContentsRelations = relations(bibliographyContents, ({ one }) => ({
+  bibliography: one(bibliographies, { fields: [bibliographyContents.bibliographyId], references: [bibliographies.id] })
 }));
 
 export const itemRelations = relations(items, ({ one, many }) => ({
