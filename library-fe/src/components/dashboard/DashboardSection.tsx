@@ -7,10 +7,23 @@ import {
   DownloadCloud,
   UploadCloud,
   Globe,
-  Layers
+  Layers,
+  ArrowRight,
+  Calendar,
+  TrendingUp
 } from "lucide-react";
-import { useRef, type ChangeEvent } from "react";
+import { useRef, useState, useEffect, type ChangeEvent } from "react";
+import {
+  Area,
+  AreaChart,
+  CartesianGrid,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis
+} from "recharts";
 import { API_BASE_URL } from "@/utils/api-config";
+import { getAuthHeaders } from "@/api/client";
 import { useToast } from "@/hooks/useToast";
 import { useDashboardOverview } from "@/hooks/dashboard/useDashboardOverview";
 import type { DashboardStats } from "@/services/dashboard/dashboardDataService";
@@ -24,17 +37,64 @@ import {
 
 interface DashboardSectionProps {
   stats: DashboardStats;
+  onNavigateLoans?: () => void;
 }
 
-export default function DashboardSection({ stats }: DashboardSectionProps) {
+interface DailyTrafficItem {
+  date: string;
+  pageViews: number;
+  uniqueVisitors: number;
+  sessions?: number;
+}
+
+export default function DashboardSection({
+  stats,
+  onNavigateLoans
+}: DashboardSectionProps) {
   const { success, error, info } = useToast();
   const importInputRef = useRef<HTMLInputElement | null>(null);
+
   const {
     displayStats,
     loanLoading,
     formattedRecentLoans,
     applyImportedSummary
   } = useDashboardOverview(stats);
+
+  const [trafficRange, setTrafficRange] = useState<number>(7);
+  const [trafficData, setTrafficData] = useState<DailyTrafficItem[]>([]);
+  const [trafficLoading, setTrafficLoading] = useState<boolean>(false);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const fetchTraffic = async () => {
+      setTrafficLoading(true);
+      try {
+        const res = await fetch(
+          `${API_BASE_URL}/api/reports/web-traffic?days=${trafficRange}`,
+          {
+            headers: getAuthHeaders()
+          }
+        );
+        if (!res.ok) return;
+        const json = await res.json();
+        if (json.success && Array.isArray(json.data?.daily) && isMounted) {
+          setTrafficData(json.data.daily);
+        }
+      } catch (err) {
+        console.error("Gagal memuat trafik web:", err);
+      } finally {
+        if (isMounted) setTrafficLoading(false);
+      }
+    };
+
+    void fetchTraffic();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [trafficRange]);
 
   const statusMeta: Record<string, { label: string; className: string }> = {
     approved: {
@@ -43,15 +103,15 @@ export default function DashboardSection({ stats }: DashboardSectionProps) {
     },
     pending: {
       label: "Menunggu",
-      className: "bg-blue-50 dark:bg-blue-950 text-blue-600 dark:bg-blue-950 dark:text-blue-400"
+      className: "bg-blue-50 text-blue-600 dark:bg-blue-950 dark:text-blue-400"
     },
     returned: {
       label: "Dikembalikan",
-      className: "bg-green-50 dark:bg-green-950 text-green-600 dark:bg-green-950 dark:text-green-400"
+      className: "bg-green-50 text-green-600 dark:bg-green-950 dark:text-green-400"
     },
     rejected: {
       label: "Ditolak",
-      className: "bg-red-50 dark:bg-red-950 text-destructive dark:bg-red-950"
+      className: "bg-red-50 text-destructive dark:bg-red-950"
     }
   };
 
@@ -103,75 +163,60 @@ export default function DashboardSection({ stats }: DashboardSectionProps) {
     }
   };
 
-  const statCards = [
+  const formatShortDate = (dateStr: string) => {
+    try {
+      const d = new Date(dateStr);
+      return d.toLocaleDateString("id-ID", { day: "numeric", month: "short" });
+    } catch {
+      return dateStr;
+    }
+  };
+
+  const primaryCards = [
     {
-      label: "Total Judul",
-      value: displayStats.totalBibliographies,
-      icon: <Book />,
+      title: "Koleksi Judul",
+      value: (displayStats.totalBibliographies || 0).toLocaleString("id-ID"),
+      subtitle: `${(displayStats.totalItems || 0).toLocaleString("id-ID")} total eksemplar`,
+      icon: Book,
       color: "text-blue-600 dark:text-blue-400",
-      bg: "bg-blue-50 dark:bg-blue-950"
+      bg: "bg-blue-50 dark:bg-blue-950/60"
     },
     {
-      label: "Total Buku",
-      value: displayStats.totalItems || 0,
-      icon: <Layers />,
-      color: "text-purple-600 dark:text-purple-400",
-      bg: "bg-purple-50 dark:bg-purple-950"
-    },
-    {
-      label: "Sedang Dipinjam",
-      value: displayStats.activeBorrowings ?? 0,
-      icon: <Clock />,
+      title: "Buku Dipinjam",
+      value: (displayStats.activeBorrowings || 0).toLocaleString("id-ID"),
+      subtitle: "Sedang dipinjam civitas",
+      icon: Clock,
       color: "text-orange-600 dark:text-orange-400",
-      bg: "bg-orange-50 dark:bg-orange-950"
+      bg: "bg-orange-50 dark:bg-orange-950/60"
     },
     {
-      label: "Kunjungan Fisik",
-      value: displayStats.totalGuests,
-      icon: <Users />,
-      color: "text-green-600 dark:text-green-400",
-      bg: "bg-green-50 dark:bg-green-950"
-    },
-    {
-      label: "Kunjungan Web",
-      value: displayStats.webVisits,
-      icon: <Globe />,
-      color: "text-indigo-600 dark:text-indigo-400",
-      bg: "bg-indigo-50 dark:bg-indigo-950"
-    },
-    {
-      label: "Antrean Reservasi",
-      value: displayStats.waitingReservations ?? 0,
-      icon: <Clock />,
+      title: "Antrean Reservasi",
+      value: (displayStats.waitingReservations || 0).toLocaleString("id-ID"),
+      subtitle: "Menunggu verifikasi admin",
+      icon: Layers,
       color: "text-amber-600 dark:text-amber-400",
-      bg: "bg-amber-50 dark:bg-amber-950"
+      bg: "bg-amber-50 dark:bg-amber-950/60"
     },
     {
-      label: "Tagihan Denda Aktif",
-      value: `Rp ${(displayStats.outstandingFines ?? 0).toLocaleString("id-ID")}`,
-      icon: <Wallet />,
-      color: "text-destructive",
-      bg: "bg-red-50 dark:bg-red-950"
-    },
-    {
-      label: "Pendapatan Denda",
-      value: `Rp ${(displayStats.totalFineRevenue ?? 0).toLocaleString("id-ID")}`,
-      icon: <Wallet />,
+      title: "Pendapatan Denda",
+      value: `Rp ${(displayStats.totalFineRevenue || 0).toLocaleString("id-ID")}`,
+      subtitle: `Tagihan aktif: Rp ${(displayStats.outstandingFines || 0).toLocaleString("id-ID")}`,
+      icon: Wallet,
       color: "text-emerald-600 dark:text-emerald-400",
-      bg: "bg-emerald-50 dark:bg-emerald-950"
+      bg: "bg-emerald-50 dark:bg-emerald-950/60"
     }
   ];
 
   return (
     <div className="space-y-6">
-      {/* Section Ringkasan */}
-      <div className="mb-8 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      {/* Section Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-foreground">
+          <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-foreground">
             Ringkasan Sistem
           </h2>
-          <p className="text-muted-foreground text-sm font-medium mt-1">
-            Pantau aktivitas perpustakaan hari ini.
+          <p className="text-muted-foreground text-xs sm:text-sm font-medium mt-1">
+            Pantau aktivitas perpustakaan, sirkulasi, dan intensitas kunjungan hari ini.
           </p>
         </div>
 
@@ -187,17 +232,17 @@ export default function DashboardSection({ stats }: DashboardSectionProps) {
           <button
             type="button"
             onClick={handleImportClick}
-            className="flex items-center gap-2 bg-card text-foreground px-5 py-2.5 rounded-xl font-bold text-sm border border-border hover:bg-surface-hover transition-colors shadow-sm"
+            className="flex items-center gap-2 bg-card text-foreground px-4 py-2 rounded-xl font-semibold text-xs border border-border hover:bg-muted/50 transition-colors shadow-xs"
           >
-            <UploadCloud size={18} />
+            <UploadCloud size={16} />
             Import Laporan
           </button>
 
           {/* Export Dropdown */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <button className="flex items-center gap-2 bg-primary text-white px-5 py-2.5 rounded-xl font-bold text-sm hover:bg-primary/90 transition-colors shadow-sm shadow-red-500/20">
-                <DownloadCloud size={18} />
+              <button className="flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2 rounded-xl font-semibold text-xs hover:bg-primary/90 transition-colors shadow-xs">
+                <DownloadCloud size={16} />
                 Export Laporan
               </button>
             </DropdownMenuTrigger>
@@ -205,7 +250,7 @@ export default function DashboardSection({ stats }: DashboardSectionProps) {
               align="end"
               className="w-56 p-2 rounded-2xl shadow-xl border-border bg-card"
             >
-              <div className="px-3 py-2 text-[11px] font-bold text-muted-foreground uppercase tracking-wider">
+              <div className="px-3 py-2 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
                 Format Laporan (PDF)
               </div>
               <DropdownMenuItem
@@ -215,7 +260,7 @@ export default function DashboardSection({ stats }: DashboardSectionProps) {
                     "_blank"
                   )
                 }
-                className="px-3 py-2.5 rounded-xl text-sm font-semibold cursor-pointer text-muted-foreground focus:bg-muted focus:text-primary"
+                className="px-3 py-2 rounded-xl text-xs font-semibold cursor-pointer text-muted-foreground focus:bg-muted focus:text-primary"
               >
                 Laporan Peminjaman
               </DropdownMenuItem>
@@ -226,14 +271,14 @@ export default function DashboardSection({ stats }: DashboardSectionProps) {
                     "_blank"
                   )
                 }
-                className="px-3 py-2.5 rounded-xl text-sm font-semibold cursor-pointer text-muted-foreground focus:bg-muted focus:text-primary"
+                className="px-3 py-2 rounded-xl text-xs font-semibold cursor-pointer text-muted-foreground focus:bg-muted focus:text-primary"
               >
                 Laporan Denda
               </DropdownMenuItem>
 
               <div className="h-px bg-muted my-1 mx-2" />
 
-              <div className="px-3 py-2 text-[11px] font-bold text-muted-foreground uppercase tracking-wider">
+              <div className="px-3 py-2 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
                 Format Excel (CSV)
               </div>
               <DropdownMenuItem
@@ -243,7 +288,7 @@ export default function DashboardSection({ stats }: DashboardSectionProps) {
                     "_blank"
                   )
                 }
-                className="px-3 py-2.5 rounded-xl text-sm font-semibold cursor-pointer text-muted-foreground focus:bg-muted focus:text-blue-600 dark:text-blue-400"
+                className="px-3 py-2 rounded-xl text-xs font-semibold cursor-pointer text-muted-foreground focus:bg-muted focus:text-blue-600 dark:text-blue-400"
               >
                 Laporan Peminjaman
               </DropdownMenuItem>
@@ -254,7 +299,7 @@ export default function DashboardSection({ stats }: DashboardSectionProps) {
                     "_blank"
                   )
                 }
-                className="px-3 py-2.5 rounded-xl text-sm font-semibold cursor-pointer text-muted-foreground focus:bg-muted focus:text-blue-600 dark:text-blue-400"
+                className="px-3 py-2 rounded-xl text-xs font-semibold cursor-pointer text-muted-foreground focus:bg-muted focus:text-blue-600 dark:text-blue-400"
               >
                 Laporan Denda
               </DropdownMenuItem>
@@ -263,49 +308,232 @@ export default function DashboardSection({ stats }: DashboardSectionProps) {
         </div>
       </div>
 
-      {/* Stats Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-        {statCards.map((stat, i) => (
-          <div
-            key={i}
-            className="bg-card p-6 rounded-[24px] border border-border shadow-sm flex items-center gap-5 hover:shadow-md transition-all"
-          >
-            <div className={`p-4 rounded-2xl ${stat.bg} ${stat.color}`}>
-              {stat.icon}
+      {/* Primary KPI Grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {primaryCards.map((card, i) => {
+          const Icon = card.icon;
+          return (
+            <div
+              key={i}
+              className="bg-card p-5 rounded-2xl border border-border shadow-xs hover:border-border/80 transition-all flex items-start justify-between gap-3"
+            >
+              <div className="space-y-1 min-w-0">
+                <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground truncate">
+                  {card.title}
+                </p>
+                <p className="text-xl font-bold tracking-tight text-foreground tabular-nums">
+                  {card.value}
+                </p>
+                <p className="text-[11px] text-muted-foreground font-medium truncate">
+                  {card.subtitle}
+                </p>
+              </div>
+              <div className={`p-2.5 rounded-xl ${card.bg} ${card.color} shrink-0`}>
+                <Icon className="size-4.5" />
+              </div>
             </div>
-            <div>
-              <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider mb-1">
-                {stat.label}
-              </p>
-              <p className="text-2xl font-black text-foreground leading-none">
-                {stat.value.toLocaleString()}
-              </p>
+          );
+        })}
+      </div>
+
+      {/* Web Traffic & Analytics Chart Card */}
+      <div className="bg-card rounded-2xl border border-border shadow-xs p-5 md:p-6 space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-border pb-4">
+          <div>
+            <div className="flex items-center gap-2">
+              <Globe className="size-4 text-primary" />
+              <h3 className="text-base font-bold tracking-tight text-foreground">
+                Tren Kunjungan & Trafik Web
+              </h3>
             </div>
+            <p className="text-xs text-muted-foreground font-medium mt-0.5">
+              Analisis pembaca online dan intensitas lalu lintas digital perpustakaan.
+            </p>
           </div>
-        ))}
+
+          <div className="flex items-center gap-1.5 bg-muted/60 p-1 rounded-xl self-start sm:self-auto border border-border">
+            {[7, 14, 30].map((days) => (
+              <button
+                key={days}
+                type="button"
+                onClick={() => setTrafficRange(days)}
+                className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all ${
+                  trafficRange === days
+                    ? "bg-card text-foreground shadow-xs border border-border/80"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                {days} Hari
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Traffic Mini KPI Bar */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
+          <div className="bg-muted/30 border border-border rounded-xl p-3 flex items-center justify-between">
+            <div>
+              <p className="text-[11px] text-muted-foreground font-medium">Hits Hari Ini</p>
+              <p className="text-base font-bold text-foreground tabular-nums mt-0.5">
+                {(displayStats.webVisits || 0).toLocaleString("id-ID")}
+              </p>
+            </div>
+            <TrendingUp className="size-4 text-blue-500" />
+          </div>
+
+          <div className="bg-muted/30 border border-border rounded-xl p-3 flex items-center justify-between">
+            <div>
+              <p className="text-[11px] text-muted-foreground font-medium">Pengunjung Fisik</p>
+              <p className="text-base font-bold text-foreground tabular-nums mt-0.5">
+                {(displayStats.totalGuests || 0).toLocaleString("id-ID")}
+              </p>
+            </div>
+            <Users className="size-4 text-emerald-500" />
+          </div>
+
+          <div className="bg-muted/30 border border-border rounded-xl p-3 flex items-center justify-between">
+            <div>
+              <p className="text-[11px] text-muted-foreground font-medium">Total Interaksi</p>
+              <p className="text-base font-bold text-foreground tabular-nums mt-0.5">
+                {(
+                  displayStats.combinedVisits ||
+                  (displayStats.totalGuests || 0) + (displayStats.webVisits || 0)
+                ).toLocaleString("id-ID")}
+              </p>
+            </div>
+            <Calendar className="size-4 text-amber-500" />
+          </div>
+        </div>
+
+        {/* Interactive Chart Container */}
+        <div className="h-64 w-full pt-2">
+          {trafficLoading ? (
+            <div className="h-full w-full flex items-center justify-center text-xs text-muted-foreground">
+              Memuat grafik trafik...
+            </div>
+          ) : trafficData.length === 0 ? (
+            <div className="h-full w-full flex items-center justify-center text-xs text-muted-foreground">
+              Belum ada riwayat trafik tercatat pada rentang waktu ini.
+            </div>
+          ) : (
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart
+                data={trafficData}
+                margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
+              >
+                <defs>
+                  <linearGradient id="pageViewsGradient" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#2563eb" stopOpacity={0.25} />
+                    <stop offset="95%" stopColor="#2563eb" stopOpacity={0.0} />
+                  </linearGradient>
+                  <linearGradient id="uniqueVisitorsGradient" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#10b981" stopOpacity={0.25} />
+                    <stop offset="95%" stopColor="#10b981" stopOpacity={0.0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid
+                  strokeDasharray="3 3"
+                  vertical={false}
+                  stroke="var(--border)"
+                  opacity={0.6}
+                />
+                <XAxis
+                  dataKey="date"
+                  tickFormatter={formatShortDate}
+                  stroke="var(--muted-foreground)"
+                  fontSize={11}
+                  tickLine={false}
+                  axisLine={false}
+                />
+                <YAxis
+                  stroke="var(--muted-foreground)"
+                  fontSize={11}
+                  tickLine={false}
+                  axisLine={false}
+                  allowDecimals={false}
+                />
+                <Tooltip
+                  content={({ active, payload, label }) => {
+                    if (active && payload && payload.length) {
+                      return (
+                        <div className="bg-popover border border-border p-2.5 rounded-xl shadow-lg text-xs space-y-1">
+                          <p className="font-bold text-foreground">
+                            {formatShortDate(String(label))}
+                          </p>
+                          <div className="flex items-center justify-between gap-4 text-blue-600 dark:text-blue-400 font-medium">
+                            <span>Page Views:</span>
+                            <span className="font-bold tabular-nums">
+                              {payload[0]?.value}
+                            </span>
+                          </div>
+                          {payload[1] && (
+                            <div className="flex items-center justify-between gap-4 text-emerald-600 dark:text-emerald-400 font-medium">
+                              <span>Pengunjung Unik:</span>
+                              <span className="font-bold tabular-nums">
+                                {payload[1]?.value}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    }
+                    return null;
+                  }}
+                />
+                <Area
+                  type="monotone"
+                  dataKey="pageViews"
+                  name="Page Views"
+                  stroke="#2563eb"
+                  strokeWidth={2}
+                  fillOpacity={1}
+                  fill="url(#pageViewsGradient)"
+                />
+                <Area
+                  type="monotone"
+                  dataKey="uniqueVisitors"
+                  name="Pengunjung Unik"
+                  stroke="#10b981"
+                  strokeWidth={2}
+                  fillOpacity={1}
+                  fill="url(#uniqueVisitorsGradient)"
+                />
+              </AreaChart>
+            </ResponsiveContainer>
+          )}
+        </div>
       </div>
 
       {/* Aktivitas Peminjaman Terbaru */}
-      <div className="bg-card rounded-[24px] border border-border shadow-sm overflow-hidden mt-6">
-        <div className="p-6 md:px-8 md:py-6 flex items-center justify-between border-b border-border">
-          <h3 className="text-xl font-extrabold text-foreground tracking-tight">
-            Aktivitas Peminjaman Terbaru
-          </h3>
-          <button className="text-primary font-bold text-sm hover:underline flex items-center gap-1 group">
-            Lihat Semua{" "}
-            <span className="text-lg group-hover:translate-x-1 transition-transform">
-              →
-            </span>
-          </button>
+      <div className="bg-card rounded-2xl border border-border shadow-xs overflow-hidden">
+        <div className="p-5 flex items-center justify-between border-b border-border">
+          <div>
+            <h3 className="text-base font-bold tracking-tight text-foreground">
+              Aktivitas Peminjaman Terbaru
+            </h3>
+            <p className="text-xs text-muted-foreground font-medium mt-0.5">
+              Riwayat transaksi sirkulasi dan permohonan terkini.
+            </p>
+          </div>
+          {onNavigateLoans && (
+            <button
+              type="button"
+              onClick={onNavigateLoans}
+              className="text-primary font-semibold text-xs hover:underline flex items-center gap-1 group"
+            >
+              Lihat Semua
+              <ArrowRight className="size-3.5 group-hover:translate-x-0.5 transition-transform" />
+            </button>
+          )}
         </div>
 
-        <div className="p-4 md:p-6 flex flex-col">
+        <div className="divide-y divide-border">
           {loanLoading ? (
-            <div className="p-4 px-6 text-sm text-muted-foreground font-semibold">
+            <div className="p-6 text-center text-xs text-muted-foreground font-medium">
               Memuat aktivitas peminjaman...
             </div>
           ) : formattedRecentLoans.length === 0 ? (
-            <div className="p-4 px-6 text-sm text-muted-foreground font-semibold">
+            <div className="p-6 text-center text-xs text-muted-foreground font-medium">
               Belum ada aktivitas peminjaman terbaru.
             </div>
           ) : (
@@ -318,28 +546,28 @@ export default function DashboardSection({ stats }: DashboardSectionProps) {
               return (
                 <div
                   key={loan.id}
-                  className="flex items-center justify-between p-4 px-6 hover:bg-surface-hover transition-colors border-b border-border last:border-0 group cursor-pointer"
+                  className="p-4 px-5 flex items-center justify-between gap-3 hover:bg-muted/40 transition-colors"
                 >
-                  <div className="flex items-center gap-4">
-                    <div className="w-10 h-10 bg-muted rounded-xl flex items-center justify-center text-muted-foreground">
-                      <UserIcon size={18} />
+                  <div className="flex items-center gap-3.5 min-w-0">
+                    <div className="size-9 bg-muted rounded-xl flex items-center justify-center text-muted-foreground shrink-0 border border-border">
+                      <UserIcon size={16} />
                     </div>
-                    <div>
-                      <p className="text-[15px] font-bold text-foreground">
+                    <div className="min-w-0">
+                      <p className="text-xs font-bold text-foreground truncate">
                         {loan.memberName}{" "}
                         <span className="font-normal text-muted-foreground mx-0.5">
                           meminjam
                         </span>{" "}
-                        {loan.bookTitle}
+                        <span className="text-foreground">{loan.bookTitle}</span>
                       </p>
-                      <p className="text-[12px] text-muted-foreground font-medium mt-0.5">
+                      <p className="text-[11px] text-muted-foreground font-medium mt-0.5">
                         {loan.timeText}
                       </p>
                     </div>
                   </div>
-                  <div className="flex items-center">
+                  <div className="shrink-0">
                     <span
-                      className={`px-4 py-1.5 rounded-lg text-[13px] font-bold ${meta.className}`}
+                      className={`px-2.5 py-1 rounded-md text-[11px] font-bold ${meta.className}`}
                     >
                       {meta.label}
                     </span>
