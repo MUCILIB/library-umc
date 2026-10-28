@@ -47,6 +47,15 @@ interface DailyTrafficItem {
   sessions?: number;
 }
 
+interface TrafficSummary {
+  todayPageViews: number;
+  todayUniqueVisitors: number;
+  todaySessions: number;
+  totalPageViews: number;
+  totalUniqueVisitors: number;
+  totalSessions: number;
+}
+
 export default function DashboardSection({
   stats,
   onNavigateLoans
@@ -63,6 +72,7 @@ export default function DashboardSection({
 
   const [trafficRange, setTrafficRange] = useState<number>(7);
   const [trafficData, setTrafficData] = useState<DailyTrafficItem[]>([]);
+  const [trafficSummary, setTrafficSummary] = useState<TrafficSummary | null>(null);
   const [trafficLoading, setTrafficLoading] = useState<boolean>(false);
 
   useEffect(() => {
@@ -74,13 +84,21 @@ export default function DashboardSection({
         const res = await fetch(
           `${API_BASE_URL}/api/reports/web-traffic?days=${trafficRange}`,
           {
-            headers: getAuthHeaders()
+            credentials: "include",
+            headers: {
+              ...getAuthHeaders()
+            }
           }
         );
         if (!res.ok) return;
         const json = await res.json();
-        if (json.success && Array.isArray(json.data?.daily) && isMounted) {
-          setTrafficData(json.data.daily);
+        if (json.success && isMounted) {
+          if (Array.isArray(json.data?.daily)) {
+            setTrafficData(json.data.daily);
+          }
+          if (json.data?.summary) {
+            setTrafficSummary(json.data.summary);
+          }
         }
       } catch (err) {
         console.error("Gagal memuat trafik web:", err);
@@ -164,12 +182,18 @@ export default function DashboardSection({
   };
 
   const formatShortDate = (dateStr: string) => {
-    try {
-      const d = new Date(dateStr);
-      return d.toLocaleDateString("id-ID", { day: "numeric", month: "short" });
-    } catch {
-      return dateStr;
+    if (!dateStr) return "";
+    const parts = dateStr.split("-");
+    if (parts.length === 3) {
+      const monthNames = [
+        "Jan", "Feb", "Mar", "Apr", "Mei", "Jun",
+        "Jul", "Agu", "Sep", "Okt", "Nov", "Des"
+      ];
+      const day = parseInt(parts[2], 10);
+      const month = parseInt(parts[1], 10) - 1;
+      return `${day} ${monthNames[month] || ""}`;
     }
+    return dateStr;
   };
 
   const primaryCards = [
@@ -373,35 +397,71 @@ export default function DashboardSection({
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
           <div className="bg-muted/30 border border-border rounded-xl p-3 flex items-center justify-between">
             <div>
-              <p className="text-[11px] text-muted-foreground font-medium">Hits Hari Ini</p>
-              <p className="text-base font-bold text-foreground tabular-nums mt-0.5">
-                {(displayStats.webVisits || 0).toLocaleString("id-ID")}
+              <p className="text-[11px] text-muted-foreground font-medium">
+                Total Hits ({trafficRange} Hari)
               </p>
-            </div>
-            <TrendingUp className="size-4 text-blue-500" />
-          </div>
-
-          <div className="bg-muted/30 border border-border rounded-xl p-3 flex items-center justify-between">
-            <div>
-              <p className="text-[11px] text-muted-foreground font-medium">Pengunjung Fisik</p>
-              <p className="text-base font-bold text-foreground tabular-nums mt-0.5">
-                {(displayStats.totalGuests || 0).toLocaleString("id-ID")}
-              </p>
-            </div>
-            <Users className="size-4 text-emerald-500" />
-          </div>
-
-          <div className="bg-muted/30 border border-border rounded-xl p-3 flex items-center justify-between">
-            <div>
-              <p className="text-[11px] text-muted-foreground font-medium">Total Interaksi</p>
               <p className="text-base font-bold text-foreground tabular-nums mt-0.5">
                 {(
-                  displayStats.combinedVisits ||
-                  (displayStats.totalGuests || 0) + (displayStats.webVisits || 0)
+                  trafficSummary?.totalPageViews ??
+                  trafficData.reduce((acc, d) => acc + d.pageViews, 0)
                 ).toLocaleString("id-ID")}
               </p>
+              <p className="text-[10px] text-muted-foreground font-medium mt-0.5">
+                Hari ini:{" "}
+                <span className="font-semibold text-foreground">
+                  {(
+                    trafficSummary?.todayPageViews ??
+                    (trafficData[trafficData.length - 1]?.pageViews || 0)
+                  ).toLocaleString("id-ID")}
+                </span>{" "}
+                hits
+              </p>
             </div>
-            <Calendar className="size-4 text-amber-500" />
+            <TrendingUp className="size-4 text-blue-500 shrink-0 self-start mt-0.5" />
+          </div>
+
+          <div className="bg-muted/30 border border-border rounded-xl p-3 flex items-center justify-between">
+            <div>
+              <p className="text-[11px] text-muted-foreground font-medium">
+                Pengunjung Unik ({trafficRange} Hari)
+              </p>
+              <p className="text-base font-bold text-foreground tabular-nums mt-0.5">
+                {(
+                  trafficSummary?.totalUniqueVisitors ??
+                  trafficData.reduce((acc, d) => acc + d.uniqueVisitors, 0)
+                ).toLocaleString("id-ID")}
+              </p>
+              <p className="text-[10px] text-muted-foreground font-medium mt-0.5">
+                Hari ini:{" "}
+                <span className="font-semibold text-foreground">
+                  {(
+                    trafficSummary?.todayUniqueVisitors ??
+                    (trafficData[trafficData.length - 1]?.uniqueVisitors || 0)
+                  ).toLocaleString("id-ID")}
+                </span>{" "}
+                orang
+              </p>
+            </div>
+            <Users className="size-4 text-emerald-500 shrink-0 self-start mt-0.5" />
+          </div>
+
+          <div className="bg-muted/30 border border-border rounded-xl p-3 flex items-center justify-between">
+            <div>
+              <p className="text-[11px] text-muted-foreground font-medium">
+                Rata-rata Hits / Hari
+              </p>
+              <p className="text-base font-bold text-foreground tabular-nums mt-0.5">
+                {Math.round(
+                  (trafficSummary?.totalPageViews ??
+                    trafficData.reduce((acc, d) => acc + d.pageViews, 0)) /
+                    (trafficData.length || trafficRange)
+                ).toLocaleString("id-ID")}
+              </p>
+              <p className="text-[10px] text-muted-foreground font-medium mt-0.5">
+                Rentang aktif {trafficRange} hari terakhir
+              </p>
+            </div>
+            <Calendar className="size-4 text-amber-500 shrink-0 self-start mt-0.5" />
           </div>
         </div>
 
@@ -418,6 +478,7 @@ export default function DashboardSection({
           ) : (
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart
+                key={`traffic-chart-${trafficRange}`}
                 data={trafficData}
                 margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
               >
