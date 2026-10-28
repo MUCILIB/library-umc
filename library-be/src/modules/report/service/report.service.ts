@@ -55,6 +55,11 @@ export class ReportService {
       startDate.setHours(0, 0, 0, 0);
       startDate.setDate(startDate.getDate() - (safeDays - 1));
 
+      const startYyyy = startDate.getFullYear();
+      const startMm = String(startDate.getMonth() + 1).padStart(2, "0");
+      const startDd = String(startDate.getDate()).padStart(2, "0");
+      const startDateStr = `${startYyyy}-${startMm}-${startDd}`;
+
       const rows = await db.execute(sql<{
         date: string;
         page_views: string | number;
@@ -73,7 +78,7 @@ export class ReportService {
             TO_CHAR(DATE_TRUNC('hour', ${webTraffic.visitTimestamp}), 'YYYY-MM-DD HH24')
           ))::int AS sessions
         FROM ${webTraffic}
-        WHERE ${webTraffic.visitTimestamp} >= ${startDate}
+        WHERE DATE(${webTraffic.visitTimestamp}) >= ${startDateStr}::date
         GROUP BY DATE(${webTraffic.visitTimestamp})
         ORDER BY DATE(${webTraffic.visitTimestamp}) ASC
       `);
@@ -93,7 +98,10 @@ export class ReportService {
         const date = new Date();
         date.setHours(0, 0, 0, 0);
         date.setDate(date.getDate() - (safeDays - 1 - index));
-        const key = date.toISOString().slice(0, 10);
+        const yyyy = date.getFullYear();
+        const mm = String(date.getMonth() + 1).padStart(2, "0");
+        const dd = String(date.getDate()).padStart(2, "0");
+        const key = `${yyyy}-${mm}-${dd}`;
         const stat = aggregateMap.get(key) ?? {
           pageViews: 0,
           uniqueVisitors: 0,

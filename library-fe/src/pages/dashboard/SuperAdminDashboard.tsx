@@ -18,7 +18,8 @@ import {
   Package,
   Building2,
   GraduationCap,
-  MapPin
+  MapPin,
+  Tablet
 } from "lucide-react";
 
 import Logo from "@/assets/logo_umc.png";
@@ -38,6 +39,7 @@ import UsersSection from "@/components/dashboard/UsersSection";
 import ReturnApprovalsSection from "@/components/dashboard/ReturnApprovalsSection";
 import RecommendationsSection from "@/components/dashboard/RecommendationsSection";
 import RepositorySection from "@/components/dashboard/RepositorySection";
+import EbookSection from "@/components/dashboard/EbookSection";
 import FakultasSection from "@/components/dashboard/FakultasSection";
 import ProdiSection from "@/components/dashboard/ProdiSection";
 import LocationSection from "@/components/dashboard/LocationSection";
@@ -78,6 +80,7 @@ type ActiveMenu =
   | "bibliographies"
   | "items"
   | "repository"
+  | "ebooks"
   | "importData"
   | "exportData"
   | "guests"
@@ -102,25 +105,35 @@ type MenuConfig = {
 };
 
 const MENU_CONFIG: MenuConfig[] = [
-  { key: "dashboard", label: "Dashboard", icon: Home },
-  { key: "circulation", label: "Sirkulasi & Scan", icon: ScanLine },
-  { key: "bibliographies", label: "Bibliografi", icon: Book, group: "Manajemen Koleksi" },
-  { key: "items", label: "Item Buku", icon: Package, group: "Manajemen Koleksi" },
+  // Utama
+  { key: "dashboard", label: "Dashboard", icon: Home, group: "Utama" },
+
+  // Sirkulasi & Layanan
+  { key: "circulation", label: "Sirkulasi & Scan", icon: ScanLine, group: "Sirkulasi & Layanan" },
+  { key: "loans", label: "Peminjaman Buku", icon: BookOpen, group: "Sirkulasi & Layanan" },
+  { key: "returnApprovals", label: "Konfirmasi Pengembalian", icon: CheckCircle, superAdminOnly: true, group: "Sirkulasi & Layanan" },
+  { key: "fines", label: "Manajemen Denda", icon: Wallet, group: "Sirkulasi & Layanan" },
+  { key: "cardApprovals", label: "Persetujuan Kartu", icon: Shield, group: "Sirkulasi & Layanan" },
+
+  // Manajemen Koleksi
+  { key: "bibliographies", label: "Bibliografi (Buku)", icon: Book, group: "Manajemen Koleksi" },
+  { key: "items", label: "Item Eksemplar", icon: Package, group: "Manajemen Koleksi" },
+  { key: "ebooks", label: "E-Book Digital", icon: Tablet, group: "Manajemen Koleksi" },
   { key: "repository", label: "Repositori Skripsi", icon: GraduationCap, group: "Manajemen Koleksi" },
+  { key: "recommendations", label: "Rekomendasi Buku", icon: BookMarked, group: "Manajemen Koleksi" },
   { key: "importData", label: "Import Data", icon: FileUp, group: "Manajemen Koleksi" },
   { key: "exportData", label: "Export Data", icon: FileDown, group: "Manajemen Koleksi" },
+
+  // Master Data
   { key: "fakultas", label: "Fakultas", icon: Building2, group: "Master Data" },
   { key: "prodi", label: "Program Studi", icon: GraduationCap, group: "Master Data" },
   { key: "locations", label: "Lokasi Rak", icon: MapPin, group: "Master Data" },
-  { key: "guests", label: "Data Pengunjung", icon: Users },
-  { key: "loans", label: "Peminjaman & Persetujuan", icon: BookOpen },
-  { key: "returnApprovals", label: "Konfirmasi Pengembalian", icon: CheckCircle, superAdminOnly: true },
-  { key: "fines", label: "Manajemen Denda", icon: Wallet },
-  { key: "cardApprovals", label: "Persetujuan Kartu", icon: Shield },
-  { key: "users", label: "Manajemen User", icon: Users, superAdminOnly: true },
-  { key: "audit", label: "Audit Log", icon: Shield, superAdminOnly: true },
-  { key: "reports", label: "Laporan & Statistik", icon: BarChart3 },
-  { key: "recommendations", label: "Rekomendasi Buku", icon: BookMarked }
+
+  // Pengaturan & Audit
+  { key: "guests", label: "Data Pengunjung", icon: Users, group: "Pengaturan & Audit" },
+  { key: "users", label: "Manajemen User", icon: Users, superAdminOnly: true, group: "Pengaturan & Audit" },
+  { key: "audit", label: "Audit Log", icon: Shield, superAdminOnly: true, group: "Pengaturan & Audit" },
+  { key: "reports", label: "Laporan & Statistik", icon: BarChart3, group: "Pengaturan & Audit" }
 ];
 
 const SIDEBAR_STORAGE_KEY = "umc-super-admin-sidebar-open";
@@ -130,50 +143,61 @@ type DashboardSidebarProps = {
   menus: MenuConfig[];
   onMenuChange: (menu: ActiveMenu) => void;
   onSignOut: () => Promise<void>;
+  user?: {
+    name?: string | null;
+    email?: string | null;
+    image?: string | null;
+    role?: string | null;
+  } | null;
 };
 
 function DashboardSidebar({
   activeMenu,
   menus,
   onMenuChange,
-  onSignOut
+  onSignOut,
+  user
 }: DashboardSidebarProps) {
+  const userInitial = (user?.name || "A").charAt(0).toUpperCase();
+
   return (
     <Sidebar
       variant="sidebar"
       collapsible="icon"
       className="border-r border-sidebar-border z-100"
     >
-      <SidebarHeader className="bg-sidebar p-6 pb-4 group-data-[collapsible=icon]:px-8 group-data-[collapsible=icon]:pb-5">
-        <div className="flex items-center gap-3 border-b border-sidebar-border pb-4 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:border-b-0 group-data-[collapsible=icon]:pb-0">
-            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary p-1">
+      <SidebarHeader className="bg-sidebar p-5 pb-4 group-data-[collapsible=icon]:p-3">
+        <div className="flex items-center gap-3 group-data-[collapsible=icon]:justify-center">
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 border border-primary/20 p-1.5">
             <img
               src={Logo}
               alt="UMC Library Logo"
               className="h-full w-full object-contain"
             />
           </div>
-          <div className="group-data-[collapsible=icon]:hidden">
-            <h1 className="text-sm font-bold tracking-tight text-sidebar-foreground">
+          <div className="group-data-[collapsible=icon]:hidden min-w-0">
+            <h1 className="text-sm font-bold tracking-tight text-sidebar-foreground truncate">
               UMC Library
             </h1>
-            <p className="text-[10px] text-sidebar-foreground/50">Digital Library System</p>
+            <p className="text-[11px] text-muted-foreground font-medium truncate">
+              Sistem Informasi Terpadu
+            </p>
           </div>
         </div>
       </SidebarHeader>
 
-      <SidebarContent className="bg-sidebar px-3 py-2">
-        <SidebarMenu className="space-y-1">
+      <SidebarContent className="bg-sidebar px-2.5 py-2">
+        <SidebarMenu className="space-y-0.5">
           {(() => {
             const items: React.ReactNode[] = [];
             let currentGroup = "";
-            
+
             menus.forEach(({ key, label, icon: Icon, group }) => {
               if (group && group !== currentGroup) {
                 currentGroup = group;
                 items.push(
-                  <div key={`group-${group}`} className="pt-3 pb-1 px-4">
-                    <span className="text-[10px] font-semibold uppercase tracking-wider text-sidebar-foreground/50 group-data-[collapsible=icon]:hidden">
+                  <div key={`group-${group}`} className="pt-4 pb-1.5 px-3">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/70 group-data-[collapsible=icon]:hidden">
                       {group}
                     </span>
                   </div>
@@ -182,21 +206,24 @@ function DashboardSidebar({
               if (!group) {
                 currentGroup = "";
               }
+
+              const isActive = activeMenu === key;
+
               items.push(
                 <SidebarMenuItem key={key}>
                   <SidebarMenuButton
                     onClick={() => onMenuChange(key)}
-                    isActive={activeMenu === key}
+                    isActive={isActive}
                     tooltip={label}
                     className={cn(
-                      "h-11 rounded-xl px-4 text-sm font-medium group-data-[collapsible=icon]:size-10! group-data-[collapsible=icon]:rounded-full! group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0!",
-                      activeMenu === key
-                        ? "bg-card text-primary shadow-lg shadow-primary/20"
-                        : "text-sidebar-foreground/90 hover:bg-primary hover:text-sidebar-foreground"
+                      "h-9.5 px-3 text-xs font-medium transition-all group-data-[collapsible=icon]:size-9 group-data-[collapsible=icon]:rounded-lg group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0",
+                      isActive
+                        ? "bg-primary/10 text-primary font-semibold border-l-2 border-primary rounded-l-none rounded-r-lg"
+                        : "text-sidebar-foreground/80 hover:bg-sidebar-accent/60 hover:text-sidebar-foreground rounded-lg"
                     )}
                   >
-                    <Icon className="size-5" />
-                    <span className="group-data-[collapsible=icon]:hidden">
+                    <Icon className={cn("size-4 shrink-0", isActive ? "text-primary" : "text-sidebar-foreground/70")} />
+                    <span className="group-data-[collapsible=icon]:hidden truncate">
                       {label}
                     </span>
                   </SidebarMenuButton>
@@ -208,21 +235,30 @@ function DashboardSidebar({
         </SidebarMenu>
       </SidebarContent>
 
-      <SidebarFooter className="bg-sidebar p-4 pt-2">
-        <SidebarMenu>
-          <SidebarMenuItem>
-            <SidebarMenuButton
-              onClick={() => void onSignOut()}
-              tooltip="Keluar"
-              className="h-11 rounded-xl px-4 text-sm font-medium text-sidebar-foreground/90 hover:bg-primary hover:text-sidebar-foreground group-data-[collapsible=icon]:size-10! group-data-[collapsible=icon]:rounded-full! group-data-[collapsible=icon]:px-0!"
-            >
-              <LogOut className="size-5" />
-              <span className="group-data-[collapsible=icon]:hidden">
-                Keluar
-              </span>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-        </SidebarMenu>
+      <SidebarFooter className="border-t border-sidebar-border bg-sidebar p-3 group-data-[collapsible=icon]:p-2">
+        <div className="flex items-center justify-between gap-2 group-data-[collapsible=icon]:justify-center">
+          <div className="flex items-center gap-2.5 min-w-0 group-data-[collapsible=icon]:hidden">
+            <div className="size-8 rounded-full bg-primary/15 text-primary flex items-center justify-center font-bold text-xs shrink-0 border border-primary/20">
+              {userInitial}
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-xs font-semibold text-sidebar-foreground truncate">
+                {user?.name || "Admin"}
+              </p>
+              <p className="text-[10px] text-muted-foreground font-medium capitalize truncate">
+                {user?.role?.replace("_", " ") || "Super Admin"}
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => void onSignOut()}
+            title="Keluar"
+            className="size-8 rounded-lg flex items-center justify-center text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors shrink-0"
+          >
+            <LogOut className="size-4" />
+          </button>
+        </div>
       </SidebarFooter>
     </Sidebar>
   );
@@ -319,7 +355,12 @@ export default function SuperAdminDashboard() {
   const renderSection = () => {
     switch (activeMenu) {
       case "dashboard":
-        return <DashboardSection stats={stats} />;
+        return (
+          <DashboardSection
+            stats={stats}
+            onNavigateLoans={() => setActiveMenu("loans")}
+          />
+        );
       case "bibliographies":
         return (
           <BibliographySection
@@ -331,6 +372,8 @@ export default function SuperAdminDashboard() {
         return <ItemSection />;
       case "repository":
         return <RepositorySection />;
+      case "ebooks":
+        return <EbookSection />;
       case "importData":
         return <ImportSection />;
       case "exportData":
@@ -397,7 +440,12 @@ export default function SuperAdminDashboard() {
       case "recommendations":
         return <RecommendationsSection />;
       default:
-        return <DashboardSection stats={stats} />;
+        return (
+          <DashboardSection
+            stats={stats}
+            onNavigateLoans={() => setActiveMenu("loans")}
+          />
+        );
     }
   };
 
@@ -418,6 +466,7 @@ export default function SuperAdminDashboard() {
         menus={visibleMenus}
         onMenuChange={setActiveMenu}
         onSignOut={handleSignOut}
+        user={session?.user}
       />
 
       <SidebarInset className="bg-background min-w-0 max-w-full overflow-hidden">

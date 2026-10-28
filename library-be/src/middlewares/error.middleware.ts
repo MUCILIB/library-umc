@@ -33,17 +33,33 @@ export const errorMiddleware = (
   }
   // Handle generic Error instances
   else if (err instanceof Error) {
-    message = err.message;
+    const raw = err.message || "";
+    const isSensitiveInternalError =
+      raw.includes("Failed query") ||
+      raw.includes("select \"") ||
+      raw.includes("insert into") ||
+      raw.includes("update \"") ||
+      raw.includes("delete from") ||
+      raw.includes("syntax error at or near") ||
+      raw.includes("relation \"") ||
+      raw.includes("column \"") ||
+      raw.includes("foreign key constraint") ||
+      raw.includes("Connection terminated") ||
+      raw.includes("password authentication failed");
+
+    if (isSensitiveInternalError || (statusCode >= 500 && process.env.NODE_ENV === "production")) {
+      message = "Terjadi kesalahan internal pada server";
+    } else {
+      message = err.message;
+    }
   }
 
-  // Log errors for debugging
+  // Log errors for debugging (always keep complete technical details in server logs)
   console.error(`🔥 [${req.method}] ${req.originalUrl} Error:`, {
-    message,
+    technicalMessage: err instanceof Error ? err.message : String(err),
+    clientMessage: message,
     statusCode,
-    stack:
-      err instanceof Error && process.env.NODE_ENV === "development"
-        ? err.stack
-        : undefined,
+    stack: err instanceof Error ? err.stack : undefined,
   });
 
   // Send error response
