@@ -158,18 +158,6 @@ function DashboardSidebar({
   onSignOut,
   user
 }: DashboardSidebarProps) {
-  const [searchQuery, setSearchQuery] = useState("");
-
-  const filteredMenus = useMemo(() => {
-    if (!searchQuery.trim()) return menus;
-    const q = searchQuery.toLowerCase();
-    return menus.filter(
-      (m) =>
-        m.label.toLowerCase().includes(q) ||
-        (m.group && m.group.toLowerCase().includes(q))
-    );
-  }, [menus, searchQuery]);
-
   const userInitial = (user?.name || "A").charAt(0).toUpperCase();
 
   return (
@@ -178,8 +166,8 @@ function DashboardSidebar({
       collapsible="icon"
       className="border-r border-sidebar-border z-100"
     >
-      <SidebarHeader className="bg-sidebar p-5 pb-3 group-data-[collapsible=icon]:p-3">
-        <div className="flex items-center gap-3 border-b border-sidebar-border pb-3.5 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:border-b-0 group-data-[collapsible=icon]:pb-0">
+      <SidebarHeader className="bg-sidebar p-5 pb-4 group-data-[collapsible=icon]:p-3">
+        <div className="flex items-center gap-3 group-data-[collapsible=icon]:justify-center">
           <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 border border-primary/20 p-1.5">
             <img
               src={Logo}
@@ -196,20 +184,6 @@ function DashboardSidebar({
             </p>
           </div>
         </div>
-
-        {/* Quick Menu Search */}
-        <div className="mt-3 group-data-[collapsible=icon]:hidden">
-          <div className="relative">
-            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground" />
-            <input
-              type="text"
-              placeholder="Cari navigasi..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-sidebar-accent/50 text-sidebar-foreground placeholder:text-muted-foreground text-xs rounded-lg pl-8 pr-2.5 py-1.5 border border-sidebar-border focus:outline-none focus:ring-1 focus:ring-primary/40 focus:border-primary/40 transition-colors"
-            />
-          </div>
-        </div>
       </SidebarHeader>
 
       <SidebarContent className="bg-sidebar px-2.5 py-2">
@@ -218,15 +192,7 @@ function DashboardSidebar({
             const items: React.ReactNode[] = [];
             let currentGroup = "";
 
-            if (filteredMenus.length === 0) {
-              return (
-                <div className="px-3 py-6 text-center text-xs text-muted-foreground">
-                  Menu tidak ditemukan
-                </div>
-              );
-            }
-
-            filteredMenus.forEach(({ key, label, icon: Icon, group }) => {
+            menus.forEach(({ key, label, icon: Icon, group }) => {
               if (group && group !== currentGroup) {
                 currentGroup = group;
                 items.push(
