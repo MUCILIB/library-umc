@@ -4,12 +4,33 @@ import {
   bibliographyFaculties, bibliographyStudyPrograms,
   authors, subjects, publishers, publicationPlaces, items, studyPrograms
 } from "../../../db/schema";
-import { eq, and, isNull, ilike, or, sql, desc, asc, inArray, notExists } from "drizzle-orm";
+import { eq, ne, and, isNull, ilike, or, sql, desc, asc, inArray, notExists } from "drizzle-orm";
 import type { CreateBibliographyData, UpdateBibliographyData, BibliographyQuery } from "../validation/bibliography.validation";
 import { syncCollectionAvailableStock } from "../../shared/utils/stock-sync";
+import { BadRequestError } from "../../../exceptions/AppError";
 
 function normalizeName(name: string): string {
   return name.trim().toLowerCase().replace(/\s+/g, " ");
+}
+
+function normalizeCode(val?: string | null): string {
+  if (!val) return "";
+  return val.replace(/[^0-9Xx]/g, "").toUpperCase();
+}
+
+function isValidCode(val?: string | null): boolean {
+  if (!val) return false;
+  const trimmed = val.trim();
+  if (
+    trimmed === "" ||
+    trimmed === "-" ||
+    trimmed === "--" ||
+    trimmed.toLowerCase() === "n/a" ||
+    trimmed.toLowerCase() === "null"
+  ) {
+    return false;
+  }
+  return normalizeCode(val).length >= 4;
 }
 
 function cleanIsbn(val?: string | null): string | null {
@@ -19,6 +40,74 @@ function cleanIsbn(val?: string | null): string | null {
 }
 
 export class BibliographyService {
+
+  async findConflictByIsbn(targetIsbn: string, excludeId?: string) {
+    if (!isValidCode(targetIsbn)) return null;
+    const cleanTargetIsbn = cleanIsbn(targetIsbn);
+    const normalizedTarget = normalizeCode(targetIsbn);
+
+    const conditions: any[] = [isNull(bibliographies.deletedAt)];
+    if (excludeId) {
+      conditions.push(ne(bibliographies.id, excludeId));
+    }
+
+    const matchConditions: any[] = [];
+    if (cleanTargetIsbn) {
+      matchConditions.push(eq(bibliographies.isbn, cleanTargetIsbn));
+      matchConditions.push(eq(bibliographies.isbnIssn, cleanTargetIsbn));
+      matchConditions.push(eq(bibliographies.isbnIssn, targetIsbn));
+    }
+    if (normalizedTarget.length >= 4) {
+      matchConditions.push(
+        sql`regexp_replace(COALESCE(${bibliographies.isbn}, ''), '[^0-9Xx]', '', 'g') = ${normalizedTarget}`
+      );
+      matchConditions.push(
+        sql`regexp_replace(COALESCE(${bibliographies.isbnIssn}, ''), '[^0-9Xx]', '', 'g') = ${normalizedTarget}`
+      );
+    }
+
+    conditions.push(or(...matchConditions));
+
+    return db.query.bibliographies.findFirst({
+      where: and(...conditions),
+      columns: { id: true, title: true, isbn: true, issn: true, isbnIssn: true },
+    });
+  }
+
+  async findConflictByIssn(targetIssn: string, excludeId?: string) {
+    if (!isValidCode(targetIssn)) return null;
+    const cleanTargetIssn = targetIssn.replace(/^ISSN[:\s]*/i, "").trim();
+    const normalizedTarget = normalizeCode(targetIssn);
+
+    const conditions: any[] = [isNull(bibliographies.deletedAt)];
+    if (excludeId) {
+      conditions.push(ne(bibliographies.id, excludeId));
+    }
+
+    const matchConditions: any[] = [];
+    if (cleanTargetIssn) {
+      matchConditions.push(eq(bibliographies.issn, cleanTargetIssn));
+      matchConditions.push(eq(bibliographies.isbnIssn, `ISSN ${cleanTargetIssn}`));
+      matchConditions.push(eq(bibliographies.isbnIssn, cleanTargetIssn));
+      matchConditions.push(eq(bibliographies.isbnIssn, targetIssn));
+    }
+    if (normalizedTarget.length >= 4) {
+      matchConditions.push(
+        sql`regexp_replace(COALESCE(${bibliographies.issn}, ''), '[^0-9Xx]', '', 'g') = ${normalizedTarget}`
+      );
+      matchConditions.push(
+        sql`regexp_replace(COALESCE(${bibliographies.isbnIssn}, ''), '[^0-9Xx]', '', 'g') = ${normalizedTarget}`
+      );
+    }
+
+    conditions.push(or(...matchConditions));
+
+    return db.query.bibliographies.findFirst({
+      where: and(...conditions),
+      columns: { id: true, title: true, isbn: true, issn: true, isbnIssn: true },
+    });
+  }
+
 
   private async resolveOrCreateAuthor(tx: any, authorName: string): Promise<number> {
     const normalized = normalizeName(authorName);
@@ -117,6 +206,24 @@ export class BibliographyService {
         resolvedLegacyIsbnIssn = resolvedIsbn || (resolvedIssn ? `ISSN ${resolvedIssn}` : null);
       }
 
+if (resolvedIsbn && isValidCode(resolvedIsbn)) {
+        const conflict = await this.findConflictByIsbn(resolvedIsbn);
+        if (conflict) {
+          throw new BadRequestError(
+            `ISBN '${resolvedIsbn}' sudah digunakan oleh buku '${conflict.title}'. ISBN tidak boleh duplikat.`
+          );
+        }
+      }
+
+      if (resolvedIssn && isValidCode(resolvedIssn)) {
+        const conflict = await this.findConflictByIssn(resolvedIssn);
+        if (conflict) {
+          throw new BadRequestError(
+            `ISSN '${resolvedIssn}' sudah digunakan oleh buku/jurnal '${conflict.title}'. ISSN tidak boleh duplikat.`
+          );
+        }
+      }
+
       const insertData: any = {
         title: data.title,
         description: data.description || null,
@@ -211,6 +318,24 @@ export class BibliographyService {
       if (publicationPlaceId !== undefined) {
         updateData.publicationPlaceId = publicationPlaceId;
       }
+if (updateData.isbn && isValidCode(updateData.isbn)) {
+        const conflict = await this.findConflictByIsbn(updateData.isbn, id);
+        if (conflict) {
+          throw new BadRequestError(
+            `ISBN '${updateData.isbn}' sudah digunakan oleh buku '${conflict.title}'. ISBN tidak boleh duplikat.`
+          );
+        }
+      }
+
+      if (updateData.issn && isValidCode(updateData.issn)) {
+        const conflict = await this.findConflictByIssn(updateData.issn, id);
+        if (conflict) {
+          throw new BadRequestError(
+            `ISSN '${updateData.issn}' sudah digunakan oleh buku/jurnal '${conflict.title}'. ISSN tidak boleh duplikat.`
+          );
+        }
+      }
+
       updateData.updatedAt = new Date();
       if (Object.keys(updateData).length > 1) {
         await tx.update(bibliographies).set(updateData).where(eq(bibliographies.id, id));
@@ -411,30 +536,43 @@ export class BibliographyService {
     await db.update(bibliographies).set({ deletedAt: new Date(), updatedAt: new Date() }).where(eq(bibliographies.id, id));
   }
 
-  async checkDuplicate(params: { isbn?: string; issn?: string; title?: string; author?: string }) {
+  async checkDuplicate(params: { isbn?: string; issn?: string; title?: string; author?: string; excludeId?: string }) {
     const duplicates: any[] = [];
     const seen = new Set<string>();
 
-    if (params.isbn) {
+    if (params.isbn && isValidCode(params.isbn)) {
       const cleanTargetIsbn = cleanIsbn(params.isbn);
+      const normalizedTarget = normalizeCode(params.isbn);
       if (cleanTargetIsbn) {
-        const exact = await db.query.bibliographies.findMany({
-          where: and(
-            or(
-              eq(bibliographies.isbn, cleanTargetIsbn),
-              eq(bibliographies.isbnIssn, cleanTargetIsbn),
-              eq(bibliographies.isbnIssn, params.isbn)
-            ),
-            isNull(bibliographies.deletedAt)
+        const conditions: any[] = [
+          or(
+            eq(bibliographies.isbn, cleanTargetIsbn),
+            eq(bibliographies.isbnIssn, cleanTargetIsbn),
+            eq(bibliographies.isbnIssn, params.isbn),
+            sql`regexp_replace(COALESCE(${bibliographies.isbn}, ''), '[^0-9Xx]', '', 'g') = ${normalizedTarget}`,
+            sql`regexp_replace(COALESCE(${bibliographies.isbnIssn}, ''), '[^0-9Xx]', '', 'g') = ${normalizedTarget}`
           ),
+          isNull(bibliographies.deletedAt),
+        ];
+        if (params.excludeId) {
+          conditions.push(ne(bibliographies.id, params.excludeId));
+        }
+        const exact = await db.query.bibliographies.findMany({
+          where: and(...conditions),
           with: { bibliographyAuthors: { with: { author: true } } },
         });
         for (const bib of exact) {
+          if (params.excludeId && bib.id === params.excludeId) continue;
           if (!seen.has(bib.id)) {
             seen.add(bib.id);
             duplicates.push({
-              id: bib.id, title: bib.title, isbn: bib.isbn, issn: bib.issn, isbnIssn: bib.isbnIssn,
-              classification: bib.classification, callNumber: bib.callNumber,
+              id: bib.id,
+              title: bib.title,
+              isbn: bib.isbn,
+              issn: bib.issn,
+              isbnIssn: bib.isbnIssn,
+              classification: bib.classification,
+              callNumber: bib.callNumber,
               authors: bib.bibliographyAuthors.map((ba: any) => ({ name: ba.author.name })),
               similarity: "isbn",
             });
@@ -443,26 +581,40 @@ export class BibliographyService {
       }
     }
 
-    if (params.issn) {
-      const cleanTargetIssn = params.issn.replace(/^ISSN\s*/i, "").trim();
+    if (params.issn && isValidCode(params.issn)) {
+      const cleanTargetIssn = params.issn.replace(/^ISSN[:\s]*/i, "").trim();
+      const normalizedTarget = normalizeCode(params.issn);
       if (cleanTargetIssn) {
-        const exactIssn = await db.query.bibliographies.findMany({
-          where: and(
-            or(
-              eq(bibliographies.issn, cleanTargetIssn),
-              eq(bibliographies.isbnIssn, `ISSN ${cleanTargetIssn}`),
-              eq(bibliographies.isbnIssn, cleanTargetIssn)
-            ),
-            isNull(bibliographies.deletedAt)
+        const conditions: any[] = [
+          or(
+            eq(bibliographies.issn, cleanTargetIssn),
+            eq(bibliographies.isbnIssn, `ISSN ${cleanTargetIssn}`),
+            eq(bibliographies.isbnIssn, cleanTargetIssn),
+            eq(bibliographies.isbnIssn, params.issn),
+            sql`regexp_replace(COALESCE(${bibliographies.issn}, ''), '[^0-9Xx]', '', 'g') = ${normalizedTarget}`,
+            sql`regexp_replace(COALESCE(${bibliographies.isbnIssn}, ''), '[^0-9Xx]', '', 'g') = ${normalizedTarget}`
           ),
+          isNull(bibliographies.deletedAt),
+        ];
+        if (params.excludeId) {
+          conditions.push(ne(bibliographies.id, params.excludeId));
+        }
+        const exactIssn = await db.query.bibliographies.findMany({
+          where: and(...conditions),
           with: { bibliographyAuthors: { with: { author: true } } },
         });
         for (const bib of exactIssn) {
+          if (params.excludeId && bib.id === params.excludeId) continue;
           if (!seen.has(bib.id)) {
             seen.add(bib.id);
             duplicates.push({
-              id: bib.id, title: bib.title, isbn: bib.isbn, issn: bib.issn, isbnIssn: bib.isbnIssn,
-              classification: bib.classification, callNumber: bib.callNumber,
+              id: bib.id,
+              title: bib.title,
+              isbn: bib.isbn,
+              issn: bib.issn,
+              isbnIssn: bib.isbnIssn,
+              classification: bib.classification,
+              callNumber: bib.callNumber,
               authors: bib.bibliographyAuthors.map((ba: any) => ({ name: ba.author.name })),
               similarity: "issn",
             });
@@ -472,11 +624,19 @@ export class BibliographyService {
     }
 
     if (params.title) {
+      const conditions: any[] = [
+        ilike(bibliographies.title, `%${params.title}%`),
+        isNull(bibliographies.deletedAt),
+      ];
+      if (params.excludeId) {
+        conditions.push(ne(bibliographies.id, params.excludeId));
+      }
       const titleMatch = await db.query.bibliographies.findMany({
-        where: and(ilike(bibliographies.title, `%${params.title}%`), isNull(bibliographies.deletedAt)),
+        where: and(...conditions),
         with: { bibliographyAuthors: { with: { author: true } } },
       });
       for (const bib of titleMatch) {
+        if (params.excludeId && bib.id === params.excludeId) continue;
         if (params.author) {
           const hasAuthor = bib.bibliographyAuthors.some(
             (ba: any) => ba.author.name.toLowerCase().includes(params.author!.toLowerCase())
@@ -486,8 +646,11 @@ export class BibliographyService {
         if (!seen.has(bib.id)) {
           seen.add(bib.id);
           duplicates.push({
-            id: bib.id, title: bib.title, isbnIssn: bib.isbnIssn,
-            classification: bib.classification, callNumber: bib.callNumber,
+            id: bib.id,
+            title: bib.title,
+            isbnIssn: bib.isbnIssn,
+            classification: bib.classification,
+            callNumber: bib.callNumber,
             authors: bib.bibliographyAuthors.map((ba: any) => ({ name: ba.author.name })),
             similarity: "title_author",
           });
@@ -495,8 +658,11 @@ export class BibliographyService {
       }
     }
 
+    const hasExactIsbn = params.isbn ? duplicates.some((d) => d.similarity === "isbn") : false;
+    const hasExactIssn = params.issn ? duplicates.some((d) => d.similarity === "issn") : false;
+
     return {
-      hasExactMatch: params.isbn ? duplicates.some((d) => d.similarity === "isbn") : false,
+      hasExactMatch: hasExactIsbn || hasExactIssn,
       duplicates,
     };
   }

@@ -174,6 +174,7 @@ const Katalog = () => {
       params.delete("search");
     }
     params.set("type", searchType);
+    params.delete("page");
     setSearchParams(params);
   };
 

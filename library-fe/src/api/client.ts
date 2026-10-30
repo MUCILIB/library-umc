@@ -260,12 +260,13 @@ export const bibliographyApi = {
   getItems: (id: string) =>
     apiFetch<Item[]>(`/api/bibliographies/${id}/items`),
 
-  checkDuplicate: (params: { isbn?: string; issn?: string; title?: string; author?: string }) => {
+  checkDuplicate: (params: { isbn?: string; issn?: string; title?: string; author?: string; excludeId?: string }) => {
     const search = new URLSearchParams();
     if (params.isbn) search.set("isbn", params.isbn);
     if (params.issn) search.set("issn", params.issn);
     if (params.title) search.set("title", params.title);
     if (params.author) search.set("author", params.author);
+    if (params.excludeId) search.set("excludeId", params.excludeId);
     return apiFetch<{ hasExactMatch: boolean; duplicates: Array<{ id: string; title: string; isbn?: string; issn?: string; isbnIssn?: string; classification?: string; callNumber?: string; authors: Array<{ name: string }>; similarity: string }> }>(
       `/api/bibliographies/check-duplicate?${search.toString()}`
     );
