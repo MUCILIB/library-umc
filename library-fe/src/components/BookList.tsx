@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
-import { useNavigate } from "react-router";
-import { ArrowRight, Heart, Search, BookMarked } from "lucide-react";
+import { useNavigate, useSearchParams } from "react-router";
+import { ArrowRight, Heart, Search, BookMarked, ChevronLeft, ChevronRight } from "lucide-react";
 import { useBookList } from "../hooks/useBookList";
 import type { Bibliography, LibraryUser } from "../types";
 import { generateColorFromSeed } from "@/utils/format";
@@ -33,14 +33,29 @@ const BookList = ({
   onRecommendClick,
 }: BookListProps) => {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { success: toastSuccess, info: toastInfo } = useToast();
 
   const { bibliographies, loading, error } = useBookList(
     currentUser ?? null
   );
 
-  const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 12; // 3 baris x 4 kolom
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  // Pagination State - 12 buku per halaman (pas untuk grid 3 baris x 4 kolom)
+  const itemsPerPage = 12;
+  const pageParam = searchParams.get("page");
+  const parsedPage = pageParam ? parseInt(pageParam, 10) : 1;
+  const initialPage = isNaN(parsedPage) || parsedPage < 1 ? 1 : parsedPage;
+  const [currentPage, setCurrentPage] = useState(initialPage);
+
+  // Sinkronisasi dengan URL query param `page` jika berubah (misal tombol Back/Forward browser)
+  useEffect(() => {
+    const pageFromUrl = searchParams.get("page");
+    const p = pageFromUrl ? parseInt(pageFromUrl, 10) : 1;
+    const validPage = isNaN(p) || p < 1 ? 1 : p;
+    setCurrentPage(validPage);
+  }, [searchParams]);
 
   // Status bookmark per buku
   const [savedMap, setSavedMap] = useState<Record<string, boolean>>({});
@@ -83,9 +98,16 @@ const BookList = ({
     return () => window.removeEventListener("storage", checkBookmarks);
   }, [bibliographies, currentUser?.id]);
 
-  // Reset page saat filter berubah
+  // Reset page ke halaman 1 saat filter pencarian/kategori berubah
   useEffect(() => {
-    setCurrentPage(1);
+    if (currentPage !== 1) {
+      setCurrentPage(1);
+      const params = new URLSearchParams(searchParams);
+      if (params.has("page")) {
+        params.delete("page");
+        setSearchParams(params, { replace: true });
+      }
+    }
   }, [
     searchQuery,
     searchType,
@@ -222,14 +244,48 @@ const BookList = ({
 
   // Pagination
   const totalItems = filteredByStudyProgram.length;
-  const totalPages = Math.ceil(totalItems / itemsPerPage);
-  const indexOfLastItem = currentPage * itemsPerPage;
-  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const totalPages = Math.max(1, Math.ceil(totalItems / itemsPerPage));
+  const safeCurrentPage = Math.min(Math.max(1, currentPage), totalPages);
+  const indexOfLastItem = safeCurrentPage * itemsPerPage;
+  const indexOfFirstItem = (safeCurrentPage - 1) * itemsPerPage;
   const currentItems = filteredByStudyProgram.slice(indexOfFirstItem, indexOfLastItem);
 
   const handlePageChange = (pageNumber: number) => {
-    setCurrentPage(pageNumber);
-    window.scrollTo({ top: 400, behavior: "smooth" });
+    const targetPage = Math.max(1, Math.min(pageNumber, totalPages));
+    setCurrentPage(targetPage);
+
+    // Sinkronkan ke URL query param
+    const params = new URLSearchParams(searchParams);
+    if (targetPage > 1) {
+      params.set("page", String(targetPage));
+    } else {
+      params.delete("page");
+    }
+    setSearchParams(params);
+
+    // Smooth scroll ke atas kontainer daftar buku
+    if (containerRef.current) {
+      containerRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
+    } else {
+      window.scrollTo({ top: 350, behavior: "smooth" });
+    }
+  };
+
+  // Generate nomor halaman pagination pintar (1, 2, 3, 4 ... N)
+  const getPaginationPages = () => {
+    if (totalPages <= 7) {
+      return Array.from({ length: totalPages }, (_, i) => i + 1);
+    }
+
+    const pages: (number | "...")[] = [];
+    if (safeCurrentPage <= 4) {
+      pages.push(1, 2, 3, 4, 5, "...", totalPages);
+    } else if (safeCurrentPage >= totalPages - 3) {
+      pages.push(1, "...", totalPages - 4, totalPages - 3, totalPages - 2, totalPages - 1, totalPages);
+    } else {
+      pages.push(1, "...", safeCurrentPage - 1, safeCurrentPage, safeCurrentPage + 1, "...", totalPages);
+    }
+    return pages;
   };
 
   const handleBookClick = (bibliographyId: string) => {
@@ -277,12 +333,28 @@ const BookList = ({
   }
 
   return (
-    <div className="w-full space-y-6">
-      {/* Header Total Hasil Pencarian */}
-      <div className="flex items-center justify-between">
+    <div ref={containerRef} className="w-full space-y-6 scroll-mt-24">
+      {/* Header Total Hasil Pencarian & Indikator Halaman */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-1">
         <h2 className="text-base sm:text-lg font-bold text-slate-900 dark:text-foreground">
-          Menampilkan {totalItems} hasil pencarian
+          {totalItems > 0 ? (
+            <>
+              Menampilkan{" "}
+              <span className="text-[#9D171D]">
+                {indexOfFirstItem + 1}–{Math.min(indexOfLastItem, totalItems)}
+              </span>{" "}
+              dari <span className="text-[#9D171D]">{totalItems}</span> koleksi
+            </>
+          ) : (
+            "Tidak ada koleksi ditemukan"
+          )}
         </h2>
+        {totalPages > 1 && (
+          <span className="text-xs text-slate-500 dark:text-muted-foreground font-medium">
+            Halaman <span className="font-bold text-slate-800 dark:text-foreground">{safeCurrentPage}</span> dari{" "}
+            <span className="font-bold text-slate-800 dark:text-foreground">{totalPages}</span>
+          </span>
+        )}
       </div>
 
       {/* Grid Katalog Buku (4 Kolom Sesuai Referensi) */}
@@ -457,55 +529,81 @@ const BookList = ({
 
       {/* Pagination Navigasi */}
       {totalPages > 1 && (
-        <div className="flex justify-center items-center gap-2 pt-6">
-          <button
-            onClick={() => handlePageChange(currentPage - 1)}
-            disabled={currentPage === 1}
-            className="w-9 h-9 border border-slate-200 dark:border-border bg-white dark:bg-card rounded-xl hover:bg-slate-50 disabled:opacity-40 transition-all flex items-center justify-center font-bold text-slate-700 dark:text-foreground cursor-pointer text-sm"
-          >
-            &lt;
-          </button>
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-6 border-t border-slate-100 dark:border-border/60">
+          <p className="text-xs text-slate-500 dark:text-muted-foreground font-medium order-2 sm:order-1">
+            Menampilkan{" "}
+            <span className="font-bold text-slate-900 dark:text-foreground">
+              {totalItems === 0 ? 0 : indexOfFirstItem + 1}–{Math.min(indexOfLastItem, totalItems)}
+            </span>{" "}
+            dari{" "}
+            <span className="font-bold text-slate-900 dark:text-foreground">
+              {totalItems}
+            </span>{" "}
+            buku
+          </p>
 
-          {[...Array(totalPages)].map((_, i) => {
-            const pageNum = i + 1;
-            if (
-              totalPages > 7 &&
-              pageNum !== 1 &&
-              pageNum !== totalPages &&
-              Math.abs(pageNum - currentPage) > 2
-            ) {
-              if (Math.abs(pageNum - currentPage) === 3) {
+          <nav
+            aria-label="Navigasi Halaman Katalog"
+            className="flex items-center gap-1.5 flex-wrap justify-center order-1 sm:order-2"
+          >
+            {/* Tombol Sebelumnya */}
+            <button
+              type="button"
+              onClick={() => handlePageChange(safeCurrentPage - 1)}
+              disabled={safeCurrentPage === 1}
+              className="inline-flex items-center gap-1 h-9 px-3 border border-slate-200 dark:border-border bg-white dark:bg-card rounded-xl text-xs font-semibold text-slate-700 dark:text-foreground hover:bg-slate-50 dark:hover:bg-muted disabled:opacity-40 disabled:pointer-events-none transition-all shadow-xs cursor-pointer"
+              aria-label="Halaman Sebelumnya"
+            >
+              <ChevronLeft size={16} />
+              <span className="hidden sm:inline">Sebelumnya</span>
+            </button>
+
+            {/* Tombol Nomor Halaman (1, 2, 3, 4 ...) */}
+            {getPaginationPages().map((item, index) => {
+              if (item === "...") {
                 return (
-                  <span key={pageNum} className="px-1 text-slate-400">
+                  <span
+                    key={`ellipsis-${index}`}
+                    className="w-9 h-9 flex items-center justify-center text-slate-400 select-none text-xs font-bold"
+                  >
                     ...
                   </span>
                 );
               }
-              return null;
-            }
 
-            return (
-              <button
-                key={pageNum}
-                onClick={() => handlePageChange(pageNum)}
-                className={`w-9 h-9 rounded-xl font-bold transition-all cursor-pointer text-xs ${
-                  currentPage === pageNum
-                    ? "bg-[#9D171D] text-white shadow-sm"
-                    : "bg-white dark:bg-card border border-slate-200 dark:border-border hover:bg-slate-50 text-slate-700 dark:text-foreground"
-                }`}
-              >
-                {pageNum}
-              </button>
-            );
-          })}
+              const pageNum = item as number;
+              const isActive = safeCurrentPage === pageNum;
 
-          <button
-            onClick={() => handlePageChange(currentPage + 1)}
-            disabled={currentPage === totalPages}
-            className="w-9 h-9 border border-slate-200 dark:border-border bg-white dark:bg-card rounded-xl hover:bg-slate-50 disabled:opacity-40 transition-all flex items-center justify-center font-bold text-slate-700 dark:text-foreground cursor-pointer text-sm"
-          >
-            &gt;
-          </button>
+              return (
+                <button
+                  key={pageNum}
+                  type="button"
+                  onClick={() => handlePageChange(pageNum)}
+                  aria-current={isActive ? "page" : undefined}
+                  aria-label={`Halaman ${pageNum}`}
+                  className={`w-9 h-9 rounded-xl font-bold transition-all text-xs cursor-pointer flex items-center justify-center ${
+                    isActive
+                      ? "bg-[#9D171D] text-white shadow-sm shadow-[#9D171D]/25 border border-[#9D171D]"
+                      : "bg-white dark:bg-card border border-slate-200 dark:border-border hover:bg-slate-50 dark:hover:bg-muted text-slate-700 dark:text-foreground"
+                  }`}
+                >
+                  {pageNum}
+                </button>
+              );
+            })}
+
+            {/* Tombol Selanjutnya */}
+            <button
+              type="button"
+              onClick={() => handlePageChange(safeCurrentPage + 1)}
+              disabled={safeCurrentPage === totalPages}
+              className="inline-flex items-center gap-1 h-9 px-3 border border-slate-200 dark:border-border bg-white dark:bg-card rounded-xl text-xs font-semibold text-slate-700 dark:text-foreground hover:bg-slate-50 dark:hover:bg-muted disabled:opacity-40 disabled:pointer-events-none transition-all shadow-xs cursor-pointer"
+              aria-label="Halaman Selanjutnya"
+            >
+              <span className="hidden sm:inline">Selanjutnya</span>
+              <ChevronRight size={16} />
+            </button>
+          </nav>
         </div>
       )}
     </div>

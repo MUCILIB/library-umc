@@ -93,6 +93,7 @@ export const checkDuplicateSchema = z.object({
   issn: z.string().max(255).optional(),
   title: z.string().max(500).optional(),
   author: z.string().max(255).optional(),
+  excludeId: z.string().optional(),
 }).refine((d) => d.isbn || d.issn || d.title || d.author, {
   message: "At least one of isbn, issn, title, or author is required",
 });

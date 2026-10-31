@@ -944,15 +944,18 @@ function BibliographyForm({ bib, onClose, onSuccess }: BibliographyFormProps) {
   const [duplicates, setDuplicates] = useState<Array<{ id: string; title: string; isbn?: string; issn?: string; isbnIssn?: string; authors: Array<{ name: string }>; similarity: string }>>([]);
   const [checkingDup, setCheckingDup] = useState(false);
 
+  const isbnDuplicate = duplicates.find((d) => d.similarity === "isbn" && d.id !== bib?.id);
+  const issnDuplicate = duplicates.find((d) => d.similarity === "issn" && d.id !== bib?.id);
+  const hasExactConflict = Boolean(isbnDuplicate || issnDuplicate);
+
   // Faculty / Study Program
   const [facultyOptions, setFacultyOptions] = useState<{ id: number; name: string }[]>([]);
   const [studyProgramOptions, setStudyProgramOptions] = useState<{ id: number; name: string; facultyId: number }[]>([]);
   const [selectedFacultyIds, setSelectedFacultyIds] = useState<number[]>(bib?.faculties?.map((f: any) => f.id) || []);
   const [selectedStudyProgramIds, setSelectedStudyProgramIds] = useState<number[]>(bib?.studyPrograms?.map((sp: any) => sp.id) || []);
 
-  // Duplicate detection
+    // Duplicate detection
   useEffect(() => {
-    if (bib) { setDuplicates([]); return; }
     const title = formData.title.trim();
     const isbn = formData.isbn.trim().replace(/[^0-9Xx]/g, "");
     const issn = formData.issn.trim().replace(/[^0-9]/g, "");
@@ -964,13 +967,14 @@ function BibliographyForm({ bib, onClose, onSuccess }: BibliographyFormProps) {
         if (isbn.length >= 3) params.isbn = isbn;
         if (issn.length >= 3) params.issn = issn;
         if (title.length >= 3) params.title = title;
+        if (bib?.id) params.excludeId = bib.id;
         if (Object.keys(params).length === 0) { setDuplicates([]); return; }
         const res = await bibliographyApi.checkDuplicate(params);
-        setDuplicates(res.data.duplicates);
+        setDuplicates(res.data.duplicates.filter((d: any) => d.id !== bib?.id));
       } catch { setDuplicates([]); } finally { setCheckingDup(false); }
-    }, 800);
+    }, 600);
     return () => clearTimeout(timer);
-  }, [formData?.title, formData?.isbn, formData?.issn, bib]);
+  }, [formData?.title, formData?.isbn, formData?.issn, bib?.id]);
 
   useEffect(() => {
     const loadOptions = async () => {
@@ -1290,6 +1294,14 @@ function BibliographyForm({ bib, onClose, onSuccess }: BibliographyFormProps) {
   // Submit all steps
   const handleSubmit = async (e?: React.FormEvent | React.MouseEvent) => {
     if (e) e.preventDefault();
+    if (isbnDuplicate) {
+      setError(`ISBN "${formData.isbn}" sudah digunakan oleh buku "${isbnDuplicate.title}". ISBN tidak boleh duplikat.`);
+      return;
+    }
+    if (issnDuplicate) {
+      setError(`ISSN "${formData.issn}" sudah digunakan oleh buku/jurnal "${issnDuplicate.title}". ISSN tidak boleh duplikat.`);
+      return;
+    }
     setLoading(true);
     setError(null);
 
@@ -1349,6 +1361,16 @@ function BibliographyForm({ bib, onClose, onSuccess }: BibliographyFormProps) {
       }
       if (authors.some((a) => !a.name.trim())) {
         setError("Silakan isi nama penulis atau hapus baris kosong");
+        return;
+      }
+    }
+    if (step === 2) {
+      if (isbnDuplicate) {
+        setError(`ISBN "${formData.isbn}" sudah digunakan oleh buku "${isbnDuplicate.title}". ISBN tidak boleh duplikat.`);
+        return;
+      }
+      if (issnDuplicate) {
+        setError(`ISSN "${formData.issn}" sudah digunakan oleh buku/jurnal "${issnDuplicate.title}". ISSN tidak boleh duplikat.`);
         return;
       }
     }
@@ -1449,24 +1471,24 @@ function BibliographyForm({ bib, onClose, onSuccess }: BibliographyFormProps) {
       )}
 
       {duplicates.length > 0 && (
-        <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
+        <div className={`rounded-xl border p-4 ${hasExactConflict ? "border-red-300 bg-red-50 dark:bg-red-950/20" : "border-amber-200 bg-amber-50"}`}>
           <div className="flex items-center gap-2 mb-3">
-            <AlertCircle className="size-5 text-amber-600" />
-            <span className="text-sm font-semibold text-amber-800">
-              {duplicates.some((d) => d.similarity === "isbn")
-                ? "ISBN sudah terdaftar"
-                : duplicates.some((d) => d.similarity === "issn")
-                ? "ISSN sudah terdaftar"
+            <AlertCircle className={`size-5 ${hasExactConflict ? "text-destructive" : "text-amber-600"}`} />
+            <span className={`text-sm font-semibold ${hasExactConflict ? "text-destructive" : "text-amber-800"}`}>
+              {isbnDuplicate
+                ? `Duplikasi ISBN Terdeteksi: ISBN ini sudah dipakai oleh buku "${isbnDuplicate.title}"`
+                : issnDuplicate
+                ? `Duplikasi ISSN Terdeteksi: ISSN ini sudah dipakai oleh publikasi "${issnDuplicate.title}"`
                 : "Judul serupa ditemukan"}
             </span>
-            {checkingDup && <Loader2 className="size-4 animate-spin text-amber-600" />}
+            {checkingDup && <Loader2 className={`size-4 animate-spin ${hasExactConflict ? "text-destructive" : "text-amber-600"}`} />}
           </div>
           <div className="space-y-2">
             {duplicates.map((d) => (
-              <div key={d.id} className="flex items-center justify-between bg-white rounded-lg p-3 border border-amber-100">
+              <div key={d.id} className={`flex items-center justify-between bg-white dark:bg-card rounded-lg p-3 border ${d.similarity === 'isbn' || d.similarity === 'issn' ? 'border-destructive/30 bg-destructive/5' : 'border-amber-100'}`}>
                 <div className="min-w-0">
-                  <p className="text-sm font-medium text-amber-900 truncate">{d.title}</p>
-                  <p className="text-xs text-amber-700">
+                  <p className={`text-sm font-medium truncate ${d.similarity === 'isbn' || d.similarity === 'issn' ? 'text-destructive font-bold' : 'text-amber-900'}`}>{d.title}</p>
+                  <p className={`text-xs ${d.similarity === 'isbn' || d.similarity === 'issn' ? 'text-destructive/80' : 'text-amber-700'}`}>
                     {d.authors.map((a) => a.name).join(", ")}
                     {d.isbn ? ` — ISBN: ${cleanIsbn(d.isbn)}` : d.issn ? ` — ISSN: ${d.issn}` : d.isbnIssn ? ` — ${cleanIsbn(d.isbnIssn)}` : ""}
                   </p>
@@ -1481,6 +1503,11 @@ function BibliographyForm({ bib, onClose, onSuccess }: BibliographyFormProps) {
               </div>
             ))}
           </div>
+          {hasExactConflict && (
+            <p className="mt-2 text-xs font-medium text-destructive">
+              Setiap buku atau publikasi harus memiliki ISBN/ISSN yang unik. ISBN/ISSN tidak boleh duplikat.
+            </p>
+          )}
         </div>
       )}
 
@@ -1660,8 +1687,13 @@ function BibliographyForm({ bib, onClose, onSuccess }: BibliographyFormProps) {
               <div className="md:col-span-2">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="mb-2 block text-xs font-bold text-foreground uppercase tracking-wider">
-                      ISBN
+                    <label className="mb-2 block text-xs font-bold text-foreground uppercase tracking-wider flex items-center justify-between">
+                      <span>ISBN</span>
+                      {isbnDuplicate && (
+                        <span className="text-[11px] font-normal text-destructive lowercase">
+                          (sudah terpakai)
+                        </span>
+                      )}
                     </label>
                     <input
                       type="text"
@@ -1669,12 +1701,27 @@ function BibliographyForm({ bib, onClose, onSuccess }: BibliographyFormProps) {
                       value={formData.isbn}
                       onChange={(e) => handleIsbnChange(e.target.value)}
                       maxLength={17}
-                      className="w-full rounded-lg border border-border px-3 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary bg-background"
+                      className={`w-full rounded-lg border px-3 py-2.5 text-sm focus:outline-none transition-colors bg-background ${
+                        isbnDuplicate
+                          ? "border-destructive ring-1 ring-destructive text-destructive"
+                          : "border-border focus:border-primary focus:ring-1 focus:ring-primary"
+                      }`}
                     />
+                    {isbnDuplicate && (
+                      <p className="mt-1 text-xs text-destructive flex items-center gap-1 font-medium">
+                        <AlertCircle className="size-3.5 shrink-0" />
+                        Sudah digunakan oleh: {isbnDuplicate.title}
+                      </p>
+                    )}
                   </div>
                   <div>
-                    <label className="mb-2 block text-xs font-bold text-foreground uppercase tracking-wider">
-                      ISSN
+                    <label className="mb-2 block text-xs font-bold text-foreground uppercase tracking-wider flex items-center justify-between">
+                      <span>ISSN</span>
+                      {issnDuplicate && (
+                        <span className="text-[11px] font-normal text-destructive lowercase">
+                          (sudah terpakai)
+                        </span>
+                      )}
                     </label>
                     <input
                       type="text"
@@ -1682,8 +1729,18 @@ function BibliographyForm({ bib, onClose, onSuccess }: BibliographyFormProps) {
                       value={formData.issn}
                       onChange={(e) => handleIssnChange(e.target.value)}
                       maxLength={9}
-                      className="w-full rounded-lg border border-border px-3 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary bg-background"
+                      className={`w-full rounded-lg border px-3 py-2.5 text-sm focus:outline-none transition-colors bg-background ${
+                        issnDuplicate
+                          ? "border-destructive ring-1 ring-destructive text-destructive"
+                          : "border-border focus:border-primary focus:ring-1 focus:ring-primary"
+                      }`}
                     />
+                    {issnDuplicate && (
+                      <p className="mt-1 text-xs text-destructive flex items-center gap-1 font-medium">
+                        <AlertCircle className="size-3.5 shrink-0" />
+                        Sudah digunakan oleh: {issnDuplicate.title}
+                      </p>
+                    )}
                   </div>
                 </div>
               </div>
@@ -2538,7 +2595,7 @@ function BibliographyForm({ bib, onClose, onSuccess }: BibliographyFormProps) {
             ) : (
               <button
                 type="button"
-                disabled={loading}
+                disabled={loading || hasExactConflict}
                 onClick={handleSubmit}
                 className="flex items-center gap-2 rounded-lg bg-primary px-6 py-2.5 text-sm font-bold text-white hover:bg-primary/95 disabled:opacity-50 transition-all"
               >

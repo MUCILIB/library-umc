@@ -11,7 +11,9 @@ import {
   AlertCircle,
   Upload,
   Lock,
-  Globe
+  Globe,
+  Filter,
+  MoreHorizontal
 } from "lucide-react";
 import { ebookService, type EbookItem } from "@/services/ebookService";
 import { dashboardDataService, type CategoryItem } from "@/services/dashboard/dashboardDataService";
@@ -25,6 +27,20 @@ import {
   TableHeader,
   TableRow
 } from "@/components/ui/table";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
+} from "@/components/ui/select";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger
+} from "@/components/ui/dropdown-menu";
 
 export default function EbookSection() {
   const { success, error } = useToast();
@@ -250,22 +266,28 @@ export default function EbookSection() {
         </div>
 
         <div className="flex items-center gap-3 w-full md:w-auto">
-          <select
-            value={selectedCategory || ""}
-            onChange={(e) => {
-              const val = e.target.value;
-              setSelectedCategory(val ? Number(val) : undefined);
+          <Select
+            value={selectedCategory !== undefined ? String(selectedCategory) : "all"}
+            onValueChange={(val) => {
+              setSelectedCategory(val === "all" ? undefined : Number(val));
               setPage(1);
             }}
-            className="w-full md:w-48 px-3 py-2 text-sm bg-background border border-input rounded-lg focus:outline-none focus:ring-2 focus:ring-primary min-h-[44px]"
           >
-            <option value="">Semua Kategori</option>
-            {categories.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name}
-              </option>
-            ))}
-          </select>
+            <SelectTrigger className="w-full md:w-56 h-[44px] bg-background border-input rounded-lg text-sm cursor-pointer shadow-xs">
+              <div className="flex items-center gap-2 truncate">
+                <Filter className="h-4 w-4 text-muted-foreground shrink-0" />
+                <SelectValue placeholder="Semua Kategori" />
+              </div>
+            </SelectTrigger>
+            <SelectContent align="end" className="w-56">
+              <SelectItem value="all" className="cursor-pointer font-medium">Semua Kategori</SelectItem>
+              {categories.map((c) => (
+                <SelectItem key={c.id} value={String(c.id)} className="cursor-pointer">
+                  {c.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
       </div>
 
@@ -374,24 +396,47 @@ export default function EbookSection() {
                           <button
                             title="Buka Preview Baca"
                             onClick={() => setPreviewItem(item)}
-                            className="p-2 text-muted-foreground hover:text-primary hover:bg-muted rounded-lg transition-colors min-h-[36px] min-w-[36px] flex items-center justify-center"
+                            className="p-2 text-muted-foreground hover:text-primary hover:bg-muted rounded-lg transition-colors min-h-[36px] min-w-[36px] flex items-center justify-center cursor-pointer"
                           >
                             <Eye className="h-4 w-4" />
                           </button>
-                          <button
-                            title="Edit Metadata"
-                            onClick={() => openEditModal(item)}
-                            className="p-2 text-muted-foreground hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950/20 rounded-lg transition-colors min-h-[36px] min-w-[36px] flex items-center justify-center"
-                          >
-                            <Edit className="h-4 w-4" />
-                          </button>
-                          <button
-                            title="Hapus E-Book"
-                            onClick={() => setDeletingItem(item)}
-                            className="p-2 text-muted-foreground hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/20 rounded-lg transition-colors min-h-[36px] min-w-[36px] flex items-center justify-center"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </button>
+
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <button
+                                type="button"
+                                className="p-2 text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-colors min-h-[36px] min-w-[36px] flex items-center justify-center cursor-pointer border border-border/60 shadow-xs"
+                                title="Menu Opsi E-Book"
+                              >
+                                <MoreHorizontal className="h-4 w-4" />
+                                <span className="sr-only">Menu aksi</span>
+                              </button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-48">
+                              <DropdownMenuItem
+                                onClick={() => setPreviewItem(item)}
+                                className="cursor-pointer text-xs flex items-center gap-2"
+                              >
+                                <Eye className="h-4 w-4 text-primary" />
+                                <span>Baca Pratinjau</span>
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() => openEditModal(item)}
+                                className="cursor-pointer text-xs flex items-center gap-2"
+                              >
+                                <Edit className="h-4 w-4 text-amber-600" />
+                                <span>Edit Metadata</span>
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem
+                                onClick={() => setDeletingItem(item)}
+                                className="cursor-pointer text-xs flex items-center gap-2 text-destructive focus:text-destructive focus:bg-destructive/10"
+                              >
+                                <Trash2 className="h-4 w-4 text-destructive" />
+                                <span>Hapus E-Book</span>
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                         </div>
                       </TableCell>
                     </TableRow>
@@ -501,18 +546,22 @@ export default function EbookSection() {
             </div>
             <div>
               <label className="block text-xs font-semibold text-foreground mb-1">Kategori</label>
-              <select
-                value={formCategoryId}
-                onChange={(e) => setFormCategoryId(e.target.value)}
-                className="w-full px-3 py-2 text-sm bg-background border border-input rounded-lg focus:ring-2 focus:ring-primary focus:outline-none min-h-[44px]"
+              <Select
+                value={formCategoryId ? String(formCategoryId) : "none"}
+                onValueChange={(val) => setFormCategoryId(val === "none" ? "" : val)}
               >
-                <option value="">Pilih Kategori</option>
-                {categories.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name}
-                  </option>
-                ))}
-              </select>
+                <SelectTrigger className="w-full h-[44px] bg-background border-input rounded-lg text-sm cursor-pointer shadow-xs">
+                  <SelectValue placeholder="Pilih Kategori" />
+                </SelectTrigger>
+                <SelectContent className="max-h-60">
+                  <SelectItem value="none" className="cursor-pointer text-muted-foreground">Pilih Kategori</SelectItem>
+                  {categories.map((c) => (
+                    <SelectItem key={c.id} value={String(c.id)} className="cursor-pointer">
+                      {c.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
 
