@@ -69,7 +69,7 @@ function escapeCsvField(value: string | null | undefined): string {
   if (value === null || value === undefined) return "";
   let str = String(value);
   // Neutralize CSV/Spreadsheet formula injection (OWASP CWE-1236)
-  if (/^[=+\-@\x09\x0d]/.test(str)) {
+  if (/^[-=+@]/.test(str) || str.charCodeAt(0) === 9 || str.charCodeAt(0) === 13) {
     str = "'" + str;
   }
   if (str.includes(";") || str.includes('"') || str.includes("\n")) {
