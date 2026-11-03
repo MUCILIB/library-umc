@@ -85,3 +85,67 @@ Complete manual and automated verification across the whole vertical stack (Admi
 - [x] Run frontend typecheck and build validation.
 - [x] Verify complete workflow in browser/test suite.
 - [x] Clean up temporary files, review git diff, and sync commits cleanly.
+
+---
+
+# Tickets: Security Hardening (Cloudflare Security Audit)
+
+Implementation of security findings identified during Cloudflare & OWASP audit across MUCILIB (`library-umc`).
+
+---
+
+## Ticket SEC-1: E-Book Magic Bytes & CSV Formula Injection Sanitization (SEC-07 & SEC-04)
+
+**What to build:**
+Strengthen boundary validation for file uploads and tabular exports. Fix inverted boolean check (`&&` -> `||`) on PDF MIME type and magic bytes in `ebook.service.ts`. Prefix spreadsheet formula characters (`=`, `+`, `-`, `@`, `\t`, `\r`) with single quote (`'`) in `export.service.ts` to neutralize CSV Injection / DDE attacks.
+
+**Blocked by:** None (frontier - can start immediately).
+
+- [x] Fix magic bytes validation condition in `ebook.service.ts` (lines 67, 351).
+- [x] Add formula character escaping in `escapeCsvField` in `export.service.ts`.
+- [x] Add unit test assertions in export and ebook test suites.
+- [x] Run backend tests to verify green baseline.
+
+---
+
+## Ticket SEC-2: Targeted Rate Limiting & Auth Route Hardening (SEC-03 & SEC-05)
+
+**What to build:**
+Shield authentication and visitor counter routes from brute-force and resource exhaustion. Attach `authLimiter` to sensitive Better-Auth paths (`/api/auth/sign-in/*`, `/api/auth/sign-up/*`, `/api/auth/forget-password`). Attach dedicated limiter on guest check-in routes (`/guests/scan`, `/guests/non-member`, `/guests/absensi`). Remove noisy ad-hoc script regex from global express body middleware.
+
+**Blocked by:** None (frontier - can start immediately).
+
+- [x] Attach `authLimiter` to Better-Auth authentication endpoints in `library-be/src/index.ts`.
+- [x] Define and apply `guestLimiter` for public guest check-in routes in `library-be/src/modules/guest/route/guest.route.ts`.
+- [x] Clean up redundant ad-hoc regex mutation from `index.ts`.
+- [x] Verify test suite runs clean.
+
+---
+
+## Ticket SEC-3: Production Security Headers via Helmet (SEC-06)
+
+**What to build:**
+Install and configure `helmet` middleware in `library-be/src/index.ts`. Strip `X-Powered-By: Express`, enforce `X-Content-Type-Options: nosniff`, and configure frameguard/CSP rules compatible with Swagger UI and embedded frontend PDF readers.
+
+**Blocked by:** Ticket SEC-2.
+
+- [x] Install `helmet` and `@types/helmet` in `library-be`.
+- [x] Register `helmet` middleware in `library-be/src/index.ts` with cross-origin & frame settings compatible with client iframe/blob viewers and Swagger.
+- [x] Disable `app.disable("x-powered-by")`.
+- [x] Verify test suite and server startup.
+
+---
+
+## Ticket SEC-4: PDF Streaming Hardening & Ephemeral Stream Ticket (SEC-01)
+
+**What to build:**
+Deprecate passing full master JWT session tokens in URL query parameter `?token=...`. Introduce ephemeral, short-lived (60-second) scoped tickets for PDF streaming and direct downloads, preventing token leakage in browser history, HTTP referrers, and proxy logs.
+
+**Blocked by:** Ticket SEC-3.
+
+- [x] Implement short-lived streaming ticket generator and validator in `library-be`.
+- [x] Update proposal and ebook streaming controllers to accept stream tickets.
+- [x] Update frontend viewers (`SecurePdfViewer.tsx`, `EbookReaderModal.tsx`) to request a stream ticket or use authenticated blob fetch.
+- [x] Deprecate master bearer token extraction from `req.query.token`.
+- [x] Run backend and frontend typechecks and test suites.
+

@@ -3,6 +3,7 @@ import type { Request } from "express";
 import { db } from "../db";
 import { session as sessionTable, Users } from "../db/schema";
 import { and, eq, gt } from "drizzle-orm";
+import { verifyStreamTicket } from "./stream-ticket";
 
 // Definisi Role seuai schema/better-auth
 import { ROLES, type Role } from "./auth-types";
@@ -28,6 +29,26 @@ export async function getSession(req: Request) {
       ) {
         bearerToken = value.split(" ")[1];
       }
+    }
+  }
+
+  // Ephemeral Stream Ticket support (SEC-01: prevent master session token exposure in URLs)
+  if (req.query && typeof req.query.ticket === "string") {
+    const ticketData = verifyStreamTicket(req.query.ticket);
+    if (ticketData) {
+      return {
+        session: {
+          id: `ticket-${ticketData.userId}`,
+          token: `ticket-${ticketData.userId}`,
+          userId: ticketData.userId,
+          expiresAt: new Date(ticketData.exp),
+        },
+        user: {
+          id: ticketData.userId,
+          role: ticketData.role,
+          email: ticketData.email || "",
+        },
+      } as any;
     }
   }
 

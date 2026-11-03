@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "react-router";
 import { authClient } from "@/utils/auth-client";
 import { API_BASE_URL } from "@/utils/api-config";
@@ -46,15 +46,50 @@ export default function SecurePdfViewer({
   const canDownloadFull = isOwner || isStaffOrAdmin;
 
   const sessionToken = (session as any)?.session?.token || (session as any)?.token;
-  const tokenParam = sessionToken ? `?token=${encodeURIComponent(sessionToken)}` : "";
 
-  // Endpoint streaming dynamic sliced PDF dari backend
-  const pdfStreamUrl = `${API_BASE_URL}/api/repository/proposals/${proposalId}/view-pdf${tokenParam}#toolbar=0&navpanes=0&scrollbar=1`;
+  const [blobUrl, setBlobUrl] = useState<string | null>(null);
+  const [loadingPdf, setLoadingPdf] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    let createdUrl: string | null = null;
+    setLoadingPdf(true);
+    setLoadError(null);
+
+    const streamUrl = `${API_BASE_URL}/api/repository/proposals/${proposalId}/view-pdf`;
+    fetch(streamUrl, {
+      credentials: "include",
+      headers: sessionToken ? { Authorization: `Bearer ${sessionToken}` } : {}
+    })
+      .then(async (res) => {
+        if (!res.ok) throw new Error("Gagal memuat dokumen naskah");
+        return res.blob();
+      })
+      .then((blob) => {
+        if (active) {
+          createdUrl = URL.createObjectURL(blob);
+          setBlobUrl(createdUrl);
+          setLoadingPdf(false);
+        }
+      })
+      .catch((err) => {
+        if (active) {
+          setLoadError(err?.message || "Gagal memuat PDF");
+          setLoadingPdf(false);
+        }
+      });
+
+    return () => {
+      active = false;
+      if (createdUrl) URL.revokeObjectURL(createdUrl);
+    };
+  }, [proposalId, sessionToken]);
 
   const handleDownloadFull = async () => {
     try {
       setDownloading(true);
-      const downloadUrl = `${API_BASE_URL}/api/repository/proposals/${proposalId}/view-pdf?download=true${sessionToken ? `&token=${encodeURIComponent(sessionToken)}` : ""}`;
+      const downloadUrl = `${API_BASE_URL}/api/repository/proposals/${proposalId}/view-pdf?download=true`;
       const res = await fetch(downloadUrl, {
         credentials: "include",
         headers: sessionToken ? { Authorization: `Bearer ${sessionToken}` } : {}
@@ -141,12 +176,25 @@ export default function SecurePdfViewer({
       {/* PDF Frame Container */}
       <div className="relative rounded-2xl border border-border bg-muted/20 overflow-hidden shadow-sm">
         {/* Iframe yang memanggil potongan PDF dari backend */}
-        <div className="w-full h-[620px] md:h-[750px] bg-slate-100 dark:bg-slate-900">
-          <iframe
-            src={pdfStreamUrl}
-            title={title}
-            className="w-full h-full border-0 select-none"
-          />
+        <div className="w-full h-[620px] md:h-[750px] bg-slate-100 dark:bg-slate-900 relative">
+          {loadingPdf && (
+            <div className="absolute inset-0 flex items-center justify-center bg-background/60 z-10">
+              <span className="text-sm font-medium text-muted-foreground animate-pulse">
+                Memuat naskah dokumen...
+              </span>
+            </div>
+          )}
+          {loadError && !loadingPdf ? (
+            <div className="absolute inset-0 flex items-center justify-center p-6 text-center text-sm text-destructive">
+              {loadError}
+            </div>
+          ) : blobUrl ? (
+            <iframe
+              src={`${blobUrl}#toolbar=0&navpanes=0&scrollbar=1`}
+              title={title}
+              className="w-full h-full border-0 select-none"
+            />
+          ) : null}
         </div>
 
         {/* Card Info Pembatas & Efek Blur untuk Pengguna Non-Login (Public Guest) */}

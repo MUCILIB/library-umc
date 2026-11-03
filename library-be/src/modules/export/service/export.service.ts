@@ -67,7 +67,11 @@ export interface UserExportFilter {
 
 function escapeCsvField(value: string | null | undefined): string {
   if (value === null || value === undefined) return "";
-  const str = String(value);
+  let str = String(value);
+  // Neutralize CSV/Spreadsheet formula injection (OWASP CWE-1236)
+  if (/^[=+\-@\x09\x0d]/.test(str)) {
+    str = "'" + str;
+  }
   if (str.includes(";") || str.includes('"') || str.includes("\n")) {
     return '"' + str.replace(/"/g, '""') + '"';
   }

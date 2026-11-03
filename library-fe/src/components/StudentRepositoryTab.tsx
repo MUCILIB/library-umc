@@ -231,16 +231,13 @@ export default function StudentRepositoryTab() {
       const sessionToken =
         (sessionObj?.session as { token?: string })?.token ||
         (sessionObj?.token as string);
-      const tokenParam = sessionToken
-        ? `&token=${encodeURIComponent(sessionToken)}`
-        : "";
       const authHeaders: Record<string, string> = {};
       if (sessionToken) {
         authHeaders["Authorization"] = `Bearer ${sessionToken}`;
       }
 
       const res = await fetch(
-        `${API_BASE_URL}/api/repository/proposals/${item.id}/view-pdf?scope=self${tokenParam}`,
+        `${API_BASE_URL}/api/repository/proposals/${item.id}/view-pdf?scope=self`,
         {
           credentials: "include",
           headers: authHeaders
@@ -268,16 +265,13 @@ export default function StudentRepositoryTab() {
       const sessionToken =
         (sessionObj?.session as { token?: string })?.token ||
         (sessionObj?.token as string);
-      const tokenParam = sessionToken
-        ? `&token=${encodeURIComponent(sessionToken)}`
-        : "";
       const authHeaders: Record<string, string> = {};
       if (sessionToken) {
         authHeaders["Authorization"] = `Bearer ${sessionToken}`;
       }
 
       const res = await fetch(
-        `${API_BASE_URL}/api/repository/proposals/${item.id}/view-pdf?download=true&scope=self${tokenParam}`,
+        `${API_BASE_URL}/api/repository/proposals/${item.id}/view-pdf?download=true&scope=self`,
         {
           credentials: "include",
           headers: authHeaders

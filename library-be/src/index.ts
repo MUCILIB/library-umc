@@ -1,4 +1,5 @@
 import express from "express";
+import helmet from "helmet";
 import dotenv from "dotenv";
 import cors from "cors";
 import { routes } from "./routes";
@@ -7,7 +8,7 @@ import { auth } from "./lib/auth";
 import path from "path";
 import { swaggerSpec } from "./config/swagger";
 import swaggerUi from "swagger-ui-express";
-import { generalLimiter } from "./middlewares/rateLimiter";
+import { generalLimiter, authLimiter } from "./middlewares/rateLimiter";
 import { errorMiddleware } from "./middlewares/error.middleware";
 import { getSession } from "./utils/auth-utils";
 import { initCronJobs } from "./cron/fineScheduler";
@@ -16,6 +17,17 @@ import { initBookingCancelScheduler } from "./cron/bookingCancelScheduler";
 dotenv.config();
 
 const app = express();
+
+app.disable("x-powered-by");
+
+// Standard HTTP Security Headers (OWASP & Cloudflare Standard)
+app.use(
+  helmet({
+    contentSecurityPolicy: false, // Keep disabled for Swagger UI inline scripts & assets
+    crossOriginEmbedderPolicy: false,
+    crossOriginResourcePolicy: { policy: "cross-origin" }, // Allow cross-origin PDF blob streaming
+  })
+);
 
 // Trust proxy fully for secure cookie (X-Forwarded-Proto) from PaaS like Railway, Render, Coolify, etc.
 app.set("trust proxy", 1);
@@ -57,36 +69,6 @@ app.use(
 );
 app.use(express.json());
 
-// Sanitize request body strings to strip dangerous HTML / script tags
-function sanitizeValue(value: unknown): unknown {
-  if (typeof value === "string") {
-    // Strip <script ...>...</script> tags and direct script/html injection tags
-    return value
-      .replace(/<\s*script[^>]*>[\s\S]*?<\s*\/\s*script\s*>/gi, "")
-      .replace(/<\s*script[^>]*>/gi, "")
-      .replace(/<\s*\/\s*script\s*>/gi, "")
-      .replace(/javascript:/gi, "");
-  }
-  if (Array.isArray(value)) {
-    return value.map(sanitizeValue);
-  }
-  if (value !== null && typeof value === "object") {
-    const cleanObj: Record<string, unknown> = {};
-    for (const [k, v] of Object.entries(value as Record<string, unknown>)) {
-      cleanObj[k] = sanitizeValue(v);
-    }
-    return cleanObj;
-  }
-  return value;
-}
-
-app.use((req, _res, next) => {
-  if (req.body && typeof req.body === "object") {
-    req.body = sanitizeValue(req.body);
-  }
-  next();
-});
-
 // Serve static files from public directory
 app.use(express.static(path.join(__dirname, "../public")));
 
@@ -95,6 +77,17 @@ app.use("/docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 // General rate limiter for all API routes (baseline protection)
 app.use("/api", generalLimiter);
+
+// Rate limiter khusus untuk endpoint autentikasi Better-Auth (prevent brute-force & credential stuffing)
+app.use(
+  [
+    "/api/auth/sign-in/*",
+    "/api/auth/sign-up/*",
+    "/api/auth/forget-password",
+    "/api/auth/reset-password"
+  ],
+  authLimiter
+);
 
 // Enforce 401 Unauthorized for unauthenticated get-session requests (REST standard & QA assertion)
 app.get(["/api/auth/get-session", "/auth/get-session"], async (req, res, next) => {

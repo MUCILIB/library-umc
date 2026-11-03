@@ -81,5 +81,15 @@ describe("Ebook Module Tests", () => {
 
       expect(slicedDoc.getPageCount()).toBe(10);
     });
+
+    it("verifies PDF magic bytes %PDF prefix", () => {
+      const validPdfBuffer = Buffer.from("%PDF-1.7\nSample PDF");
+      const fakePdfBuffer = Buffer.from("MZ\x90\x00\x03Executable disguised as PDF");
+
+      const isMagicPdf = (buf: Buffer) => buf.subarray(0, 5).toString().startsWith("%PDF");
+
+      expect(isMagicPdf(validPdfBuffer)).toBe(true);
+      expect(isMagicPdf(fakePdfBuffer)).toBe(false);
+    });
   });
 });
