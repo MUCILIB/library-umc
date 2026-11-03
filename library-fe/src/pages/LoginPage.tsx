@@ -103,9 +103,9 @@ const LoginPage = () => {
         const role = (data.user as any).role;
         setTimeout(() => {
           if (role === "super_admin" || role === "staff") {
-            navigate("/dashboard/super-admin");
+            navigate("/dashboard/super-admin", { replace: true });
           } else {
-            navigate("/");
+            navigate("/", { replace: true });
           }
         }, 1500);
       }
