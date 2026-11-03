@@ -16,7 +16,9 @@ import {
   Ban,
   ChevronLeft,
   ChevronRight,
+  Download,
 } from "lucide-react";
+import Modal from "@/components/ui/modal";
 import { itemApi, bibliographyApi, locationApi, type Item, type Bibliography, type Location } from "@/api/client";
 import {
   Select,
@@ -363,57 +365,101 @@ export default function ItemSection() {
       )}
 
       {/* Modal QR Code Salinan Buku */}
-      {showQrModal && qrModalItem && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 backdrop-blur-xs">
-          <div className="bg-card rounded-3xl p-6 max-w-md w-full border border-border shadow-2xl animate-in fade-in-0 zoom-in-95 duration-150 animate-out fade-out-0 zoom-out-95">
-            <div className="flex justify-between items-center mb-5">
-              <h3 className="text-md font-extrabold text-foreground tracking-tight">
-                QR Code Salinan (Exemplar)
-              </h3>
+      <Modal
+        isOpen={showQrModal && !!qrModalItem}
+        onClose={() => {
+          setShowQrModal(false);
+          setQrModalItem(null);
+        }}
+        title="QR Code Salinan (Exemplar)"
+        size="md"
+      >
+        {qrModalItem && (
+          <div className="space-y-4 p-4">
+            {/* Detail Buku Singkat */}
+            <div className="p-3 bg-muted rounded-xl border border-border/50">
+              <p className="font-bold text-sm text-foreground line-clamp-1">
+                {qrModalItem.bibliography?.title || "Buku"}
+              </p>
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-1 text-xs text-muted-foreground font-medium">
+                <span>
+                  Kode Item: <span className="font-mono font-bold text-foreground">{qrModalItem.itemCode}</span>
+                </span>
+                {qrModalItem.inventoryCode && (
+                  <span>
+                    No. Inventaris: <span className="font-mono text-foreground">{qrModalItem.inventoryCode}</span>
+                  </span>
+                )}
+                {qrModalItem.callNumber && (
+                  <span>
+                    No. Panggil: <span className="font-mono text-foreground">{qrModalItem.callNumber}</span>
+                  </span>
+                )}
+              </div>
+            </div>
+
+            {/* QR Code Frame */}
+            <div className="flex flex-col items-center justify-center p-6 bg-slate-50 dark:bg-muted/30 rounded-2xl border border-border">
+              <div className="p-3 bg-white rounded-2xl shadow-sm border border-slate-200 dark:border-border">
+                <img
+                  src={itemApi.getQrSvg(qrModalItem.id)}
+                  alt="QR Code"
+                  className="w-48 h-48 object-contain"
+                />
+              </div>
+              <span className="mt-4 font-mono font-extrabold text-base text-foreground tracking-wider">
+                {qrModalItem.itemCode}
+              </span>
+              <span
+                className={`mt-1.5 px-3 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider ${
+                  qrModalItem.status === "available"
+                    ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800"
+                    : "bg-rose-50 text-rose-700 dark:bg-rose-950/50 dark:text-rose-300 border border-rose-200 dark:border-rose-800"
+                }`}
+              >
+                Status: {qrModalItem.status === "available" ? "Tersedia" : "Dipinjam"}
+              </span>
+            </div>
+
+            {/* Tombol Aksi */}
+            <div className="flex items-center justify-between gap-3 pt-2">
+              <div className="flex items-center gap-2">
+                <a
+                  href={itemApi.getQrPng(qrModalItem.id)}
+                  target="_blank"
+                  rel="noreferrer"
+                  download={`QR-${qrModalItem.itemCode}.png`}
+                  className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-border px-3 text-xs font-medium text-foreground hover:bg-muted transition-colors"
+                >
+                  <Download className="size-3.5" />
+                  <span>Unduh PNG</span>
+                </a>
+                <a
+                  href={itemApi.getQrSvg(qrModalItem.id)}
+                  target="_blank"
+                  rel="noreferrer"
+                  download={`QR-${qrModalItem.itemCode}.svg`}
+                  className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-border px-3 text-xs font-medium text-foreground hover:bg-muted transition-colors"
+                >
+                  <Download className="size-3.5" />
+                  <span>Unduh SVG</span>
+                </a>
+              </div>
+
               <button
+                type="button"
                 onClick={() => {
                   setShowQrModal(false);
                   setQrModalItem(null);
                 }}
-                className="p-1.5 rounded-full hover:bg-muted text-muted-foreground transition-colors"
+                className="h-9 rounded-lg border border-border px-4 text-sm font-medium text-muted-foreground hover:bg-muted transition-colors"
               >
-                <X className="size-4" />
+                Tutup
               </button>
             </div>
-
-            <div className="space-y-5">
-              {/* Detail Buku Singkat */}
-              <div className="p-3 bg-muted rounded-2xl">
-                <p className="font-bold text-xs text-foreground line-clamp-1">
-                  {qrModalItem.bibliography?.title || "Buku"}
-                </p>
-                <p className="text-[10px] text-muted-foreground mt-0.5 font-medium">
-                  Kode Item: {qrModalItem.itemCode}
-                </p>
-              </div>
-
-              {/* QR Code Frame */}
-              <div className="flex flex-col items-center justify-center p-6 bg-slate-50 rounded-2xl border border-slate-100 dark:bg-muted/30">
-                <img
-                  src={itemApi.getQrSvg(qrModalItem.id)}
-                  alt="QR Code"
-                  className="w-48 h-48 bg-white p-2 rounded-2xl shadow-md border border-slate-200"
-                />
-                <span className="mt-4 font-mono font-extrabold text-sm text-slate-800 tracking-wider dark:text-white">
-                  {qrModalItem.itemCode}
-                </span>
-                <span className={`mt-1.5 px-2.5 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider ${
-                  qrModalItem.status === "available"
-                    ? "bg-green-50 text-green-700"
-                    : "bg-red-50 text-red-700"
-                }`}>
-                  Status: {qrModalItem.status === "available" ? "Tersedia" : "Dipinjam"}
-                </span>
-              </div>
-            </div>
           </div>
-        </div>
-      )}
+        )}
+      </Modal>
     </div>
   );
 }

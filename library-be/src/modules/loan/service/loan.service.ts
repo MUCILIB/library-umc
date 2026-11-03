@@ -8,7 +8,8 @@ import {
   reservations,
   bibliographies,
   Users,
-  returnRequests
+  returnRequests,
+  transactions
 } from "../../../db/schema";
 import crypto from "crypto";
 import qrcode from "qrcode";
@@ -399,40 +400,77 @@ export class LoanService {
         void reservationService.fulfillNextReservation(loanItem.bibliographyId);
       }
 
-      // Calculate late fine
+      // Calculate late fine or settle existing fine upon return
       const returnDateObj = new Date();
       const dueDateObj = new Date(loan.dueDate);
       returnDateObj.setHours(0, 0, 0, 0);
       dueDateObj.setHours(0, 0, 0, 0);
       const isLate = returnDateObj > dueDateObj;
-      if (isLate) {
-        const diffTime = Math.abs(returnDateObj.getTime() - dueDateObj.getTime());
-        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-        const finePerDay = 500;
-        const fineAmount = diffDays * finePerDay;
-        const existingUnpaidFine = tx.query.fines
-          ? await tx.query.fines.findFirst({
-              where: and(
-                eq(fines.loanId, loan.id),
-                eq(fines.status, "unpaid"),
-                isNull(fines.deletedAt)
-              )
-            })
-          : null;
-        if (existingUnpaidFine) {
-          await tx.update(fines).set({ amount: fineAmount.toString(), updatedAt: new Date() }).where(eq(fines.id, existingUnpaidFine.id));
-        } else {
-          await tx.insert(fines).values({ loanId: loan.id, amount: fineAmount.toString(), status: "unpaid" });
+
+      const existingUnpaidFine = tx.query.fines
+        ? await tx.query.fines.findFirst({
+            where: and(
+              eq(fines.loanId, loan.id),
+              eq(fines.status, "unpaid"),
+              isNull(fines.deletedAt)
+            )
+          })
+        : null;
+
+      if (isLate || existingUnpaidFine) {
+        let fineAmount = 0;
+        let diffDays = 0;
+
+        if (isLate) {
+          const diffTime = Math.abs(returnDateObj.getTime() - dueDateObj.getTime());
+          diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+          const finePerDay = 500;
+          fineAmount = diffDays * finePerDay;
+        } else if (existingUnpaidFine) {
+          fineAmount = Number(existingUnpaidFine.amount) || 0;
         }
-        const fineId = existingUnpaidFine?.id || "fine-" + loan.id;
+
+        let fineId: string;
+
+        if (existingUnpaidFine) {
+          fineId = existingUnpaidFine.id;
+          await tx.update(fines).set({
+            amount: fineAmount.toString(),
+            status: "paid",
+            updatedAt: new Date()
+          }).where(eq(fines.id, existingUnpaidFine.id));
+        } else {
+          const insertQuery = tx.insert(fines).values({
+            loanId: loan.id,
+            amount: fineAmount.toString(),
+            status: "paid"
+          });
+          const inserted = typeof (insertQuery as any).returning === "function"
+            ? await (insertQuery as any).returning()
+            : await insertQuery;
+          const newFine = Array.isArray(inserted) ? inserted[0] : inserted;
+          fineId = newFine?.id || "fine-" + loan.id;
+        }
+
+        if (fineId && !fineId.startsWith("fine-")) {
+          await tx.insert(transactions).values({
+            fineId: fineId,
+            paymentMethod: "cash",
+            confirmedBy: adminId,
+            paidAt: returnDateStr
+          });
+        }
+
         return {
           success: true,
-          message: `Buku dikembalikan, namun terlambat ${diffDays} hari. Dikenakan denda sebesar Rp ${fineAmount.toLocaleString("id-ID")}.`,
+          message: isLate
+            ? `Buku berhasil dikembalikan dan denda keterlambatan sebesar Rp ${fineAmount.toLocaleString("id-ID")} (${diffDays} hari) telah dilunasi.`
+            : `Buku berhasil dikembalikan dan denda sebesar Rp ${fineAmount.toLocaleString("id-ID")} telah dilunasi.`,
           fine: {
-            id: fineId || "fine-" + loan.id,
+            id: fineId,
             overdueDays: diffDays,
             assessedAmount: fineAmount.toString(),
-            status: "unpaid",
+            status: "paid",
           }
         };
       }
@@ -491,32 +529,74 @@ export class LoanService {
         void reservationService.fulfillNextReservation(loanItem.bibliographyId);
       }
 
-      // Calculate late fine (same logic as returnLoan)
+      // Calculate late fine or settle existing fine upon return
       const returnDateObj = new Date();
       const dueDateObj = new Date(loan.dueDate);
       returnDateObj.setHours(0, 0, 0, 0);
       dueDateObj.setHours(0, 0, 0, 0);
       const isLate = returnDateObj > dueDateObj;
-      if (isLate) {
-        const diffTime = Math.abs(returnDateObj.getTime() - dueDateObj.getTime());
-        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-        const finePerDay = 500;
-        const fineAmount = diffDays * finePerDay;
-        const existingUnpaidFine = await tx.query.fines.findFirst({
-          where: and(
-            eq(fines.loanId, loan.id),
-            eq(fines.status, "unpaid"),
-            isNull(fines.deletedAt)
-          )
-        });
-        if (existingUnpaidFine) {
-          await tx.update(fines).set({ amount: fineAmount.toString(), updatedAt: new Date() }).where(eq(fines.id, existingUnpaidFine.id));
-        } else {
-          await tx.insert(fines).values({ loanId: loan.id, amount: fineAmount.toString(), status: "unpaid" });
+
+      const existingUnpaidFine = await tx.query.fines.findFirst({
+        where: and(
+          eq(fines.loanId, loan.id),
+          eq(fines.status, "unpaid"),
+          isNull(fines.deletedAt)
+        )
+      });
+
+      if (isLate || existingUnpaidFine) {
+        let fineAmount = 0;
+        let diffDays = 0;
+
+        if (isLate) {
+          const diffTime = Math.abs(returnDateObj.getTime() - dueDateObj.getTime());
+          diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+          const finePerDay = 500;
+          fineAmount = diffDays * finePerDay;
+        } else if (existingUnpaidFine) {
+          fineAmount = Number(existingUnpaidFine.amount) || 0;
         }
+
+        let fineId: string;
+
+        if (existingUnpaidFine) {
+          fineId = existingUnpaidFine.id;
+          await tx.update(fines).set({
+            amount: fineAmount.toString(),
+            status: "paid",
+            updatedAt: new Date()
+          }).where(eq(fines.id, existingUnpaidFine.id));
+        } else {
+          const insertQuery = tx.insert(fines).values({
+            loanId: loan.id,
+            amount: fineAmount.toString(),
+            status: "paid"
+          });
+          const inserted = typeof (insertQuery as any).returning === "function"
+            ? await (insertQuery as any).returning()
+            : await insertQuery;
+          const newFine = Array.isArray(inserted) ? inserted[0] : inserted;
+          fineId = newFine?.id || "fine-" + loan.id;
+        }
+
+        if (fineId && !fineId.startsWith("fine-")) {
+          await tx.insert(transactions).values({
+            fineId: fineId,
+            paymentMethod: "cash",
+            confirmedBy: adminId,
+            paidAt: returnDateStr
+          });
+        }
+
         // Update request status to approved
         await tx.update(returnRequests).set({ status: "approved", processedAt: new Date(), processedBy: adminId }).where(eq(returnRequests.id, requestId));
-        return { success: true, message: `Buku dikembalikan, namun terlambat ${diffDays} hari. Dikenakan denda sebesar Rp ${fineAmount.toLocaleString("id-ID")}.` };
+
+        return {
+          success: true,
+          message: isLate
+            ? `Buku berhasil dikembalikan dan denda keterlambatan sebesar Rp ${fineAmount.toLocaleString("id-ID")} (${diffDays} hari) telah dilunasi.`
+            : `Buku berhasil dikembalikan dan denda sebesar Rp ${fineAmount.toLocaleString("id-ID")} telah dilunasi.`
+        };
       }
 
       // Update request status to approved (no fine)
