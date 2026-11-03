@@ -3,6 +3,7 @@ import { useNavigate } from "react-router";
 import loanService from "@/services/loanService";
 import reservationService from "@/services/reservationService";
 import { useToast } from "@/hooks/useToast";
+import { triggerBadgeRefresh } from "@/hooks/dashboard/useDashboardBadges";
 import type { Bibliography, LibraryUser, LoanRequest } from "@/types";
 import type { Reservation } from "@/services/reservationService";
 
@@ -237,6 +238,7 @@ export function useKatalogActions({
 
       setPendingRequests((prev) => [...prev, loan as unknown as LoanRequest]);
       setShowLoanForm(false);
+      triggerBadgeRefresh();
 
       setLoanFormData({
         loanDate: defaultLoanDate,

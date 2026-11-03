@@ -14,6 +14,19 @@ export interface DashboardStats {
   waitingReservations?: number;
 }
 
+export interface DashboardBadgeCounts {
+  loans: number;
+  pendingLoans?: number;
+  pendingExtensions?: number;
+  returnApprovals: number;
+  cardApprovals: number;
+  recommendations: number;
+  repository: number;
+  fines?: number;
+  total: number;
+  [key: string]: number | undefined;
+}
+
 interface WebTrafficSummaryResponse {
   success: boolean;
   data?: {
@@ -284,5 +297,37 @@ export const dashboardDataService = {
       })
     });
     return jsonOrThrow(res);
+  },
+
+  async getBadgeCounts(): Promise<DashboardBadgeCounts> {
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/reports/badges`, {
+        credentials: "include",
+        headers: {
+          ...getAuthHeaders(),
+        },
+      });
+      const data = await jsonOrThrow(res);
+      return (
+        data.data || {
+          loans: 0,
+          returnApprovals: 0,
+          cardApprovals: 0,
+          recommendations: 0,
+          repository: 0,
+          total: 0,
+        }
+      );
+    } catch (err) {
+      console.warn("[dashboardDataService] Failed to fetch badge counts:", err);
+      return {
+        loans: 0,
+        returnApprovals: 0,
+        cardApprovals: 0,
+        recommendations: 0,
+        repository: 0,
+        total: 0,
+      };
+    }
   }
 };

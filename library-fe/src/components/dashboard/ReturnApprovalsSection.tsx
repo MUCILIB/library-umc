@@ -2,6 +2,7 @@ import { useState, useEffect, Fragment } from "react";
 import { CheckCircle, Clock, BookOpen, ChevronLeft, ChevronRight } from "lucide-react";
 import loanService from "@/services/loanService";
 import { useToast } from "@/hooks/useToast";
+import { triggerBadgeRefresh } from "@/hooks/dashboard/useDashboardBadges";
 
 export default function ReturnApprovalsSection() {
   const [requests, setRequests] = useState<any[]>([]);
@@ -35,6 +36,7 @@ export default function ReturnApprovalsSection() {
       toast.removeToast(loadingId);
       toast.success("Berhasil", res.message || "Pengembalian berhasil disetujui");
       fetchRequests();
+      triggerBadgeRefresh();
     } catch (err: any) {
       toast.removeToast(loadingId);
       toast.error("Gagal", err.message || "Gagal menyetujui pengembalian");

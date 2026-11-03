@@ -15,6 +15,7 @@ import {
   Minimize2
 } from "lucide-react";
 import { repositoryService, type RepositoryProposal } from "@/services/repositoryService";
+import { triggerBadgeRefresh } from "@/hooks/dashboard/useDashboardBadges";
 import { API_BASE_URL } from "@/utils/api-config";
 import { useToast } from "@/hooks/useToast";
 import Modal from "@/components/ui/modal";
@@ -156,6 +157,7 @@ export default function RepositorySection() {
       setReviewModalItem(null);
       setReviewNotes("");
       fetchProposals();
+      triggerBadgeRefresh();
     } catch (err: any) {
       error("Gagal Memproses Review", err.message || "Terjadi kesalahan");
     } finally {

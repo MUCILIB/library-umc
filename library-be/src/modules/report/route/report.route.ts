@@ -37,6 +37,26 @@ router.get(
 
 /**
  * @swagger
+ * /reports/badges:
+ *   get:
+ *     summary: Get pending notification and approval counts for dashboard menu badges
+ *     tags: [Reports]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Actionable badge counts
+ */
+router.get(
+  ["/reports/badges", "/dashboard/badges"],
+  publicApiLimiter,
+  isAuthenticated,
+  requireRole(["super_admin", "staff"]),
+  reportController.getBadgeCounts.bind(reportController)
+);
+
+/**
+ * @swagger
  * /reports/popular-books:
  *   get:
  *     summary: Get top most borrowed books

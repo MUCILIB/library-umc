@@ -10,7 +10,10 @@ import {
   reservations,
   Users,
   webTraffic,
-  studyPrograms
+  studyPrograms,
+  returnRequests,
+  recommendations,
+  repositoryProposals
 } from "../../../db/schema";
 import { eq, sql, and, desc, isNull } from "drizzle-orm";
 import PDFDocument from "pdfkit";
@@ -221,6 +224,90 @@ export class ReportService {
       };
     } catch (error) {
       console.error("[ReportService] getDashboardStats error:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get actionable pending notification/request counts for dashboard menus
+   */
+  async getBadgeCounts() {
+    try {
+      const [
+        pendingLoansRes,
+        pendingExtensionsRes,
+        pendingReturnsRes,
+        pendingCardsRes,
+        pendingRecommendationsRes,
+        pendingProposalsRes,
+        unpaidFinesRes
+      ] = await Promise.all([
+        db
+          .select({ count: sql<number>`count(*)` })
+          .from(loans)
+          .where(and(eq(loans.status, "pending"), isNull(loans.deletedAt))),
+        db
+          .select({ count: sql<number>`count(*)` })
+          .from(loans)
+          .where(
+            and(
+              eq(loans.status, "approved"),
+              eq(loans.extensionStatus, "pending"),
+              isNull(loans.deletedAt)
+            )
+          ),
+        db
+          .select({ count: sql<number>`count(*)` })
+          .from(returnRequests)
+          .where(eq(returnRequests.status, "pending")),
+        db
+          .select({ count: sql<number>`count(*)` })
+          .from(members)
+          .where(and(eq(members.cardStatus, "pending"), isNull(members.deletedAt))),
+        db
+          .select({ count: sql<number>`count(*)` })
+          .from(recommendations)
+          .where(and(eq(recommendations.status, "pending"), isNull(recommendations.deletedAt))),
+        db
+          .select({ count: sql<number>`count(*)` })
+          .from(repositoryProposals)
+          .where(sql`${repositoryProposals.status} IN ('SUBMITTED', 'UNDER_REVIEW')`),
+        db
+          .select({ count: sql<number>`count(*)` })
+          .from(fines)
+          .where(and(eq(fines.status, "unpaid"), isNull(fines.deletedAt)))
+      ]);
+
+      const pendingLoans = Number(pendingLoansRes[0]?.count || 0);
+      const pendingExtensions = Number(pendingExtensionsRes[0]?.count || 0);
+      const totalLoansPending = pendingLoans + pendingExtensions;
+      const pendingReturns = Number(pendingReturnsRes[0]?.count || 0);
+      const pendingCards = Number(pendingCardsRes[0]?.count || 0);
+      const pendingRecommendations = Number(pendingRecommendationsRes[0]?.count || 0);
+      const pendingProposals = Number(pendingProposalsRes[0]?.count || 0);
+      const unpaidFines = Number(unpaidFinesRes[0]?.count || 0);
+
+      return {
+        success: true,
+        data: {
+          loans: totalLoansPending,
+          pendingLoans,
+          pendingExtensions,
+          returnApprovals: pendingReturns,
+          cardApprovals: pendingCards,
+          recommendations: pendingRecommendations,
+          repository: pendingProposals,
+          fines: unpaidFines,
+          total:
+            totalLoansPending +
+            pendingReturns +
+            pendingCards +
+            pendingRecommendations +
+            pendingProposals
+        }
+      };
+    } catch (error) {
+      console.error("[ReportService] getBadgeCounts error:", error);
       throw error;
     }
   }
