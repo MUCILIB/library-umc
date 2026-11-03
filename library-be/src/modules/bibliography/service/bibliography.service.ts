@@ -369,6 +369,7 @@ if (updateData.isbn && isValidCode(updateData.isbn)) {
   }
 
   async getById(id: string) {
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) return null;
     const bib = await db.query.bibliographies.findFirst({
       where: and(eq(bibliographies.id, id), isNull(bibliographies.deletedAt)),
       with: {
@@ -668,6 +669,7 @@ if (updateData.isbn && isValidCode(updateData.isbn)) {
   }
 
   async getItemsForBibliography(bibliographyId: string) {
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(bibliographyId)) return [];
     return db.query.items.findMany({
       where: and(eq(items.bibliographyId, bibliographyId), isNull(items.deletedAt)),
       with: { location: true, vendor: true, collectionType: true },

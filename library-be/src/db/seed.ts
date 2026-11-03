@@ -35,7 +35,7 @@ async function seed() {
   if (!existingAccount) {
     const hashedPassword = await hashPassword(ADMIN_PASSWORD);
     const now = new Date();
-    await db.insert(accountTable).values({ id: `account-${adminId}-credential`, accountId: ADMIN_EMAIL, providerId: "credential", userId: adminId, password: hashedPassword, createdAt: now, updatedAt: now });
+    await db.insert(accountTable).values({ id: `account-${adminId}-credential`, accountId: adminId, providerId: "credential", userId: adminId, password: hashedPassword, createdAt: now, updatedAt: now });
     console.log("Created admin credential account");
   } else {
     console.log("Admin credential account already exists");

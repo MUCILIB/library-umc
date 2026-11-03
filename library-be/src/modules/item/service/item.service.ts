@@ -55,6 +55,9 @@ export class ItemService {
   }
 
   async getItemById(id: string) {
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) {
+      return { success: false, message: "Item not found", data: null };
+    }
     const result = await db.query.items.findFirst({
       where: and(eq(items.id, id), isNull(items.deletedAt)),
       with: { bibliography: true, location: true, vendor: true, collectionType: true },

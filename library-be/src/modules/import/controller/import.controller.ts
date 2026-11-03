@@ -2,6 +2,8 @@ import { type Request, type Response, type NextFunction } from "express";
 import { importService } from "../service/import.service";
 import { sendSuccess, sendError } from "../../../utils/api-utils";
 
+const isUuid = (val: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(val);
+
 export class ImportController {
   async uploadBibliography(req: Request, res: Response, next: NextFunction) {
     try {
@@ -23,51 +25,65 @@ export class ImportController {
 
   async parseBatch(req: Request, res: Response, next: NextFunction) {
     try {
-      const result = await importService.parseBatch(req.params.batchId as string);
+      const batchId = req.params.batchId as string;
+      if (!isUuid(batchId)) return sendError(res, "Batch not found", 404);
+      const result = await importService.parseBatch(batchId);
       sendSuccess(res, "Batch parsed and validated", result);
     } catch (error) { next(error); }
   }
 
   async validateBatch(req: Request, res: Response, next: NextFunction) {
     try {
-      const result = await importService.validateBatch(req.params.batchId as string);
+      const batchId = req.params.batchId as string;
+      if (!isUuid(batchId)) return sendError(res, "Batch not found", 404);
+      const result = await importService.validateBatch(batchId);
       sendSuccess(res, "Batch validated", result);
     } catch (error) { next(error); }
   }
 
   async previewBatch(req: Request, res: Response, next: NextFunction) {
     try {
+      const batchId = req.params.batchId as string;
+      if (!isUuid(batchId)) return sendError(res, "Batch not found", 404);
       const limit = parseInt(req.query.limit as string) || 20;
       const offset = parseInt(req.query.offset as string) || 0;
-      const result = await importService.previewBatch(req.params.batchId as string, limit);
+      const result = await importService.previewBatch(batchId, limit);
       sendSuccess(res, "Preview retrieved", result);
     } catch (error) { next(error); }
   }
 
   async approveBatch(req: Request, res: Response, next: NextFunction) {
     try {
-      const result = await importService.approveBatch(req.params.batchId as string, (req as any).user.id);
+      const batchId = req.params.batchId as string;
+      if (!isUuid(batchId)) return sendError(res, "Batch not found", 404);
+      const result = await importService.approveBatch(batchId, (req as any).user.id);
       sendSuccess(res, "Batch committed", result);
     } catch (error) { next(error); }
   }
 
   async cancelBatch(req: Request, res: Response, next: NextFunction) {
     try {
-      const result = await importService.cancelBatch(req.params.batchId as string);
+      const batchId = req.params.batchId as string;
+      if (!isUuid(batchId)) return sendError(res, "Batch not found", 404);
+      const result = await importService.cancelBatch(batchId);
       sendSuccess(res, "Batch cancelled", result);
     } catch (error) { next(error); }
   }
 
   async getErrors(req: Request, res: Response, next: NextFunction) {
     try {
-      const errors = await importService.getErrors(req.params.batchId as string);
+      const batchId = req.params.batchId as string;
+      if (!isUuid(batchId)) return sendError(res, "Batch not found", 404);
+      const errors = await importService.getErrors(batchId);
       sendSuccess(res, "Errors retrieved", errors);
     } catch (error) { next(error); }
   }
 
   async downloadErrorsCsv(req: Request, res: Response, next: NextFunction) {
     try {
-      const errors = await importService.getErrors(req.params.batchId as string);
+      const batchId = req.params.batchId as string;
+      if (!isUuid(batchId)) return sendError(res, "Batch not found", 404);
+      const errors = await importService.getErrors(batchId);
       const header = "row_number,errors,raw_data";
       const csvRows = errors.map((r: any) => {
         const errs = Array.isArray(r.errors) ? r.errors.join("; ") : String(r.errors);
@@ -76,7 +92,7 @@ export class ImportController {
       });
       const csv = [header, ...csvRows].join("\n");
       res.setHeader("Content-Type", "text/csv; charset=utf-8");
-      res.setHeader("Content-Disposition", `attachment; filename="errors-${req.params.batchId}.csv"`);
+      res.setHeader("Content-Disposition", `attachment; filename="errors-${batchId}.csv"`);
       res.send("\uFEFF" + csv);
     } catch (error) { next(error); }
   }
@@ -90,7 +106,9 @@ export class ImportController {
 
   async getBatch(req: Request, res: Response, next: NextFunction) {
     try {
-      const batch = await importService.getBatch(req.params.batchId as string);
+      const batchId = req.params.batchId as string;
+      if (!isUuid(batchId)) return sendError(res, "Batch not found", 404);
+      const batch = await importService.getBatch(batchId);
       if (!batch) return sendError(res, "Batch not found", 404);
       sendSuccess(res, "Batch retrieved", batch);
     } catch (error) { next(error); }

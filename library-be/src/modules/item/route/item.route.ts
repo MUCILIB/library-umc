@@ -6,8 +6,10 @@ import { publicApiLimiter } from "../../../middlewares/rateLimiter";
 
 const router = Router();
 
-// Item CRUD
+// Item CRUD & Specific Utility Routes
 router.get("/items", publicApiLimiter, (req, res, next) => itemController.getAll(req, res, next));
+router.get("/items/bulk-labels", publicApiLimiter, isAuthenticated, requireRole(["super_admin", "staff"]), (req, res, next) => itemController.bulkLabels(req, res, next));
+router.get("/items/generate-code/:bibliographyId", publicApiLimiter, isAuthenticated, requireRole(["super_admin", "staff"]), (req, res, next) => itemController.generateCode(req, res, next));
 router.get("/items/:id", publicApiLimiter, (req, res, next) => itemController.getById(req, res, next));
 router.post("/items", publicApiLimiter, isAuthenticated, requireRole(["super_admin", "staff"]), (req, res, next) => itemController.create(req, res, next));
 router.patch("/items/:id", publicApiLimiter, isAuthenticated, requireRole(["super_admin", "staff"]), (req, res, next) => itemController.update(req, res, next));
@@ -28,7 +30,5 @@ router.post("/qr/lookup", publicApiLimiter, isAuthenticated, requireRole(["super
 router.get("/qr/lookup", publicApiLimiter, isAuthenticated, requireRole(["super_admin", "staff"]), (req, res, next) => itemController.lookup(req, res, next));
 router.post("/qr/scan", publicApiLimiter, isAuthenticated, requireRole(["super_admin", "staff"]), (req, res, next) => itemController.scan(req, res, next));
 router.get("/qr/scan", publicApiLimiter, isAuthenticated, requireRole(["super_admin", "staff"]), (req, res, next) => itemController.scan(req, res, next));
-router.get("/items/generate-code/:bibliographyId", publicApiLimiter, isAuthenticated, requireRole(["super_admin", "staff"]), (req, res, next) => itemController.generateCode(req, res, next));
-router.get("/items/bulk-labels", publicApiLimiter, isAuthenticated, requireRole(["super_admin", "staff"]), (req, res, next) => itemController.bulkLabels(req, res, next));
 
 export { router as itemRoutes };
