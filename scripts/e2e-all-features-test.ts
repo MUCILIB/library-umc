@@ -195,10 +195,11 @@ async function runE2E() {
 
   console.log("▶ [FASE 2 - STEP 7] Pendaftaran Bibliografi Buku Baru...");
   const bibTitle = `Rekayasa Sistem Informasi Enterprise E2E ${SUFFIX}`;
+  const randomIsbn = "978" + Math.floor(1000000000 + Math.random() * 9000000000).toString();
   const bibRes = await apiCall("POST", "/api/bibliographies", {
     title: bibTitle,
     author: "Prof. Dr. Ir. Budi Rahardjo, M.Sc.",
-    isbn: "9786020301234",
+    isbn: randomIsbn,
     publishYear: 2026,
     categoryId: categoryId || 1,
     locationId: locationId,
