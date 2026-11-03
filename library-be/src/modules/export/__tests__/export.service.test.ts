@@ -263,5 +263,33 @@ describe("Export Service", () => {
       expect(lines[1]).toContain("Siti");
       expect(lines[1]).toContain("Ekonomi");
     });
+
+    it("should sanitize formula injection characters in CSV fields (OWASP CWE-1236)", async () => {
+      (db.query.Users.findMany as ReturnType<typeof vi.fn>).mockResolvedValueOnce([
+        {
+          id: "u-malicious",
+          name: "=cmd|' /C calc'!A0",
+          email: "+62812345678",
+          role: "-admin",
+          banned: false,
+          createdAt: new Date("2025-01-01T00:00:00.000Z"),
+          member: {
+            nimNidn: "@mention",
+            faculty: "Teknik",
+            phone: "08123456789",
+            cardStatus: "active"
+          }
+        }
+      ]);
+
+      const csv = await exportService.exportUsers();
+      const lines = csv.replace("\uFEFF", "").trim().split("\n");
+      const maliciousRow = lines[1];
+      // Should prefix with single quote to prevent execution in Excel
+      expect(maliciousRow).toContain("'=cmd|' /C calc'!A0");
+      expect(maliciousRow).toContain("'+62812345678");
+      expect(maliciousRow).toContain("'-admin");
+      expect(maliciousRow).toContain("'@mention");
+    });
   });
 });

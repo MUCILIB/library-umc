@@ -87,3 +87,15 @@ export const strictLimiter = rateLimit({
   standardHeaders: "draft-7",
   legacyHeaders: false,
 });
+
+// 5. GUEST CHECK-IN - Visitor presensi & kiosk scanning (prevent attendance flood)
+export const guestCheckinLimiter = rateLimit({
+  windowMs: 1 * 60 * 1000, // 1 menit
+  limit: 60, // maks 60 check-in per menit per IP
+  message: {
+    status: 429,
+    message: "Terlalu banyak permintaan presensi. Silakan coba sesaat lagi.",
+  },
+  standardHeaders: "draft-7",
+  legacyHeaders: false,
+});

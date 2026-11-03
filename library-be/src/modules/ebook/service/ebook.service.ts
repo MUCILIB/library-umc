@@ -64,7 +64,7 @@ export class EbookService {
     let fileSize = 0;
 
     if (file) {
-      if (!file.mimetype.includes("pdf") && !file.buffer.subarray(0, 5).toString().startsWith("%PDF")) {
+      if (!file.mimetype.includes("pdf") || !file.buffer.subarray(0, 5).toString().startsWith("%PDF")) {
         throw new BadRequestError("Berkas e-book harus berformat PDF yang valid");
       }
       try {
@@ -348,10 +348,14 @@ export class EbookService {
       let fileSize = existingContent?.fileSize || 0;
 
       if (file) {
-        if (!file.mimetype.includes("pdf") && !file.buffer.subarray(0, 5).toString().startsWith("%PDF")) {
+        if (!file.mimetype.includes("pdf") || !file.buffer.subarray(0, 5).toString().startsWith("%PDF")) {
           throw new BadRequestError("Berkas e-book harus berformat PDF yang valid");
         }
-        pageCount = await pdfSlicingService.getPageCount(file.buffer);
+        try {
+          pageCount = await pdfSlicingService.getPageCount(file.buffer);
+        } catch (err: any) {
+          throw new BadRequestError(`Gagal membaca berkas PDF: ${err?.message || "File corrupt"}`);
+        }
         fileSize = file.size || file.buffer.length;
         const cleanFilename = `ebook-${Date.now()}-${file.originalname.replace(/[^a-zA-Z0-9._-]/g, "_")}`;
         storageKey = await this.storageService.save(cleanFilename, file.buffer);

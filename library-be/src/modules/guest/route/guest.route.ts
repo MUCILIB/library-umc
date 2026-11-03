@@ -4,6 +4,10 @@ import {
   isAuthenticated,
   requireRole
 } from "../../../middlewares/auth.middleware";
+import {
+  publicApiLimiter,
+  guestCheckinLimiter
+} from "../../../middlewares/rateLimiter";
 
 const router = Router();
 const guestController = new GuestController();
@@ -73,6 +77,7 @@ const guestController = new GuestController();
  * */
 router.get(
   "/guests/search",
+  publicApiLimiter,
   isAuthenticated,
   requireRole(["super_admin", "staff"]),
   guestController.searchCampusUsers
@@ -255,7 +260,7 @@ router.post(
  *       400:
  *         description: Validation error
  */
-router.post("/guests/scan", guestController.scanMember);
+router.post("/guests/scan", guestCheckinLimiter, guestController.scanMember);
 
 /**
  * @swagger
@@ -294,7 +299,7 @@ router.post("/guests/scan", guestController.scanMember);
  *       400:
  *         description: Validation error
  */
-router.post("/guests/non-member", guestController.createNonMember);
+router.post("/guests/non-member", guestCheckinLimiter, guestController.createNonMember);
 
 /**
  * @swagger
@@ -306,10 +311,12 @@ router.post("/guests/non-member", guestController.createNonMember);
 
 router.post(
   "/guests/absensi",
+  guestCheckinLimiter,
   guestController.createAbsensi
 );
 router.post(
   "/guest/absensi",
+  guestCheckinLimiter,
   guestController.createAbsensi
 );
 

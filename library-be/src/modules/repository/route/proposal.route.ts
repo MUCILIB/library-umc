@@ -3,6 +3,7 @@ import multer from "multer";
 import { proposalController } from "../controller/proposal.controller";
 import { isAuthenticated, requireRole } from "../../../middlewares/auth.middleware";
 import { publicApiLimiter } from "../../../middlewares/rateLimiter";
+import { generateStreamTicket } from "../../../utils/stream-ticket";
 
 const router = Router();
 
@@ -35,6 +36,25 @@ router.get(
   publicApiLimiter,
   isAuthenticated,
   (req, res, next) => proposalController.getAll(req, res, next)
+);
+
+// Ephemeral stream ticket for secure PDF access without exposing master auth token (SEC-01)
+router.get(
+  ["/repository/stream-ticket", "/api/repository/stream-ticket"],
+  publicApiLimiter,
+  isAuthenticated,
+  (req, res) => {
+    const user = req.user as any;
+    const ticket = generateStreamTicket(user);
+    res.status(200).json({
+      success: true,
+      message: "Stream ticket generated successfully",
+      data: {
+        ticket,
+        expiresIn: 60,
+      },
+    });
+  }
 );
 
 router.get(

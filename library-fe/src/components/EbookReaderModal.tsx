@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "react-router";
 import {
   X,
@@ -34,8 +34,47 @@ export default function EbookReaderModal({
     (session as any)?.session?.token ||
     (session as any)?.token ||
     (typeof window !== "undefined" ? localStorage.getItem("better_auth_token") : null);
-  const tokenParam = sessionToken ? `?token=${encodeURIComponent(sessionToken)}` : "";
-  const streamUrl = `${API_BASE_URL}/api/ebooks/${ebookId}/stream${tokenParam}#toolbar=0&navpanes=0&scrollbar=1`;
+
+  const [blobUrl, setBlobUrl] = useState<string | null>(null);
+  const [loadingPdf, setLoadingPdf] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    let active = true;
+    let createdUrl: string | null = null;
+    setLoadingPdf(true);
+    setLoadError(null);
+
+    const streamUrl = `${API_BASE_URL}/api/ebooks/${ebookId}/stream`;
+    fetch(streamUrl, {
+      credentials: "include",
+      headers: sessionToken ? { Authorization: `Bearer ${sessionToken}` } : {}
+    })
+      .then(async (res) => {
+        if (!res.ok) throw new Error("Gagal memuat e-book");
+        return res.blob();
+      })
+      .then((blob) => {
+        if (active) {
+          createdUrl = URL.createObjectURL(blob);
+          setBlobUrl(createdUrl);
+          setLoadingPdf(false);
+        }
+      })
+      .catch((err) => {
+        if (active) {
+          setLoadError(err?.message || "Gagal memuat berkas e-book");
+          setLoadingPdf(false);
+        }
+      });
+
+    return () => {
+      active = false;
+      if (createdUrl) URL.revokeObjectURL(createdUrl);
+    };
+  }, [isOpen, ebookId, sessionToken]);
 
   if (!isOpen) return null;
 
@@ -85,11 +124,24 @@ export default function EbookReaderModal({
 
         {/* Reader Frame */}
         <div className="flex-1 bg-muted relative">
-          <iframe
-            src={streamUrl}
-            title={title}
-            className="w-full h-full border-0"
-          />
+          {loadingPdf && (
+            <div className="absolute inset-0 flex items-center justify-center bg-background/60 z-10">
+              <span className="text-sm font-medium text-muted-foreground animate-pulse">
+                Membuka berkas e-book...
+              </span>
+            </div>
+          )}
+          {loadError && !loadingPdf ? (
+            <div className="absolute inset-0 flex items-center justify-center p-6 text-center text-sm text-destructive">
+              {loadError}
+            </div>
+          ) : blobUrl ? (
+            <iframe
+              src={`${blobUrl}#toolbar=0&navpanes=0&scrollbar=1`}
+              title={title}
+              className="w-full h-full border-0"
+            />
+          ) : null}
         </div>
 
         {/* Reader Bottom Banner (Guest vs Authenticated) */}
