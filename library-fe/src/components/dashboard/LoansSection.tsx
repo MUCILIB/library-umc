@@ -22,6 +22,7 @@ import { API_BASE_URL } from "@/utils/api-config";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/useToast";
 import { exportApi } from "@/api/client";
+import Modal from "@/components/ui/modal";
 
 
 interface Loan {
@@ -769,179 +770,280 @@ export default function LoansSection({ searchTerm, onSearchChange }: LoansSectio
       </div>
 
       {/* ── Modal: Approve Loan ── */}
-      {selectedLoan && (
-        <div className="fixed inset-0 bg-slate-900/50 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
-          <div className="bg-card rounded-[24px] p-6 max-w-md w-full shadow-2xl animate-slide-up">
-            <h3 className="text-[18px] font-extrabold text-foreground mb-5">Setujui Peminjaman</h3>
-
-            <div className="space-y-4 mb-6">
-              <div className="p-4 bg-muted rounded-xl space-y-3 border border-border">
-                <p className="text-[13px] text-muted-foreground flex justify-between">
-                  <span className="font-bold text-muted-foreground">Buku</span>
-                  <span className="font-bold text-foreground text-right">{selectedLoan.item?.bibliography?.title}</span>
-                </p>
-                <div className="h-px bg-muted"></div>
-                <p className="text-[13px] text-muted-foreground flex justify-between">
-                  <span className="font-bold text-muted-foreground">Peminjam</span>
-                  <span className="font-bold text-foreground text-right">
-                    {selectedLoan.member?.user?.name} <span className="text-muted-foreground">({selectedLoan.member?.nimNidn})</span>
-                  </span>
-                </p>
+      <Modal
+        isOpen={!!selectedLoan}
+        onClose={() => {
+          setSelectedLoan(null);
+          setActionNotes("");
+        }}
+        title="Setujui Peminjaman"
+        size="md"
+      >
+        {selectedLoan && (
+          <div className="space-y-4 p-2">
+            <div className="p-4 bg-muted/60 rounded-xl space-y-3 border border-border">
+              <div className="text-[13px] text-muted-foreground flex justify-between items-center">
+                <span className="font-semibold text-muted-foreground">Buku</span>
+                <span className="font-bold text-foreground text-right max-w-[65%] truncate">
+                  {selectedLoan.item?.bibliography?.title || "-"}
+                </span>
               </div>
-
-              <div>
-                <label className="text-[12px] font-bold text-muted-foreground mb-2 block">Catatan Tambahan (Opsional)</label>
-                <textarea
-                  placeholder="Opsional, berikan pesan ke mahasiswa..."
-                  value={actionNotes}
-                  onChange={(e) => setActionNotes(e.target.value)}
-                  className="w-full px-4 py-3 bg-muted border border-border rounded-xl text-[13px] text-foreground font-medium focus:ring-2 focus:ring-green-500/20 focus:border-green-500/40 transition-all outline-none"
-                  rows={3}
-                />
+              <div className="h-px bg-border"></div>
+              <div className="text-[13px] text-muted-foreground flex justify-between items-center">
+                <span className="font-semibold text-muted-foreground">Peminjam</span>
+                <span className="font-bold text-foreground text-right">
+                  {selectedLoan.member?.user?.name}{" "}
+                  <span className="text-muted-foreground font-normal">
+                    ({selectedLoan.member?.nimNidn})
+                  </span>
+                </span>
               </div>
             </div>
 
-            <div className="flex gap-3">
+            <div>
+              <label className="mb-1 block text-xs font-semibold text-foreground">
+                Catatan Persetujuan (Opsional)
+              </label>
+              <textarea
+                placeholder="Opsional, berikan pesan atau catatan untuk peminjam..."
+                value={actionNotes}
+                onChange={(e) => setActionNotes(e.target.value)}
+                className="w-full rounded-lg border border-border px-3 py-2 text-sm bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 resize-none"
+                rows={3}
+              />
+            </div>
+
+            <div className="flex items-center justify-end gap-3 pt-2">
               <button
-                onClick={() => { setSelectedLoan(null); setActionNotes(''); }}
-                className="flex-1 px-4 py-3 bg-card border border-border rounded-xl text-[13px] font-bold text-muted-foreground hover:bg-surface-hover transition-all"
+                type="button"
+                onClick={() => {
+                  setSelectedLoan(null);
+                  setActionNotes("");
+                }}
+                disabled={processingId === selectedLoan.id}
+                className="h-9 rounded-lg border border-border px-4 text-sm font-medium text-muted-foreground hover:bg-muted transition-colors"
               >
                 Batal
               </button>
               <button
+                type="button"
+                id="btn-confirm-approve"
                 onClick={() => handleApprove(selectedLoan.id)}
                 disabled={processingId === selectedLoan.id}
-                className="flex-1 bg-green-600 text-white px-4 py-3 rounded-xl text-[13px] font-bold hover:bg-green-700 transition-all shadow-lg shadow-green-600/20 disabled:opacity-50"
+                className="inline-flex h-9 items-center gap-2 rounded-lg bg-green-600 px-4 text-sm font-medium text-white hover:bg-green-700 disabled:opacity-50 shadow-sm transition-colors"
               >
-                {processingId === selectedLoan.id ? 'Memproses...' : 'Setujui Sekarang'}
+                {processingId === selectedLoan.id && (
+                  <Loader2 className="size-4 animate-spin" />
+                )}
+                <span>
+                  {processingId === selectedLoan.id
+                    ? "Memproses..."
+                    : "Setujui Sekarang"}
+                </span>
               </button>
             </div>
           </div>
-        </div>
-      )}
+        )}
+      </Modal>
 
       {/* ── Modal: Return Book ── */}
-      {returnModalLoan && (
-        <div className="fixed inset-0 bg-slate-900/50 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
-          <div className="bg-card rounded-[24px] p-6 max-w-md w-full shadow-2xl animate-slide-up">
+      <Modal
+        isOpen={!!returnModalLoan}
+        onClose={() => {
+          setReturnModalLoan(null);
+          setReturnResult(null);
+        }}
+        title={
+          returnResult
+            ? (returnResult.isLate ? "Pengembalian Terlambat" : "Buku Berhasil Dikembalikan")
+            : "Konfirmasi Pengembalian Buku"
+        }
+        size="md"
+      >
+        {returnModalLoan && (
+          <div className="space-y-4 p-2">
             {returnResult ? (
-              <>
-                {/* ── Result State ── */}
-                <div className={`w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 ${
-                  returnResult.isLate ? 'bg-orange-100 dark:bg-orange-900' : 'bg-green-100 dark:bg-green-900'
-                }`}>
-                  {returnResult.isLate
-                    ? <AlertTriangle size={28} className="text-orange-500 dark:text-orange-400" />
-                    : <CheckCircle size={28} className="text-green-500" />
-                  }
+              <div className="text-center py-2">
+                <div
+                  className={`w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-3 ${
+                    returnResult.isLate
+                      ? "bg-orange-100 dark:bg-orange-950 text-orange-600 dark:text-orange-400"
+                      : "bg-green-100 dark:bg-green-950 text-green-600 dark:text-green-400"
+                  }`}
+                >
+                  {returnResult.isLate ? (
+                    <AlertTriangle size={28} />
+                  ) : (
+                    <CheckCircle size={28} />
+                  )}
                 </div>
-                <h3 className="text-[18px] font-extrabold text-foreground mb-3 text-center">
-                  {returnResult.isLate ? 'Pengembalian Terlambat' : 'Buku Berhasil Dikembalikan!'}
+                <h3 className="text-base font-bold text-foreground mb-2">
+                  {returnResult.isLate
+                    ? "Pengembalian Melewati Batas Waktu"
+                    : "Buku Berhasil Dikembalikan!"}
                 </h3>
-                <p className="text-sm text-muted-foreground font-medium text-center leading-relaxed mb-6">
+                <p className="text-sm text-muted-foreground font-medium leading-relaxed mb-5">
                   {returnResult.message}
                 </p>
                 <button
-                  onClick={() => { setReturnModalLoan(null); setReturnResult(null); }}
-                  className="w-full bg-primary hover:bg-primary/90 text-white px-4 py-3 rounded-xl text-[13px] font-bold transition-all"
+                  type="button"
+                  onClick={() => {
+                    setReturnModalLoan(null);
+                    setReturnResult(null);
+                  }}
+                  className="w-full h-9 rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
                 >
                   Tutup
                 </button>
-              </>
+              </div>
             ) : (
               <>
-                {/* ── Confirm State ── */}
-                <h3 className="text-[18px] font-extrabold text-foreground mb-5">Konfirmasi Pengembalian Buku</h3>
-
-                <div className="p-4 bg-muted rounded-xl space-y-3 border border-border mb-6">
-                  <p className="text-[13px] text-muted-foreground flex justify-between items-center">
-                    <span className="font-bold text-muted-foreground">Kode Buku</span>
+                <div className="p-4 bg-muted/60 rounded-xl space-y-3 border border-border">
+                  <div className="text-[13px] text-muted-foreground flex justify-between items-center">
+                    <span className="font-semibold text-muted-foreground">Kode Buku</span>
                     <span className="font-mono font-bold text-primary px-2 py-0.5 bg-primary/10 rounded border border-primary/20 text-xs">
-                      {returnModalLoan.item?.itemCode || returnModalLoan.item?.barcode || (returnModalLoan as any).itemCode || "-"}
+                      {returnModalLoan.item?.itemCode ||
+                        returnModalLoan.item?.barcode ||
+                        (returnModalLoan as any).itemCode ||
+                        "-"}
                     </span>
-                  </p>
-                  <div className="h-px bg-muted"></div>
-                  <p className="text-[13px] text-muted-foreground flex justify-between">
-                    <span className="font-bold text-muted-foreground">Judul Buku</span>
-                    <span className="font-bold text-foreground text-right max-w-[60%] truncate">{returnModalLoan.item?.bibliography?.title || returnModalLoan.bibliographyTitle || "-"}</span>
-                  </p>
-                  <div className="h-px bg-muted"></div>
-                  <p className="text-[13px] text-muted-foreground flex justify-between">
-                    <span className="font-bold text-muted-foreground">Peminjam</span>
-                    <span className="font-bold text-foreground">{returnModalLoan.member?.user?.name || returnModalLoan.memberName || "-"}</span>
-                  </p>
-                  <div className="h-px bg-muted"></div>
-                  <p className="text-[13px] text-muted-foreground flex justify-between">
-                    <span className="font-bold text-muted-foreground">Batas Kembali</span>
-                    <span className={`font-bold ${
-                      new Date(returnModalLoan.dueDate).setHours(0,0,0,0) < new Date().setHours(0,0,0,0)
-                        ? 'text-destructive' : 'text-foreground'
-                    }`}>
-                      {new Date(returnModalLoan.dueDate).toLocaleDateString('id-ID', {day:'numeric',month:'long',year:'numeric'})}
+                  </div>
+                  <div className="h-px bg-border"></div>
+                  <div className="text-[13px] text-muted-foreground flex justify-between items-center">
+                    <span className="font-semibold text-muted-foreground">Judul Buku</span>
+                    <span className="font-bold text-foreground text-right max-w-[65%] truncate">
+                      {returnModalLoan.item?.bibliography?.title ||
+                        returnModalLoan.bibliographyTitle ||
+                        "-"}
                     </span>
-                  </p>
+                  </div>
+                  <div className="h-px bg-border"></div>
+                  <div className="text-[13px] text-muted-foreground flex justify-between items-center">
+                    <span className="font-semibold text-muted-foreground">Peminjam</span>
+                    <span className="font-bold text-foreground text-right">
+                      {returnModalLoan.member?.user?.name ||
+                        returnModalLoan.memberName ||
+                        "-"}
+                    </span>
+                  </div>
+                  <div className="h-px bg-border"></div>
+                  <div className="text-[13px] text-muted-foreground flex justify-between items-center">
+                    <span className="font-semibold text-muted-foreground">Batas Kembali</span>
+                    <span
+                      className={`font-bold ${
+                        new Date(returnModalLoan.dueDate).setHours(0, 0, 0, 0) <
+                        new Date().setHours(0, 0, 0, 0)
+                          ? "text-destructive"
+                          : "text-foreground"
+                      }`}
+                    >
+                      {new Date(returnModalLoan.dueDate).toLocaleDateString("id-ID", {
+                        day: "numeric",
+                        month: "long",
+                        year: "numeric",
+                      })}
+                    </span>
+                  </div>
                 </div>
 
-                <p className="text-[12px] text-muted-foreground font-medium mb-5 text-center">
-                  Denda keterlambatan: <strong className="text-primary">Rp 500 / hari</strong> jika melewati batas kembali.
+                <p className="text-xs text-muted-foreground font-medium text-center">
+                  Denda keterlambatan:{" "}
+                  <strong className="text-primary font-bold">Rp 500 / hari</strong>{" "}
+                  jika melewati batas kembali.
                 </p>
 
-                <div className="flex gap-3">
+                <div className="flex items-center justify-end gap-3 pt-2">
                   <button
+                    type="button"
                     onClick={() => setReturnModalLoan(null)}
-                    className="flex-1 px-4 py-3 bg-card border border-border rounded-xl text-[13px] font-bold text-muted-foreground hover:bg-surface-hover transition-all"
+                    disabled={processingId === returnModalLoan.id}
+                    className="h-9 rounded-lg border border-border px-4 text-sm font-medium text-muted-foreground hover:bg-muted transition-colors"
                   >
                     Batal
                   </button>
                   <button
+                    type="button"
                     id="btn-confirm-return"
                     onClick={() => handleReturn(returnModalLoan.id)}
                     disabled={processingId === returnModalLoan.id}
-                    className="flex-1 bg-blue-600 text-white px-4 py-3 rounded-xl text-[13px] font-bold hover:bg-blue-700 transition-all shadow-lg shadow-blue-600/20 disabled:opacity-50 flex items-center justify-center gap-2"
+                    className="inline-flex h-9 items-center gap-2 rounded-lg bg-blue-600 px-4 text-sm font-medium text-white shadow-sm hover:bg-blue-700 transition-colors disabled:opacity-50"
                   >
-                    <RotateCcw size={14} />
-                    {processingId === returnModalLoan.id ? 'Memproses...' : 'Kembalikan Buku'}
+                    {processingId === returnModalLoan.id ? (
+                      <Loader2 className="size-4 animate-spin" />
+                    ) : (
+                      <RotateCcw className="size-4" />
+                    )}
+                    <span>
+                      {processingId === returnModalLoan.id
+                        ? "Memproses..."
+                        : "Kembalikan Buku"}
+                    </span>
                   </button>
                 </div>
               </>
             )}
           </div>
-        </div>
-      )}
+        )}
+      </Modal>
 
-      {/* ── Modal: Reject Loan (menggantikan prompt() native) ── */}
-      {rejectModal && (
-        <div className="fixed inset-0 bg-slate-900/50 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
-          <div className="bg-card rounded-[24px] p-6 max-w-md w-full shadow-2xl">
-            <h3 className="text-[18px] font-extrabold text-foreground mb-2">Tolak Peminjaman</h3>
-            <p className="text-sm text-muted-foreground mb-5">Berikan alasan penolakan yang jelas kepada peminjam.</p>
+      {/* ── Modal: Reject Loan ── */}
+      <Modal
+        isOpen={!!rejectModal}
+        onClose={() => setRejectModal(null)}
+        title="Tolak Peminjaman"
+        size="md"
+      >
+        {rejectModal && (
+          <div className="space-y-4 p-2">
+            <p className="text-sm text-muted-foreground">
+              Berikan alasan penolakan yang jelas agar peminjam mengetahui alasan permintaan ditolak.
+            </p>
 
-            <textarea
-              autoFocus
-              value={rejectModal.reason}
-              onChange={(e) => setRejectModal({ ...rejectModal, reason: e.target.value })}
-              placeholder="Contoh: Buku sedang dalam perbaikan, kartu tidak valid, dll."
-              className="w-full px-4 py-3 bg-muted border border-border rounded-xl text-[13px] font-medium focus:ring-2 focus:ring-red-500/20 focus:border-red-400 transition-all outline-none mb-5 resize-none"
-              rows={3}
-            />
+            <div>
+              <label className="mb-1 block text-xs font-semibold text-foreground">
+                Alasan Penolakan *
+              </label>
+              <textarea
+                autoFocus
+                value={rejectModal.reason}
+                onChange={(e) =>
+                  setRejectModal({ ...rejectModal, reason: e.target.value })
+                }
+                placeholder="Contoh: Buku sedang dalam perbaikan, kartu tidak valid, dll."
+                className="w-full rounded-lg border border-border px-3 py-2 text-sm bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-destructive/20 focus:border-destructive resize-none"
+                rows={3}
+              />
+            </div>
 
-            <div className="flex gap-3">
+            <div className="flex items-center justify-end gap-3 pt-2">
               <button
+                type="button"
                 onClick={() => setRejectModal(null)}
-                className="flex-1 px-4 py-3 bg-card border border-border rounded-xl text-[13px] font-bold text-muted-foreground hover:bg-surface-hover transition-all"
+                disabled={processingId === rejectModal.loanId}
+                className="h-9 rounded-lg border border-border px-4 text-sm font-medium text-muted-foreground hover:bg-muted transition-colors"
               >
                 Batal
               </button>
               <button
+                type="button"
+                id="btn-confirm-reject"
                 onClick={handleReject}
-                className="flex-1 bg-destructive text-white px-4 py-3 rounded-xl text-[13px] font-bold hover:bg-destructive/90 transition-all shadow-lg shadow-red-600/20"
+                disabled={processingId === rejectModal.loanId}
+                className="inline-flex h-9 items-center gap-2 rounded-lg bg-destructive px-4 text-sm font-medium text-destructive-foreground hover:bg-destructive/90 disabled:opacity-50 shadow-sm transition-colors"
               >
-                Tolak Peminjaman
+                {processingId === rejectModal.loanId && (
+                  <Loader2 className="size-4 animate-spin" />
+                )}
+                <span>
+                  {processingId === rejectModal.loanId
+                    ? "Memproses..."
+                    : "Tolak Peminjaman"}
+                </span>
               </button>
             </div>
           </div>
-        </div>
-      )}
+        )}
+      </Modal>
     </div>
   );
 }

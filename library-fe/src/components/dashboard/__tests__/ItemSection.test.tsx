@@ -144,4 +144,25 @@ describe("ItemSection", () => {
       expect(screen.getAllByText(/Tambah Item/).length).toBeGreaterThan(0);
     });
   });
+
+  it('should open and close QR code modal dialog', async () => {
+    render(<ItemSection />);
+    await waitFor(() => {
+      expect(screen.getByText('ITEM-001')).toBeInTheDocument();
+    });
+    const qrButtons = screen.getAllByTitle('Lihat QR Code');
+    expect(qrButtons.length).toBeGreaterThan(0);
+    fireEvent.click(qrButtons[0]);
+
+    await waitFor(() => {
+      expect(screen.getByText('QR Code Salinan (Exemplar)')).toBeInTheDocument();
+      expect(screen.getByText('Unduh PNG')).toBeInTheDocument();
+      expect(screen.getByText('Unduh SVG')).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByText('Tutup'));
+    await waitFor(() => {
+      expect(screen.queryByText('QR Code Salinan (Exemplar)')).not.toBeInTheDocument();
+    });
+  });
 });

@@ -228,8 +228,10 @@ describe("LoanService Unit Tests", () => {
         });
         tx.insert = vi.fn().mockImplementation(() => ({
           values: vi.fn().mockImplementation((data: any) => {
-            insertedFine = data;
-            return Promise.resolve([{}]);
+            if (data.amount) {
+              insertedFine = data;
+            }
+            return Promise.resolve([{ id: "fine-1", ...data }]);
           }),
         }));
         return cb(tx);
@@ -238,6 +240,7 @@ describe("LoanService Unit Tests", () => {
       const result = await loanService.returnLoan("loan-1", "admin-1");
       expect(result.message).toContain("terlambat");
       expect(insertedFine.amount).toBe("2500");
+      expect(insertedFine.status).toBe("paid");
       expect(reservationService.fulfillNextReservation).toHaveBeenCalledWith(
         "bib-1",
       );

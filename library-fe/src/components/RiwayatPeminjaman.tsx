@@ -41,6 +41,7 @@ import {
   DialogFooter
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import Modal from "@/components/ui/modal";
 
 interface RiwayatPeminjamanProps {
   type: "active" | "history";
@@ -112,6 +113,53 @@ const RiwayatPeminjaman = ({
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedLoan, setSelectedLoan] = useState<LoanData | null>(null);
+  const [returnModalLoan, setReturnModalLoan] = useState<LoanData | null>(null);
+  const [extendModalLoan, setExtendModalLoan] = useState<LoanData | null>(null);
+  const [isSubmittingReturn, setIsSubmittingReturn] = useState(false);
+  const [isSubmittingExtend, setIsSubmittingExtend] = useState(false);
+  const toast = useToast();
+
+  const handleConfirmReturn = async () => {
+    if (!returnModalLoan) return;
+    try {
+      setIsSubmittingReturn(true);
+      const res = await loanService.createReturnRequest(returnModalLoan.id);
+      toast.success(
+        "Pengajuan Berhasil",
+        res.message || "Pengajuan pengembalian berhasil dikirim. Menunggu konfirmasi admin."
+      );
+      setReturnModalLoan(null);
+      fetchLoans();
+    } catch (err) {
+      toast.error(
+        "Gagal",
+        err instanceof Error ? err.message : "Gagal mengajukan pengembalian"
+      );
+    } finally {
+      setIsSubmittingReturn(false);
+    }
+  };
+
+  const handleConfirmExtend = async () => {
+    if (!extendModalLoan) return;
+    try {
+      setIsSubmittingExtend(true);
+      const res = await loanService.extendLoan(extendModalLoan.id);
+      toast.success(
+        "Perpanjangan Berhasil",
+        res.message || "Pengajuan perpanjangan berhasil dikirim."
+      );
+      setExtendModalLoan(null);
+      fetchLoans();
+    } catch (err) {
+      toast.error(
+        "Gagal",
+        err instanceof Error ? err.message : "Gagal memperpanjang peminjaman"
+      );
+    } finally {
+      setIsSubmittingExtend(false);
+    }
+  };
   const [displayMode, setDisplayMode] = useState<"auto" | "table" | "cards">("auto");
   const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false);
   const itemsPerPage = 8;
@@ -248,9 +296,52 @@ const RiwayatPeminjaman = ({
       <div className="space-y-4">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 animate-fade-in">
           {loans.map((loan) => (
-            <ActiveLoanCard key={loan.id} loan={loan} onRefresh={fetchLoans} />
+            <ActiveLoanCard
+              key={loan.id}
+              loan={loan}
+              onReturnClick={(l) => setReturnModalLoan(l)}
+              onExtendClick={(l) => setExtendModalLoan(l)}
+            />
           ))}
         </div>
+
+        {/* Modal: Kembalikan Buku */}
+        <Modal
+          isOpen={!!returnModalLoan}
+          onClose={() => {
+            if (!isSubmittingReturn) setReturnModalLoan(null);
+          }}
+          title="Konfirmasi Pengembalian Buku"
+          size="md"
+        >
+          {returnModalLoan && (
+            <ReturnModalContent
+              loan={returnModalLoan}
+              loading={isSubmittingReturn}
+              onClose={() => setReturnModalLoan(null)}
+              onConfirm={handleConfirmReturn}
+            />
+          )}
+        </Modal>
+
+        {/* Modal: Perpanjang Buku */}
+        <Modal
+          isOpen={!!extendModalLoan}
+          onClose={() => {
+            if (!isSubmittingExtend) setExtendModalLoan(null);
+          }}
+          title="Konfirmasi Perpanjangan Peminjaman"
+          size="md"
+        >
+          {extendModalLoan && (
+            <ExtendModalContent
+              loan={extendModalLoan}
+              loading={isSubmittingExtend}
+              onClose={() => setExtendModalLoan(null)}
+              onConfirm={handleConfirmExtend}
+            />
+          )}
+        </Modal>
       </div>
     );
   }
@@ -747,10 +838,56 @@ const RiwayatPeminjaman = ({
       {selectedLoan && (
         <LoanDetailDialog
           loan={selectedLoan}
-          type="history"
+          type={type}
           onClose={() => setSelectedLoan(null)}
+          onReturnClick={(l) => {
+            setSelectedLoan(null);
+            setReturnModalLoan(l);
+          }}
+          onExtendClick={(l) => {
+            setSelectedLoan(null);
+            setExtendModalLoan(l);
+          }}
         />
       )}
+
+      {/* Modal: Kembalikan Buku */}
+      <Modal
+        isOpen={!!returnModalLoan}
+        onClose={() => {
+          if (!isSubmittingReturn) setReturnModalLoan(null);
+        }}
+        title="Konfirmasi Pengembalian Buku"
+        size="md"
+      >
+        {returnModalLoan && (
+          <ReturnModalContent
+            loan={returnModalLoan}
+            loading={isSubmittingReturn}
+            onClose={() => setReturnModalLoan(null)}
+            onConfirm={handleConfirmReturn}
+          />
+        )}
+      </Modal>
+
+      {/* Modal: Perpanjang Buku */}
+      <Modal
+        isOpen={!!extendModalLoan}
+        onClose={() => {
+          if (!isSubmittingExtend) setExtendModalLoan(null);
+        }}
+        title="Konfirmasi Perpanjangan Peminjaman"
+        size="md"
+      >
+        {extendModalLoan && (
+          <ExtendModalContent
+            loan={extendModalLoan}
+            loading={isSubmittingExtend}
+            onClose={() => setExtendModalLoan(null)}
+            onConfirm={handleConfirmExtend}
+          />
+        )}
+      </Modal>
     </div>
   );
 };
@@ -759,11 +896,15 @@ const RiwayatPeminjaman = ({
 const LoanDetailDialog = ({
   loan,
   type,
-  onClose
+  onClose,
+  onReturnClick,
+  onExtendClick
 }: {
   loan: LoanData;
   type: "active" | "history";
   onClose: () => void;
+  onReturnClick?: (loan: LoanData) => void;
+  onExtendClick?: (loan: LoanData) => void;
 }) => {
   const title = getLoanTitle(loan);
   const author = getLoanAuthor(loan);
@@ -950,10 +1091,31 @@ const LoanDetailDialog = ({
           )}
         </div>
 
-        <DialogFooter>
+        <DialogFooter className="flex flex-col sm:flex-row items-center gap-2">
+          {type === "active" && !returnPending && (
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full sm:w-auto flex-1 rounded-xl text-xs font-bold border-blue-200 text-blue-700 hover:bg-blue-50 dark:border-blue-800 dark:text-blue-400 dark:hover:bg-blue-950"
+              onClick={() => onReturnClick?.(loan)}
+            >
+              <RotateCcw size={12} className="mr-1.5" />
+              Kembalikan
+            </Button>
+          )}
+          {type === "active" && !isLate && loan.status !== "extended" && !returnPending && (
+            <Button
+              type="button"
+              className="w-full sm:w-auto flex-1 rounded-xl text-xs font-bold bg-primary text-primary-foreground hover:bg-primary/90"
+              onClick={() => onExtendClick?.(loan)}
+            >
+              <RefreshCw size={12} className="mr-1.5" />
+              Perpanjang
+            </Button>
+          )}
           <Button
             variant="outline"
-            className="w-full rounded-xl text-xs font-bold"
+            className="w-full sm:w-auto rounded-xl text-xs font-bold"
             onClick={onClose}
           >
             Tutup
@@ -964,22 +1126,231 @@ const LoanDetailDialog = ({
   );
 };
 
+// Helper components for Action Modals
+interface ActionModalContentProps {
+  loan: LoanData;
+  loading: boolean;
+  onClose: () => void;
+  onConfirm: () => void;
+}
+
+const ReturnModalContent = ({
+  loan,
+  loading,
+  onClose,
+  onConfirm
+}: ActionModalContentProps) => {
+  const title = getLoanTitle(loan);
+  const author = getLoanAuthor(loan);
+  const itemCode =
+    loan.item?.itemCode ||
+    loan.item?.barcode ||
+    loan.item?.uniqueCode;
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const dueDate = loan.dueDate ? new Date(loan.dueDate) : null;
+  if (dueDate) dueDate.setHours(0, 0, 0, 0);
+
+  const daysLeft = dueDate
+    ? Math.round((dueDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
+    : null;
+  const isLate = daysLeft !== null && daysLeft < 0;
+
+  return (
+    <div className="space-y-4 p-2">
+      <div className="p-4 bg-muted/60 rounded-xl space-y-3 border border-border">
+        <div className="text-[13px] text-muted-foreground flex justify-between items-center">
+          <span className="font-semibold text-muted-foreground">Judul Buku</span>
+          <span className="font-bold text-foreground text-right max-w-[65%] truncate">
+            {title}
+          </span>
+        </div>
+        <div className="h-px bg-border"></div>
+        <div className="text-[13px] text-muted-foreground flex justify-between items-center">
+          <span className="font-semibold text-muted-foreground">Penulis</span>
+          <span className="font-bold text-foreground text-right max-w-[65%] truncate">
+            {author}
+          </span>
+        </div>
+        {itemCode && (
+          <>
+            <div className="h-px bg-border"></div>
+            <div className="text-[13px] text-muted-foreground flex justify-between items-center">
+              <span className="font-semibold text-muted-foreground">Kode Eksemplar</span>
+              <span className="font-mono font-bold text-primary px-2 py-0.5 bg-primary/10 rounded border border-primary/20 text-xs">
+                {itemCode}
+              </span>
+            </div>
+          </>
+        )}
+        <div className="h-px bg-border"></div>
+        <div className="text-[13px] text-muted-foreground flex justify-between items-center">
+          <span className="font-semibold text-muted-foreground">Batas Kembali</span>
+          <span
+            className={`font-bold ${
+              isLate ? "text-destructive" : "text-foreground"
+            }`}
+          >
+            {formatDate(loan.dueDate)}
+          </span>
+        </div>
+      </div>
+
+      {isLate ? (
+        <div className="p-3.5 bg-destructive/10 border border-destructive/20 rounded-xl flex items-start gap-3 text-xs text-destructive">
+          <AlertCircle className="size-4 shrink-0 mt-0.5" />
+          <div className="space-y-1">
+            <p className="font-bold">
+              Peminjaman Melewati Batas Waktu ({Math.abs(daysLeft!)} hari)
+            </p>
+            <p className="text-muted-foreground text-[11px] leading-relaxed">
+              Denda keterlambatan Rp 500/hari akan tercatat dan dapat Anda selesaikan melalui menu Denda atau langsung ke meja sirkulasi perpustakaan.
+            </p>
+          </div>
+        </div>
+      ) : (
+        <div className="p-3.5 bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800 rounded-xl flex items-start gap-3 text-xs text-blue-700 dark:text-blue-300">
+          <RotateCcw className="size-4 shrink-0 mt-0.5 text-blue-600 dark:text-blue-400" />
+          <div className="space-y-1">
+            <p className="font-bold">Pengajuan Pengembalian</p>
+            <p className="text-muted-foreground text-[11px] leading-relaxed">
+              Setelah konfirmasi ini diajukan, silakan serahkan fisik buku ke meja sirkulasi perpustakaan untuk diverifikasi oleh petugas.
+            </p>
+          </div>
+        </div>
+      )}
+
+      <div className="flex items-center justify-end gap-3 pt-2">
+        <button
+          type="button"
+          onClick={onClose}
+          disabled={loading}
+          className="h-9 rounded-lg border border-border px-4 text-sm font-medium text-muted-foreground hover:bg-muted transition-colors disabled:opacity-50"
+        >
+          Batal
+        </button>
+        <button
+          type="button"
+          id="btn-confirm-user-return"
+          onClick={onConfirm}
+          disabled={loading}
+          className="inline-flex h-9 items-center gap-2 rounded-lg bg-blue-600 px-4 text-sm font-medium text-white shadow-sm hover:bg-blue-700 transition-colors disabled:opacity-50"
+        >
+          {loading ? (
+            <RefreshCw className="size-4 animate-spin" />
+          ) : (
+            <RotateCcw className="size-4" />
+          )}
+          <span>{loading ? "Memproses..." : "Ajukan Pengembalian"}</span>
+        </button>
+      </div>
+    </div>
+  );
+};
+
+const ExtendModalContent = ({
+  loan,
+  loading,
+  onClose,
+  onConfirm
+}: ActionModalContentProps) => {
+  const title = getLoanTitle(loan);
+  const author = getLoanAuthor(loan);
+  const itemCode =
+    loan.item?.itemCode ||
+    loan.item?.barcode ||
+    loan.item?.uniqueCode;
+
+  return (
+    <div className="space-y-4 p-2">
+      <div className="p-4 bg-muted/60 rounded-xl space-y-3 border border-border">
+        <div className="text-[13px] text-muted-foreground flex justify-between items-center">
+          <span className="font-semibold text-muted-foreground">Judul Buku</span>
+          <span className="font-bold text-foreground text-right max-w-[65%] truncate">
+            {title}
+          </span>
+        </div>
+        <div className="h-px bg-border"></div>
+        <div className="text-[13px] text-muted-foreground flex justify-between items-center">
+          <span className="font-semibold text-muted-foreground">Penulis</span>
+          <span className="font-bold text-foreground text-right max-w-[65%] truncate">
+            {author}
+          </span>
+        </div>
+        {itemCode && (
+          <>
+            <div className="h-px bg-border"></div>
+            <div className="text-[13px] text-muted-foreground flex justify-between items-center">
+              <span className="font-semibold text-muted-foreground">Kode Eksemplar</span>
+              <span className="font-mono font-bold text-primary px-2 py-0.5 bg-primary/10 rounded border border-primary/20 text-xs">
+                {itemCode}
+              </span>
+            </div>
+          </>
+        )}
+        <div className="h-px bg-border"></div>
+        <div className="text-[13px] text-muted-foreground flex justify-between items-center">
+          <span className="font-semibold text-muted-foreground">Batas Kembali Saat Ini</span>
+          <span className="font-bold text-foreground">
+            {formatDate(loan.dueDate)}
+          </span>
+        </div>
+      </div>
+
+      <div className="p-3.5 bg-purple-50 dark:bg-purple-950/40 border border-purple-200 dark:border-purple-800 rounded-xl flex items-start gap-3 text-xs text-purple-700 dark:text-purple-300">
+        <Clock className="size-4 shrink-0 mt-0.5 text-purple-600 dark:text-purple-400" />
+        <div className="space-y-1">
+          <p className="font-bold">Ketentuan Perpanjangan</p>
+          <p className="text-muted-foreground text-[11px] leading-relaxed">
+            Masa peminjaman buku akan diperpanjang sesuai ketentuan perpustakaan. Pastikan buku tidak melewati batas waktu dan tidak dalam antrean reservasi anggota lain.
+          </p>
+        </div>
+      </div>
+
+      <div className="flex items-center justify-end gap-3 pt-2">
+        <button
+          type="button"
+          onClick={onClose}
+          disabled={loading}
+          className="h-9 rounded-lg border border-border px-4 text-sm font-medium text-muted-foreground hover:bg-muted transition-colors disabled:opacity-50"
+        >
+          Batal
+        </button>
+        <button
+          type="button"
+          id="btn-confirm-user-extend"
+          onClick={onConfirm}
+          disabled={loading}
+          className="inline-flex h-9 items-center gap-2 rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground shadow-sm hover:bg-primary/90 transition-colors disabled:opacity-50"
+        >
+          {loading ? (
+            <RefreshCw className="size-4 animate-spin" />
+          ) : (
+            <RefreshCw className="size-4" />
+          )}
+          <span>{loading ? "Memproses..." : "Perpanjang Sekarang"}</span>
+        </button>
+      </div>
+    </div>
+  );
+};
+
 // Refined Active Loan Card (Neat & Structured identically to History Card)
 const ActiveLoanCard = ({
   loan,
-  onRefresh,
-  onSelect
+  onReturnClick,
+  onExtendClick
 }: {
   loan: LoanData;
-  onRefresh: () => void;
+  onRefresh?: () => void;
   onSelect?: (loan: LoanData) => void;
+  onReturnClick?: (loan: LoanData) => void;
+  onExtendClick?: (loan: LoanData) => void;
 }) => {
   const bibliography = loan.item?.bibliography;
   const title = getLoanTitle(loan);
   const author = getLoanAuthor(loan);
-  const [isReturning, setIsReturning] = useState(false);
-  const [isExtending, setIsExtending] = useState(false);
-  const toast = useToast();
 
   const itemCode =
     loan.item?.itemCode ||
@@ -1013,49 +1384,17 @@ const ActiveLoanCard = ({
       })
     : "-";
 
-  const handleReturn = async () => {
-    if (!confirm(`Ajukan pengembalian untuk buku "${title}"?`)) return;
-
-    try {
-      setIsReturning(true);
-      await loanService.createReturnRequest(loan.id);
-      toast.success(
-        "Berhasil",
-        "Pengajuan pengembalian berhasil dikirim. Menunggu konfirmasi admin."
-      );
-      onRefresh();
-    } catch (err) {
-      toast.error(
-        "Gagal",
-        err instanceof Error ? err.message : "Gagal mengajukan pengembalian"
-      );
-    } finally {
-      setIsReturning(false);
-    }
+  const handleReturn = () => {
+    onReturnClick?.(loan);
   };
 
-  const handleExtend = async () => {
-    if (!confirm(`Ajukan perpanjangan untuk buku "${title}"?`)) return;
-
-    try {
-      setIsExtending(true);
-      await loanService.extendLoan(loan.id);
-      toast.success("Berhasil", "Pengajuan perpanjangan berhasil dikirim.");
-      onRefresh();
-    } catch (err) {
-      toast.error(
-        "Gagal",
-        err instanceof Error ? err.message : "Gagal memperpanjang peminjaman"
-      );
-    } finally {
-      setIsExtending(false);
-    }
+  const handleExtend = () => {
+    onExtendClick?.(loan);
   };
 
   return (
     <div
-      onClick={() => onSelect?.(loan)}
-      className="bg-card border border-border rounded-2xl p-4 shadow-2xs hover:border-primary/30 transition-all cursor-pointer space-y-3 flex flex-col justify-between"
+      className="bg-card border border-border rounded-2xl p-4 shadow-2xs hover:border-primary/30 transition-all space-y-3 flex flex-col justify-between"
     >
       <div className="space-y-3">
         {/* Top Row: Status badge & Item code */}
@@ -1223,20 +1562,6 @@ const ActiveLoanCard = ({
 
       {/* Bottom Actions Row */}
       <div className="flex items-center justify-end gap-2 pt-2 border-t border-border/50">
-        {onSelect && (
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              onSelect(loan);
-            }}
-            className="p-2 rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted/70 transition-all border border-border/60"
-            title="Lihat Detail Peminjaman"
-          >
-            <Eye size={14} />
-          </button>
-        )}
-
         {!returnPending ? (
           <button
             type="button"
@@ -1244,20 +1569,11 @@ const ActiveLoanCard = ({
               e.stopPropagation();
               handleReturn();
             }}
-            disabled={isReturning || isExtending}
+            disabled={returnPending}
             className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 px-3 py-1.5 bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-400 border border-blue-200/80 dark:border-blue-800 text-xs font-bold rounded-xl hover:bg-blue-100 dark:hover:bg-blue-900/60 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {isReturning ? (
-              <>
-                <RefreshCw size={12} className="animate-spin" />
-                <span>Memproses...</span>
-              </>
-            ) : (
-              <>
-                <RotateCcw size={12} />
-                <span>Kembalikan</span>
-              </>
-            )}
+            <RotateCcw size={12} />
+            <span>Kembalikan</span>
           </button>
         ) : (
           <div className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 px-3 py-1.5 bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-800 text-xs font-bold rounded-xl">
@@ -1273,20 +1589,11 @@ const ActiveLoanCard = ({
               e.stopPropagation();
               handleExtend();
             }}
-            disabled={isExtending || isReturning || returnPending}
+            disabled={returnPending}
             className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 px-3 py-2 bg-primary/10 text-primary border border-primary/20 text-xs font-bold rounded-xl hover:bg-primary/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {isExtending ? (
-              <>
-                <RefreshCw size={12} className="animate-spin" />
-                <span>Memproses...</span>
-              </>
-            ) : (
-              <>
-                <RefreshCw size={12} />
-                <span>Perpanjang</span>
-              </>
-            )}
+            <RefreshCw size={12} />
+            <span>Perpanjang</span>
           </button>
         )}
       </div>
