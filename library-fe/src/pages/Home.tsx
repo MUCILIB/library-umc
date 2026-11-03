@@ -32,7 +32,7 @@ export default function Home() {
     if (session?.user) {
       const role = (session.user as any).role;
       if (role === "super_admin" || role === "staff") {
-        navigate("/dashboard/super-admin");
+        navigate("/dashboard/super-admin", { replace: true });
       }
     }
   }, [session, navigate]);

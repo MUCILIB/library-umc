@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 import { authClient } from "@/utils/auth-client";
 
@@ -15,20 +15,27 @@ export default function ProtectedRoute({
   excludeRole,
 }: ProtectedRouteProps) {
   const { data: session, isPending } = authClient.useSession();
+  const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
   const navigate = useNavigate();
+
+  useEffect(() => {
+    if (!isPending) {
+      setHasLoadedOnce(true);
+    }
+  }, [isPending]);
 
   useEffect(() => {
     if (!isPending) {
       // Not logged in
       if (!session) {
-        navigate("/login");
+        navigate("/login", { replace: true });
         return;
       }
 
       // Logged in but role is excluded
       const userRole = (session.user as any).role;
       if (excludeRole && excludeRole.includes(userRole)) {
-        navigate("/");
+        navigate("/", { replace: true });
         return;
       }
 
@@ -36,15 +43,15 @@ export default function ProtectedRoute({
       if (requiredRole) {
         const allowed = Array.isArray(requiredRole) ? requiredRole : [requiredRole];
         if (!allowed.includes(userRole)) {
-          navigate("/");
+          navigate("/", { replace: true });
           return;
         }
       }
     }
   }, [session, isPending, navigate, requiredRole, excludeRole]);
 
-  // Avoid double loading UI; page-level skeleton handles content loading.
-  if (isPending) {
+  // Hanya block render pada initial load, bukan saat background refetch (tab focus)
+  if (isPending && !hasLoadedOnce) {
     return null;
   }
 

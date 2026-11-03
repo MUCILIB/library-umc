@@ -22,7 +22,7 @@ export default function NonAdminRoute({ children }: NonAdminRouteProps) {
 
   const userRole = (session?.user as any)?.role;
 
-  if (userRole === "super_admin") {
+  if (userRole === "super_admin" || userRole === "staff") {
     return <Navigate to="/dashboard/super-admin" replace />;
   }
 

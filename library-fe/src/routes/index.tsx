@@ -94,7 +94,7 @@ const AppRoutes = () => {
         <Route
           path="/dashboard/super-admin"
           element={
-            <ProtectedRoute requiredRole="super_admin">
+            <ProtectedRoute requiredRole={["super_admin", "staff"]}>
               <SuperAdminDashboard />
             </ProtectedRoute>
           }

@@ -17,7 +17,7 @@ export default function PublicRoute({ children }: { children: ReactNode }) {
 
   if (session) {
     const role = (session.user as any)?.role;
-    if (role === "super_admin") {
+    if (role === "super_admin" || role === "staff") {
       return <Navigate to="/dashboard/super-admin" replace />;
     }
     return <Navigate to="/" replace />;
