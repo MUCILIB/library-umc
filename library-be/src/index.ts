@@ -81,8 +81,8 @@ app.use("/api", generalLimiter);
 // Rate limiter khusus untuk endpoint autentikasi Better-Auth (prevent brute-force & credential stuffing)
 app.use(
   [
-    "/api/auth/sign-in/*",
-    "/api/auth/sign-up/*",
+    "/api/auth/sign-in",
+    "/api/auth/sign-up",
     "/api/auth/forget-password",
     "/api/auth/reset-password"
   ],
