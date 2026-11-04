@@ -56,12 +56,17 @@ export function useDashboardOverview(stats: DashboardStats) {
         const bookTitle =
           loan.bibliographyTitle || loan.item?.bibliography?.title || "Buku";
         const createdAt = loan.createdAt || loan.loanDate;
+        const user = loan.member?.user || {
+          name: memberName,
+          email: (loan.member as any)?.nimNidn ? `${(loan.member as any).nimNidn}@student.umc.ac.id` : undefined,
+        };
 
         return {
           id: loan.id,
           memberName,
           bookTitle,
           status: loan.status,
+          user,
           timeText: createdAt
             ? new Date(createdAt).toLocaleString("id-ID", {
                 day: "2-digit",
