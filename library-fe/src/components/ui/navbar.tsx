@@ -89,7 +89,7 @@ const Navbar = () => {
   };
 
   const handleMyLoansClick = () => {
-    navigate("/my-loans");
+    navigate("/profile?tab=peminjaman-aktif");
     setIsDropdownOpen(false);
     setIsMenuOpen(false);
   };

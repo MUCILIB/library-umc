@@ -14,7 +14,6 @@ import SuperAdminDashboard from "../pages/dashboard/SuperAdminDashboard";
 import Profile from "../pages/Profile";
 import RepositoryDetailPage from "../pages/RepositoryDetailPage";
 import Eresource from "../pages/EResoucePage";
-import MyLoans from "../pages/MyLoansPage";
 import MyRepositoryPage from "../pages/MyRepositoryPage";
 import LecturerRecommendationsPage from "../pages/LecturerRecommendationsPage";
 import NotFound from "../pages/NotFound";
@@ -45,15 +44,7 @@ const AppRoutes = () => {
         <Route path="/buku-tamu" element={<NonAdminRoute><AbsensiPage /></NonAdminRoute>} />
         <Route path="/repositori" element={<Navigate to="/e-resource" replace />} />
         <Route path="/repositori-saya" element={<Navigate to="/my-repository" replace />} />
-        
-        <Route 
-          path="/my-loans" 
-          element={
-            <ProtectedRoute excludeRole={["super_admin", "staff"]}>
-              <MyLoans />
-            </ProtectedRoute>
-          } 
-        />
+        <Route path="/my-loans" element={<Navigate to="/profile?tab=peminjaman-aktif" replace />} />
 
         <Route 
           path="/my-repository" 
