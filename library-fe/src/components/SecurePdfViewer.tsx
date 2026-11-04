@@ -8,7 +8,9 @@ import {
   FileText,
   ShieldAlert,
   Maximize2,
-  Download
+  Download,
+  ExternalLink,
+  Smartphone
 } from "lucide-react";
 
 interface SecurePdfViewerProps {
@@ -151,7 +153,19 @@ export default function SecurePdfViewer({
           </p>
         </div>
 
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="flex items-center gap-2 shrink-0 flex-wrap">
+          {blobUrl && (
+            <a
+              href={blobUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-primary/30 text-xs font-semibold text-primary bg-primary/10 hover:bg-primary/20 transition-colors"
+              title="Buka naskah di tab baru atau aplikasi pembaca PDF bawaan perangkat"
+            >
+              <ExternalLink className="w-3.5 h-3.5" />
+              <span>Buka di Tab Baru</span>
+            </a>
+          )}
           {canDownloadFull && (
             <button
               onClick={handleDownloadFull}
@@ -175,6 +189,24 @@ export default function SecurePdfViewer({
 
       {/* PDF Frame Container */}
       <div className="relative rounded-2xl border border-border bg-muted/20 overflow-hidden shadow-sm">
+        {/* Banner petunjuk tampilan mobile */}
+        {blobUrl && (
+          <div className="md:hidden flex items-center justify-between px-4 py-2.5 bg-primary/10 border-b border-border text-xs text-primary font-medium">
+            <span className="flex items-center gap-1.5">
+              <Smartphone className="w-4 h-4 shrink-0" />
+              Mode Ponsel: Gunakan tab baru untuk navigasi lancar
+            </span>
+            <a
+              href={blobUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-bold underline ml-2 shrink-0"
+            >
+              Buka PDF
+            </a>
+          </div>
+        )}
+
         {/* Iframe yang memanggil potongan PDF dari backend */}
         <div className="w-full h-[620px] md:h-[750px] bg-slate-100 dark:bg-slate-900 relative">
           {loadingPdf && (
@@ -189,11 +221,17 @@ export default function SecurePdfViewer({
               {loadError}
             </div>
           ) : blobUrl ? (
-            <iframe
-              src={`${blobUrl}#toolbar=0&navpanes=0&scrollbar=1`}
-              title={title}
-              className="w-full h-full border-0 select-none"
-            />
+            <object
+              data={blobUrl}
+              type="application/pdf"
+              className="w-full h-full"
+            >
+              <iframe
+                src={`${blobUrl}#toolbar=0&navpanes=0&scrollbar=1`}
+                title={title}
+                className="w-full h-full border-0 select-none"
+              />
+            </object>
           ) : null}
         </div>
 

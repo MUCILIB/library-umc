@@ -280,7 +280,16 @@ export class LoanController {
       const requestId = String(req.params.requestId);
       const result = await loanService.approveReturnRequest(requestId, user.id);
       sendSuccess(res, result.message, result);
-    } catch (error) {
+    } catch (error: any) {
+      if (
+        error.message &&
+        (error.message.includes("tidak ditemukan") ||
+          error.message.includes("harus disetujui") ||
+          error.message.includes("tidak dalam status") ||
+          error.message.includes("sudah diproses"))
+      ) {
+        return sendError(res, error.message, 400);
+      }
       next(error);
     }
   }

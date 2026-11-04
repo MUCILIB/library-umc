@@ -466,7 +466,7 @@ export default function DashboardSection({
         </div>
 
         {/* Interactive Chart Container */}
-        <div className="h-64 w-full pt-2">
+        <div className="h-64 w-full pt-2 min-w-0">
           {trafficLoading ? (
             <div className="h-full w-full flex items-center justify-center text-xs text-muted-foreground">
               Memuat grafik trafik...
@@ -476,7 +476,7 @@ export default function DashboardSection({
               Belum ada riwayat trafik tercatat pada rentang waktu ini.
             </div>
           ) : (
-            <ResponsiveContainer width="100%" height="100%">
+            <ResponsiveContainer width="100%" height="100%" minWidth={1} minHeight={200}>
               <AreaChart
                 key={`traffic-chart-${trafficRange}`}
                 data={trafficData}
