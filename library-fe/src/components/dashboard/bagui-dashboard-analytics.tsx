@@ -633,7 +633,7 @@ function formatChartDate(offset: number) {
   return d.toLocaleDateString("en-US", { day: "numeric", month: "short", year: "numeric" });
 }
 
-const RevenueFlowChart = React.forwardRef<HTMLDivElement, {}>(function RevenueFlowChart(_props, ref) {
+const RevenueFlowChart = React.forwardRef<HTMLDivElement, Record<string, never>>(function RevenueFlowChart(_props, ref) {
   const [hovered, setHovered] = useState<number | null>(null);
   const [slide, setSlide] = useState(0);
   const [metric, setMetric] = useState<"revenue" | "profit">("revenue");
@@ -781,7 +781,6 @@ function LeadSourcesCard({ activeSource, onSelectSource }: { activeSource: "All"
   const total = leadSources.reduce((a, b) => a + b.value, 0);
   const radius = 15.9;
   const circumference = 2 * Math.PI * radius;
-  let offsetAcc = 0;
 
   return (
     <div className="rounded-2xl border border-white/[0.06] bg-[#141416] p-5">
@@ -798,10 +797,15 @@ function LeadSourcesCard({ activeSource, onSelectSource }: { activeSource: "All"
         <div className="relative h-[130px] w-[130px] shrink-0">
           <svg viewBox="0 0 36 36" className="h-full w-full -rotate-90">
             {leadSources.map((s, i) => {
+              const currentOffset = leadSources.slice(0, i).reduce((acc, prev) => {
+                const prevPct = prev.value / total;
+                const prevDash = prevPct * circumference;
+                return acc + prevDash + 1.5;
+              }, 0);
               const pct = s.value / total;
               const dash = pct * circumference;
               const gap = circumference - dash;
-              const el = (
+              return (
                 <circle
                   key={s.label}
                   cx="18"
@@ -811,15 +815,13 @@ function LeadSourcesCard({ activeSource, onSelectSource }: { activeSource: "All"
                   stroke={s.color}
                   strokeWidth={hovered === i ? 4.2 : 3.2}
                   strokeDasharray={`${dash} ${gap}`}
-                  strokeDashoffset={-offsetAcc}
+                  strokeDashoffset={-currentOffset}
                   strokeLinecap="round"
                   className="transition-all duration-200"
                   onMouseEnter={() => setHovered(i)}
                   onMouseLeave={() => setHovered(null)}
                 />
               );
-              offsetAcc += dash + 1.5;
-              return el;
             })}
           </svg>
           <div className="absolute inset-0 flex flex-col items-center justify-center">

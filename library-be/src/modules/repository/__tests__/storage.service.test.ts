@@ -44,6 +44,16 @@ describe("StorageService (TDD Seam)", () => {
     expect(key).toBe("library/proposals/document.pdf");
   });
 
+  it("should generate proper S3 object key with custom subfolder", () => {
+    process.env.ENDPOINT_URL = "https://s3.dahono.com";
+    process.env.ACCESS_KEY = "test-access-key";
+    process.env.SECRET_KEY = "test-secret-key";
+
+    const storage = new StorageService("covers");
+    const key = storage.resolveKey("cover-123.jpg");
+    expect(key).toBe("library/covers/cover-123.jpg");
+  });
+
   it("should fall back to local disk storage when S3 is disabled", async () => {
     delete process.env.ENDPOINT_URL;
     delete process.env.ACCESS_KEY;

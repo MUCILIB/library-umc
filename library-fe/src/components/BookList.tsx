@@ -6,6 +6,7 @@ import type { Bibliography, LibraryUser } from "../types";
 import { generateColorFromSeed } from "@/utils/format";
 import { isBookSaved, saveBook, removeBook } from "@/utils/bookmarks";
 import { useToast } from "@/hooks/useToast";
+import { resolveCoverUrl } from "@/utils/imageUrl";
 
 interface BookListProps {
   searchQuery?: string;
@@ -41,6 +42,7 @@ const BookList = ({
   );
 
   const containerRef = useRef<HTMLDivElement>(null);
+  const [brokenImages, setBrokenImages] = useState<Record<string, boolean>>({});
 
   // Pagination State - 12 buku per halaman (pas untuk grid 3 baris x 4 kolom)
   const itemsPerPage = 12;
@@ -402,6 +404,10 @@ const BookList = ({
               tags.push(isEbook ? "E-Book" : "Umum");
             }
 
+            const coverUrl = resolveCoverUrl(bibliography.image);
+            const isBroken = !!brokenImages[bibliography.id];
+            const hasValidCover = !!coverUrl && !isBroken;
+
             return (
               <div
                 key={bibliography.id}
@@ -411,12 +417,15 @@ const BookList = ({
                 <div>
                   {/* Bagian Cover Buku & Badge Mengambang */}
                   <div className="relative w-full aspect-[4/5] rounded-xl overflow-hidden bg-slate-100 dark:bg-muted">
-                    {bibliography.image ? (
+                    {hasValidCover ? (
                       <img
-                        src={bibliography.image}
+                        src={coverUrl!}
                         alt={bibliography.title}
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                         loading="lazy"
+                        onError={() => {
+                          setBrokenImages((prev) => ({ ...prev, [bibliography.id]: true }));
+                        }}
                       />
                     ) : (
                       <div

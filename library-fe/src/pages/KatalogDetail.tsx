@@ -24,6 +24,7 @@ import {
 } from "lucide-react";
 import { generateColorFromSeed, cleanIsbn } from "@/utils/format";
 import { isBookSaved, saveBook, removeBook } from "@/utils/bookmarks";
+import { resolveCoverUrl } from "@/utils/imageUrl";
 import EbookReaderModal from "@/components/EbookReaderModal";
 
 const KatalogDetail = () => {
@@ -36,6 +37,8 @@ const KatalogDetail = () => {
   const [selectedItemForQr, setSelectedItemForQr] = useState<{ id: string; itemCode?: string; status: string } | null>(null);
   const [isSaved, setIsSaved] = useState(false);
   const [similarSavedMap, setSimilarSavedMap] = useState<Record<string, boolean>>({});
+  const [brokenMainCover, setBrokenMainCover] = useState(false);
+  const [brokenRelatedCovers, setBrokenRelatedCovers] = useState<Record<string, boolean>>({});
 
   const { data: session, isPending: sessionLoading } = authClient.useSession();
 
@@ -441,19 +444,27 @@ const KatalogDetail = () => {
           {/* Sisi Kiri - Visual */}
           <div className="md:w-[35%] bg-background p-6 sm:p-8 flex flex-col items-center justify-center border-b md:border-b-0 md:border-r border-border">
             <div className="w-44 h-60 sm:w-52 sm:h-72 rounded-xl overflow-hidden shadow-2xl bg-card mb-6 sm:mb-8">
-              {bibliography?.image ? (
-                <img
-                  src={bibliography.image}
-                  alt={bibliography.title}
-                  className="w-full h-full object-cover"
-                />
-              ) : (
-                <div className="w-full h-full bg-emerald-900 flex items-center justify-center text-white p-4 text-center">
-                  <span className="font-bold text-sm sm:text-lg italic">
-                    {bibliography?.title}
-                  </span>
-                </div>
-              )}
+              {(() => {
+                const mainCoverUrl = resolveCoverUrl(bibliography?.image);
+                const hasValidMainCover = !!mainCoverUrl && !brokenMainCover;
+
+                return hasValidMainCover ? (
+                  <img
+                    src={mainCoverUrl!}
+                    alt={bibliography?.title || "Sampul Buku"}
+                    className="w-full h-full object-cover"
+                    onError={() => setBrokenMainCover(true)}
+                  />
+                ) : (
+                  <div className="w-full h-full bg-emerald-900 flex flex-col items-center justify-between text-white p-4 text-center">
+                    <span className="text-[10px] uppercase font-bold text-emerald-200/80">UMC Library</span>
+                    <span className="font-bold text-sm sm:text-base italic line-clamp-4">
+                      {bibliography?.title}
+                    </span>
+                    <span className="text-xs text-emerald-200/70">{bibliography?.author || ""}</span>
+                  </div>
+                );
+              })()}
             </div>
             <div className="flex gap-4 sm:gap-5">
               {[
@@ -779,28 +790,35 @@ const KatalogDetail = () => {
                     <div>
                       {/* Bagian Cover Buku & Badge Mengambang */}
                       <div className="relative w-full aspect-[4/5] rounded-xl overflow-hidden bg-slate-100 dark:bg-muted">
-                        {book.image ? (
-                          <img
-                            src={book.image}
-                            alt={book.title}
-                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                            loading="lazy"
-                          />
-                        ) : (
-                          <div
-                            className={`w-full h-full bg-gradient-to-br ${seedColor} p-2.5 sm:p-4 flex flex-col justify-between text-white shadow-inner`}
-                          >
-                            <span className="text-[8px] sm:text-[9px] font-bold uppercase tracking-wider text-white/60">
-                              {isEbook ? "E-Book" : "UMC Library"}
-                            </span>
-                            <span className="font-bold text-[11px] sm:text-xs md:text-sm text-center leading-snug line-clamp-3 my-auto">
-                              {book.title}
-                            </span>
-                            <span className="text-[8px] sm:text-[9px] text-white/70 line-clamp-1 text-right">
-                              {book.author}
-                            </span>
-                          </div>
-                        )}
+                        {(() => {
+                          const relCoverUrl = resolveCoverUrl(book.image);
+                          const isRelBroken = !!brokenRelatedCovers[book.id];
+                          const hasValidRelCover = !!relCoverUrl && !isRelBroken;
+
+                          return hasValidRelCover ? (
+                            <img
+                              src={relCoverUrl!}
+                              alt={book.title}
+                              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                              loading="lazy"
+                              onError={() => setBrokenRelatedCovers((prev) => ({ ...prev, [book.id]: true }))}
+                            />
+                          ) : (
+                            <div
+                              className={`w-full h-full bg-gradient-to-br ${seedColor} p-2.5 sm:p-4 flex flex-col justify-between text-white shadow-inner`}
+                            >
+                              <span className="text-[8px] sm:text-[9px] font-bold uppercase tracking-wider text-white/60">
+                                {isEbook ? "E-Book" : "UMC Library"}
+                              </span>
+                              <span className="font-bold text-[11px] sm:text-xs md:text-sm text-center leading-snug line-clamp-3 my-auto">
+                                {book.title}
+                              </span>
+                              <span className="text-[8px] sm:text-[9px] text-white/70 line-clamp-1 text-right">
+                                {book.author}
+                              </span>
+                            </div>
+                          );
+                        })()}
 
                         {/* Status Badge Mengambang di Pojok Kanan Atas Cover */}
                         <div className="absolute top-2 right-2 sm:top-2.5 sm:right-2.5 z-10">
