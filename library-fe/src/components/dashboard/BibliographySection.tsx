@@ -42,6 +42,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { cleanIsbn } from "@/utils/format";
+import { API_BASE_URL } from "@/utils/api-config";
+import { resolveCoverUrl } from "@/utils/imageUrl";
 import {
   bibliographyApi,
   type Bibliography,
@@ -1244,11 +1246,10 @@ function BibliographyForm({ bib, onClose, onSuccess }: BibliographyFormProps) {
     }
   };
 
-  // Step 4 File Upload Handlers (resize + compress cover to avoid 413)
-  const handleCoverUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  // Step 4 File Upload Handlers (upload ke S3 Dahono dengan fallback kompresi base64)
+  const [isUploadingCover, setIsUploadingCover] = useState(false);
 
+  const compressAndSetBase64 = (file: File) => {
     const img = new Image();
     const objectUrl = URL.createObjectURL(file);
     img.onload = () => {
@@ -1266,7 +1267,6 @@ function BibliographyForm({ bib, onClose, onSuccess }: BibliographyFormProps) {
       if (!ctx) return;
       ctx.drawImage(img, 0, 0, width, height);
 
-      // Compress to JPEG quality 0.7, keep under ~300KB
       const dataUrl = canvas.toDataURL("image/jpeg", 0.7);
       if (dataUrl.length > 400 * 1024) {
         const smaller = canvas.toDataURL("image/jpeg", 0.5);
@@ -1277,9 +1277,40 @@ function BibliographyForm({ bib, onClose, onSuccess }: BibliographyFormProps) {
     };
     img.onerror = () => {
       URL.revokeObjectURL(objectUrl);
-      alert("Gagal membaca gambar");
     };
     img.src = objectUrl;
+  };
+
+  const handleCoverUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Coba upload berkas fisik langsung ke S3 backend
+    const uploadData = new FormData();
+    uploadData.append("file", file);
+
+    try {
+      setIsUploadingCover(true);
+      const res = await fetch(`${API_BASE_URL}/api/upload/cover`, {
+        method: "POST",
+        body: uploadData,
+        credentials: "include",
+      });
+
+      if (res.ok) {
+        const json = await res.json();
+        if (json.data?.url) {
+          setFormData((prev) => ({ ...prev, image: json.data.url }));
+          return;
+        }
+      }
+      // Fallback ke kompresi client jika offline / error
+      compressAndSetBase64(file);
+    } catch {
+      compressAndSetBase64(file);
+    } finally {
+      setIsUploadingCover(false);
+    }
   };
 
   // PDF file mock upload
@@ -2351,20 +2382,30 @@ function BibliographyForm({ bib, onClose, onSuccess }: BibliographyFormProps) {
 
               {/* PRATINJAU SAMPUL VISUAL */}
               <div className="space-y-3">
-                <label className="block text-xs font-bold text-foreground uppercase tracking-wider">
-                  Pratinjau Sampul Visual
-                </label>
+                <div className="flex items-center justify-between">
+                  <label className="block text-xs font-bold text-foreground uppercase tracking-wider">
+                    Pratinjau Sampul Visual
+                  </label>
+                  {isUploadingCover && (
+                    <span className="text-xs text-primary font-medium flex items-center gap-1.5">
+                      <Loader2 className="size-3 animate-spin" /> Mengunggah ke S3...
+                    </span>
+                  )}
+                </div>
                 <div className="border border-border rounded-xl p-4 bg-muted/30 flex items-start gap-4 h-[180px] overflow-hidden">
                   <div className="relative w-28 h-full bg-card border border-border rounded-lg overflow-hidden flex items-center justify-center shrink-0">
-                    {formData.image ? (
-                      <img
-                        src={formData.image}
-                        alt="Preview cover"
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <Book className="size-12 text-muted-foreground/40" />
-                    )}
+                    {(() => {
+                      const previewSrc = resolveCoverUrl(formData.image) || formData.image;
+                      return previewSrc ? (
+                        <img
+                          src={previewSrc}
+                          alt="Preview cover"
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <Book className="size-12 text-muted-foreground/40" />
+                      );
+                    })()}
                   </div>
                   <div className="flex flex-col justify-center h-full space-y-2 py-1">
                     <h4 className="font-bold text-base text-foreground line-clamp-2">

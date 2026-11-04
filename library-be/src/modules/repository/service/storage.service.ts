@@ -75,10 +75,14 @@ export class StorageService {
   }
 
   /**
-   * Menyimpan buffer PDF ke S3 atau local disk
+   * Menyimpan buffer berkas (PDF / Gambar) ke S3 atau local disk
    * Mengembalikan path lokal atau s3 key
    */
-  async save(filename: string, buffer: Buffer): Promise<string> {
+  async save(
+    filename: string,
+    buffer: Buffer,
+    contentType: string = "application/pdf"
+  ): Promise<string> {
     if (this.isS3Enabled() && this.s3Client) {
       const key = this.resolveKey(filename);
       await this.s3Client.send(
@@ -86,7 +90,7 @@ export class StorageService {
           Bucket: this.bucket,
           Key: key,
           Body: buffer,
-          ContentType: "application/pdf",
+          ContentType: contentType,
         })
       );
       return key;
@@ -160,3 +164,4 @@ export class StorageService {
 }
 
 export const storageService = new StorageService();
+export const coverStorageService = new StorageService("covers");

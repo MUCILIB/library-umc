@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { useNavigate, Link } from "react-router";
 import { bibliographyApi, type Bibliography } from "@/api/client";
 import { ChevronLeft, ChevronRight, ArrowRight } from "lucide-react";
+import { resolveCoverUrl } from "@/utils/imageUrl";
 
 // Palet warna latar belakang cover sesuai desain referensi
 const COVER_PALETTES = [
@@ -31,6 +32,7 @@ export default function HomeBookList() {
   const [books, setBooks] = useState<Bibliography[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [brokenImages, setBrokenImages] = useState<Record<string, boolean>>({});
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
@@ -252,6 +254,10 @@ export default function HomeBookList() {
             const isAvailable = getIsAvailable(book);
             const palette = getPalette(book.id || book.title);
 
+            const coverUrl = resolveCoverUrl(book.image);
+            const isBroken = !!brokenImages[book.id];
+            const hasValidCover = !!coverUrl && !isBroken;
+
             return (
               <div
                 key={book.id}
@@ -262,34 +268,32 @@ export default function HomeBookList() {
                 <div
                   className={`relative w-full h-42 sm:h-52 ${palette} overflow-hidden flex items-center justify-center p-3 sm:p-4 group-hover:brightness-105 transition-all`}
                 >
-                  {book.image ? (
+                  {hasValidCover ? (
                     <img
-                      src={book.image}
+                      src={coverUrl!}
                       alt={book.title}
                       className="h-full max-h-[88%] max-w-[85%] object-contain rounded-xs shadow-[0_8px_20px_rgba(0,0,0,0.35)] group-hover:scale-105 transition-transform duration-300 z-10"
                       loading="lazy"
-                      onError={(e) => {
-                        (e.currentTarget as HTMLElement).style.display = "none";
+                      onError={() => {
+                        setBrokenImages((prev) => ({ ...prev, [book.id]: true }));
                       }}
                     />
-                  ) : null}
-
-                  {/* Fallback Mock Cover jika tidak ada cover gambar atau saat gagal muat */}
-                  <div
-                    className={`w-[105px] sm:w-[115px] h-[140px] sm:h-[152px] bg-white rounded-xs shadow-[0_8px_20px_rgba(0,0,0,0.35)] p-2.5 flex flex-col justify-between border-l-[3px] border-slate-200 group-hover:scale-105 transition-transform duration-300 ${
-                      book.image ? "hidden" : "flex"
-                    }`}
-                  >
-                    <div className="text-[7px] font-black uppercase tracking-wider text-slate-400">
-                      {book.type === "ebook" ? "E-Book" : "UMC Library"}
+                  ) : (
+                    /* Fallback Mock Cover jika tidak ada cover gambar atau saat gagal muat */
+                    <div
+                      className="w-[105px] sm:w-[115px] h-[140px] sm:h-[152px] bg-white rounded-xs shadow-[0_8px_20px_rgba(0,0,0,0.35)] p-2.5 flex flex-col justify-between border-l-[3px] border-slate-200 group-hover:scale-105 transition-transform duration-300"
+                    >
+                      <div className="text-[7px] font-black uppercase tracking-wider text-slate-400">
+                        {book.type === "ebook" ? "E-Book" : "UMC Library"}
+                      </div>
+                      <div className="text-[10px] sm:text-[11px] font-bold text-slate-900 line-clamp-3 leading-snug">
+                        {book.title}
+                      </div>
+                      <div className="text-[8px] font-medium text-slate-500 line-clamp-1">
+                        {author}
+                      </div>
                     </div>
-                    <div className="text-[10px] sm:text-[11px] font-bold text-slate-900 line-clamp-3 leading-snug">
-                      {book.title}
-                    </div>
-                    <div className="text-[8px] font-medium text-slate-500 line-clamp-1">
-                      {author}
-                    </div>
-                  </div>
+                  )}
                 </div>
 
                 {/* Bagian Detail Buku */}
