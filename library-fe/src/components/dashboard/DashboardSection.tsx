@@ -3,7 +3,6 @@ import {
   Users,
   Clock,
   Wallet,
-  User as UserIcon,
   DownloadCloud,
   UploadCloud,
   Globe,
@@ -28,6 +27,7 @@ import { useToast } from "@/hooks/useToast";
 import { useDashboardOverview } from "@/hooks/dashboard/useDashboardOverview";
 import type { DashboardStats } from "@/services/dashboard/dashboardDataService";
 import { analyzeReportCsv } from "@/utils/dashboardReportImport";
+import { getUserAvatar } from "@/lib/avatar";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -610,9 +610,14 @@ export default function DashboardSection({
                   className="p-4 px-5 flex items-center justify-between gap-3 hover:bg-muted/40 transition-colors"
                 >
                   <div className="flex items-center gap-3.5 min-w-0">
-                    <div className="size-9 bg-muted rounded-xl flex items-center justify-center text-muted-foreground shrink-0 border border-border">
-                      <UserIcon size={16} />
-                    </div>
+                    <img
+                      src={getUserAvatar((loan as any).user || { name: loan.memberName })}
+                      alt={loan.memberName}
+                      className="size-9 rounded-full object-cover shrink-0 border border-border bg-muted/60 shadow-2xs"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).src = `https://api.dicebear.com/10.x/waves/svg?seed=${encodeURIComponent(loan.memberName || "member")}`;
+                      }}
+                    />
                     <div className="min-w-0">
                       <p className="text-xs font-bold text-foreground truncate">
                         {loan.memberName}{" "}

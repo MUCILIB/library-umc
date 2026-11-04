@@ -163,7 +163,7 @@ function DashboardSidebar({
   user,
   badgeCounts
 }: DashboardSidebarProps) {
-  const userInitial = (user?.name || "A").charAt(0).toUpperCase();
+  const avatarUrl = getUserAvatar(user);
 
   return (
     <Sidebar
@@ -262,23 +262,40 @@ function DashboardSidebar({
       <SidebarFooter className="border-t border-sidebar-border bg-sidebar p-3 group-data-[collapsible=icon]:p-2">
         <div className="flex items-center justify-between gap-2 group-data-[collapsible=icon]:justify-center">
           <div className="flex items-center gap-2.5 min-w-0 group-data-[collapsible=icon]:hidden">
-            <div className="size-8 rounded-full bg-primary/15 text-primary flex items-center justify-center font-bold text-xs shrink-0 border border-primary/20">
-              {userInitial}
-            </div>
+            <img
+              src={avatarUrl}
+              alt={user?.name || "Super Admin"}
+              className="size-8 rounded-full object-cover shrink-0 border border-primary/30 bg-primary/10 shadow-xs"
+              onError={(e) => {
+                (e.target as HTMLImageElement).src = `https://api.dicebear.com/10.x/waves/svg?seed=${encodeURIComponent(user?.email || user?.name || "admin")}`;
+              }}
+            />
             <div className="min-w-0 flex-1">
               <p className="text-xs font-semibold text-sidebar-foreground truncate">
-                {user?.name || "Admin"}
+                {user?.name || "Super Admin"}
               </p>
               <p className="text-[10px] text-muted-foreground font-medium capitalize truncate">
                 {user?.role?.replace("_", " ") || "Super Admin"}
               </p>
             </div>
           </div>
+          {/* Collapsed state avatar */}
+          <div className="hidden group-data-[collapsible=icon]:flex items-center justify-center">
+            <img
+              src={avatarUrl}
+              alt={user?.name || "Super Admin"}
+              title={`${user?.name || "Super Admin"} (${user?.role?.replace("_", " ") || "Super Admin"})`}
+              className="size-7 rounded-full object-cover shrink-0 border border-primary/30 bg-primary/10 shadow-xs cursor-pointer"
+              onError={(e) => {
+                (e.target as HTMLImageElement).src = `https://api.dicebear.com/10.x/waves/svg?seed=${encodeURIComponent(user?.email || user?.name || "admin")}`;
+              }}
+            />
+          </div>
           <button
             type="button"
             onClick={() => void onSignOut()}
             title="Keluar"
-            className="size-8 rounded-lg flex items-center justify-center text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors shrink-0"
+            className="size-8 rounded-lg flex items-center justify-center text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors shrink-0 group-data-[collapsible=icon]:hidden"
           >
             <LogOut className="size-4" />
           </button>

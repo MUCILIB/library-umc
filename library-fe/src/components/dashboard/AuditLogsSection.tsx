@@ -9,6 +9,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useAuditLogs } from "@/hooks/dashboard/useAuditLogs";
+import { getUserAvatar } from "@/lib/avatar";
 
 const ACTION_OPTIONS = [
   "all",
@@ -208,13 +209,23 @@ export default function AuditLogsSection() {
                           : "-"}
                       </td>
                       <td className="px-6 py-4">
-                        <div>
-                          <p className="text-sm font-semibold text-muted-foreground">
-                            {log.user?.name || "-"}
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            {log.user?.email || log.userId || "-"}
-                          </p>
+                        <div className="flex items-center gap-2.5">
+                          <img
+                            src={getUserAvatar(log.user || { id: log.userId || "user" })}
+                            alt={log.user?.name || "User"}
+                            className="size-8 rounded-full object-cover shrink-0 border border-border bg-muted/60 shadow-2xs"
+                            onError={(e) => {
+                              (e.target as HTMLImageElement).src = `https://api.dicebear.com/10.x/waves/svg?seed=${encodeURIComponent(log.user?.email || log.user?.name || log.userId || "user")}`;
+                            }}
+                          />
+                          <div className="min-w-0">
+                            <p className="text-sm font-semibold text-foreground truncate">
+                              {log.user?.name || "-"}
+                            </p>
+                            <p className="text-xs text-muted-foreground truncate">
+                              {log.user?.email || log.userId || "-"}
+                            </p>
+                          </div>
                         </div>
                       </td>
                       <td className="px-6 py-4 text-sm font-bold text-muted-foreground uppercase">
