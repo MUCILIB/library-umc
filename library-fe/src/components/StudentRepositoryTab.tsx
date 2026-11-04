@@ -314,26 +314,26 @@ export default function StudentRepositoryTab() {
     switch (status) {
       case "APPROVED":
         return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] sm:text-xs font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-950/70 dark:text-emerald-300">
-            <CheckCircle className="w-3 h-3 shrink-0" /> Disetujui & Terpublikasi
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20">
+            <CheckCircle className="w-3.5 h-3.5 shrink-0" /> Disetujui & Terpublikasi
           </span>
         );
       case "REVISION_REQUIRED":
         return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] sm:text-xs font-bold bg-amber-100 text-amber-900 dark:bg-amber-950/70 dark:text-amber-300">
-            <AlertCircle className="w-3 h-3 shrink-0" /> Perlu Revisi
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/20">
+            <AlertCircle className="w-3.5 h-3.5 shrink-0" /> Perlu Revisi
           </span>
         );
       case "UNDER_REVIEW":
         return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] sm:text-xs font-bold bg-blue-100 text-blue-800 dark:bg-blue-950/70 dark:text-blue-300">
-            <Clock className="w-3 h-3 shrink-0" /> Ditinjau Pustakawan
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold bg-blue-500/10 text-blue-700 dark:text-blue-400 border border-blue-500/20">
+            <Clock className="w-3.5 h-3.5 shrink-0" /> Ditinjau Pustakawan
           </span>
         );
       default:
         return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] sm:text-xs font-bold bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300">
-            <Clock className="w-3 h-3 shrink-0" /> Menunggu Verifikasi
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold bg-muted text-muted-foreground border border-border">
+            <Clock className="w-3.5 h-3.5 shrink-0" /> Menunggu Verifikasi
           </span>
         );
     }
@@ -360,89 +360,83 @@ export default function StudentRepositoryTab() {
   ).length;
 
   return (
-    <div className="space-y-4 sm:space-y-6 animate-fade-in">
-      {/* Hero Banner Repositori - Disesuaikan untuk HP & Layar Lebar */}
-      <div className="relative overflow-hidden rounded-2xl sm:rounded-3xl bg-linear-to-r from-red-950 via-slate-900 to-red-900 p-4 sm:p-6 md:p-8 text-white shadow-xl">
-        <div className="relative z-10 flex flex-col md:flex-row md:items-center md:justify-between gap-4 sm:gap-6">
-          <div className="space-y-2 max-w-2xl">
-            <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-red-500/20 text-red-200 border border-red-500/30 text-[10px] sm:text-xs font-bold tracking-wide uppercase">
-              <GraduationCap className="w-3.5 h-3.5 shrink-0" />
-              Repositori Digital Mahasiswa
+    <div className="space-y-5 animate-fade-in">
+      {/* Header Repositori Karya Ilmiah Mahasiswa */}
+      <div className="bg-card border border-border rounded-2xl p-5 sm:p-7 shadow-xs">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-5">
+          <div className="space-y-1.5 max-w-2xl">
+            <div className="inline-flex items-center gap-1.5 text-xs font-semibold text-primary">
+              <GraduationCap className="w-4 h-4 shrink-0" />
+              <span>Repositori Karya Ilmiah Mahasiswa</span>
             </div>
-            <h2 className="text-xl sm:text-2xl md:text-3xl font-black tracking-tight text-white leading-tight">
-              Repositori Skripsi & Karya Ilmiah
-            </h2>
-            <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
-              Unggah naskah proposal skripsi atau karya ilmiah, pantau hasil review pustakawan, dan kelola dokumen akademik Anda.
+            <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-foreground">
+              Pengajuan Naskah & Skripsi
+            </h1>
+            <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed">
+              Unggah naskah skripsi, proposal, atau laporan riset Anda untuk diverifikasi pustakawan kampus dan dipublikasikan di repositori digital perpustakaan UMC.
             </p>
           </div>
 
-          <div className="shrink-0 w-full sm:w-auto">
+          <div className="shrink-0 flex items-center gap-2.5">
             <button
               onClick={openAddModal}
-              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-3 sm:py-3.5 rounded-xl sm:rounded-2xl font-bold text-xs sm:text-sm text-slate-950 bg-white hover:bg-slate-100 transition-all shadow-md hover:shadow-lg active:scale-95"
+              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-semibold text-xs sm:text-sm text-white bg-primary hover:bg-primary/90 transition-all shadow-sm active:scale-98 min-h-[42px] cursor-pointer"
             >
-              <Plus className="w-4 h-4 text-red-700 shrink-0" />
-              Ajukan Naskah Baru
+              <Plus className="w-4 h-4 shrink-0" />
+              <span>Ajukan Naskah Baru</span>
             </button>
           </div>
         </div>
-
-        {/* Background glow */}
-        <div className="absolute -right-10 -bottom-10 w-48 sm:w-64 h-48 sm:h-64 bg-red-600/10 rounded-full blur-3xl pointer-events-none" />
       </div>
 
-      {/* Info Callout */}
-      <div className="rounded-xl sm:rounded-2xl border border-red-200/60 bg-red-50/50 dark:bg-red-950/20 dark:border-red-900/40 p-3 sm:p-4 flex items-start gap-2.5 sm:gap-3">
-        <Info className="w-4 h-4 text-red-700 dark:text-red-400 shrink-0 mt-0.5" />
-        <div className="text-[11px] sm:text-xs text-slate-700 dark:text-slate-300 leading-relaxed">
-          <strong className="font-bold text-red-800 dark:text-red-300">
-            Pemberitahuan Khusus:
-          </strong>{" "}
-          Semua naskah yang diajukan akan diverifikasi oleh pustakawan kampus. Naskah yang disetujui (APPROVED) akan langsung terpublikasi di repositori perpustakaan digital UMC.
-        </div>
+      {/* Panduan Singkat Prosedur */}
+      <div className="rounded-xl border border-border/80 bg-muted/40 p-3.5 sm:p-4 flex items-start gap-3">
+        <Info className="w-4 h-4 text-primary shrink-0 mt-0.5" />
+        <p className="text-xs text-muted-foreground leading-relaxed">
+          <span className="font-semibold text-foreground">Prosedur Kurasi:</span> Semua naskah yang diajukan akan ditinjau oleh pustakawan kampus. Naskah yang disetujui (APPROVED) akan langsung terpublikasi secara otomatis di repositori perpustakaan digital UMC.
+        </p>
       </div>
 
-      {/* Summary Cards Grid (2x2 di HP, 4 di Desktop) */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-4">
-        <div className="p-3 sm:p-4 rounded-xl sm:rounded-2xl border border-border bg-card shadow-2xs">
-          <div className="flex items-center justify-between text-muted-foreground mb-1">
-            <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider truncate">
-              Total Naskah
+      {/* Summary Cards Grid */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <div className="p-4 rounded-xl border border-border bg-card shadow-2xs">
+          <div className="flex items-center justify-between text-muted-foreground mb-1.5">
+            <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+              Total Pengajuan
             </span>
-            <FileText className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-muted-foreground shrink-0" />
+            <FileText className="w-4 h-4 shrink-0 text-muted-foreground" />
           </div>
-          <p className="text-xl sm:text-2xl font-black text-foreground">{proposals.length}</p>
+          <p className="text-2xl font-bold tracking-tight text-foreground">{proposals.length}</p>
         </div>
 
-        <div className="p-3 sm:p-4 rounded-xl sm:rounded-2xl border border-border bg-card shadow-2xs">
-          <div className="flex items-center justify-between text-blue-600 dark:text-blue-400 mb-1">
-            <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider truncate">
-              Review
+        <div className="p-4 rounded-xl border border-border bg-card shadow-2xs">
+          <div className="flex items-center justify-between text-blue-600 dark:text-blue-400 mb-1.5">
+            <span className="text-[11px] font-semibold uppercase tracking-wider">
+              Dalam Review
             </span>
-            <Clock className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
+            <Clock className="w-4 h-4 shrink-0" />
           </div>
-          <p className="text-xl sm:text-2xl font-black text-foreground">{countPending}</p>
+          <p className="text-2xl font-bold tracking-tight text-foreground">{countPending}</p>
         </div>
 
-        <div className="p-3 sm:p-4 rounded-xl sm:rounded-2xl border border-border bg-card shadow-2xs">
-          <div className="flex items-center justify-between text-amber-600 dark:text-amber-400 mb-1">
-            <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider truncate">
-              Revisi
+        <div className="p-4 rounded-xl border border-border bg-card shadow-2xs">
+          <div className="flex items-center justify-between text-amber-600 dark:text-amber-400 mb-1.5">
+            <span className="text-[11px] font-semibold uppercase tracking-wider">
+              Perlu Revisi
             </span>
-            <AlertTriangle className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
+            <AlertTriangle className="w-4 h-4 shrink-0" />
           </div>
-          <p className="text-xl sm:text-2xl font-black text-foreground">{countRevision}</p>
+          <p className="text-2xl font-bold tracking-tight text-foreground">{countRevision}</p>
         </div>
 
-        <div className="p-3 sm:p-4 rounded-xl sm:rounded-2xl border border-border bg-card shadow-2xs">
-          <div className="flex items-center justify-between text-emerald-600 dark:text-emerald-400 mb-1">
-            <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider truncate">
+        <div className="p-4 rounded-xl border border-border bg-card shadow-2xs">
+          <div className="flex items-center justify-between text-emerald-600 dark:text-emerald-400 mb-1.5">
+            <span className="text-[11px] font-semibold uppercase tracking-wider">
               Disetujui
             </span>
-            <FileCheck className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
+            <FileCheck className="w-4 h-4 shrink-0" />
           </div>
-          <p className="text-xl sm:text-2xl font-black text-foreground">{countApproved}</p>
+          <p className="text-2xl font-bold tracking-tight text-foreground">{countApproved}</p>
         </div>
       </div>
 

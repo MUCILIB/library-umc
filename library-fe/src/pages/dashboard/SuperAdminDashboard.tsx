@@ -202,7 +202,7 @@ function DashboardSidebar({
                 currentGroup = group;
                 items.push(
                   <div key={`group-${group}`} className="pt-4 pb-1.5 px-3">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/70 group-data-[collapsible=icon]:hidden">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400/80 group-data-[collapsible=icon]:hidden">
                       {group}
                     </span>
                   </div>
@@ -222,30 +222,36 @@ function DashboardSidebar({
                     isActive={isActive}
                     tooltip={badgeCount > 0 ? `${label} (${badgeCount} menunggu)` : label}
                     className={cn(
-                      "h-9.5 px-3 text-xs font-medium transition-all group-data-[collapsible=icon]:size-9 group-data-[collapsible=icon]:rounded-lg group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0 relative",
+                      "h-9.5 px-3 text-xs font-medium transition-all group-data-[collapsible=icon]:size-9 group-data-[collapsible=icon]:rounded-xl group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0 relative",
                       isActive
-                        ? "bg-primary/10 text-primary font-semibold border-l-2 border-primary rounded-l-none rounded-r-lg"
-                        : "text-sidebar-foreground/80 hover:bg-sidebar-accent/60 hover:text-sidebar-foreground rounded-lg"
+                        ? "bg-primary text-white font-semibold rounded-xl shadow-md shadow-primary/25 hover:bg-primary hover:text-white"
+                        : "text-sidebar-foreground/80 hover:bg-sidebar-accent/80 hover:text-white rounded-xl"
                     )}
                   >
                     <div className="relative shrink-0 flex items-center justify-center">
-                      <Icon className={cn("size-4 shrink-0", isActive ? "text-primary" : "text-sidebar-foreground/70")} />
+                      <Icon className={cn("size-4 shrink-0 transition-colors", isActive ? "text-white" : "text-sidebar-foreground/70")} />
                       {badgeCount > 0 && (
                         <span
                           aria-label={`${badgeCount} permintaan menunggu`}
-                          className="hidden group-data-[collapsible=icon]:flex absolute -top-1.5 -right-2 h-4 min-w-4 px-1 items-center justify-center rounded-full bg-rose-600 text-white font-extrabold text-[9px] shadow-sm ring-2 ring-sidebar animate-in zoom-in-75 duration-200"
+                          className={cn(
+                            "hidden group-data-[collapsible=icon]:flex absolute -top-1.5 -right-2 h-4 min-w-4 px-1 items-center justify-center rounded-full font-extrabold text-[9px] shadow-sm ring-2 ring-sidebar animate-in zoom-in-75 duration-200",
+                            isActive ? "bg-white text-primary" : "bg-rose-600 text-white"
+                          )}
                         >
                           {badgeCount > 99 ? "99+" : badgeCount}
                         </span>
                       )}
                     </div>
-                    <span className="group-data-[collapsible=icon]:hidden truncate">
+                    <span className={cn("group-data-[collapsible=icon]:hidden truncate", isActive && "text-white font-semibold")}>
                       {label}
                     </span>
                     {badgeCount > 0 && (
                       <span
                         aria-label={`${badgeCount} permintaan menunggu`}
-                        className="group-data-[collapsible=icon]:hidden ml-auto flex h-5 min-w-5 px-1.5 items-center justify-center rounded-full bg-rose-600 text-white dark:bg-rose-600 text-[10px] font-extrabold shadow-xs animate-in zoom-in-75 duration-200"
+                        className={cn(
+                          "group-data-[collapsible=icon]:hidden ml-auto flex h-5 min-w-5 px-1.5 items-center justify-center rounded-full text-[10px] font-extrabold shadow-xs animate-in zoom-in-75 duration-200",
+                          isActive ? "bg-white text-primary" : "bg-rose-600 text-white dark:bg-rose-600"
+                        )}
                       >
                         {badgeCount > 99 ? "99+" : badgeCount}
                       </span>
