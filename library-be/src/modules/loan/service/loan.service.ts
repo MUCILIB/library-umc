@@ -390,6 +390,13 @@ export class LoanService {
       const itemStatus = condition === "damaged" ? "damaged" : condition === "lost" ? "lost" : "available";
       await tx.update(items).set({ status: itemStatus as any, updatedAt: new Date() }).where(eq(items.id, loan.itemId));
 
+      // Auto-approve any pending return requests for this loan to avoid desync
+      await tx.update(returnRequests).set({
+        status: "approved",
+        processedAt: new Date(),
+        processedBy: adminId
+      }).where(and(eq(returnRequests.loanId, loan.id), eq(returnRequests.status, "pending")));
+
       // Sync collection stock if needed
       const loanItem = await tx.query.items.findFirst({ where: and(eq(items.id, loan.itemId), isNull(items.deletedAt)) });
       if (loanItem?.bibliographyId) {
@@ -503,7 +510,25 @@ export class LoanService {
       const loan = await tx.query.loans.findFirst({
         where: and(eq(loans.id, request.loanId), isNull(loans.deletedAt))
       });
-      if (!loan || !["approved", "extended"].includes(loan.status)) {
+      if (!loan) {
+        throw new Error("Data peminjaman tidak ditemukan");
+      }
+
+      // If loan is already returned (e.g. via direct return), approve the request idempotently
+      if (loan.status === "returned") {
+        await tx.update(returnRequests).set({
+          status: "approved",
+          processedAt: new Date(),
+          processedBy: adminId
+        }).where(eq(returnRequests.id, requestId));
+
+        return {
+          success: true,
+          message: "Permintaan pengembalian disetujui (buku telah tercatat dikembalikan sebelumnya)."
+        };
+      }
+
+      if (!["approved", "extended"].includes(loan.status)) {
         throw new Error("Buku tidak dalam status dipinjam atau data tidak ditemukan");
       }
 
@@ -658,7 +683,8 @@ export class LoanService {
         }
       }
     });
-    return { success: true, data: requests };
+    const validPending = requests.filter((r) => r.loan && ["approved", "extended"].includes(r.loan.status));
+    return { success: true, data: validPending };
   }
 
 

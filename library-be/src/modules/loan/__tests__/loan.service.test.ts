@@ -24,6 +24,8 @@ vi.mock("../../../db/schema", () => ({
   fines: Symbol("fines"),
   bibliographies: Symbol("bibliographies"),
   reservations: Symbol("reservations"),
+  returnRequests: Symbol("returnRequests"),
+  Users: Symbol("Users"),
 }));
 
 vi.mock("../../notification/service/notification.service", () => ({
@@ -315,6 +317,45 @@ describe("LoanService Unit Tests", () => {
 
       const result = await loanService.cancelLoan("loan-1", "member-1");
       expect(result.status).toBe("rejected");
+    });
+  });
+
+  describe("approveReturnRequest", () => {
+    it("throw jika adminId bukan ber-role super_admin", async () => {
+      (db.transaction as any).mockImplementationOnce(async (cb: any) => {
+        const tx = {
+          query: {
+            Users: { findFirst: vi.fn().mockResolvedValueOnce({ id: "staff-1", role: "staff" }) },
+          },
+        };
+        return cb(tx);
+      });
+
+      await expect(
+        loanService.approveReturnRequest("req-1", "staff-1")
+      ).rejects.toThrowError("Pengembalian buku harus disetujui oleh Super Admin");
+    });
+
+    it("sukses menyetujui secara idempoten jika buku sudah berstatus returned", async () => {
+      (db.transaction as any).mockImplementationOnce(async (cb: any) => {
+        const tx = {
+          query: {
+            Users: { findFirst: vi.fn().mockResolvedValueOnce({ id: "admin-1", role: "super_admin" }) },
+            returnRequests: { findFirst: vi.fn().mockResolvedValueOnce({ id: "req-1", loanId: "loan-1", status: "pending" }) },
+            loans: { findFirst: vi.fn().mockResolvedValueOnce({ id: "loan-1", status: "returned" }) },
+          },
+          update: vi.fn().mockReturnValue({
+            set: vi.fn().mockReturnValue({
+              where: vi.fn().mockResolvedValue([{}]),
+            }),
+          }),
+        };
+        return cb(tx);
+      });
+
+      const res = await loanService.approveReturnRequest("req-1", "admin-1");
+      expect(res.success).toBe(true);
+      expect(res.message).toContain("telah tercatat dikembalikan sebelumnya");
     });
   });
 });

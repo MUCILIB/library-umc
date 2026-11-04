@@ -5,7 +5,10 @@ import {
   Maximize2,
   Minimize2,
   BookOpen,
-  Lock
+  Lock,
+  ExternalLink,
+  FileWarning,
+  Smartphone
 } from "lucide-react";
 import { authClient } from "@/utils/auth-client";
 import { API_BASE_URL } from "@/utils/api-config";
@@ -105,6 +108,18 @@ export default function EbookReaderModal({
           </div>
 
           <div className="flex items-center gap-2 flex-shrink-0">
+            {blobUrl && (
+              <a
+                href={blobUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                title="Buka e-book di tab baru atau aplikasi pembaca PDF bawaan perangkat"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-primary bg-primary/10 hover:bg-primary/20 rounded-lg transition-colors min-h-[38px]"
+              >
+                <ExternalLink className="h-4 w-4" />
+                <span className="hidden sm:inline">Buka di Tab Baru</span>
+              </a>
+            )}
             <button
               onClick={() => setFullscreen(!fullscreen)}
               title={fullscreen ? "Keluar Layar Penuh" : "Layar Penuh"}
@@ -123,7 +138,25 @@ export default function EbookReaderModal({
         </div>
 
         {/* Reader Frame */}
-        <div className="flex-1 bg-muted relative">
+        <div className="flex-1 bg-muted relative flex flex-col">
+          {/* Banner petunjuk mobile */}
+          {blobUrl && (
+            <div className="md:hidden flex items-center justify-between px-4 py-2 bg-primary/10 border-b border-border text-xs text-primary font-medium">
+              <span className="flex items-center gap-1.5">
+                <Smartphone className="w-4 h-4 shrink-0" />
+                Mode Ponsel: Buka tab baru untuk navigasi lancar
+              </span>
+              <a
+                href={blobUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-bold underline ml-2 shrink-0"
+              >
+                Buka PDF
+              </a>
+            </div>
+          )}
+
           {loadingPdf && (
             <div className="absolute inset-0 flex items-center justify-center bg-background/60 z-10">
               <span className="text-sm font-medium text-muted-foreground animate-pulse">
@@ -132,15 +165,29 @@ export default function EbookReaderModal({
             </div>
           )}
           {loadError && !loadingPdf ? (
-            <div className="absolute inset-0 flex items-center justify-center p-6 text-center text-sm text-destructive">
-              {loadError}
+            <div className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center">
+              <div className="w-12 h-12 rounded-2xl bg-amber-100 dark:bg-amber-950/70 text-amber-700 dark:text-amber-400 flex items-center justify-center mb-3 shadow-inner">
+                <FileWarning className="w-6 h-6" />
+              </div>
+              <h3 className="text-sm font-bold text-foreground">Berkas E-Book Belum Tersedia</h3>
+              <p className="text-xs text-muted-foreground mt-1.5 max-w-sm">
+                {loadError.toLowerCase().includes("belum diunggah")
+                  ? "Dokumen naskah digital untuk e-book ini belum diunggah oleh administrator perpustakaan. Silakan hubungi petugas perpustakaan."
+                  : loadError}
+              </p>
             </div>
           ) : blobUrl ? (
-            <iframe
-              src={`${blobUrl}#toolbar=0&navpanes=0&scrollbar=1`}
-              title={title}
-              className="w-full h-full border-0"
-            />
+            <object
+              data={blobUrl}
+              type="application/pdf"
+              className="w-full h-full flex-1"
+            >
+              <iframe
+                src={`${blobUrl}#toolbar=0&navpanes=0&scrollbar=1`}
+                title={title}
+                className="w-full h-full border-0"
+              />
+            </object>
           ) : null}
         </div>
 
