@@ -633,7 +633,7 @@ function formatChartDate(offset: number) {
   return d.toLocaleDateString("en-US", { day: "numeric", month: "short", year: "numeric" });
 }
 
-const RevenueFlowChart = React.forwardRef<HTMLDivElement, Record<string, never>>(function RevenueFlowChart(_props, ref) {
+const RevenueFlowChart = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(function RevenueFlowChart(_props, ref) {
   const [hovered, setHovered] = useState<number | null>(null);
   const [slide, setSlide] = useState(0);
   const [metric, setMetric] = useState<"revenue" | "profit">("revenue");
