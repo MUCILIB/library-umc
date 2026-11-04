@@ -19,7 +19,8 @@ import {
   Building2,
   GraduationCap,
   MapPin,
-  Tablet
+  Tablet,
+  Bell
 } from "lucide-react";
 
 import Logo from "@/assets/logo_umc.png";
@@ -69,6 +70,8 @@ import {
 } from "@/components/ui/sidebar";
 import { useDashboardStatsLazy } from "@/hooks/dashboard/useDashboardStatsLazy";
 import { useGuestsData } from "@/hooks/dashboard/useGuestsData";
+import { useDashboardBadges } from "@/hooks/dashboard/useDashboardBadges";
+import type { DashboardBadgeCounts } from "@/services/dashboard/dashboardDataService";
 import { cn } from "@/lib/utils";
 import { dashboardDataService } from "@/services/dashboard/dashboardDataService";
 import { authClient } from "@/utils/auth-client";
@@ -110,7 +113,7 @@ const MENU_CONFIG: MenuConfig[] = [
 
   // Sirkulasi & Layanan
   { key: "circulation", label: "Sirkulasi & Scan", icon: ScanLine, group: "Sirkulasi & Layanan" },
-  { key: "loans", label: "Peminjaman Buku", icon: BookOpen, group: "Sirkulasi & Layanan" },
+  { key: "loans", label: "Peminjaman & Persetujuan", icon: BookOpen, group: "Sirkulasi & Layanan" },
   { key: "returnApprovals", label: "Konfirmasi Pengembalian", icon: CheckCircle, superAdminOnly: true, group: "Sirkulasi & Layanan" },
   { key: "fines", label: "Manajemen Denda", icon: Wallet, group: "Sirkulasi & Layanan" },
   { key: "cardApprovals", label: "Persetujuan Kartu", icon: Shield, group: "Sirkulasi & Layanan" },
@@ -149,6 +152,7 @@ type DashboardSidebarProps = {
     image?: string | null;
     role?: string | null;
   } | null;
+  badgeCounts?: DashboardBadgeCounts;
 };
 
 function DashboardSidebar({
@@ -156,7 +160,8 @@ function DashboardSidebar({
   menus,
   onMenuChange,
   onSignOut,
-  user
+  user,
+  badgeCounts
 }: DashboardSidebarProps) {
   const userInitial = (user?.name || "A").charAt(0).toUpperCase();
 
@@ -208,24 +213,43 @@ function DashboardSidebar({
               }
 
               const isActive = activeMenu === key;
+              const badgeCount = badgeCounts?.[key] || 0;
 
               items.push(
                 <SidebarMenuItem key={key}>
                   <SidebarMenuButton
                     onClick={() => onMenuChange(key)}
                     isActive={isActive}
-                    tooltip={label}
+                    tooltip={badgeCount > 0 ? `${label} (${badgeCount} menunggu)` : label}
                     className={cn(
-                      "h-9.5 px-3 text-xs font-medium transition-all group-data-[collapsible=icon]:size-9 group-data-[collapsible=icon]:rounded-lg group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0",
+                      "h-9.5 px-3 text-xs font-medium transition-all group-data-[collapsible=icon]:size-9 group-data-[collapsible=icon]:rounded-lg group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0 relative",
                       isActive
                         ? "bg-primary/10 text-primary font-semibold border-l-2 border-primary rounded-l-none rounded-r-lg"
                         : "text-sidebar-foreground/80 hover:bg-sidebar-accent/60 hover:text-sidebar-foreground rounded-lg"
                     )}
                   >
-                    <Icon className={cn("size-4 shrink-0", isActive ? "text-primary" : "text-sidebar-foreground/70")} />
+                    <div className="relative shrink-0 flex items-center justify-center">
+                      <Icon className={cn("size-4 shrink-0", isActive ? "text-primary" : "text-sidebar-foreground/70")} />
+                      {badgeCount > 0 && (
+                        <span
+                          aria-label={`${badgeCount} permintaan menunggu`}
+                          className="hidden group-data-[collapsible=icon]:flex absolute -top-1.5 -right-2 h-4 min-w-4 px-1 items-center justify-center rounded-full bg-rose-600 text-white font-extrabold text-[9px] shadow-sm ring-2 ring-sidebar animate-in zoom-in-75 duration-200"
+                        >
+                          {badgeCount > 99 ? "99+" : badgeCount}
+                        </span>
+                      )}
+                    </div>
                     <span className="group-data-[collapsible=icon]:hidden truncate">
                       {label}
                     </span>
+                    {badgeCount > 0 && (
+                      <span
+                        aria-label={`${badgeCount} permintaan menunggu`}
+                        className="group-data-[collapsible=icon]:hidden ml-auto flex h-5 min-w-5 px-1.5 items-center justify-center rounded-full bg-rose-600 text-white dark:bg-rose-600 text-[10px] font-extrabold shadow-xs animate-in zoom-in-75 duration-200"
+                      >
+                        {badgeCount > 99 ? "99+" : badgeCount}
+                      </span>
+                    )}
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               );
@@ -318,6 +342,8 @@ export default function SuperAdminDashboard() {
     loading: guestsLoading,
     refetch: refetchGuests
   } = useGuestsData(activeMenu === "guests");
+
+  const { badges } = useDashboardBadges();
 
   const activeLoading = useMemo(() => {
     if (activeMenu === "dashboard") return statsLoading;
@@ -467,6 +493,7 @@ export default function SuperAdminDashboard() {
         onMenuChange={setActiveMenu}
         onSignOut={handleSignOut}
         user={session?.user}
+        badgeCounts={badges}
       />
 
       <SidebarInset className="bg-background min-w-0 max-w-full overflow-hidden">
@@ -485,9 +512,33 @@ export default function SuperAdminDashboard() {
             </span>
           </button>
 
-          <div className="ml-auto flex items-center gap-4 sm:gap-6">
+          <div className="ml-auto flex items-center gap-3 sm:gap-4">
+            <button
+              type="button"
+              onClick={() => {
+                if (badges.returnApprovals > 0) setActiveMenu("returnApprovals");
+                else if (badges.loans > 0) setActiveMenu("loans");
+                else if (badges.cardApprovals > 0) setActiveMenu("cardApprovals");
+                else if (badges.repository > 0) setActiveMenu("repository");
+                else if (badges.recommendations > 0) setActiveMenu("recommendations");
+                else setIsCommandOpen(true);
+              }}
+              title={
+                badges.total > 0
+                  ? `${badges.total} permintaan menunggu persetujuan`
+                  : "Tidak ada permintaan menunggu"
+              }
+              className="relative flex size-9 items-center justify-center rounded-xl border border-border bg-card text-muted-foreground hover:bg-muted hover:text-foreground transition-colors cursor-pointer"
+            >
+              <Bell className="size-4" />
+              {badges.total > 0 && (
+                <span className="absolute -top-1 -right-1 flex h-4 min-w-4 px-1 items-center justify-center rounded-full bg-rose-600 text-white font-extrabold text-[9px] shadow-sm ring-2 ring-background animate-in zoom-in-75 duration-200">
+                  {badges.total > 99 ? "99+" : badges.total}
+                </span>
+              )}
+            </button>
             <ThemeToggle />
-            <div className="flex items-center gap-3 border-l border-border pl-4 sm:pl-6">
+            <div className="flex items-center gap-3 border-l border-border pl-3 sm:pl-4">
               <div className="hidden text-right sm:block">
                 <p className="leading-tight text-sm font-bold text-foreground">
                   {session?.user?.name || "Admin"}
@@ -548,24 +599,32 @@ export default function SuperAdminDashboard() {
               heading="Menu Dashboard"
               className="**:[[cmdk-group-heading]]:text-red-600/80"
             >
-              {visibleMenus.map(({ key, label, icon: Icon }) => (
-                <CommandItem
-                  key={key}
-                  value={label}
-                  className="data-[selected=true]:bg-red-600 data-[selected=true]:text-white"
-                  onSelect={() => {
-                    setActiveMenu(key);
-                    setSearchTerm("");
-                    setIsCommandOpen(false);
-                  }}
-                >
-                  <Icon className="size-4" />
-                  <span>{label}</span>
-                  <CommandShortcut className="text-red-500 dark:text-red-400">
-                    {activeMenu === key ? "Aktif" : ""}
-                  </CommandShortcut>
-                </CommandItem>
-              ))}
+              {visibleMenus.map(({ key, label, icon: Icon }) => {
+                const badgeCount = badges?.[key] || 0;
+                return (
+                  <CommandItem
+                    key={key}
+                    value={label}
+                    className="data-[selected=true]:bg-red-600 data-[selected=true]:text-white flex items-center gap-2"
+                    onSelect={() => {
+                      setActiveMenu(key);
+                      setSearchTerm("");
+                      setIsCommandOpen(false);
+                    }}
+                  >
+                    <Icon className="size-4 shrink-0" />
+                    <span className="flex-1 truncate">{label}</span>
+                    {badgeCount > 0 && (
+                      <span className="h-4.5 min-w-4.5 px-1.5 flex items-center justify-center rounded-full bg-rose-500 text-white text-[10px] font-extrabold shadow-xs">
+                        {badgeCount > 99 ? "99+" : badgeCount}
+                      </span>
+                    )}
+                    <CommandShortcut className="text-red-500 dark:text-red-400">
+                      {activeMenu === key ? "Aktif" : ""}
+                    </CommandShortcut>
+                  </CommandItem>
+                );
+              })}
             </CommandGroup>
           </CommandList>
         </CommandDialog>

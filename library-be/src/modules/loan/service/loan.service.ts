@@ -381,6 +381,7 @@ export class LoanService {
       // Update loan status to returned
       await tx.update(loans).set({
         status: "returned",
+        extensionStatus: "none",
         returnDate: returnDateStr,
         updatedAt: new Date()
       }).where(eq(loans.id, loan.id));
@@ -511,6 +512,7 @@ export class LoanService {
       // Update loan status to returned
       await tx.update(loans).set({
         status: "returned",
+        extensionStatus: "none",
         returnDate: returnDateStr,
         updatedAt: new Date()
       }).where(eq(loans.id, loan.id));

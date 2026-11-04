@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/useToast";
 import { formatDateID } from "@/utils/format";
+import { triggerBadgeRefresh } from "@/hooks/dashboard/useDashboardBadges";
 
 interface Recommendation {
   id: string;
@@ -93,6 +94,7 @@ export default function RecommendationsSection() {
       if (data.success) {
         toast.success("Berhasil", `Rekomendasi telah ${status === 'approved' ? 'disetujui' : 'ditolak'}`);
         fetchRecommendations();
+        triggerBadgeRefresh();
       } else {
         toast.error("Gagal", data.message || "Gagal memperbarui status");
       }

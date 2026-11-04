@@ -41,6 +41,16 @@ class ReportController {
     }
   }
 
+  // GET /reports/badges
+  async getBadgeCounts(req: Request, res: Response, next: NextFunction) {
+    try {
+      const result = await reportService.getBadgeCounts();
+      res.status(200).json(result);
+    } catch (error) {
+      next(error);
+    }
+  }
+
   // GET /reports/popular-books?limit=10
   async getPopularBooks(req: Request, res: Response, next: NextFunction) {
     try {

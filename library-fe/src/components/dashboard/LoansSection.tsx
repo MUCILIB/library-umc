@@ -23,6 +23,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/useToast";
 import { exportApi } from "@/api/client";
 import Modal from "@/components/ui/modal";
+import { triggerBadgeRefresh } from "@/hooks/dashboard/useDashboardBadges";
 
 
 interface Loan {
@@ -129,6 +130,7 @@ export default function LoansSection({ searchTerm, onSearchChange }: LoansSectio
         // Pastikan data.data adalah array
         if (Array.isArray(data.data)) {
           setLoans(data.data);
+          triggerBadgeRefresh();
         } else {
           console.error("Data is not an array:", data.data);
           setLoans([]);
@@ -164,6 +166,7 @@ export default function LoansSection({ searchTerm, onSearchChange }: LoansSectio
         setSelectedLoan(null);
         setActionNotes("");
         fetchLoans();
+        triggerBadgeRefresh();
       } else {
         toast.error("Gagal", data.message || "Gagal menyetujui peminjaman");
       }
@@ -203,6 +206,7 @@ export default function LoansSection({ searchTerm, onSearchChange }: LoansSectio
       if (data.success) {
         toast.success("Ditolak", "Peminjaman berhasil ditolak");
         fetchLoans();
+        triggerBadgeRefresh();
       } else {
         toast.error("Gagal", data.message || "Gagal menolak peminjaman");
       }
@@ -259,6 +263,7 @@ export default function LoansSection({ searchTerm, onSearchChange }: LoansSectio
       if (data.success) {
         toast.success("Berhasil", "Perpanjangan peminjaman disetujui");
         fetchLoans();
+        triggerBadgeRefresh();
       } else {
         toast.error("Gagal", data.message || "Gagal menyetujui perpanjangan");
       }
@@ -285,6 +290,7 @@ export default function LoansSection({ searchTerm, onSearchChange }: LoansSectio
       if (data.success) {
         toast.success("Berhasil", "Perpanjangan peminjaman ditolak");
         fetchLoans();
+        triggerBadgeRefresh();
       } else {
         toast.error("Gagal", data.message || "Gagal menolak perpanjangan");
       }

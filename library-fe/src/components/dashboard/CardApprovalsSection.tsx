@@ -7,6 +7,7 @@ import {
   usersManagementService,
   type PendingMemberCardRequest
 } from "@/services/dashboard/usersManagementService";
+import { triggerBadgeRefresh } from "@/hooks/dashboard/useDashboardBadges";
 
 export default function CardApprovalsSection() {
   const { success, error, warning } = useToast();
@@ -62,6 +63,7 @@ export default function CardApprovalsSection() {
       await usersManagementService.approveMemberCard(item.id);
       success("Berhasil", `Kartu member ${item.user.name} disetujui`, 3000);
       await loadRequests();
+      triggerBadgeRefresh();
     } catch (err) {
       const message =
         err instanceof Error ? err.message : "Gagal approve kartu";
@@ -84,6 +86,7 @@ export default function CardApprovalsSection() {
       await usersManagementService.rejectMemberCard(item.id, reason.trim());
       success("Berhasil", `Kartu member ${item.user.name} ditolak`, 3000);
       await loadRequests();
+      triggerBadgeRefresh();
     } catch (err) {
       const message =
         err instanceof Error ? err.message : "Gagal menolak kartu";
@@ -99,6 +102,7 @@ export default function CardApprovalsSection() {
       await usersManagementService.issueMemberCard(item.userId);
       success("Berhasil", `Kartu member ${item.user.name} diterbitkan`, 3000);
       await loadRequests();
+      triggerBadgeRefresh();
     } catch (err) {
       const message =
         err instanceof Error ? err.message : "Gagal menerbitkan kartu";
