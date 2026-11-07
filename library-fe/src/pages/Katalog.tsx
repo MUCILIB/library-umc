@@ -1,14 +1,15 @@
 // src/pages/Katalog.tsx
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useSearchParams } from "react-router";
 import Navbar from "@/components/ui/navbar";
 import Footer from "@/components/Footer";
 import BookList from "@/components/BookList";
 import Background from "@/assets/bg1.jpeg";
-import { Search, Filter, X, ChevronDown, ChevronUp, ArrowRight, BookOpen, Smartphone, Layers, BookMarked } from "lucide-react";
+import { Search, Filter, X, ArrowRight, BookOpen, Smartphone, Layers, BookMarked, Calendar } from "lucide-react";
 import { authClient } from "@/utils/auth-client";
 import { API_BASE_URL } from "@/utils/api-config";
 import LecturerRecommendationModal from "@/components/LecturerRecommendationModal";
+import { FilterMenu, type FilterGroup, type FilterValue } from "@/components/ui/filter-menu-clean";
 import {
   Select,
   SelectContent,
@@ -59,16 +60,6 @@ const Katalog = () => {
   const [selectedStudyProgram, setSelectedStudyProgram] = useState<string>(
     searchParams.get("prodi") || ""
   );
-
-  // Accordion state untuk filter sidebar
-  const [openSections, setOpenSections] = useState({
-    ketersediaan: true,
-    tahun: true,
-  });
-
-  const toggleSection = (section: keyof typeof openSections) => {
-    setOpenSections((prev) => ({ ...prev, [section]: !prev[section] }));
-  };
 
   // Helper status filter jenis koleksi untuk tab di atas
   const isAllSelected =
@@ -195,6 +186,127 @@ const Katalog = () => {
     setSelectedFaculty("");
     setSelectedStudyProgram("");
     setSearchParams({});
+  };
+
+  // Definisi grup filter untuk komponen FilterMenu (AffectUI Clean)
+  const filterGroups: FilterGroup[] = useMemo(() => {
+    const groups: FilterGroup[] = [
+      {
+        id: "availability",
+        label: "Ketersediaan Koleksi",
+        chipPrefix: "Status: ",
+        options: [
+          { id: "available", label: "Tersedia Dipinjam" },
+          { id: "borrowed", label: "Sedang Dipinjam" },
+        ],
+      },
+      {
+        id: "collection",
+        label: "Jenis Koleksi",
+        chipPrefix: "Tipe: ",
+        options: [
+          { id: "physical_book", label: "Buku Fisik" },
+          { id: "ebook", label: "E-Book Digital" },
+        ],
+      },
+    ];
+
+    if (faculties.length > 0) {
+      groups.push({
+        id: "faculty",
+        label: "Fakultas",
+        chipPrefix: "Fakultas: ",
+        options: faculties.map((fac) => ({
+          id: String(fac.id),
+          label: fac.name,
+        })),
+      });
+    }
+
+    if (availableStudyPrograms.length > 0) {
+      groups.push({
+        id: "prodi",
+        label: "Program Studi",
+        chipPrefix: "Prodi: ",
+        options: availableStudyPrograms.map((sp) => ({
+          id: String(sp.id),
+          label: sp.name,
+        })),
+      });
+    }
+
+    return groups;
+  }, [faculties, availableStudyPrograms]);
+
+  // Reactive value mapping dari state lokal ke FilterValue
+  const filterValue: FilterValue = useMemo(() => {
+    const val: FilterValue = {};
+    if (availabilityFilter.length > 0) {
+      val.availability = availabilityFilter;
+    }
+    if (collectionTypeFilter.length > 0) {
+      val.collection = collectionTypeFilter;
+    }
+    if (selectedFaculty) {
+      val.faculty = [selectedFaculty];
+    }
+    if (selectedStudyProgram) {
+      val.prodi = [selectedStudyProgram];
+    }
+    return val;
+  }, [availabilityFilter, collectionTypeFilter, selectedFaculty, selectedStudyProgram]);
+
+  // Handler perubahan nilai FilterMenu
+  const handleFilterMenuChange = (nextVal: FilterValue) => {
+    // 1. Ketersediaan
+    const nextAvailability = nextVal.availability || [];
+    setAvailabilityFilter(nextAvailability);
+
+    // 2. Jenis Koleksi
+    const nextCollection = nextVal.collection || [];
+    setCollectionTypeFilter(
+      nextCollection.length > 0 ? nextCollection : ["physical_book"]
+    );
+
+    // 3. Fakultas (single choice)
+    const nextFacs = nextVal.faculty || [];
+    const latestFaculty = nextFacs.length > 0 ? nextFacs[nextFacs.length - 1] : "";
+    setSelectedFaculty(latestFaculty);
+
+    // 4. Program Studi (single choice)
+    const nextProdis = nextVal.prodi || [];
+    const latestProdi = nextProdis.length > 0 ? nextProdis[nextProdis.length - 1] : "";
+    setSelectedStudyProgram(latestProdi);
+
+    // Verifikasi relasi fakultas & prodi
+    if (latestFaculty && latestProdi) {
+      const belongs = studyPrograms.some(
+        (sp) =>
+          String(sp.id) === latestProdi &&
+          (sp.facultyId === Number(latestFaculty) || sp.faculty?.id === Number(latestFaculty))
+      );
+      if (!belongs) {
+        setSelectedStudyProgram("");
+      }
+    }
+
+    // Sinkronisasi query params URL
+    const params = new URLSearchParams(searchParams);
+    if (latestFaculty) params.set("faculty", latestFaculty);
+    else params.delete("faculty");
+
+    if (latestProdi) params.set("prodi", latestProdi);
+    else params.delete("prodi");
+
+    if (nextCollection.length === 1) {
+      params.set("collection", nextCollection[0] === "ebook" ? "ebook" : "physical");
+    } else if (nextCollection.length > 1) {
+      params.set("collection", "all");
+    } else {
+      params.delete("collection");
+    }
+    params.delete("page");
+    setSearchParams(params);
   };
 
   const handleCountsChange = useCallback(
@@ -383,217 +495,98 @@ const Katalog = () => {
         </div>
 
         <div className="flex flex-col lg:flex-row gap-6 lg:gap-8 items-start">
-          {/* Sidebar Filter (Kiri) Sesuai Referensi Gambar */}
-          <aside
-            className={`
-              fixed inset-0 z-40 lg:relative lg:inset-auto lg:z-0 lg:w-64 xl:w-72 shrink-0
-              transition-transform duration-300 ease-in-out lg:translate-x-0
-              ${isSidebarOpen ? "translate-x-0" : "-translate-x-full"}
-            `}
-          >
-            {/* Backdrop for mobile */}
-            {isSidebarOpen && (
-              <div
-                className="fixed inset-0 bg-black/50 lg:hidden backdrop-blur-xs"
-                onClick={() => setIsSidebarOpen(false)}
-              />
-            )}
-
-            <div className="relative bg-white dark:bg-card h-full lg:h-auto p-5 rounded-none lg:rounded-2xl shadow-xl lg:shadow-xs border border-slate-100 dark:border-border/60 overflow-y-auto w-[280px] sm:w-[320px] lg:w-full space-y-4">
-              {/* Header Filter & Tombol RESET */}
-              <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-border/60">
-                <h2 className="font-bold text-slate-900 dark:text-foreground text-sm">
-                  Filter Pencarian
-                </h2>
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={handleResetFilters}
-                    className="text-xs font-bold text-red-600 hover:text-red-700 tracking-wider cursor-pointer uppercase"
-                  >
-                    RESET
-                  </button>
-                  <button
-                    onClick={() => setIsSidebarOpen(false)}
-                    className="lg:hidden p-1 rounded-md text-slate-400 hover:text-slate-600"
-                  >
-                    <X size={16} />
-                  </button>
-                </div>
-              </div>
-
-              {/* 1. Ketersediaan */}
-              <div className="space-y-2.5">
-                <button
-                  type="button"
-                  onClick={() => toggleSection("ketersediaan")}
-                  className="w-full flex items-center justify-between text-xs font-bold text-slate-900 dark:text-foreground cursor-pointer"
-                >
-                  <span>Ketersediaan</span>
-                  {openSections.ketersediaan ? (
-                    <ChevronUp size={16} className="text-slate-400" />
-                  ) : (
-                    <ChevronDown size={16} className="text-slate-400" />
-                  )}
-                </button>
-
-                {openSections.ketersediaan && (
-                  <div className="space-y-2 pt-1 pl-1">
-                    <label className="flex items-center gap-2.5 cursor-pointer text-xs text-slate-600 dark:text-slate-300">
-                      <input
-                        type="checkbox"
-                        checked={availabilityFilter.includes("available")}
-                        onChange={(e) => {
-                          if (e.target.checked) {
-                            setAvailabilityFilter([...availabilityFilter, "available"]);
-                          } else {
-                            setAvailabilityFilter(
-                              availabilityFilter.filter((f) => f !== "available")
-                            );
-                          }
-                        }}
-                        className="w-4 h-4 rounded text-[#9D171D] border-slate-300 accent-[#9D171D] cursor-pointer"
-                      />
-                      <span>Tersedia</span>
-                    </label>
-
-                    <label className="flex items-center gap-2.5 cursor-pointer text-xs text-slate-600 dark:text-slate-300">
-                      <input
-                        type="checkbox"
-                        checked={availabilityFilter.includes("borrowed")}
-                        onChange={(e) => {
-                          if (e.target.checked) {
-                            setAvailabilityFilter([...availabilityFilter, "borrowed"]);
-                          } else {
-                            setAvailabilityFilter(
-                              availabilityFilter.filter((f) => f !== "borrowed")
-                            );
-                          }
-                        }}
-                        className="w-4 h-4 rounded text-[#9D171D] border-slate-300 accent-[#9D171D] cursor-pointer"
-                      />
-                      <span>Dipinjam</span>
-                    </label>
-                  </div>
-                )}
-              </div>
-
-              <div className="border-t border-slate-100 dark:border-border/60" />
-
-              {/* 2. Tahun Terbit */}
-              <div className="space-y-2.5">
-                <button
-                  type="button"
-                  onClick={() => toggleSection("tahun")}
-                  className="w-full flex items-center justify-between text-xs font-bold text-slate-900 dark:text-foreground cursor-pointer"
-                >
-                  <span>Tahun Terbit</span>
-                  {openSections.tahun ? (
-                    <ChevronUp size={16} className="text-slate-400" />
-                  ) : (
-                    <ChevronDown size={16} className="text-slate-400" />
-                  )}
-                </button>
-
-                {openSections.tahun && (
-                  <div className="grid grid-cols-2 gap-2 pt-1">
-                    <input
-                      type="number"
-                      placeholder="Tahun Mulai"
-                      value={yearRange.start}
-                      onChange={(e) =>
-                        setYearRange({ ...yearRange, start: e.target.value })
-                      }
-                      className="w-full px-2.5 py-1.5 bg-slate-50 dark:bg-muted border border-slate-200 dark:border-border rounded-lg text-xs placeholder:text-slate-400 text-slate-800 dark:text-foreground outline-none focus:border-[#9D171D] transition-colors"
-                    />
-                    <input
-                      type="number"
-                      placeholder="Tahun Akhir"
-                      value={yearRange.end}
-                      onChange={(e) =>
-                        setYearRange({ ...yearRange, end: e.target.value })
-                      }
-                      className="w-full px-2.5 py-1.5 bg-slate-50 dark:bg-muted border border-slate-200 dark:border-border rounded-lg text-xs placeholder:text-slate-400 text-slate-800 dark:text-foreground outline-none focus:border-[#9D171D] transition-colors"
-                    />
-                  </div>
-                )}
-              </div>
-
-
-
-              {/* 4. Fakultas (Opsional) */}
-              {faculties.length > 0 && (
-                <>
-                  <div className="border-t border-slate-100 dark:border-border/60" />
-                  <div className="space-y-1.5">
-                    <label
-                      htmlFor="filter-faculty"
-                      className="block text-xs font-bold text-slate-900 dark:text-foreground cursor-pointer"
+                    {/* Sidebar Filter (Kiri): Menggunakan AffectUI Clean FilterMenu Component */}
+                    <aside
+                      className={`
+                        fixed inset-0 z-40 lg:relative lg:inset-auto lg:z-0 lg:w-72 xl:w-80 shrink-0
+                        transition-transform duration-300 ease-in-out lg:translate-x-0
+                        ${isSidebarOpen ? "translate-x-0" : "-translate-x-full"}
+                      `}
                     >
-                      Fakultas
-                    </label>
-                    <Select
-                      value={selectedFaculty || "all"}
-                      onValueChange={handleFacultyChange}
-                    >
-                      <SelectTrigger
-                        id="filter-faculty"
-                        className="w-full h-9 rounded-lg bg-slate-50 dark:bg-muted border border-slate-200 dark:border-border text-xs font-medium text-slate-700 dark:text-foreground focus:ring-0 cursor-pointer"
-                      >
-                        <SelectValue placeholder="Semua Fakultas" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all" className="cursor-pointer">
-                          Semua Fakultas
-                        </SelectItem>
-                        {faculties.map((fac) => (
-                          <SelectItem key={fac.id} value={String(fac.id)} className="cursor-pointer">
-                            {fac.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </>
-              )}
+                      {/* Backdrop for mobile */}
+                      {isSidebarOpen && (
+                        <div
+                          className="fixed inset-0 bg-black/50 lg:hidden backdrop-blur-xs"
+                          onClick={() => setIsSidebarOpen(false)}
+                        />
+                      )}
 
-              {/* 5. Program Studi (Opsional) */}
-              {studyPrograms.length > 0 && (
-                <>
-                  <div className="border-t border-slate-100 dark:border-border/60" />
-                  <div className="space-y-1.5">
-                    <label
-                      htmlFor="filter-prodi"
-                      className="block text-xs font-bold text-slate-900 dark:text-foreground cursor-pointer"
-                    >
-                      Program Studi
-                    </label>
-                    <Select
-                      value={selectedStudyProgram || "all"}
-                      onValueChange={handleStudyProgramChange}
-                    >
-                      <SelectTrigger
-                        id="filter-prodi"
-                        className="w-full h-9 rounded-lg bg-slate-50 dark:bg-muted border border-slate-200 dark:border-border text-xs font-medium text-slate-700 dark:text-foreground focus:ring-0 cursor-pointer"
-                      >
-                        <SelectValue placeholder="Semua Program Studi" />
-                      </SelectTrigger>
-                      <SelectContent className="max-h-60">
-                        <SelectItem value="all" className="cursor-pointer">
-                          Semua Program Studi
-                        </SelectItem>
-                        {availableStudyPrograms.map((sp) => (
-                          <SelectItem key={sp.id} value={String(sp.id)} className="cursor-pointer">
-                            {sp.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </>
-              )}
-            </div>
-          </aside>
+                      <div className="relative bg-white dark:bg-card h-full lg:h-auto p-3.5 sm:p-4 rounded-none lg:rounded-2xl shadow-xl lg:shadow-xs border border-slate-100 dark:border-border/60 overflow-y-auto w-[290px] sm:w-[320px] lg:w-full space-y-4">
+                        {/* Header Filter Mobile */}
+                        <div className="lg:hidden flex items-center justify-between pb-2 border-b border-slate-100 dark:border-border/60">
+                          <span className="text-xs font-bold text-slate-900 dark:text-foreground">
+                            Filter Pencarian
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => setIsSidebarOpen(false)}
+                            className="p-1 rounded-md text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
+                            aria-label="Tutup Filter"
+                          >
+                            <X size={16} />
+                          </button>
+                        </div>
+
+                        {/* AffectUI Clean FilterMenu Component */}
+                        <FilterMenu
+                          groups={filterGroups}
+                          value={filterValue}
+                          onChange={handleFilterMenuChange}
+                          defaultOpen={["availability", "collection"]}
+                          title="Filter Koleksi"
+                          clearLabel="Reset Semua"
+                          className="w-full"
+                        />
+
+                        {/* Filter Rentang Tahun Terbit */}
+                        <div className="pt-2 border-t border-slate-100 dark:border-border/60 space-y-2">
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs font-bold text-slate-800 dark:text-foreground flex items-center gap-1.5">
+                              <Calendar size={13} className="text-[#9D171D] dark:text-red-400" />
+                              Tahun Terbit
+                            </span>
+                            {(yearRange.start || yearRange.end) && (
+                              <button
+                                type="button"
+                                onClick={() => setYearRange({ start: "", end: "" })}
+                                className="text-[10px] font-semibold text-slate-400 hover:text-red-600 transition-colors cursor-pointer"
+                              >
+                                Hapus
+                              </button>
+                            )}
+                          </div>
+
+                          <div className="grid grid-cols-2 gap-2">
+                            <div>
+                              <label htmlFor="year-start-input" className="sr-only">Tahun Mulai</label>
+                              <input
+                                id="year-start-input"
+                                type="number"
+                                placeholder="Mulai (e.g. 2020)"
+                                value={yearRange.start}
+                                onChange={(e) =>
+                                  setYearRange({ ...yearRange, start: e.target.value })
+                                }
+                                className="w-full px-2.5 py-1.5 bg-slate-50 dark:bg-muted border border-slate-200 dark:border-border rounded-lg text-xs placeholder:text-slate-400 text-slate-800 dark:text-foreground outline-none focus:border-[#9D171D] transition-colors"
+                              />
+                            </div>
+                            <div>
+                              <label htmlFor="year-end-input" className="sr-only">Tahun Akhir</label>
+                              <input
+                                id="year-end-input"
+                                type="number"
+                                placeholder="Akhir (e.g. 2026)"
+                                value={yearRange.end}
+                                onChange={(e) =>
+                                  setYearRange({ ...yearRange, end: e.target.value })
+                                }
+                                className="w-full px-2.5 py-1.5 bg-slate-50 dark:bg-muted border border-slate-200 dark:border-border rounded-lg text-xs placeholder:text-slate-400 text-slate-800 dark:text-foreground outline-none focus:border-[#9D171D] transition-colors"
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </aside>
 
           {/* List Hasil (Kanan) */}
           <section className="w-full min-w-0 flex-1">
