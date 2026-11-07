@@ -88,6 +88,34 @@ describe("ItemService Unit Tests", () => {
   });
 
   describe("createItem", () => {
+    it("should generate hierarchical item code from pattern (e.g. PND-01 -> PND-01-01)", async () => {
+      (db.query.bibliographies.findFirst as any).mockResolvedValue({
+        id: "bib-1",
+        title: "Buku Pendidikan",
+        callNumber: "PND-01",
+      });
+      (db.query.items.findMany as any).mockResolvedValue([]);
+      (db.query.items.findFirst as any).mockResolvedValue(null);
+
+      const code = await itemService.generateItemCodePreview("bib-1", "PND-01");
+      expect(code).toBe("PND-01-01");
+    });
+
+    it("should increment sequence when existing items exist (PND-01-01 -> PND-01-02)", async () => {
+      (db.query.bibliographies.findFirst as any).mockResolvedValue({
+        id: "bib-1",
+        title: "Buku Pendidikan",
+        callNumber: "PND-01",
+      });
+      (db.query.items.findMany as any).mockResolvedValue([
+        { itemCode: "PND-01-01" },
+      ]);
+      (db.query.items.findFirst as any).mockResolvedValue(null);
+
+      const code = await itemService.generateItemCodePreview("bib-1");
+      expect(code).toBe("PND-01-02");
+    });
+
     it("should create item and sync stock in transaction", async () => {
       (db.query.items.findFirst as any).mockResolvedValue(null);
       (db.query.bibliographies.findFirst as any).mockResolvedValue({

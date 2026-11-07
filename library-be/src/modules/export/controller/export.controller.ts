@@ -19,6 +19,7 @@ function parseFilter(query: Request["query"]): ExportFilter {
     categoryId: parseNum(query.categoryId),
     subject: parseStr(query.subject),
     status: parseStr(query.status),
+    delimiter: query.delimiter === "," ? "," : ";",
   };
 }
 
@@ -30,6 +31,15 @@ export class ExportController {
       res.setHeader("Content-Type", "text/csv; charset=utf-8");
       res.setHeader("Content-Disposition", 'attachment; filename="bibliographies_export.csv"');
       res.send(csv);
+    } catch (error) { next(error); }
+  }
+
+  async exportBibliographiesPdf(req: Request, res: Response, next: NextFunction) {
+    try {
+      const filter = parseFilter(req.query);
+      res.setHeader("Content-Type", "application/pdf");
+      res.setHeader("Content-Disposition", 'attachment; filename="katalog_koleksi_umc.pdf"');
+      await exportService.exportBibliographiesPdf(res, filter);
     } catch (error) { next(error); }
   }
 

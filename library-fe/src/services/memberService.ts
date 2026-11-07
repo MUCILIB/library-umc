@@ -14,6 +14,9 @@ export interface MemberProfile {
   cardNumber: string | null;
   cardRequestedAt: string | null;
   cardApprovedAt: string | null;
+  cardExpiresAt?: string | null;
+  cardRenewalStatus?: "pending" | "approved" | "rejected" | null;
+  cardRenewalRequestedAt?: string | null;
   cardRejectedAt: string | null;
   cardRejectedReason: string | null;
   createdAt: string;
@@ -93,6 +96,28 @@ class MemberService {
     const result = await response.json();
     if (!result.success) {
       throw new Error(result.message || "Gagal mengajukan kartu member");
+    }
+
+    return this.getMyProfile();
+  }
+
+  async requestCardRenewal(): Promise<MemberProfile> {
+    const authHeaders = getAuthHeaders();
+    const response = await fetch(
+      `${this.baseUrl}/api/members/me/card/renew`,
+      {
+        method: "POST",
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+          ...authHeaders,
+        }
+      }
+    );
+
+    const result = await response.json();
+    if (!result.success) {
+      throw new Error(result.message || "Gagal mengajukan perpanjangan kartu");
     }
 
     return this.getMyProfile();

@@ -11,6 +11,7 @@ import ForgotPasswordPage from "../pages/ForgotPasswordPage";
 import ResetPasswordPage from "../pages/ResetPasswordPage";
 import HandleLogout from "../pages/Handlelogout";
 import SuperAdminDashboard from "../pages/dashboard/SuperAdminDashboard";
+import ReturnConfirmationPage from "../pages/dashboard/ReturnConfirmationPage";
 import Profile from "../pages/Profile";
 import RepositoryDetailPage from "../pages/RepositoryDetailPage";
 import Eresource from "../pages/EResoucePage";
@@ -90,6 +91,26 @@ const AppRoutes = () => {
             </ProtectedRoute>
           }
         />
+        <Route
+          path="/dashboard/return-confirmation/:loanId"
+          element={
+            <ProtectedRoute requiredRole={["super_admin", "staff"]}>
+              <ReturnConfirmationPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/return-confirmation/:loanId"
+          element={
+            <ProtectedRoute requiredRole={["super_admin", "staff"]}>
+              <ReturnConfirmationPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route path="/items" element={<Navigate to="/dashboard/super-admin?tab=items" replace />} />
+        <Route path="/item" element={<Navigate to="/dashboard/super-admin?tab=items" replace />} />
+        <Route path="/exemplar" element={<Navigate to="/dashboard/super-admin?tab=items" replace />} />
+        <Route path="/eksemplar" element={<Navigate to="/dashboard/super-admin?tab=items" replace />} />
 
         <Route path="*" element={<NotFound />} />
       </Routes>

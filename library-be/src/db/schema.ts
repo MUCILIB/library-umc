@@ -268,6 +268,9 @@ export const members = pgTable("members", {
   cardNumber: varchar("card_number", { length: 100 }).unique(),
   cardRequestedAt: timestamp("card_requested_at"),
   cardApprovedAt: timestamp("card_approved_at"),
+  cardExpiresAt: timestamp("card_expires_at"),
+  cardRenewalStatus: varchar("card_renewal_status", { length: 50 }),
+  cardRenewalRequestedAt: timestamp("card_renewal_requested_at"),
   cardRejectedAt: timestamp("card_rejected_at"),
   cardRejectedReason: text("card_rejected_reason"),
   createdAt: timestamp("created_at").defaultNow(),
@@ -439,6 +442,10 @@ export const loans = pgTable("loans", {
   approvedBy: text("approved_by").references(() => Users.id),
   verificationToken: varchar("verification_token", { length: 100 }),
   verificationExpiresAt: timestamp("verification_expires_at"),
+  returnStaffName: varchar("return_staff_name", { length: 255 }),
+  returnStaffSignature: text("return_staff_signature"),
+  returnCondition: varchar("return_condition", { length: 50 }).default("good"),
+  returnReceiptNo: varchar("return_receipt_no", { length: 100 }),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
   deletedAt: timestamp("deleted_at")
@@ -838,4 +845,41 @@ export const proposalReviewLogRelations = relations(proposalReviewLogs, ({ one }
   proposal: one(repositoryProposals, { fields: [proposalReviewLogs.proposalId], references: [repositoryProposals.id] }),
   reviewerUser: one(Users, { fields: [proposalReviewLogs.reviewerUserId], references: [Users.id] })
 }));
+
+// ==========================================
+// 12. DYNAMIC RBAC (ROLES & PERMISSIONS)
+// ==========================================
+
+export const roles = pgTable("roles", {
+  id: varchar("id", { length: 50 }).primaryKey(),
+  name: varchar("name", { length: 100 }).notNull(),
+  description: text("description"),
+  isSystem: boolean("is_system").default(false).notNull(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow()
+});
+
+export const rolePermissions = pgTable("role_permissions", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  roleId: varchar("role_id", { length: 50 }).notNull().references(() => roles.id, { onDelete: "cascade" }),
+  menuKey: varchar("menu_key", { length: 100 }).notNull(),
+  canView: boolean("can_view").default(false).notNull(),
+  canAdd: boolean("can_add").default(false).notNull(),
+  canEdit: boolean("can_edit").default(false).notNull(),
+  canDelete: boolean("can_delete").default(false).notNull(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow()
+}, (table) => ({
+  roleMenuUnique: unique("role_permission_role_menu_unique").on(table.roleId, table.menuKey),
+  roleIdIdx: index("role_permissions_role_id_idx").on(table.roleId)
+}));
+
+export const roleRelations = relations(roles, ({ many }) => ({
+  permissions: many(rolePermissions)
+}));
+
+export const rolePermissionRelations = relations(rolePermissions, ({ one }) => ({
+  role: one(roles, { fields: [rolePermissions.roleId], references: [roles.id] })
+}));
+
 

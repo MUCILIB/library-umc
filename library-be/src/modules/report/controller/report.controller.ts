@@ -102,8 +102,8 @@ class ReportController {
       const rows = data.map((loan) => ({
         memberName: (loan as any).member?.user?.name ?? "-",
         memberEmail: (loan as any).member?.user?.email ?? "-",
-        bookTitle: (loan as any).item?.collection?.title ?? "-",
-        ISBN: (loan as any).item?.collection?.ISBN ?? "-",
+        bookTitle: (loan as any).item?.bibliography?.title ?? "-",
+        ISBN: (loan as any).item?.bibliography?.isbn ?? (loan as any).item?.bibliography?.isbnIssn ?? "-",
         status: (loan as any).status,
         borrowDate: (loan as any).createdAt
           ? new Date((loan as any).createdAt).toLocaleDateString("id-ID")

@@ -224,7 +224,7 @@ router.post(
   "/loans/return-requests/:requestId/approve",
   publicApiLimiter,
   isAuthenticated,
-  requireRole(["super_admin"]),
+  requireRole(["super_admin", "staff"]),
   loanController.approveReturnRequest
 );
 
@@ -232,8 +232,22 @@ router.get(
   "/loans/return-requests/pending",
   publicApiLimiter,
   isAuthenticated,
-  requireRole(["super_admin"]),
+  requireRole(["super_admin", "staff"]),
   loanController.getPendingReturnRequests
+);
+
+router.get(
+  "/loans/:loanId/return-receipt",
+  publicApiLimiter,
+  isAuthenticated,
+  (req, res, next) => loanController.downloadReturnReceiptPdf(req, res, next)
+);
+
+router.get(
+  "/loans/:loanId",
+  publicApiLimiter,
+  isAuthenticated,
+  (req, res, next) => loanController.getLoanById(req, res, next)
 );
 
 /**

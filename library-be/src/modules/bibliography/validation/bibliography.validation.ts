@@ -6,17 +6,17 @@ export const createBibliographySchema = z.object({
     .refine((val) => {
       if (!val || val.trim() === "-" || val.trim() === "") return true;
       const digits = val.replace(/[^0-9X]/gi, "");
-      return digits.length >= 10 && digits.length <= 13;
+      return digits.length >= 4 && digits.length <= 30;
     }, {
-      message: "ISBN harus 10 sampai 13 digit angka"
+      message: "ISBN minimal 4 karakter angka/huruf"
     }),
-  issn: z.string().max(20).optional().nullable().or(z.literal(""))
+  issn: z.string().max(30).optional().nullable().or(z.literal(""))
     .refine((val) => {
       if (!val || val.trim() === "-" || val.trim() === "") return true;
       const clean = val.replace(/^ISSN[:\s]*/i, "").trim();
-      return /^\d{4}-\d{3}[\dX]$/i.test(clean) || /^\d{7,8}[\dX]$/i.test(clean) || (clean.length >= 7 && clean.length <= 9);
+      return clean.length >= 4 && clean.length <= 25;
     }, {
-      message: "ISSN harus berupa format 8 karakter (misal: 1234-5678)"
+      message: "Format ISSN tidak valid"
     }),
   isbnIssn: z.string().max(255).optional().nullable().or(z.literal(""))
     .refine((val) => {
@@ -25,12 +25,12 @@ export const createBibliographySchema = z.object({
       const isISSN = /^ISSN\s/i.test(clean);
       if (isISSN) {
         const cleanIssn = clean.replace(/^ISSN\s*/i, "").trim();
-        return /^\d{4}-\d{3}[\dX]$/i.test(cleanIssn) || /^\d{7,8}[\dX]$/i.test(cleanIssn) || (cleanIssn.length >= 7 && cleanIssn.length <= 9);
+        return cleanIssn.length >= 4 && cleanIssn.length <= 25;
       }
       const isbnDigits = val.replace(/[^0-9X]/gi, "");
-      return isbnDigits.length >= 10 && isbnDigits.length <= 13;
+      return isbnDigits.length >= 4 && isbnDigits.length <= 30;
     }, {
-      message: "ISBN harus 10 sampai 13 digit, atau ISSN berformat 'ISSN xxxx-xxxx'"
+      message: "Format ISBN atau ISSN tidak valid"
     }),
   edition: z.string().max(100).optional().or(z.literal("")),
   publisherId: z.coerce.number().int().positive().optional(),

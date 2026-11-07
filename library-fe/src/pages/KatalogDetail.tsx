@@ -580,7 +580,7 @@ const KatalogDetail = () => {
               </span>
             </p>
 
-            <div className="grid grid-cols-3 gap-3 sm:gap-4 mb-5 sm:mb-8 border-b border-slate-100 dark:border-border/50 pb-5 sm:pb-8">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 mb-5 sm:mb-8 border-b border-slate-100 dark:border-border/50 pb-5 sm:pb-8">
               <div>
                 <p className="text-[8px] sm:text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1">
                   {bibliography?.isbn && bibliography?.issn ? "ISBN / ISSN" : bibliography?.issn ? "ISSN" : "ISBN"}
@@ -595,18 +595,26 @@ const KatalogDetail = () => {
               </div>
               <div>
                 <p className="text-[8px] sm:text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1">
-                  Penerbit
+                  Klasifikasi (DDC)
                 </p>
-                <p className="text-[11px] sm:text-xs font-bold text-slate-700 dark:text-slate-200">
-                  {bibliography?.publisher || "-"}
+                <p className="text-[11px] sm:text-xs font-bold text-slate-700 dark:text-slate-200 font-mono">
+                  {bibliography?.classification || "-"}
                 </p>
               </div>
               <div>
                 <p className="text-[8px] sm:text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1">
-                  Tahun
+                  No. Panggil
+                </p>
+                <p className="text-[11px] sm:text-xs font-bold text-slate-700 dark:text-slate-200 font-mono">
+                  {bibliography?.callNumber || "-"}
+                </p>
+              </div>
+              <div>
+                <p className="text-[8px] sm:text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1">
+                  Penerbit &amp; Tahun
                 </p>
                 <p className="text-[11px] sm:text-xs font-bold text-slate-700 dark:text-slate-200">
-                  {bibliography?.publicationYear || "-"}
+                  {bibliography?.publisher || "-"} {bibliography?.publicationYear ? `(${bibliography.publicationYear})` : ""}
                 </p>
               </div>
             </div>

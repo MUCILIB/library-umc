@@ -25,6 +25,8 @@ function mapRawBibliography(item: any): Bibliography {
     isbn: cleanIsbn(item.isbn || item.isbnIssn || ""),
     issn: item.issn || (item.isbnIssn?.startsWith("ISSN") ? item.isbnIssn.replace(/^ISSN[:\s]*/i, "") : undefined),
     isbnIssn: item.isbnIssn || undefined,
+    classification: item.classification || undefined,
+    callNumber: item.callNumber || undefined,
     type: item.type || "physical_book",
     image: item.image || null,
     stock: item.stock ?? item.totalItems ?? 0,

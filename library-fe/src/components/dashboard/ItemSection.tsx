@@ -565,7 +565,7 @@ function ItemDetail({
 
         <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <div>
-            <dt className="text-xs font-medium text-muted-foreground">Kode Inventaris</dt>
+            <dt className="text-xs font-medium text-muted-foreground">No. Inventaris</dt>
             <dd className="mt-0.5 text-sm text-foreground">{item.inventoryCode || "-"}</dd>
           </div>
           <div>
@@ -833,30 +833,28 @@ function ItemForm({
                   setFormData({ ...formData, itemCode: val });
                 }}
                 required
-                maxLength={15}
+                maxLength={50}
                 className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
               />
             </div>
             <div>
-              <label className="mb-1 block text-xs font-medium text-muted-foreground">Kode Inventaris</label>
+              <label className="mb-1 block text-xs font-medium text-muted-foreground">No. Inventaris</label>
               <input
                 type="text"
+                placeholder="Otomatis sama dengan kode item jika kosong"
                 value={formData.inventoryCode}
                 onChange={(e) => setFormData({ ...formData, inventoryCode: e.target.value })}
                 className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
               />
             </div>
             <div>
-              <label className="mb-1 block text-xs font-medium text-muted-foreground">Call Number</label>
+              <label className="mb-1 block text-xs font-medium text-muted-foreground">Call Number / No. Panggil</label>
               <input
                 type="text"
                 value={formData.callNumber}
-                onChange={(e) => {
-                  const val = e.target.value.replace(/\D/g, "");
-                  setFormData({ ...formData, callNumber: val });
-                }}
-                maxLength={13}
-                placeholder="Maksimal 13 angka"
+                onChange={(e) => setFormData({ ...formData, callNumber: e.target.value })}
+                maxLength={100}
+                placeholder="Contoh: PND-01 atau 370.1 UMC"
                 className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
               />
             </div>
@@ -984,9 +982,10 @@ function BulkCreateForm({
 
   const generateItems = () => {
     const newItems = [];
+    const cleanPrefix = (prefix.trim() || "PND-01").toUpperCase().replace(/[\s/\\_]+/g, "-");
     for (let i = 1; i <= quantity; i++) {
-      const code = `${prefix}-${String(i).padStart(4, "0")}`;
-      newItems.push({ itemCode: code, inventoryCode: "" });
+      const code = `${cleanPrefix}-${String(i).padStart(2, "0")}`;
+      newItems.push({ itemCode: code, inventoryCode: code });
     }
     setItems(newItems);
   };
@@ -1092,6 +1091,9 @@ function BulkCreateForm({
                         onClick={() => {
                           setSelectedBibId(bib.id);
                           setSearchBibQuery(bib.title);
+                          if ((bib as any).callNumber) {
+                            setPrefix((bib as any).callNumber.trim().toUpperCase().replace(/[\s/\\_]+/g, "-"));
+                          }
                           setIsDropdownOpen(false);
                         }}
                         className="w-full text-left px-3 py-2 text-sm hover:bg-muted hover:text-foreground text-foreground transition-colors"
@@ -1103,6 +1105,26 @@ function BulkCreateForm({
                 </div>
               )}
             </div>
+
+            {/* Guidance Card for Bulk Item Generation */}
+            <div className="sm:col-span-2 rounded-xl border border-blue-200/60 bg-blue-50/50 p-3.5 text-xs text-blue-900 dark:border-blue-900/40 dark:bg-blue-950/30 dark:text-blue-300">
+              <p className="font-bold flex items-center gap-1.5 mb-1 text-[11px] uppercase tracking-wider text-blue-700 dark:text-blue-300">
+                <Info className="size-3.5 shrink-0" />
+                Panduan Pola Penomoran Eksemplar
+              </p>
+              <p className="leading-relaxed text-[11px] text-muted-foreground">
+                Kode item akan di-generate berjenjang dua digit dari pola dasar. Contoh:
+              </p>
+              <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-2 text-[10px] font-mono">
+                <span className="p-1.5 bg-white/80 dark:bg-background/80 rounded border border-blue-100 dark:border-blue-900/60 text-foreground">
+                  Pola: <strong className="text-primary">PND-01</strong> &rarr; <strong>PND-01-01</strong>, <strong>PND-01-02</strong>
+                </span>
+                <span className="p-1.5 bg-white/80 dark:bg-background/80 rounded border border-blue-100 dark:border-blue-900/60 text-foreground">
+                  Pola: <strong className="text-primary">TI-2026-05</strong> &rarr; <strong>TI-2026-05-01</strong>, <strong>TI-2026-05-02</strong>
+                </span>
+              </div>
+            </div>
+
             <div>
               <label className="mb-1 block text-xs font-medium text-muted-foreground">Jumlah Item *</label>
               <input
@@ -1116,12 +1138,13 @@ function BulkCreateForm({
               />
             </div>
             <div>
-              <label className="mb-1 block text-xs font-medium text-muted-foreground">Prefix Kode Item (Maks 10 Karakter)</label>
+              <label className="mb-1 block text-xs font-medium text-muted-foreground">Pola Kode Buku (Prefix)</label>
               <input
                 type="text"
+                placeholder="Contoh: PND-01"
                 value={prefix}
                 onChange={(e) => setPrefix(e.target.value)}
-                maxLength={10}
+                maxLength={30}
                 className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
               />
             </div>
@@ -1139,7 +1162,7 @@ function BulkCreateForm({
               <button
                 type="button"
                 onClick={generateItems}
-                className="rounded-lg bg-slate-600 px-4 py-2 text-sm font-medium text-white hover:bg-slate-700"
+                className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white hover:bg-primary/90 transition-all"
               >
                 Generate Kode
               </button>
@@ -1155,8 +1178,8 @@ function BulkCreateForm({
                 <thead>
                   <tr className="border-b border-border bg-muted">
                     <th className="px-3 py-2 text-left font-semibold text-muted-foreground">#</th>
-                    <th className="px-3 py-2 text-left font-semibold text-muted-foreground">Item Code</th>
-                    <th className="px-3 py-2 text-left font-semibold text-muted-foreground">Inventory Code</th>
+                    <th className="px-3 py-2 text-left font-semibold text-muted-foreground">Kode Item (Eksemplar)</th>
+                    <th className="px-3 py-2 text-left font-semibold text-muted-foreground">No. Inventaris</th>
                   </tr>
                 </thead>
                 <tbody>

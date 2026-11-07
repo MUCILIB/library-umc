@@ -18,6 +18,8 @@ export interface Bibliography {
   isbn?: string;
   issn?: string;
   isbnIssn?: string;
+  classification?: string;
+  callNumber?: string;
   type: BibliographyType;
   description?: string;
   /** URL gambar cover (Cloudinary) */

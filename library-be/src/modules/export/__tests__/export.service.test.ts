@@ -291,5 +291,41 @@ describe("Export Service", () => {
       expect(maliciousRow).toContain("'-admin");
       expect(maliciousRow).toContain("'@mention");
     });
+
+    it("should support custom comma delimiter when requested", async () => {
+      (db.query.bibliographies.findMany as ReturnType<typeof vi.fn>).mockResolvedValueOnce([
+        {
+          id: "bib-1",
+          title: "Pemrograman Web Modern",
+          edition: "1",
+          isbn: "978-1234567890",
+          issn: null,
+          isbnIssn: "978-1234567890",
+          publishYear: 2026,
+          collation: "250 hlm",
+          seriesTitle: null,
+          callNumber: "005.13 PEM",
+          classification: "005",
+          notes: null,
+          image: null,
+          sor: null,
+          gmd: { name: "Text" },
+          publisher: { name: "Informatika" },
+          language: { name: "Indonesia" },
+          publicationPlace: { name: "Bandung" },
+          bibliographyAuthors: [{ author: { name: "Budi" } }],
+          bibliographySubjects: [{ subject: { name: "Web" } }],
+          bibliographyFaculties: [],
+          bibliographyStudyPrograms: [],
+          items: [],
+        }
+      ]);
+
+      const csv = await exportService.exportBibliographies({ delimiter: "," });
+      expect(csv.startsWith("\uFEFF")).toBe(true);
+      const lines = csv.replace("\uFEFF", "").trim().split("\n");
+      expect(lines[0]).toContain("title,gmd_name,edition,isbn");
+      expect(lines[1]).toContain("Pemrograman Web Modern,Text,1,978-1234567890");
+    });
   });
 });

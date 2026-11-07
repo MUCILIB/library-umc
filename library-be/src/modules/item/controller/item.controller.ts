@@ -147,8 +147,9 @@ export class ItemController {
   async generateCode(req: Request, res: Response, next: NextFunction) {
     try {
       const bibId = req.params.bibliographyId as string;
+      const pattern = (req.query?.pattern || req.body?.pattern) as string | undefined;
       if (!bibId) return sendError(res, "bibliographyId required", 400);
-      const code = await itemService.generateItemCodePreview(bibId);
+      const code = await itemService.generateItemCodePreview(bibId, pattern);
       sendSuccess(res, "Generated item code", { itemCode: code });
     } catch (error) { next(error); }
   }

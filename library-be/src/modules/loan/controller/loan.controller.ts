@@ -179,12 +179,47 @@ export class LoanController {
         return sendError(res, "Akses ditolak — hanya Admin/Staff", 403);
       }
 
+      const { condition, staffName, signature, notes } = req.body || {};
       const result = await loanService.returnLoan(
         String(req.params.loanId),
         user.id,
-        req.body?.condition
+        {
+          condition,
+          staffName: staffName || user.name || "Petugas Perpustakaan",
+          signature,
+          notes,
+        }
       );
       sendSuccess(res, "Buku berhasil dikembalikan", result);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * GET /loans/:loanId — Ambil detail satu peminjaman
+   */
+  async getLoanById(req: Request, res: Response, next: NextFunction) {
+    try {
+      const loan = await loanService.getLoanById(String(req.params.loanId));
+      if (!loan) {
+        return sendError(res, "Data peminjaman tidak ditemukan", 404);
+      }
+      sendSuccess(res, "Detail data peminjaman", loan);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * GET /loans/:loanId/return-receipt — Unduh Berita Acara / Tanda Terima Pengembalian PDF
+   */
+  async downloadReturnReceiptPdf(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { loanId } = req.params;
+      res.setHeader("Content-Type", "application/pdf");
+      res.setHeader("Content-Disposition", `attachment; filename="tanda_terima_pengembalian_${loanId}.pdf"`);
+      await loanService.generateReturnReceiptPdf(String(loanId), res);
     } catch (error) {
       next(error);
     }
@@ -269,16 +304,22 @@ export class LoanController {
   }
 
   /**
-   * POST /loans/return-requests/:requestId/approve — Super Admin approves return
+   * POST /loans/return-requests/:requestId/approve — Super Admin / Staff approves return
    */
   async approveReturnRequest(req: Request, res: Response, next: NextFunction) {
     try {
       const user = req.user;
-      if (!user || user.role !== "super_admin") {
-        return sendError(res, "Akses ditolak — hanya Super Admin", 403);
+      if (!user || (user.role !== "super_admin" && user.role !== "staff")) {
+        return sendError(res, "Akses ditolak — hanya Super Admin atau Staff", 403);
       }
       const requestId = String(req.params.requestId);
-      const result = await loanService.approveReturnRequest(requestId, user.id);
+      const { condition, staffName, signature, notes } = req.body || {};
+      const result = await loanService.approveReturnRequest(requestId, user.id, {
+        condition,
+        staffName: staffName || user.name || "Petugas Perpustakaan",
+        signature,
+        notes,
+      });
       sendSuccess(res, result.message, result);
     } catch (error: any) {
       if (

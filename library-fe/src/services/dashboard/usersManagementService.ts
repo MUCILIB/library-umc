@@ -179,6 +179,53 @@ export const usersManagementService = {
     return jsonOrThrow(res);
   },
 
+  async getPendingCardRenewals(limit = 100): Promise<PendingMemberCardRequest[]> {
+    const query = new URLSearchParams({ limit: String(limit) });
+    const res = await fetch(
+      `${API_BASE_URL}/api/members/cards/renewals/pending?${query.toString()}`,
+      {
+        credentials: "include",
+        headers: {
+          ...getAuthHeaders(),
+        },
+      }
+    );
+    const data = await jsonOrThrow(res);
+    return data.success && Array.isArray(data.data) ? data.data : [];
+  },
+
+  async approveCardRenewal(memberId: string, durationDays = 365) {
+    const res = await fetch(
+      `${API_BASE_URL}/api/members/${memberId}/card/renew/approve`,
+      {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          ...getAuthHeaders(),
+        },
+        credentials: "include",
+        body: JSON.stringify({ durationDays })
+      }
+    );
+    return jsonOrThrow(res);
+  },
+
+  async rejectCardRenewal(memberId: string, reason: string) {
+    const res = await fetch(
+      `${API_BASE_URL}/api/members/${memberId}/card/renew/reject`,
+      {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          ...getAuthHeaders(),
+        },
+        credentials: "include",
+        body: JSON.stringify({ reason })
+      }
+    );
+    return jsonOrThrow(res);
+  },
+
   async getMembers(): Promise<any[]> {
     const res = await fetch(`${API_BASE_URL}/api/members`, {
       credentials: "include",

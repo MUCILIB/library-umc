@@ -261,28 +261,48 @@ export class ItemService {
     return crypto.randomBytes(20).toString("hex");
   }
 
-  private async generateItemCode(bibliographyId: string): Promise<string> {
+  private async generateItemCode(bibliographyId: string, customPattern?: string): Promise<string> {
     const bib = await db.query.bibliographies.findFirst({ where: eq(bibliographies.id, bibliographyId) });
     if (!bib) throw new Error("Bibliography not found");
-    const title = bib.title.replace(/[^a-zA-Z]/g, "").toLowerCase();
-    const prefix = title.slice(0, 2).padEnd(2, "x");
-    const suffix = title.slice(-2).padEnd(2, "x");
+
+    let basePrefix = "";
+    if (customPattern && customPattern.trim()) {
+      basePrefix = customPattern.trim().toUpperCase().replace(/[\s/\\_]+/g, "-");
+    } else if (bib.callNumber && bib.callNumber.trim()) {
+      basePrefix = bib.callNumber.trim().toUpperCase().replace(/[\s/\\_]+/g, "-");
+    } else {
+      const words = bib.title
+        .trim()
+        .replace(/[^a-zA-Z0-9\s]/g, "")
+        .split(/\s+/)
+        .filter(Boolean);
+      const initials = words.length >= 2
+        ? words.slice(0, 3).map((w) => w[0]).join("").toUpperCase()
+        : words[0]?.slice(0, 3).toUpperCase() || "BKO";
+      basePrefix = `${initials}-01`;
+    }
 
     const existingCodes = await db.query.items.findMany({
       where: and(eq(items.bibliographyId, bibliographyId), isNull(items.deletedAt)),
       columns: { itemCode: true },
     });
 
-    const used = new Set(existingCodes.map((i) => i.itemCode));
+    const used = new Set(existingCodes.map((i) => i.itemCode.toUpperCase()));
     for (let n = 1; n <= 999; n++) {
-      const code = `${prefix}${String(n).padStart(3, "0")}${suffix}`;
-      if (!used.has(code)) return code;
+      const code = `${basePrefix}-${String(n).padStart(2, "0")}`;
+      if (!used.has(code.toUpperCase())) {
+        const globalExists = await db.query.items.findFirst({
+          where: and(eq(items.itemCode, code), isNull(items.deletedAt)),
+          columns: { id: true },
+        });
+        if (!globalExists) return code;
+      }
     }
-    throw new Error("No available item code");
+    return `${basePrefix}-${Date.now().toString().slice(-4)}`;
   }
 
-  async generateItemCodePreview(bibliographyId: string): Promise<string> {
-    return this.generateItemCode(bibliographyId);
+  async generateItemCodePreview(bibliographyId: string, customPattern?: string): Promise<string> {
+    return this.generateItemCode(bibliographyId, customPattern);
   }
 
   async createItem(data: CreateItemData) {
@@ -292,7 +312,7 @@ export class ItemService {
     const userProvidedCode = data.itemCode;
     let itemCode: string;
     if (!userProvidedCode) {
-      itemCode = await this.generateItemCode(data.bibliographyId);
+      itemCode = await this.generateItemCode(data.bibliographyId, (data as any).pattern);
     } else {
       const existing = await db.query.items.findFirst({
         where: and(eq(items.itemCode, userProvidedCode), isNull(items.deletedAt)),
@@ -307,14 +327,17 @@ export class ItemService {
     let result: any;
     try {
       result = await db.transaction(async (tx) => {
+        const effectiveInventoryCode = data.inventoryCode && data.inventoryCode.trim() !== "" ? data.inventoryCode.trim() : itemCode;
         const insertData: any = {
           ...data,
           itemCode,
+          inventoryCode: effectiveInventoryCode,
           price: data.price != null ? String(data.price) : null,
           qrToken: this.generateQrToken(),
           qrVersion: 1,
           qrGeneratedAt: new Date(),
         };
+        delete insertData.pattern;
         const [newItem] = await tx.insert(items).values(insertData).returning();
         await syncCollectionAvailableStock(tx, data.bibliographyId);
         return newItem;
@@ -352,10 +375,11 @@ export class ItemService {
           if (existing) { errors.push({ itemCode: itemData.itemCode, error: "Duplicate item_code" }); continue; }
 
           const locId = itemData.locationId || data.defaults?.locationId || 1;
+          const effectiveInventory = itemData.inventoryCode && itemData.inventoryCode.trim() !== "" ? itemData.inventoryCode.trim() : itemData.itemCode;
           const [newItem] = await tx.insert(items).values({
             bibliographyId,
             itemCode: itemData.itemCode,
-            inventoryCode: itemData.inventoryCode || null,
+            inventoryCode: effectiveInventory,
             callNumber: itemData.callNumber || null,
             locationId: locId,
             source: data.defaults?.source || null,

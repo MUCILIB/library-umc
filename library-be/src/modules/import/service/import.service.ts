@@ -30,35 +30,63 @@ function stripBom(text: string): string {
 }
 
 function detectDelimiter(raw: string): ";" | "," {
-  const firstLine = raw.split("\n")[0] || "";
+  const newlineIdx = raw.indexOf("\n");
+  const firstLine = newlineIdx !== -1 ? raw.substring(0, newlineIdx) : raw;
   const semicolons = (firstLine.match(/;/g) || []).length;
   const commas = (firstLine.match(/,/g) || []).length;
   return semicolons >= commas ? ";" : ",";
 }
 
-function parseCsvLine(line: string, delimiter: string): string[] {
-  const result: string[] = [];
-  let current = "";
+function parseCsvRecords(raw: string, delimiter: string): string[][] {
+  const records: string[][] = [];
+  let currentRecord: string[] = [];
+  let currentField = "";
   let inQuotes = false;
-  for (let i = 0; i < line.length; i++) {
-    const ch = line[i];
-    const DQ = String.fromCharCode(34);
+  const len = raw.length;
+  const DQ = '"';
+  const CR = String.fromCharCode(13);
+  const LF = String.fromCharCode(10);
+
+  for (let i = 0; i < len; i++) {
+    const ch = raw[i];
     if (ch === DQ) {
-      if (inQuotes && i + 1 < line.length && line[i + 1] === DQ) {
-        current += DQ;
+      if (inQuotes && i + 1 < len && raw[i + 1] === DQ) {
+        currentField += DQ;
         i++;
       } else {
         inQuotes = !inQuotes;
       }
     } else if (ch === delimiter && !inQuotes) {
-      result.push(current);
-      current = "";
+      currentRecord.push(currentField);
+      currentField = "";
+    } else if ((ch === CR || ch === LF) && !inQuotes) {
+      if (ch === CR && i + 1 < len && raw[i + 1] === LF) {
+        i++;
+      }
+      currentRecord.push(currentField);
+      currentField = "";
+      if (currentRecord.length > 1 || (currentRecord.length === 1 && currentRecord[0].trim().length > 0)) {
+        records.push(currentRecord);
+      }
+      currentRecord = [];
     } else {
-      current += ch;
+      currentField += ch;
     }
   }
-  result.push(current);
-  return result;
+
+  if (currentField.length > 0 || currentRecord.length > 0) {
+    currentRecord.push(currentField);
+    if (currentRecord.length > 1 || (currentRecord.length === 1 && currentRecord[0].trim().length > 0)) {
+      records.push(currentRecord);
+    }
+  }
+
+  return records;
+}
+
+function parseCsvLine(line: string, delimiter: string): string[] {
+  const records = parseCsvRecords(line, delimiter);
+  return records[0] || [];
 }
 
 function normalizeName(name: string): string {
@@ -205,15 +233,15 @@ export class ImportService {
 
     const cleanContent = stripBom(fileContent);
     const delimiter = detectDelimiter(cleanContent);
-    const lines = cleanContent.split("\n").filter((l: string) => l.trim().length > 0);
+    const records = parseCsvRecords(cleanContent, delimiter);
 
-    if (lines.length < 2) {
+    if (records.length < 2) {
       await db.update(importBatches).set({ status: "failed" }).where(eq(importBatches.id, batchId));
       return { totalRows: 0, parsedRows: 0 };
     }
 
-    const headers = parseCsvLine(lines[0], delimiter).map(h => h.trim().toLowerCase().replace(/[^a-z0-9_]/g, "_"));
-    const dataLines = lines.slice(1);
+    const headers = records[0].map(h => h.trim().toLowerCase().replace(/[^a-z0-9_]/g, "_"));
+    const dataRecords = records.slice(1);
 
     // Clear old rows
     if (batch.type === "bibliography") {
@@ -228,13 +256,12 @@ export class ImportService {
     const chunkSize = 500;
     let parsedCount = 0;
 
-    for (let i = 0; i < dataLines.length; i += chunkSize) {
-      const chunk = dataLines.slice(i, i + chunkSize);
+    for (let i = 0; i < dataRecords.length; i += chunkSize) {
+      const chunk = dataRecords.slice(i, i + chunkSize);
       const rows: any[] = [];
 
       for (let j = 0; j < chunk.length; j++) {
-        const line = chunk[j];
-        const values = parseCsvLine(line, delimiter);
+        const values = chunk[j];
         const rawData: Record<string, string> = {};
         headers.forEach((h, hi) => { rawData[h] = (values[hi] || "").trim(); });
 
@@ -258,14 +285,14 @@ export class ImportService {
 
     await db.update(importBatches).set({
       status: "validating",
-      totalRows: dataLines.length,
+      totalRows: dataRecords.length,
       processedRows: parsedCount,
     }).where(eq(importBatches.id, batchId));
 
     // Auto-validate
     await this.validateBatch(batchId);
 
-    return { totalRows: dataLines.length, parsedRows: parsedCount };
+    return { totalRows: dataRecords.length, parsedRows: parsedCount };
   }
 
   // ==========================================
@@ -423,19 +450,54 @@ export class ImportService {
         resolutionMethod = "ITEM_CODE";
       }
 
-      // Method 2: Title fallback (exact match)
+      // Method 2: Title fallback (exact & case-insensitive match)
       if (!resolvedBibliographyId && raw.title) {
-        const matchingBibs = await db.query.bibliographies.findMany({
+        const trimmedTitle = raw.title.trim();
+        let matchingBibs = await db.query.bibliographies.findMany({
           where: and(
-            eq(bibliographies.title, raw.title.trim()),
+            eq(bibliographies.title, trimmedTitle),
             isNull(bibliographies.deletedAt)
           ),
         });
+
+        if (matchingBibs.length === 0) {
+          const allBibs = await db.query.bibliographies.findMany({
+            where: isNull(bibliographies.deletedAt),
+          });
+          matchingBibs = allBibs.filter(b => b.title.trim().toLowerCase() === trimmedTitle.toLowerCase());
+        }
+
         if (matchingBibs.length === 1) {
           resolvedBibliographyId = matchingBibs[0].id;
           resolutionMethod = "UNIQUE_TITLE_FALLBACK";
         } else if (matchingBibs.length > 1) {
-          errors.push(`ambiguous title: ${matchingBibs.length} matches`);
+          if (raw.call_number && raw.call_number.trim()) {
+            const byCallNo = matchingBibs.find(b => b.callNumber?.trim() === raw.call_number.trim());
+            if (byCallNo) {
+              resolvedBibliographyId = byCallNo.id;
+              resolutionMethod = "TITLE_AND_CALL_NUMBER";
+            } else {
+              resolvedBibliographyId = matchingBibs[0].id;
+              resolutionMethod = "FIRST_MATCHING_TITLE";
+            }
+          } else {
+            resolvedBibliographyId = matchingBibs[0].id;
+            resolutionMethod = "FIRST_MATCHING_TITLE";
+          }
+        }
+      }
+
+      // Method 3: Call number fallback
+      if (!resolvedBibliographyId && raw.call_number && raw.call_number.trim()) {
+        const byCallNo = await db.query.bibliographies.findFirst({
+          where: and(
+            eq(bibliographies.callNumber, raw.call_number.trim()),
+            isNull(bibliographies.deletedAt)
+          ),
+        });
+        if (byCallNo) {
+          resolvedBibliographyId = byCallNo.id;
+          resolutionMethod = "CALL_NUMBER_FALLBACK";
         }
       }
 
@@ -601,18 +663,27 @@ export class ImportService {
             placeId = place.id;
           }
 
-          // Resolve GMD
+          // Resolve or create GMD
           let gmdId: number | null = null;
           if (resolved.gmd_name?.trim()) {
-            const gmd = await tx.query.gmds.findFirst({ where: eq(gmds.name, resolved.gmd_name.trim()) });
-            gmdId = gmd?.id || null;
+            const trimmedGmd = resolved.gmd_name.trim();
+            let gmd = await tx.query.gmds.findFirst({ where: eq(gmds.name, trimmedGmd) });
+            if (!gmd) {
+              [gmd] = await tx.insert(gmds).values({ name: trimmedGmd }).returning();
+            }
+            gmdId = gmd.id;
           }
 
-          // Resolve language
+          // Resolve or create language
           let languageId: number | null = null;
           if (resolved.language_name?.trim()) {
-            const lang = await tx.query.languages.findFirst({ where: eq(languages.name, resolved.language_name.trim()) });
-            languageId = lang?.id || null;
+            const trimmedLang = resolved.language_name.trim();
+            let lang = await tx.query.languages.findFirst({ where: eq(languages.name, trimmedLang) });
+            if (!lang) {
+              const code = trimmedLang.slice(0, 5).toLowerCase();
+              [lang] = await tx.insert(languages).values({ name: trimmedLang, code }).returning();
+            }
+            languageId = lang.id;
           }
 
           // Parse & resolve ISBN / ISSN
@@ -727,6 +798,43 @@ export class ImportService {
             }
           }
 
+          // Auto-create physical items if _parsedItemCodes are present in SLiMS export
+          if (resolved._parsedItemCodes && Array.isArray(resolved._parsedItemCodes) && resolved._parsedItemCodes.length > 0) {
+            let defaultLoc = await tx.query.locations.findFirst();
+            if (!defaultLoc) {
+              [defaultLoc] = await tx.insert(locations).values({
+                room: "UMC Library",
+                rack: "Rak Utama",
+                shelf: "1",
+              }).returning();
+            }
+
+            for (const itemCode of resolved._parsedItemCodes) {
+              const trimmedCode = String(itemCode).trim();
+              if (!trimmedCode) continue;
+
+              const existingItem = await tx.query.items.findFirst({
+                where: and(eq(items.itemCode, trimmedCode), isNull(items.deletedAt)),
+              });
+
+              if (!existingItem) {
+                const qrToken = crypto.randomBytes(20).toString("hex");
+                await tx.insert(items).values({
+                  bibliographyId: bib.id,
+                  itemCode: trimmedCode,
+                  inventoryCode: trimmedCode,
+                  callNumber: resolved.call_number || null,
+                  locationId: defaultLoc.id,
+                  status: "available",
+                  qrToken,
+                  qrVersion: 1,
+                  qrGeneratedAt: new Date(),
+                });
+              }
+            }
+            await syncCollectionAvailableStock(tx, bib.id);
+          }
+
           // Mark row committed
           await db.update(importBibliographyRows).set({
             status: "committed",
@@ -815,22 +923,35 @@ export class ImportService {
         // Generate QR token
         const qrToken = crypto.randomBytes(20).toString("hex");
 
-        // Resolve location
-        let locationId = 1; // default
-        if (resolved.location_name?.trim()) {
-          const loc = await db.query.locations.findFirst({
-            where: eq(locations.room, resolved.location_name.trim()),
-          });
-          if (loc) locationId = loc.id;
+        // Resolve location safely
+        let location = await db.query.locations.findFirst({
+          where: eq(locations.room, (resolved.location_name || "UMC Library").trim()),
+        });
+        if (!location) {
+          const anyLoc = await db.query.locations.findFirst();
+          if (anyLoc) {
+            location = anyLoc;
+          } else {
+            [location] = await db.insert(locations).values({
+              room: resolved.location_name?.trim() || "UMC Library",
+              rack: "Rak Utama",
+              shelf: "1",
+            }).returning();
+          }
         }
+        const locationId = location.id;
 
-        // Resolve collection type
+        // Resolve collection type safely
         let collectionTypeId: number | null = null;
         if (resolved.coll_type_name?.trim()) {
-          const ct = await db.query.collectionTypes.findFirst({
-            where: eq(collectionTypes.name, resolved.coll_type_name.trim()),
+          const ctName = resolved.coll_type_name.trim();
+          let ct = await db.query.collectionTypes.findFirst({
+            where: eq(collectionTypes.name, ctName),
           });
-          if (ct) collectionTypeId = ct.id;
+          if (!ct) {
+            [ct] = await db.insert(collectionTypes).values({ name: ctName }).returning();
+          }
+          collectionTypeId = ct.id;
         }
 
         // Status mapping
@@ -859,7 +980,7 @@ export class ImportService {
           const [item] = await tx.insert(items).values({
             bibliographyId: bibId,
             itemCode: resolved.item_code,
-            inventoryCode: resolved.inventory_code || null,
+            inventoryCode: resolved.inventory_code || resolved.item_code,
             callNumber: resolved.call_number || null,
             locationId,
             collectionTypeId,

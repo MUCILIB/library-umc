@@ -14,6 +14,8 @@ interface MemberCardProps {
   profile: MemberProfile | null;
   requestLoading?: boolean;
   onRequestCard?: () => Promise<void> | void;
+  renewalLoading?: boolean;
+  onRequestRenewal?: () => Promise<void> | void;
 }
 
 const statusConfig = {
@@ -72,7 +74,9 @@ const formatDate = (value?: string | null) => {
 const MemberCard = ({
   profile,
   requestLoading,
-  onRequestCard
+  onRequestCard,
+  renewalLoading,
+  onRequestRenewal
 }: MemberCardProps) => {
   if (!profile) return null;
 
@@ -80,10 +84,23 @@ const MemberCard = ({
   const status = statusConfig[profile.cardStatus] ?? statusConfig.not_requested;
   const StatusIcon = status.icon;
 
+  const now = new Date();
+  const expiryDate = profile.cardExpiresAt ? new Date(profile.cardExpiresAt) : null;
+  const daysUntilExpiry = expiryDate
+    ? Math.ceil((expiryDate.getTime() - now.getTime()) / (1000 * 3600 * 24))
+    : null;
+  const isExpired = profile.cardStatus === "expired" || (daysUntilExpiry !== null && daysUntilExpiry <= 0);
+  const isExpiringSoon = daysUntilExpiry !== null && daysUntilExpiry > 0 && daysUntilExpiry <= 30;
+  const isRenewalPending = profile.cardRenewalStatus === "pending";
+
   const canRequest =
     profile.cardStatus === "not_requested" ||
-    profile.cardStatus === "rejected" ||
-    profile.cardStatus === "expired";
+    profile.cardStatus === "rejected";
+
+  const canRenew =
+    (profile.cardStatus === "active" || profile.cardStatus === "expired") &&
+    (isExpired || isExpiringSoon || !expiryDate) &&
+    !isRenewalPending;
 
   return (
     <div className="w-full max-w-4xl space-y-6">
@@ -213,6 +230,17 @@ const MemberCard = ({
               <div className="flex items-center justify-between gap-3 rounded-2xl border border-white/10 bg-slate-950/20 px-4 py-3">
                 <div>
                   <p className="text-[10px] font-black uppercase tracking-[0.3em] text-white/55">
+                    Masa Berlaku
+                  </p>
+                  <p className={`mt-1 text-sm font-bold ${isExpired ? "text-rose-300 font-extrabold" : isExpiringSoon ? "text-amber-300" : "text-white"}`}>
+                    {profile.cardExpiresAt ? formatDate(profile.cardExpiresAt) : "1 Tahun Sejak Disetujui"}
+                  </p>
+                </div>
+                <Clock3 size={18} className={isExpired ? "text-rose-300" : "text-white/60"} />
+              </div>
+              <div className="flex items-center justify-between gap-3 rounded-2xl border border-white/10 bg-slate-950/20 px-4 py-3">
+                <div>
+                  <p className="text-[10px] font-black uppercase tracking-[0.3em] text-white/55">
                     Ditolak
                   </p>
                   <p className="mt-1 text-sm font-bold text-white">
@@ -223,6 +251,17 @@ const MemberCard = ({
               </div>
             </div>
           </div>
+
+          {isRenewalPending ? (
+            <div className="mt-5 rounded-[22px] border border-amber-300/30 bg-amber-500/10 px-5 py-4 text-sm text-amber-50">
+              <p className="text-[10px] font-black uppercase tracking-[0.3em] text-amber-100/80">
+                Status Perpanjangan
+              </p>
+              <p className="mt-1 font-medium leading-6">
+                Pengajuan perpanjangan kartu Anda sedang diproses oleh petugas perpustakaan.
+              </p>
+            </div>
+          ) : null}
 
           {profile.cardRejectedReason ? (
             <div className="mt-5 rounded-[22px] border border-rose-200/30 bg-rose-500/10 px-5 py-4 text-sm text-rose-50">
@@ -256,6 +295,17 @@ const MemberCard = ({
                   className="inline-flex items-center justify-center gap-2 rounded-2xl bg-card px-5 py-3 text-[11px] font-black uppercase tracking-[0.18em] text-foreground transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:bg-white/50"
                 >
                   {requestLoading ? "Mengajukan..." : "Ajukan Kartu"}
+                </button>
+              ) : null}
+              {canRenew && onRequestRenewal ? (
+                <button
+                  type="button"
+                  onClick={() => void onRequestRenewal()}
+                  disabled={renewalLoading}
+                  className="inline-flex items-center justify-center gap-2 rounded-2xl bg-amber-400 hover:bg-amber-300 text-slate-950 px-5 py-3 text-[11px] font-black uppercase tracking-[0.18em] transition disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  <RefreshCcw size={14} className={renewalLoading ? "animate-spin" : ""} />
+                  {renewalLoading ? "Mengajukan..." : "Ajukan Perpanjangan Kartu"}
                 </button>
               ) : null}
             </div>

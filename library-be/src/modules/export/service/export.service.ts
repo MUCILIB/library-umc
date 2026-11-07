@@ -7,6 +7,8 @@ import {
   guestLogs, loans, Users, members
 } from "../../../db/schema";
 import { eq, and, isNull, asc, desc, inArray, ilike, gte, lte, or } from "drizzle-orm";
+import PDFDocument from "pdfkit";
+import { Response } from "express";
 
 const BIBLIO_HEADERS = [
   "title", "gmd_name", "edition", "isbn", "issn", "isbn_issn", "publisher_name",
@@ -40,6 +42,7 @@ export interface ExportFilter {
   categoryId?: number;
   subject?: string;
   status?: string;
+  delimiter?: ";" | ",";
 }
 
 export interface GuestExportFilter {
@@ -48,6 +51,7 @@ export interface GuestExportFilter {
   faculty?: string;
   major?: string;
   search?: string;
+  delimiter?: ";" | ",";
 }
 
 export interface LoanExportFilter {
@@ -56,6 +60,7 @@ export interface LoanExportFilter {
   endDate?: string;
   faculty?: string;
   search?: string;
+  delimiter?: ";" | ",";
 }
 
 export interface UserExportFilter {
@@ -63,16 +68,17 @@ export interface UserExportFilter {
   faculty?: string;
   banned?: boolean;
   search?: string;
+  delimiter?: ";" | ",";
 }
 
-function escapeCsvField(value: string | null | undefined): string {
+function escapeCsvField(value: string | null | undefined, delimiter: string = ";"): string {
   if (value === null || value === undefined) return "";
   let str = String(value);
   // Neutralize CSV/Spreadsheet formula injection (OWASP CWE-1236)
   if (/^[-=+@]/.test(str) || str.charCodeAt(0) === 9 || str.charCodeAt(0) === 13) {
     str = "'" + str;
   }
-  if (str.includes(";") || str.includes('"') || str.includes("\n")) {
+  if (str.includes(delimiter) || str.includes('"') || str.includes("\n") || str.includes(String.fromCharCode(13)) || (delimiter !== "," && str.includes(","))) {
     return '"' + str.replace(/"/g, '""') + '"';
   }
   return str;
@@ -158,9 +164,10 @@ async function getFilteredBibliographyIds(filter: ExportFilter): Promise<string[
 export class ExportService {
 
   async exportBibliographies(filter?: ExportFilter): Promise<string> {
+    const delimiter = filter?.delimiter || ";";
     const matchingIds = filter ? await getFilteredBibliographyIds(filter) : null;
     if (matchingIds !== null && matchingIds.length === 0) {
-      return "\uFEFF" + BIBLIO_HEADERS.join(";") + "\n";
+      return "\uFEFF" + BIBLIO_HEADERS.join(delimiter) + "\n";
     }
 
     const where = matchingIds !== null
@@ -183,7 +190,7 @@ export class ExportService {
       orderBy: [asc(bibliographies.title)],
     });
 
-    const lines: string[] = [BIBLIO_HEADERS.join(";")];
+    const lines: string[] = [BIBLIO_HEADERS.join(delimiter)];
 
     for (const bib of rows) {
       const authorNames = bib.bibliographyAuthors.map(ca => `<${ca.author.name}>`).join("");
@@ -193,36 +200,37 @@ export class ExportService {
       const studyProgramNames = [...new Set(bib.bibliographyStudyPrograms.map(bsp => bsp.studyProgram.name))].join(", ");
 
       const row = [
-        escapeCsvField(bib.title),
-        escapeCsvField(bib.gmd?.name || ""),
-        escapeCsvField(bib.edition || ""),
-        escapeCsvField(bib.isbn || ""),
-        escapeCsvField(bib.issn || ""),
-        escapeCsvField(bib.isbnIssn || ""),
-        escapeCsvField(bib.publisher?.name || ""),
-        escapeCsvField(bib.publishYear?.toString() || ""),
-        escapeCsvField(bib.collation || ""),
-        escapeCsvField(bib.seriesTitle || ""),
-        escapeCsvField(bib.callNumber || ""),
-        escapeCsvField(bib.language?.name || ""),
-        escapeCsvField(bib.publicationPlace?.name || ""),
-        escapeCsvField(bib.classification || ""),
-        escapeCsvField(bib.notes || ""),
-        escapeCsvField(bib.image || ""),
-        escapeCsvField(bib.sor || ""),
-        escapeCsvField(authorNames),
-        escapeCsvField(topicNames),
-        escapeCsvField(itemCodes),
-        escapeCsvField(facultyNames),
-        escapeCsvField(studyProgramNames),
+        escapeCsvField(bib.title, delimiter),
+        escapeCsvField(bib.gmd?.name || "", delimiter),
+        escapeCsvField(bib.edition || "", delimiter),
+        escapeCsvField(bib.isbn || "", delimiter),
+        escapeCsvField(bib.issn || "", delimiter),
+        escapeCsvField(bib.isbnIssn || "", delimiter),
+        escapeCsvField(bib.publisher?.name || "", delimiter),
+        escapeCsvField(bib.publishYear?.toString() || "", delimiter),
+        escapeCsvField(bib.collation || "", delimiter),
+        escapeCsvField(bib.seriesTitle || "", delimiter),
+        escapeCsvField(bib.callNumber || "", delimiter),
+        escapeCsvField(bib.language?.name || "", delimiter),
+        escapeCsvField(bib.publicationPlace?.name || "", delimiter),
+        escapeCsvField(bib.classification || "", delimiter),
+        escapeCsvField(bib.notes || "", delimiter),
+        escapeCsvField(bib.image || "", delimiter),
+        escapeCsvField(bib.sor || "", delimiter),
+        escapeCsvField(authorNames, delimiter),
+        escapeCsvField(topicNames, delimiter),
+        escapeCsvField(itemCodes, delimiter),
+        escapeCsvField(facultyNames, delimiter),
+        escapeCsvField(studyProgramNames, delimiter),
       ];
-      lines.push(row.join(";"));
+      lines.push(row.join(delimiter));
     }
 
     return "\uFEFF" + lines.join("\n");
   }
 
   async exportItems(filter?: ExportFilter): Promise<string> {
+    const delimiter = filter?.delimiter || ";";
     const itemConditions: any[] = [isNull(items.deletedAt)];
 
     if (filter?.status) {
@@ -238,7 +246,7 @@ export class ExportService {
       };
       const matchingBibIds = await getFilteredBibliographyIds(bibFilter);
       if (matchingBibIds !== null && matchingBibIds.length === 0) {
-        return "\uFEFF" + ITEM_HEADERS.join(";") + "\n";
+        return "\uFEFF" + ITEM_HEADERS.join(delimiter) + "\n";
       }
       if (matchingBibIds !== null) {
         itemConditions.push(inArray(items.bibliographyId, matchingBibIds));
@@ -258,7 +266,7 @@ export class ExportService {
       orderBy: [asc(items.itemCode)],
     });
 
-    const lines: string[] = [ITEM_HEADERS.join(";")];
+    const lines: string[] = [ITEM_HEADERS.join(delimiter)];
 
     for (const item of allItems) {
       const locationName = (item as any).location
@@ -272,27 +280,27 @@ export class ExportService {
       };
 
       const row = [
-        escapeCsvField(item.itemCode),
-        escapeCsvField(item.callNumber || ""),
-        escapeCsvField((item as any).collectionType?.name || ""),
-        escapeCsvField(item.inventoryCode || ""),
-        escapeCsvField(formatDate(item.receivedDate)),
-        escapeCsvField((item as any).vendor?.name || ""),
-        escapeCsvField(item.orderNo || ""),
-        escapeCsvField(locationName),
-        escapeCsvField(formatDate(item.orderDate)),
-        escapeCsvField(statusMap[item.status] || item.status),
-        escapeCsvField(item.site || ""),
-        escapeCsvField(item.source || ""),
-        escapeCsvField(item.invoice || ""),
-        escapeCsvField(item.price || ""),
-        escapeCsvField(item.priceCurrency || ""),
-        escapeCsvField(formatDate(item.invoiceDate)),
-        escapeCsvField(formatDate(item.createdAt)),
-        escapeCsvField(formatDate(item.updatedAt)),
-        escapeCsvField((item as any).bibliography?.title || ""),
+        escapeCsvField(item.itemCode, delimiter),
+        escapeCsvField(item.callNumber || "", delimiter),
+        escapeCsvField((item as any).collectionType?.name || "", delimiter),
+        escapeCsvField(item.inventoryCode || "", delimiter),
+        escapeCsvField(formatDate(item.receivedDate), delimiter),
+        escapeCsvField((item as any).vendor?.name || "", delimiter),
+        escapeCsvField(item.orderNo || "", delimiter),
+        escapeCsvField(locationName, delimiter),
+        escapeCsvField(formatDate(item.orderDate), delimiter),
+        escapeCsvField(statusMap[item.status] || item.status, delimiter),
+        escapeCsvField(item.site || "", delimiter),
+        escapeCsvField(item.source || "", delimiter),
+        escapeCsvField(item.invoice || "", delimiter),
+        escapeCsvField(item.price || "", delimiter),
+        escapeCsvField(item.priceCurrency || "", delimiter),
+        escapeCsvField(formatDate(item.invoiceDate), delimiter),
+        escapeCsvField(formatDate(item.createdAt), delimiter),
+        escapeCsvField(formatDate(item.updatedAt), delimiter),
+        escapeCsvField((item as any).bibliography?.title || "", delimiter),
       ];
-      lines.push(row.join(";"));
+      lines.push(row.join(delimiter));
     }
 
     return "\uFEFF" + lines.join("\n");
@@ -469,6 +477,127 @@ export class ExportService {
     }
 
     return "\uFEFF" + lines.join("\n");
+  }
+
+  async exportBibliographiesPdf(res: Response, filter: ExportFilter = {}): Promise<void> {
+    const matchingIds = await getFilteredBibliographyIds(filter);
+    if (matchingIds !== null && matchingIds.length === 0) {
+      const doc = new PDFDocument({ margin: 36, size: "A4", layout: "landscape" });
+      doc.pipe(res);
+      doc.fontSize(16).font("Helvetica-Bold").text("MUCILIB — Perpustakaan UMC", { align: "center" });
+      doc.fontSize(11).font("Helvetica").text("Tidak ada data koleksi yang sesuai dengan filter yang dipilih.", { align: "center" });
+      doc.end();
+      return;
+    }
+
+    const where = matchingIds !== null
+      ? and(isNull(bibliographies.deletedAt), inArray(bibliographies.id, matchingIds))
+      : isNull(bibliographies.deletedAt);
+
+    const rows = await db.query.bibliographies.findMany({
+      where,
+      with: {
+        publisher: true,
+        bibliographyAuthors: { with: { author: true } },
+        items: { where: isNull(items.deletedAt) },
+      },
+      orderBy: [asc(bibliographies.title)],
+    });
+
+    let facultyLabel = "Semua Fakultas";
+    if (filter.facultyId) {
+      const f = await db.query.faculties.findFirst({ where: eq(faculties.id, filter.facultyId) });
+      if (f) facultyLabel = f.name;
+    }
+    let prodiLabel = "Semua Program Studi";
+    if (filter.studyProgramId) {
+      const sp = await db.query.studyPrograms.findFirst({ where: eq(studyPrograms.id, filter.studyProgramId) });
+      if (sp) prodiLabel = sp.name;
+    }
+
+    const doc = new PDFDocument({ margin: 36, size: "A4", layout: "landscape" });
+    doc.pipe(res);
+
+    // Header Kop
+    doc.fontSize(15).font("Helvetica-Bold").text("MUCILIB — PERPUSTAKAAN UNIVERSITAS MUHAMMADIYAH CIREBON", { align: "center" });
+    doc.fontSize(10).font("Helvetica").text("Katalog Koleksi Bahan Pustaka & Eksemplar", { align: "center" });
+    doc.fontSize(8).fillColor("#64748B").text(
+      `Fakultas: ${facultyLabel} | Program Studi: ${prodiLabel} | Dicetak: ${new Date().toLocaleDateString("id-ID", { dateStyle: "long" })}`,
+      { align: "center" }
+    );
+    doc.fillColor("#000000");
+    doc.moveDown(0.8);
+
+    const startX = 36;
+    const colWidths = [25, 270, 160, 110, 70, 50, 75];
+    const headers = ["No", "Judul Buku", "Pengarang", "ISBN / ISSN", "DDC", "Tahun", "Eksemplar"];
+    let y = doc.y;
+
+    doc.rect(startX, y, 760, 18).fill("#0F172A");
+    doc.fillColor("#FFFFFF").font("Helvetica-Bold").fontSize(8);
+    let curX = startX + 4;
+    headers.forEach((h, i) => {
+      doc.text(h, curX, y + 5, { width: colWidths[i] - 4, lineBreak: false });
+      curX += colWidths[i];
+    });
+    doc.fillColor("#000000");
+    y += 18;
+
+    let totalCopies = 0;
+    doc.font("Helvetica").fontSize(7.5);
+
+    rows.forEach((bib, idx) => {
+      if (y > 520) {
+        doc.addPage();
+        y = 36;
+        doc.rect(startX, y, 760, 18).fill("#0F172A");
+        doc.fillColor("#FFFFFF").font("Helvetica-Bold").fontSize(8);
+        let hX = startX + 4;
+        headers.forEach((h, i) => {
+          doc.text(h, hX, y + 5, { width: colWidths[i] - 4, lineBreak: false });
+          hX += colWidths[i];
+        });
+        doc.fillColor("#000000").font("Helvetica").fontSize(7.5);
+        y += 18;
+      }
+
+      const copyCount = bib.items?.length || 0;
+      totalCopies += copyCount;
+      const authorStr = bib.bibliographyAuthors.map(ba => ba.author.name).join(", ") || "-";
+      const isbnStr = bib.isbn || bib.isbnIssn || bib.issn || "-";
+
+      const bg = idx % 2 === 0 ? "#F8FAFC" : "#FFFFFF";
+      doc.rect(startX, y, 760, 16).fill(bg);
+      doc.fillColor("#000000");
+
+      curX = startX + 4;
+      const values = [
+        String(idx + 1),
+        bib.title,
+        authorStr,
+        isbnStr,
+        bib.classification || bib.callNumber || "-",
+        bib.publishYear ? String(bib.publishYear) : "-",
+        `${copyCount} eks`
+      ];
+
+      values.forEach((val, i) => {
+        doc.text(val, curX, y + 4, { width: colWidths[i] - 4, lineBreak: false });
+        curX += colWidths[i];
+      });
+
+      y += 16;
+    });
+
+    doc.rect(startX, y + 6, 760, 20).fill("#F1F5F9");
+    doc.fillColor("#0F172A").font("Helvetica-Bold").fontSize(8);
+    doc.text(
+      `Total Judul Koleksi: ${rows.length} judul  |  Total Eksemplar Fisik: ${totalCopies} eksemplar`,
+      startX + 8,
+      y + 12
+    );
+
+    doc.end();
   }
 }
 

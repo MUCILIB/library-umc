@@ -22,3 +22,10 @@ export const extendLoanSchema = z.object({
   loanId: z.string().uuid("Loan ID tidak valid"),
 });
 
+export const returnLoanSchema = z.object({
+  condition: z.enum(["good", "damaged", "lost"]).optional().default("good"),
+  staffName: z.string().optional(),
+  signature: z.string().optional(),
+  notes: z.string().optional(),
+});
+

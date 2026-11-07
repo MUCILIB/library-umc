@@ -1112,8 +1112,11 @@ function BibliographyForm({ bib, onClose, onSuccess }: BibliographyFormProps) {
     setGeneratingCode(true);
     setStep3Error(null);
     try {
-      const res = await itemApi.generateCode(bibId);
+      const res = await itemApi.generateCode(bibId, polaKodeItem.trim() || undefined);
       setPolaKodeItem(res.data.itemCode);
+      if (!inventoryCodeInput) {
+        setInventoryCodeInput(res.data.itemCode);
+      }
     } catch (err: unknown) {
       setStep3Error(err instanceof Error ? err.message : "Gagal generate kode item");
     } finally {
@@ -2085,10 +2088,31 @@ function BibliographyForm({ bib, onClose, onSuccess }: BibliographyFormProps) {
 
             {/* OPSI POLA KODE ITEM INVENTARISASI */}
             <div className="border border-border rounded-xl p-5 bg-muted/40 space-y-4">
-              <h4 className="text-xs font-bold text-foreground uppercase tracking-wider flex items-center gap-2">
-                <Plus className="size-4 text-primary" />
-                OPSI POLA KODE ITEM INVENTARISASI
-              </h4>
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <h4 className="text-xs font-bold text-foreground uppercase tracking-wider flex items-center gap-2">
+                  <Plus className="size-4 text-primary" />
+                  POLA KODE BUKU &amp; EKSEMPLAR
+                </h4>
+              </div>
+
+              {/* Guidance Card Antislop */}
+              <div className="rounded-xl border border-blue-200/60 bg-blue-50/50 p-3.5 text-xs text-blue-900 dark:border-blue-900/40 dark:bg-blue-950/30 dark:text-blue-300">
+                <p className="font-bold flex items-center gap-1.5 mb-1 text-[11px] uppercase tracking-wider text-blue-700 dark:text-blue-300">
+                  <Info className="size-3.5 shrink-0" />
+                  Panduan Pola Penomoran Eksemplar
+                </p>
+                <p className="leading-relaxed text-[11px] text-muted-foreground">
+                  Nomor eksemplar dibentuk otomatis berjenjang mengikuti kode buku induk. Masukkan pola dasar atau klik tombol <strong>Generate</strong>.
+                </p>
+                <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-2 text-[10px] font-mono">
+                  <span className="p-1.5 bg-white/80 dark:bg-background/80 rounded border border-blue-100 dark:border-blue-900/60 text-foreground">
+                    Pola: <strong className="text-primary">PND-01</strong> &rarr; Eksemplar: <strong>PND-01-01</strong>, <strong>PND-01-02</strong>
+                  </span>
+                  <span className="p-1.5 bg-white/80 dark:bg-background/80 rounded border border-blue-100 dark:border-blue-900/60 text-foreground">
+                    Pola: <strong className="text-primary">TI-2026-05</strong> &rarr; Eksemplar: <strong>TI-2026-05-01</strong>, <strong>TI-2026-05-02</strong>
+                  </span>
+                </div>
+              </div>
 
               {step3Error && (
                 <p className="text-xs text-destructive font-medium bg-red-50 p-2 rounded border border-red-200">
@@ -2099,12 +2123,12 @@ function BibliographyForm({ bib, onClose, onSuccess }: BibliographyFormProps) {
               <div className="grid gap-4 md:grid-cols-4 items-end">
                 <div>
                   <label className="mb-2 block text-xs font-medium text-muted-foreground uppercase">
-                    Kode Item
+                    Pola / Kode Item
                   </label>
                   <div className="flex gap-2">
                     <input
                       type="text"
-                      placeholder="Otomatis jika klik Generate"
+                      placeholder="Contoh: PND-01"
                       value={polaKodeItem}
                       onChange={(e) => setPolaKodeItem(e.target.value.replace(/\s/g, ""))}
                       className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary bg-background"
@@ -2122,11 +2146,11 @@ function BibliographyForm({ bib, onClose, onSuccess }: BibliographyFormProps) {
 
                 <div>
                   <label className="mb-2 block text-xs font-medium text-muted-foreground uppercase">
-                    Kode Inventaris
+                    No. Inventaris
                   </label>
                   <input
                     type="text"
-                    placeholder="Opsional"
+                    placeholder="Sama dengan kode item jika kosong"
                     value={inventoryCodeInput}
                     onChange={(e) => setInventoryCodeInput(e.target.value)}
                     className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary bg-background"

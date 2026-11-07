@@ -82,6 +82,12 @@ router.post(
   memberController.requestMyMemberCard
 );
 
+router.post(
+  "/members/me/card/renew",
+  isAuthenticated,
+  memberController.requestCardRenewal
+);
+
 router.get(
   "/members/cards/pending",
   isAuthenticated,
@@ -89,11 +95,25 @@ router.get(
   memberController.getPendingCardRequests
 );
 
+router.get(
+  "/members/cards/renewals/pending",
+  isAuthenticated,
+  requireRole(["super_admin", "staff"]),
+  memberController.getPendingCardRenewals
+);
+
 router.patch(
   "/members/:id/card/approve",
   isAuthenticated,
   requireRole(["super_admin", "staff"]),
   memberController.approveMemberCard
+);
+
+router.patch(
+  "/members/:id/card/renew/approve",
+  isAuthenticated,
+  requireRole(["super_admin", "staff"]),
+  memberController.approveCardRenewal
 );
 
 router.post(
@@ -108,6 +128,13 @@ router.patch(
   isAuthenticated,
   requireRole(["super_admin", "staff"]),
   memberController.rejectMemberCard
+);
+
+router.patch(
+  "/members/:id/card/renew/reject",
+  isAuthenticated,
+  requireRole(["super_admin", "staff"]),
+  memberController.rejectCardRenewal
 );
 
 export const memberRoutes = router;

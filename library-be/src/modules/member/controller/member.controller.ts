@@ -287,4 +287,111 @@ export class MemberController {
       next(error);
     }
   }
+
+  async requestCardRenewal(req: Request, res: Response, next: NextFunction) {
+    try {
+      const userId = req.user?.id;
+      if (!userId) {
+        return sendError(res, "User tidak terautentikasi", 401);
+      }
+
+      const result = await memberService.requestCardRenewal(userId);
+      if (!result.success) {
+        return sendError(res, result.message ?? "Gagal mengajukan perpanjangan", 400);
+      }
+
+      await auditService.createLog({
+        userId,
+        action: "update",
+        entity: "Users",
+        entityId: result.data?.id,
+        ipAddress: req.ip,
+        detail: "request_card_renewal"
+      });
+
+      sendSuccess(res, "Pengajuan perpanjangan kartu berhasil", result.data);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async getPendingCardRenewals(req: Request, res: Response, next: NextFunction) {
+    try {
+      const limit = Number(req.query.limit || 100);
+      const result = await memberService.getPendingCardRenewals(limit);
+
+      if (!result.success) {
+        return sendError(res, result.message ?? "Gagal memuat perpanjangan kartu", 400);
+      }
+
+      sendSuccess(res, "Daftar perpanjangan kartu berhasil diambil", result.data);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async approveCardRenewal(req: Request, res: Response, next: NextFunction) {
+    try {
+      const memberId = String(req.params.id || "");
+      if (!memberId) {
+        return sendError(res, "Member ID tidak valid", 400);
+      }
+
+      const durationDays = req.body?.durationDays ? Number(req.body.durationDays) : 365;
+      const result = await memberService.approveCardRenewal(memberId, durationDays);
+
+      if (!result.success) {
+        return sendError(res, result.message ?? "Gagal menyetujui perpanjangan", 400);
+      }
+
+      await auditService.createLog({
+        userId: req.user?.id,
+        action: "update",
+        entity: "Users",
+        entityId: memberId,
+        ipAddress: req.ip,
+        detail: `approve_card_renewal; durationDays=${durationDays}`
+      });
+
+      sendSuccess(res, "Perpanjangan kartu member berhasil disetujui", result.data);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async rejectCardRenewal(req: Request, res: Response, next: NextFunction) {
+    try {
+      const validation = rejectCardSchema.safeParse(req.body);
+      if (!validation.success) {
+        return sendValidationError(res, validation.error.flatten());
+      }
+
+      const memberId = String(req.params.id || "");
+      if (!memberId) {
+        return sendError(res, "Member ID tidak valid", 400);
+      }
+
+      const result = await memberService.rejectCardRenewal(
+        memberId,
+        validation.data.reason
+      );
+
+      if (!result.success) {
+        return sendError(res, result.message ?? "Gagal menolak perpanjangan kartu", 400);
+      }
+
+      await auditService.createLog({
+        userId: req.user?.id,
+        action: "update",
+        entity: "Users",
+        entityId: memberId,
+        ipAddress: req.ip,
+        detail: `reject_card_renewal; reason=${validation.data.reason}`
+      });
+
+      sendSuccess(res, "Pengajuan perpanjangan kartu member berhasil ditolak", result.data);
+    } catch (error) {
+      next(error);
+    }
+  }
 }
