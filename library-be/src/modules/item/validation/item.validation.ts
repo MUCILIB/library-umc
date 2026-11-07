@@ -7,9 +7,10 @@ export const createItemSchema = z.object({
   locationId: z.coerce.number().int().positive(),
   barcode: z.string().min(1).max(50).optional(),
   uniqueCode: z.string().min(1).max(30).optional(),
-  itemCode: z.string().min(1).max(15, "Kode item tidak boleh lebih dari 15 karakter").regex(/^\S+$/, "Kode item tidak boleh mengandung spasi"),
+  itemCode: z.string().min(1).max(50, "Kode item tidak boleh lebih dari 50 karakter").regex(/^\S+$/, "Kode item tidak boleh mengandung spasi"),
   inventoryCode: z.string().max(50).optional().or(z.literal("")),
-  callNumber: z.string().max(13, "Call number maksimal 13 digit").regex(/^\d*$/, "Call number harus berupa angka").optional().or(z.literal("")),
+  callNumber: z.string().max(100).optional().or(z.literal("")),
+  pattern: z.string().max(50).optional().or(z.literal("")),
   collectionTypeId: z.coerce.number().int().positive().optional(),
   vendorId: z.coerce.number().int().positive().optional(),
   receivedDate: z.string().optional().or(z.literal("")),
@@ -26,10 +27,10 @@ export const createItemSchema = z.object({
 
 export const bulkCreateItemSchema = z.object({
   items: z.array(z.object({
-  itemCode: z.string().min(1).max(15, "Kode item tidak boleh lebih dari 15 karakter").regex(/^\S+$/, "Kode item tidak boleh mengandung spasi"),
+    itemCode: z.string().min(1).max(50, "Kode item tidak boleh lebih dari 50 karakter").regex(/^\S+$/, "Kode item tidak boleh mengandung spasi"),
     barcode: z.string().min(1).max(50).optional(),
     locationId: z.coerce.number().int().positive().optional(),
-    callNumber: z.string().max(13, "Call number maksimal 13 digit").regex(/^\d*$/, "Call number harus berupa angka").optional().or(z.literal("")),
+    callNumber: z.string().max(100).optional().or(z.literal("")),
     inventoryCode: z.string().max(50).optional().or(z.literal("")),
   })).min(1).max(1000),
   defaults: z.object({
@@ -41,13 +42,13 @@ export const bulkCreateItemSchema = z.object({
 });
 
 export const updateItemSchema = z.object({
-  itemCode: z.string().min(1).max(15, "Kode item tidak boleh lebih dari 15 karakter").regex(/^\S+$/, "Kode item tidak boleh mengandung spasi").optional(),
+  itemCode: z.string().min(1).max(50, "Kode item tidak boleh lebih dari 50 karakter").regex(/^\S+$/, "Kode item tidak boleh mengandung spasi").optional(),
   status: itemStatusSchema.optional(),
   locationId: z.coerce.number().int().positive().optional(),
   barcode: z.string().min(1).max(50).optional(),
   uniqueCode: z.string().min(1).max(30).optional(),
   inventoryCode: z.string().max(50).optional().or(z.literal("")),
-  callNumber: z.string().max(13, "Call number maksimal 13 digit").regex(/^\d*$/, "Call number harus berupa angka").optional().or(z.literal("")),
+  callNumber: z.string().max(100).optional().or(z.literal("")),
   collectionTypeId: z.coerce.number().int().positive().optional(),
   vendorId: z.coerce.number().int().positive().optional(),
   receivedDate: z.string().optional().or(z.literal("")),

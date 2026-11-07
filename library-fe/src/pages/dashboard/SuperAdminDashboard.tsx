@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { useNavigate, useSearchParams } from "react-router";
 import {
   BarChart3,
   Book,
@@ -76,6 +76,7 @@ import { cn } from "@/lib/utils";
 import { dashboardDataService } from "@/services/dashboard/dashboardDataService";
 import { authClient } from "@/utils/auth-client";
 import { setAuthToken, clearAuthToken } from "@/api/client";
+import { useRolePermissions } from "@/hooks/useRolePermissions";
 
 type ActiveMenu =
   | "dashboard"
@@ -314,9 +315,38 @@ function DashboardSidebar({
 export default function SuperAdminDashboard() {
   const { data: session } = authClient.useSession();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tabParam = (searchParams.get("tab") || searchParams.get("menu")) as ActiveMenu | null;
 
   const [searchTerm, setSearchTerm] = useState("");
-  const [activeMenu, setActiveMenu] = useState<ActiveMenu>("dashboard");
+  const [activeMenu, setActiveMenuState] = useState<ActiveMenu>(() => {
+    if (tabParam && MENU_CONFIG.some((item) => item.key === tabParam)) {
+      return tabParam;
+    }
+    return "dashboard";
+  });
+
+  const setActiveMenu = useCallback(
+    (menu: ActiveMenu) => {
+      setActiveMenuState(menu);
+      setSearchParams(
+        (prev) => {
+          const next = new URLSearchParams(prev);
+          next.set("tab", menu);
+          return next;
+        },
+        { replace: true }
+      );
+    },
+    [setSearchParams]
+  );
+
+  useEffect(() => {
+    if (tabParam && MENU_CONFIG.some((item) => item.key === tabParam) && tabParam !== activeMenu) {
+      setActiveMenuState(tabParam);
+    }
+  }, [tabParam, activeMenu]);
+
   const [isCommandOpen, setIsCommandOpen] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState<boolean>(() => {
     if (typeof window === "undefined") return true;
@@ -324,8 +354,7 @@ export default function SuperAdminDashboard() {
     return saved === null ? true : saved === "true";
   });
 
-  const isSuperAdmin =
-    (session?.user as { role?: string } | undefined)?.role === "super_admin";
+  const { canView: canViewMenu, isSuperAdmin } = useRolePermissions();
 
   useEffect(() => {
     const token = (session as any)?.session?.token;
@@ -335,8 +364,13 @@ export default function SuperAdminDashboard() {
   }, [session]);
 
   const visibleMenus = useMemo(
-    () => MENU_CONFIG.filter((item) => !item.superAdminOnly || isSuperAdmin),
-    [isSuperAdmin]
+    () =>
+      MENU_CONFIG.filter((item) => {
+        if (isSuperAdmin) return true;
+        if (item.superAdminOnly) return false;
+        return canViewMenu(item.key);
+      }),
+    [isSuperAdmin, canViewMenu]
   );
 
   useEffect(() => {

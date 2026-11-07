@@ -12,6 +12,10 @@ export interface Loan {
   loanDate: string;
   dueDate: string;
   returnDate?: string;
+  returnStaffName?: string;
+  returnStaffSignature?: string;
+  returnCondition?: "good" | "damaged" | "lost";
+  returnReceiptNo?: string;
   status: "pending" | "approved" | "rejected" | "returned" | "extended";
   extensionStatus?: "none" | "pending" | "approved" | "rejected";
   extendCount: number;
@@ -174,16 +178,66 @@ class LoanService {
     return result.data;
   }
 
+  // GET /loans/{loanId} - Get loan by ID
+  async getLoanById(loanId: string): Promise<Loan> {
+    const response = await fetch(`${this.baseUrl}/api/loans/${loanId}`, {
+      credentials: "include"
+    });
+    const result = await response.json();
+    if (!result.success) throw new Error(result.message || "Gagal memuat detail peminjaman");
+    return result.data;
+  }
+
+  // POST /loans/{loanId}/return - Direct return by librarian
+  async returnLoan(
+    loanId: string,
+    payload?: { condition?: string; staffName?: string; signature?: string; notes?: string }
+  ): Promise<{ success: boolean; message: string; data?: any }> {
+    const response = await fetch(`${this.baseUrl}/api/loans/${loanId}/return`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload || {}),
+      credentials: "include"
+    });
+    const result = await response.json();
+    if (!result.success) throw new Error(result.message || "Gagal mengembalikan buku");
+    return result;
+  }
+
   // POST /loans/return-requests/{requestId}/approve - Admin approves return request
-  async approveReturnRequest(requestId: string): Promise<any> {
+  async approveReturnRequest(
+    requestId: string,
+    payload?: { condition?: string; staffName?: string; signature?: string; notes?: string }
+  ): Promise<any> {
     const response = await fetch(`${this.baseUrl}/api/loans/return-requests/${requestId}/approve`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload || {}),
       credentials: "include"
     });
     const result = await response.json();
     if (!result.success) throw new Error(result.message || "Gagal menyetujui pengembalian");
     return result;
+  }
+
+  // GET /loans/{loanId}/return-receipt - Download Return Receipt PDF
+  async downloadReturnReceiptPdf(loanId: string): Promise<void> {
+    const response = await fetch(`${this.baseUrl}/api/loans/${loanId}/return-receipt`, {
+      credentials: "include"
+    });
+    if (!response.ok) {
+      const errJson = await response.json().catch(() => null);
+      throw new Error(errJson?.message || "Gagal mengunduh tanda terima pengembalian PDF");
+    }
+    const blob = await response.blob();
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `tanda_terima_pengembalian_${loanId}.pdf`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.URL.revokeObjectURL(url);
   }
 
 

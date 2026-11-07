@@ -377,7 +377,7 @@ export default function ReportsSection({
                 }
                 className="px-3 py-2.5 rounded-xl text-sm font-semibold cursor-pointer text-muted-foreground focus:bg-muted focus:text-primary"
               >
-                Pendapatan Denda Bulanan
+                Denda Bulanan
               </DropdownMenuItem>
 
               <div className="h-px bg-muted my-1 mx-2" />
@@ -416,7 +416,7 @@ export default function ReportsSection({
                 }
                 className="px-3 py-2.5 rounded-xl text-sm font-semibold cursor-pointer text-muted-foreground focus:bg-muted focus:text-blue-600 dark:text-blue-400"
               >
-                Pendapatan Denda Bulanan
+                Denda Bulanan
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -425,7 +425,7 @@ export default function ReportsSection({
 
       <div className="flex flex-wrap items-center gap-3">
         <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
-          Periode Audit Pendapatan
+          Periode Audit Denda
         </p>
         <Select
           value={String(selectedMonth)}
@@ -507,7 +507,7 @@ export default function ReportsSection({
           </div>
           <div>
             <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-1">
-              PENDAPATAN DENDA ({selectedMonthLabel.toUpperCase()}{" "}
+              DENDA ({selectedMonthLabel.toUpperCase()}{" "}
               {selectedYear})
             </p>
             <p className="text-3xl font-black text-foreground mt-2">

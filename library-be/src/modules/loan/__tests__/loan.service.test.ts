@@ -247,6 +247,47 @@ describe("LoanService Unit Tests", () => {
         "bib-1",
       );
     });
+
+    it("sukses mengembalikan buku dengan metadata verifikasi (nama petugas, ttd, berita acara)", async () => {
+      let updatedLoanData: any = null;
+      (db.transaction as any).mockImplementationOnce(async (cb: any) => {
+        const tx = createTxForStockSync(0);
+        tx.query.loans.findFirst = vi.fn().mockResolvedValueOnce({
+          id: "loan-1",
+          itemId: "item-1",
+          status: "approved",
+          dueDate: new Date().toISOString().split("T")[0],
+        });
+        tx.query.items.findFirst = vi.fn().mockResolvedValueOnce({
+          id: "item-1",
+          bibliographyId: "bib-1",
+        });
+        tx.update = vi.fn().mockImplementation(() => ({
+          set: vi.fn().mockImplementation((data: any) => {
+            if (data.returnReceiptNo) {
+              updatedLoanData = data;
+            }
+            return {
+              where: vi.fn().mockResolvedValue([{}]),
+            };
+          }),
+        }));
+        return cb(tx);
+      });
+
+      const result = await loanService.returnLoan("loan-1", "admin-1", {
+        condition: "good",
+        staffName: "Roni",
+        signature: "data:image/png;base64,sampleSignature",
+      });
+
+      expect(result.success).toBe(true);
+      expect(updatedLoanData).not.toBeNull();
+      expect(updatedLoanData.returnStaffName).toBe("Roni");
+      expect(updatedLoanData.returnCondition).toBe("good");
+      expect(updatedLoanData.returnReceiptNo).toMatch(/^BA-RET-/);
+      expect(updatedLoanData.returnStaffSignature).toBe("data:image/png;base64,sampleSignature");
+    });
   });
 
   describe("cancelLoan", () => {

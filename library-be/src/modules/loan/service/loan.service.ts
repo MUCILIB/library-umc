@@ -17,6 +17,8 @@ import { NotificationService } from "../../notification/service/notification.ser
 import reservationService from "../../reservation/service/reservation.service";
 import { ROLES } from "../../../utils/auth-types";
 import { syncCollectionAvailableStock } from "../../shared/utils/stock-sync";
+import PDFDocument from "pdfkit";
+import { Response } from "express";
 
 const notificationService = new NotificationService();
 
@@ -366,7 +368,19 @@ export class LoanService {
   /**
    * Return Loan (Pengembalian Buku secara langsung oleh Admin/Staff)
    */
-  async returnLoan(loanId: string, adminId: string, condition?: string) {
+  async returnLoan(
+    loanId: string,
+    adminId: string,
+    payload?: string | { condition?: string; staffName?: string; signature?: string; notes?: string }
+  ) {
+    const options = typeof payload === "string" ? { condition: payload } : (payload || {});
+    const condition = options.condition || "good";
+    const staffName = options.staffName || "Petugas Perpustakaan";
+    const signature = options.signature || null;
+    const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, "");
+    const randomSuffix = Math.floor(1000 + Math.random() * 9000);
+    const receiptNo = `BA-RET-${dateStr}-${randomSuffix}`;
+
     return await db.transaction(async (tx) => {
       // Find the loan
       const loan = await tx.query.loans.findFirst({
@@ -378,11 +392,16 @@ export class LoanService {
 
       const returnDateStr = new Date().toISOString().split("T")[0];
 
-      // Update loan status to returned
+      // Update loan status to returned with verification metadata
       await tx.update(loans).set({
         status: "returned",
         extensionStatus: "none",
         returnDate: returnDateStr,
+        returnCondition: condition,
+        returnStaffName: staffName,
+        returnStaffSignature: signature,
+        returnReceiptNo: receiptNo,
+        notes: options.notes || loan.notes,
         updatedAt: new Date()
       }).where(eq(loans.id, loan.id));
 
@@ -490,7 +509,18 @@ export class LoanService {
   /**
    * 5. Return Loan (Pengembalian Buku) - NEW
    */
-  async approveReturnRequest(requestId: string, adminId: string) {
+  async approveReturnRequest(
+    requestId: string,
+    adminId: string,
+    payload?: { condition?: string; staffName?: string; signature?: string; notes?: string }
+  ) {
+    const condition = payload?.condition || "good";
+    const staffName = payload?.staffName || "Petugas Perpustakaan";
+    const signature = payload?.signature || null;
+    const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, "");
+    const randomSuffix = Math.floor(1000 + Math.random() * 9000);
+    const receiptNo = `BA-RET-${dateStr}-${randomSuffix}`;
+
     return await db.transaction(async (tx) => {
       // Verify super_admin
       const adminUser = await tx.query.Users.findFirst({ where: eq(Users.id, adminId) });
@@ -534,16 +564,22 @@ export class LoanService {
 
       const returnDateStr = new Date().toISOString().split("T")[0];
 
-      // Update loan status to returned
+      // Update loan status to returned with verification metadata
       await tx.update(loans).set({
         status: "returned",
         extensionStatus: "none",
         returnDate: returnDateStr,
+        returnCondition: condition,
+        returnStaffName: staffName,
+        returnStaffSignature: signature,
+        returnReceiptNo: receiptNo,
+        notes: payload?.notes || loan.notes,
         updatedAt: new Date()
       }).where(eq(loans.id, loan.id));
 
-      // Update item status to available
-      await tx.update(items).set({ status: "available", updatedAt: new Date() }).where(eq(items.id, loan.itemId));
+      // Update item status based on condition
+      const itemStatus = condition === "damaged" ? "damaged" : condition === "lost" ? "lost" : "available";
+      await tx.update(items).set({ status: itemStatus as any, updatedAt: new Date() }).where(eq(items.id, loan.itemId));
 
       // Sync collection stock if needed
       const loanItem = await tx.query.items.findFirst({ where: and(eq(items.id, loan.itemId), isNull(items.deletedAt)) });
@@ -987,5 +1023,122 @@ export class LoanService {
         extensionStatus: "rejected"
       }
     };
+  }
+
+  async getLoanById(loanId: string) {
+    const loan = await db.query.loans.findFirst({
+      where: and(eq(loans.id, loanId), isNull(loans.deletedAt)),
+      with: {
+        item: {
+          with: {
+            bibliography: {
+              with: {
+                bibliographyAuthors: { with: { author: true } }
+              }
+            },
+            location: true,
+          }
+        },
+        member: {
+          with: { user: true }
+        },
+        returnRequests: true,
+      }
+    });
+    if (!loan) return null;
+
+    if ((loan as any).item?.bibliography) {
+      const bib = (loan as any).item.bibliography;
+      const authorNames = Array.isArray(bib.bibliographyAuthors)
+        ? bib.bibliographyAuthors.map((ba: any) => ba.author?.name).filter(Boolean).join(", ")
+        : "";
+      bib.author = authorNames || bib.author || bib.sor || "Penulis tidak tersedia";
+    }
+    return loan;
+  }
+
+  async generateReturnReceiptPdf(loanId: string, res: Response): Promise<void> {
+    const loan = await this.getLoanById(loanId);
+    if (!loan) {
+      throw new Error("Peminjaman tidak ditemukan");
+    }
+
+    const doc = new PDFDocument({ margin: 40, size: "A4" });
+    doc.pipe(res);
+
+    // Kop Surat UMC
+    doc.fontSize(14).font("Helvetica-Bold").text("UNIVERSITAS MUHAMMADIYAH CIREBON", { align: "center" });
+    doc.fontSize(11).font("Helvetica-Bold").text("UPT PERPUSTAKAAN", { align: "center" });
+    doc.fontSize(8.5).font("Helvetica").text("Jl. Tuparev No. 70 Cirebon 45153 — Telp: (0231) 209608 — perpustakaan@umc.ac.id", { align: "center" });
+    doc.moveDown(0.5);
+
+    // Divider
+    doc.strokeColor("#0F172A").lineWidth(2).moveTo(40, doc.y).lineTo(555, doc.y).stroke();
+    doc.strokeColor("#64748B").lineWidth(0.5).moveTo(40, doc.y + 2).lineTo(555, doc.y + 2).stroke();
+    doc.moveDown(1.2);
+
+    // Title
+    doc.fontSize(12).font("Helvetica-Bold").text("TANDA TERIMA & BERITA ACARA PENGEMBALIAN BUKU", { align: "center" });
+    doc.fontSize(9).font("Helvetica").text(`Nomor: ${loan.returnReceiptNo || "BA-RET-MANUAL"}`, { align: "center" });
+    doc.moveDown(1);
+
+    // Box data
+    const startY = doc.y;
+    doc.rect(40, startY, 515, 175).strokeColor("#CBD5E1").lineWidth(1).stroke();
+
+    doc.fontSize(9).fillColor("#0F172A");
+    const fields = [
+      ["Nama Peminjam / Anggota", ": " + ((loan.member as any)?.user?.name || (loan.member as any)?.name || "-")],
+      ["Nomor Induk / Kode Member", ": " + ((loan.member as any)?.memberCode || (loan.member as any)?.nim || "-")],
+      ["Judul Buku / Bahan Pustaka", ": " + ((loan.item as any)?.bibliography?.title || "-")],
+      ["No. Inventaris / Kode Eksemplar", ": " + ((loan.item as any)?.inventoryCode || (loan.item as any)?.itemCode || "-")],
+      ["Tanggal Peminjaman", ": " + (loan.loanDate || "-")],
+      ["Batas Waktu Pengembalian", ": " + (loan.dueDate || "-")],
+      ["Tanggal Realisasi Kembali", ": " + (loan.returnDate || "-")],
+      ["Kondisi Fisik Saat Kembali", ": " + (loan.returnCondition === "damaged" ? "Rusak" : loan.returnCondition === "lost" ? "Hilang" : "Baik & Lengkap (Normal)")],
+      ["Status Pengesahan", ": SAH / TELAH DIVERIFIKASI PETUGAS"],
+    ];
+
+    let fieldY = startY + 10;
+    fields.forEach(([label, value]) => {
+      doc.font("Helvetica-Bold").text(label, 50, fieldY, { width: 170 });
+      doc.font("Helvetica").text(value, 220, fieldY, { width: 320 });
+      fieldY += 17;
+    });
+
+    // Verification signature area
+    const signY = fieldY + 30;
+
+    // Member side
+    doc.fontSize(9).font("Helvetica").text("Peminjam / Anggota,", 60, signY);
+    doc.text((loan.member as any)?.user?.name || (loan.member as any)?.name || "Anggota Perpustakaan", 60, signY + 70);
+
+    // Officer side
+    doc.text(`Cirebon, ${loan.returnDate || new Date().toISOString().split("T")[0]}`, 360, signY);
+    doc.text("Petugas Penerima Perpustakaan,", 360, signY + 12);
+
+    if (loan.returnStaffSignature && loan.returnStaffSignature.startsWith("data:image")) {
+      try {
+        const base64Data = loan.returnStaffSignature.split(",")[1];
+        const imgBuffer = Buffer.from(base64Data, "base64");
+        doc.image(imgBuffer, 360, signY + 25, { width: 90, height: 35 });
+      } catch {
+        doc.text("[ Tanda Tangan Digital ]", 360, signY + 35);
+      }
+    } else {
+      doc.text("[ Tanda Tangan Digital ]", 360, signY + 35);
+    }
+
+    doc.font("Helvetica-Bold").text(loan.returnStaffName || "Petugas Perpustakaan", 360, signY + 70);
+    doc.font("Helvetica").fontSize(8).fillColor("#64748B").text("UPT Perpustakaan UMC", 360, signY + 82);
+
+    // Official Digital Stamp
+    doc.rect(230, signY + 15, 110, 50).strokeColor("#059669").lineWidth(1.5).stroke();
+    doc.fontSize(7.5).font("Helvetica-Bold").fillColor("#059669")
+      .text("TERVERIFIKASI SAH", 235, signY + 22, { width: 100, align: "center" })
+      .text("PERPUSTAKAAN UMC", 235, signY + 34, { width: 100, align: "center" })
+      .text(loan.returnDate || "", 235, signY + 46, { width: 100, align: "center" });
+
+    doc.end();
   }
 }

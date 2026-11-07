@@ -82,7 +82,9 @@ describe("Bibliography Validation Schema", () => {
     });
     expect(nullResult.success).toBe(true);
 
-    // Test 10, 11, 12, 13 digits and "-"
+    // Test 6, 10, 11, 12, 13 digits and "-"
+    expect(updateBibliographySchema.safeParse({ isbn: "123456" }).success).toBe(true);
+    expect(createBibliographySchema.safeParse({ title: "Buku 6 digit", isbn: "987654" }).success).toBe(true);
     expect(updateBibliographySchema.safeParse({ isbn: "0123456789" }).success).toBe(true);
     expect(updateBibliographySchema.safeParse({ isbn: "01234567891" }).success).toBe(true);
     expect(updateBibliographySchema.safeParse({ isbn: "012345678912" }).success).toBe(true);

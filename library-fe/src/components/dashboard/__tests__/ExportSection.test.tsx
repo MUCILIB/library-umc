@@ -7,6 +7,7 @@ vi.mock("@/api/client", () => ({
   exportApi: {
     downloadBibliographies: vi.fn(),
     downloadItems: vi.fn(),
+    downloadBibliographiesPdf: vi.fn(),
   },
   facultyApi: {
     list: vi.fn().mockResolvedValue({
@@ -50,7 +51,7 @@ describe("ExportSection", () => {
     });
   });
 
-  it("should show loading state when exporting bibliographies", async () => {
+  it("should open delimiter modal and show loading state when exporting bibliographies", async () => {
     (exportApi.downloadBibliographies as ReturnType<typeof vi.fn>).mockImplementation(
       () => new Promise((resolve) => setTimeout(resolve, 100))
     );
@@ -58,7 +59,12 @@ describe("ExportSection", () => {
     render(<ExportSection />);
 
     const biblioButton = screen.getByRole("button", { name: /Export Bibliografi/i });
-    biblioButton.click();
+    fireEvent.click(biblioButton);
+
+    expect(screen.getByText("Pilih Delimiter Format CSV")).toBeInTheDocument();
+
+    const submitBtn = screen.getByRole("button", { name: /Unduh Berkas CSV/i });
+    fireEvent.click(submitBtn);
 
     await waitFor(() => {
       expect(screen.getByText("Mengexport...")).toBeInTheDocument();
@@ -71,7 +77,10 @@ describe("ExportSection", () => {
     render(<ExportSection />);
 
     const biblioButton = screen.getByRole("button", { name: /Export Bibliografi/i });
-    biblioButton.click();
+    fireEvent.click(biblioButton);
+
+    const submitBtn = screen.getByRole("button", { name: /Unduh Berkas CSV/i });
+    fireEvent.click(submitBtn);
 
     await waitFor(() => {
       expect(screen.getByText("Berhasil!")).toBeInTheDocument();
@@ -86,7 +95,10 @@ describe("ExportSection", () => {
     render(<ExportSection />);
 
     const biblioButton = screen.getByRole("button", { name: /Export Bibliografi/i });
-    biblioButton.click();
+    fireEvent.click(biblioButton);
+
+    const submitBtn = screen.getByRole("button", { name: /Unduh Berkas CSV/i });
+    fireEvent.click(submitBtn);
 
     await waitFor(() => {
       expect(screen.getByText("Network error")).toBeInTheDocument();
@@ -99,14 +111,17 @@ describe("ExportSection", () => {
     render(<ExportSection />);
 
     const itemButton = screen.getByRole("button", { name: /Export Item/i });
-    itemButton.click();
+    fireEvent.click(itemButton);
+
+    const submitBtn = screen.getByRole("button", { name: /Unduh Berkas CSV/i });
+    fireEvent.click(submitBtn);
 
     await waitFor(() => {
       expect(screen.getByText("Berhasil!")).toBeInTheDocument();
     });
   });
 
-  it("should pass selected facultyId and studyProgramId when exporting", async () => {
+  it("should pass selected facultyId, studyProgramId, and delimiter when exporting", async () => {
     (exportApi.downloadBibliographies as ReturnType<typeof vi.fn>).mockResolvedValue(undefined);
     (exportApi.downloadItems as ReturnType<typeof vi.fn>).mockResolvedValue(undefined);
 
@@ -127,24 +142,61 @@ describe("ExportSection", () => {
     const prodiSelect = screen.getByLabelText("Filter Program Studi");
     fireEvent.change(prodiSelect, { target: { value: "10" } });
 
+    // Test bibliography export with comma delimiter
     const biblioButton = screen.getByRole("button", { name: /Export Bibliografi/i });
     fireEvent.click(biblioButton);
+
+    const commaRadio = screen.getByDisplayValue(",");
+    fireEvent.click(commaRadio);
+
+    const submitBtn = screen.getByRole("button", { name: /Unduh Berkas CSV/i });
+    fireEvent.click(submitBtn);
 
     await waitFor(() => {
       expect(exportApi.downloadBibliographies).toHaveBeenCalledWith({
         facultyId: 1,
         studyProgramId: 10,
+        delimiter: ",",
       });
     });
 
+    // Test item export
     const itemButton = screen.getByRole("button", { name: /Export Item/i });
     fireEvent.click(itemButton);
+
+    const itemSubmitBtn = screen.getByRole("button", { name: /Unduh Berkas CSV/i });
+    fireEvent.click(itemSubmitBtn);
 
     await waitFor(() => {
       expect(exportApi.downloadItems).toHaveBeenCalledWith({
         facultyId: 1,
         studyProgramId: 10,
+        delimiter: ",",
       });
+    });
+  });
+
+  it("should export collection PDF with faculty and study program filters", async () => {
+    (exportApi.downloadBibliographiesPdf as ReturnType<typeof vi.fn>).mockResolvedValue(undefined);
+
+    render(<ExportSection />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Fakultas Teknik")).toBeInTheDocument();
+    });
+
+    const facultySelect = screen.getByLabelText("Filter Fakultas");
+    fireEvent.change(facultySelect, { target: { value: "1" } });
+
+    const pdfButton = screen.getByRole("button", { name: /Cetak Katalog PDF/i });
+    fireEvent.click(pdfButton);
+
+    await waitFor(() => {
+      expect(exportApi.downloadBibliographiesPdf).toHaveBeenCalledWith({
+        facultyId: 1,
+        studyProgramId: undefined,
+      });
+      expect(screen.getByText("Berhasil Diunduh!")).toBeInTheDocument();
     });
   });
 });

@@ -6,6 +6,8 @@ import {
   MapPinned,
   ExternalLink,
   Navigation,
+  Instagram,
+  Globe,
 } from "lucide-react";
 import Navbar from "@/components/ui/navbar";
 import Footer from "@/components/Footer";
@@ -122,6 +124,40 @@ export default function TentangPage() {
                   >
                     <Mail className="w-4 h-4 text-[#9D171D] shrink-0" />
                     <span>perpustakaan@umc.ac.id</span>
+                  </a>
+                </div>
+              </div>
+
+              {/* Media Sosial & Web */}
+              <div className="mt-6 pt-6 border-t border-slate-100 dark:border-border/60">
+                <h3 className="text-xs sm:text-sm font-bold uppercase tracking-wider text-muted-foreground mb-3 flex items-center gap-2">
+                  <Instagram className="w-4 h-4 text-[#9D171D]" />
+                  Media Sosial &amp; Website
+                </h3>
+                <div className="space-y-2.5 text-xs sm:text-sm">
+                  <a
+                    href="https://www.instagram.com/perpustakaan_umc"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-muted-foreground hover:text-[#9D171D] flex items-center justify-between group transition-colors"
+                  >
+                    <div className="flex items-center gap-3">
+                      <Instagram className="w-4 h-4 text-[#9D171D] shrink-0" />
+                      <span>@perpustakaan_umc</span>
+                    </div>
+                    <ExternalLink className="w-3.5 h-3.5 opacity-60 group-hover:opacity-100 transition-opacity" />
+                  </a>
+                  <a
+                    href="https://umc.ac.id"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-muted-foreground hover:text-[#9D171D] flex items-center justify-between group transition-colors"
+                  >
+                    <div className="flex items-center gap-3">
+                      <Globe className="w-4 h-4 text-[#9D171D] shrink-0" />
+                      <span>umc.ac.id</span>
+                    </div>
+                    <ExternalLink className="w-3.5 h-3.5 opacity-60 group-hover:opacity-100 transition-opacity" />
                   </a>
                 </div>
               </div>

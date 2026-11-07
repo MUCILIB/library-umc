@@ -1,10 +1,12 @@
 import { useState, useEffect, Fragment } from "react";
-import { CheckCircle, Clock, BookOpen, ChevronLeft, ChevronRight } from "lucide-react";
+import { useNavigate } from "react-router";
+import { CheckCircle, Clock, BookOpen, ChevronLeft, ChevronRight, FileCheck2 } from "lucide-react";
 import loanService from "@/services/loanService";
 import { useToast } from "@/hooks/useToast";
 import { triggerBadgeRefresh } from "@/hooks/dashboard/useDashboardBadges";
 
 export default function ReturnApprovalsSection() {
+  const navigate = useNavigate();
   const [requests, setRequests] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [processingId, setProcessingId] = useState<string | null>(null);
@@ -102,11 +104,15 @@ export default function ReturnApprovalsSection() {
               </div>
               <div className="flex gap-2">
                 <button
-                  onClick={() => handleApprove(req.id)}
-                  disabled={processingId === req.id}
-                  className="px-6 py-2.5 bg-green-600 hover:bg-green-700 text-white rounded-xl text-sm font-bold shadow-sm disabled:opacity-50 transition-colors"
+                  onClick={() =>
+                    navigate(
+                      `/dashboard/return-confirmation/${req.loan?.id || req.loanId}?requestId=${req.id}`
+                    )
+                  }
+                  className="px-5 py-2.5 bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl text-xs font-bold shadow-xs transition-colors flex items-center gap-1.5"
                 >
-                  {processingId === req.id ? "Memproses..." : "Konfirmasi Pengembalian"}
+                  <FileCheck2 size={14} />
+                  Verifikasi & Tanda Terima
                 </button>
               </div>
             </div>

@@ -1,5 +1,6 @@
 import { type Request, type Response, type NextFunction } from "express";
 import { getSession } from "../utils/auth-utils";
+import { roleService } from "../modules/role/service/role.service";
 
 /**
  * Middleware untuk memastikan user sudah login
@@ -84,3 +85,64 @@ export const requireRole = (allowedRoles: string[]) => {
     }
   };
 };
+
+/**
+ * Middleware dinamis untuk membatasi akses berdasarkan matriks izin RBAC per sub-menu
+ * @param menuKey Kunci sub-menu (misal: "circulation", "loans", "bibliographies")
+ * @param action Tindakan yang diminta: "view" | "add" | "edit" | "delete"
+ */
+export const requirePermission = (
+  menuKey: string,
+  action: "view" | "add" | "edit" | "delete" = "view"
+) => {
+  return async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const session = await getSession(req);
+      if (!session) {
+        res.status(401).json({
+          success: false,
+          message: "Unauthorized",
+          data: null,
+        });
+        return;
+      }
+
+      const userRole = session.user.role || "";
+      if (userRole === "super_admin") {
+        next();
+        return;
+      }
+
+      const permissions = await roleService.getUserPermissions(userRole);
+      const menuPerm = permissions[menuKey];
+
+      const actionKey =
+        action === "view"
+          ? "canView"
+          : action === "add"
+          ? "canAdd"
+          : action === "edit"
+          ? "canEdit"
+          : "canDelete";
+
+      if (menuPerm && menuPerm[actionKey]) {
+        next();
+        return;
+      }
+
+      res.status(403).json({
+        success: false,
+        message: `Forbidden - Role '${userRole}' tidak memiliki hak akses ${action} pada modul ${menuKey}`,
+        data: null,
+      });
+    } catch (error) {
+      console.error("[AuthMiddleware] Error checking permission:", error);
+      res.status(500).json({
+        success: false,
+        message: "Internal server error during permission check",
+        data: null,
+      });
+    }
+  };
+};
+

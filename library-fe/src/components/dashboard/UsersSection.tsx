@@ -47,6 +47,8 @@ import { useUsersManagement } from "@/hooks/dashboard/useUsersManagement";
 import { usersManagementService } from "@/services/dashboard/usersManagementService";
 import { dashboardDataService } from "@/services/dashboard/dashboardDataService";
 import { exportApi, importApi } from "@/api/client";
+import RolePermissionsManager from "./RolePermissionsManager";
+import { Shield, Users as UsersIcon } from "lucide-react";
 
 const BAN_PRESET_REASONS = [
   "Pelanggaran kebijakan sistem",
@@ -58,6 +60,8 @@ const BAN_PRESET_REASONS = [
 export default function UsersSection() {
   const { data: session } = authClient.useSession();
   const { success, error: showErrorToast, warning } = useToast();
+
+  const [mainTab, setMainTab] = useState<"users" | "roles">("users");
 
   const {
     users,
@@ -390,40 +394,74 @@ export default function UsersSection() {
 
   return (
     <div className="w-full min-w-0 max-w-full space-y-6">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h2 className="text-[28px] font-extrabold text-foreground tracking-tight">
-            Manajemen User
-          </h2>
-          <p className="text-muted-foreground font-medium text-[15px] mt-1">
-            Kelola dan monitor akun pengguna sistem perpustakaan.
-          </p>
-        </div>
+      {/* Main Tabs Navigation */}
+      <div className="flex border-b border-border gap-2">
+        <button
+          type="button"
+          onClick={() => setMainTab("users")}
+          className={`pb-3 px-4 text-sm font-bold flex items-center gap-2 border-b-2 transition-all ${
+            mainTab === "users"
+              ? "border-primary text-primary"
+              : "border-transparent text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          <UsersIcon size={16} />
+          Daftar Pengguna
+        </button>
 
-        <div className="flex flex-wrap items-center gap-2">
-          <button
-            onClick={handleExportUsers}
-            disabled={exportingUsers}
-            className="bg-card hover:bg-muted text-foreground border border-border px-5 py-2.5 rounded-full text-sm font-bold flex items-center justify-center gap-2 shadow-sm transition-all disabled:opacity-50"
-            title="Export data user ke CSV"
-          >
-            {exportingUsers ? (
-              <Loader2 size={16} className="animate-spin" />
-            ) : (
-              <Download size={16} strokeWidth={2.5} />
-            )}
-            Export CSV
-          </button>
+        <button
+          type="button"
+          onClick={() => setMainTab("roles")}
+          className={`pb-3 px-4 text-sm font-bold flex items-center gap-2 border-b-2 transition-all ${
+            mainTab === "roles"
+              ? "border-primary text-primary"
+              : "border-transparent text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          <Shield size={16} />
+          Kelola Role & Hak Akses (RBAC)
+        </button>
+      </div>
 
-          <button
-            onClick={() => setIsImportModalOpen(true)}
-            className="bg-primary hover:bg-primary/90 text-white px-5 py-2.5 rounded-full text-sm font-bold flex items-center justify-center gap-2 shadow-lg shadow-red-500/20 transition-all"
-            title="Import user dari file CSV"
-          >
-            <Upload size={16} strokeWidth={2.5} />
-            Import User CSV
-          </button>
-        </div>
+      {mainTab === "roles" ? (
+        <RolePermissionsManager />
+      ) : (
+        <>
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div>
+              <h2 className="text-[28px] font-extrabold text-foreground tracking-tight">
+                Manajemen User
+              </h2>
+              <p className="text-muted-foreground font-medium text-[15px] mt-1">
+                Kelola dan monitor akun pengguna sistem perpustakaan.
+              </p>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                onClick={handleExportUsers}
+                disabled={exportingUsers}
+                className="bg-card hover:bg-muted text-foreground border border-border px-5 py-2.5 rounded-full text-sm font-bold flex items-center justify-center gap-2 shadow-sm transition-all disabled:opacity-50"
+                title="Export data user ke CSV"
+              >
+                {exportingUsers ? (
+                  <Loader2 size={16} className="animate-spin" />
+                ) : (
+                  <Download size={16} strokeWidth={2.5} />
+                )}
+                Export CSV
+              </button>
+
+              <button
+                onClick={() => setIsImportModalOpen(true)}
+                className="bg-primary hover:bg-primary/90 text-white px-5 py-2.5 rounded-full text-sm font-bold flex items-center justify-center gap-2 shadow-lg shadow-red-500/20 transition-all"
+                title="Import user dari file CSV"
+              >
+                <Upload size={16} strokeWidth={2.5} />
+                Import User CSV
+              </button>
+            </div>
+          </div>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -1107,6 +1145,8 @@ export default function UsersSection() {
           </div>
         </div>
       </Modal>
+        </>
+      )}
     </div>
   );
 }

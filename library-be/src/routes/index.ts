@@ -20,11 +20,16 @@ import importRoutes from "../modules/import/route/import.route";
 import exportRoutes from "../modules/export/route/export.route";
 import { repositoryRoutes } from "../modules/repository/route/proposal.route";
 import { ebookRoutes } from "../modules/ebook/route/ebook.route";
+import { roleRoutes } from "../modules/role/route/role.route";
 
 const router = Router();
 
 // Auth & Users
 router.use(authRoutes);
+
+// Dynamic RBAC & Permissions Matrix
+router.use(roleRoutes);
+
 
 // Member
 router.use(memberRoutes);

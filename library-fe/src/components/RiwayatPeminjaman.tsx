@@ -19,7 +19,8 @@ import {
   Tag,
   MapPin,
   Barcode,
-  Filter
+  Filter,
+  FileDown
 } from "lucide-react";
 import loanService, { type Loan as LoanData } from "@/services/loanService";
 import { useToast } from "@/hooks/useToast";
@@ -1087,6 +1088,79 @@ const LoanDetailDialog = ({
               <p className="text-foreground font-medium">
                 {loan.notes}
               </p>
+            </div>
+          )}
+
+          {/* Berita Acara Pengembalian Resmi */}
+          {isReturned && (
+            <div className="bg-emerald-50/50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-800 p-3.5 rounded-2xl text-xs space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-bold text-emerald-800 dark:text-emerald-300 flex items-center gap-1.5">
+                  <CheckCircle2 size={13} className="text-emerald-600" />
+                  Berita Acara Pengembalian Sah
+                </span>
+                {loan.returnReceiptNo && (
+                  <span className="font-mono text-[10px] bg-background/80 px-2 py-0.5 rounded border border-emerald-200 dark:border-emerald-800 font-bold text-foreground">
+                    {loan.returnReceiptNo}
+                  </span>
+                )}
+              </div>
+
+              <div className="grid grid-cols-2 gap-2 text-[11px]">
+                <div>
+                  <span className="text-muted-foreground block text-[10px]">Kondisi Fisik:</span>
+                  <span className="font-semibold text-foreground">
+                    {loan.returnCondition === "good"
+                      ? "Baik / Utuh"
+                      : loan.returnCondition === "damaged"
+                      ? "Rusak"
+                      : loan.returnCondition === "lost"
+                      ? "Hilang"
+                      : "Baik"}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-muted-foreground block text-[10px]">Petugas Penerima:</span>
+                  <span className="font-semibold text-foreground">
+                    {loan.returnStaffName || "Petugas Perpustakaan"}
+                  </span>
+                </div>
+              </div>
+
+              {loan.returnStaffSignature && (
+                <div className="pt-2 border-t border-emerald-200/60 dark:border-emerald-800/60 flex items-center justify-between">
+                  <div>
+                    <span className="text-[10px] text-muted-foreground block">Tanda Tangan Petugas:</span>
+                    <img
+                      src={loan.returnStaffSignature}
+                      alt="Tanda Tangan Petugas"
+                      className="h-10 object-contain mt-1 bg-white/80 dark:bg-slate-900/80 rounded border p-1"
+                    />
+                  </div>
+                  <div className="text-right">
+                    <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-100/60 dark:bg-emerald-900/60 px-2 py-0.5 rounded">
+                      <CheckCircle2 size={10} /> Sah & Terverifikasi
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="w-full text-xs font-bold border-emerald-300 text-emerald-800 dark:border-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 mt-1"
+                onClick={async () => {
+                  try {
+                    await loanService.downloadReturnReceiptPdf(loan.id);
+                  } catch (e: any) {
+                    console.error(e);
+                  }
+                }}
+              >
+                <FileDown size={13} className="mr-1.5" />
+                Unduh Tanda Terima Pengembalian (PDF)
+              </Button>
             </div>
           )}
         </div>

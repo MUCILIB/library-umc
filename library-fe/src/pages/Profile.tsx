@@ -35,6 +35,7 @@ const Profile = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [updateLoading, setUpdateLoading] = useState(false);
   const [cardActionLoading, setCardActionLoading] = useState(false);
+  const [renewalLoading, setRenewalLoading] = useState(false);
   const [activeLoanCount, setActiveLoanCount] = useState(0);
   const [unpaidFineCount, setUnpaidFineCount] = useState(0);
   const [savedCount, setSavedCount] = useState(0);
@@ -192,6 +193,24 @@ const Profile = () => {
       error("Gagal", "Gagal mengajukan kartu member", 5000);
     } finally {
       setCardActionLoading(false);
+    }
+  };
+
+  const handleRequestRenewal = async () => {
+    try {
+      setRenewalLoading(true);
+      const updatedProfile = await memberService.requestCardRenewal();
+      setProfile(updatedProfile);
+      success(
+        "Pengajuan Berhasil",
+        "Pengajuan perpanjangan kartu member berhasil dikirim ke admin",
+        3000
+      );
+    } catch (err: any) {
+      console.error("Request renewal error:", err);
+      error("Gagal", err.message || "Gagal mengajukan perpanjangan kartu member", 5000);
+    } finally {
+      setRenewalLoading(false);
     }
   };
 
@@ -462,6 +481,8 @@ const Profile = () => {
                   profile={profile}
                   requestLoading={cardActionLoading}
                   onRequestCard={handleRequestCard}
+                  renewalLoading={renewalLoading}
+                  onRequestRenewal={handleRequestRenewal}
                 />
               </div>
             )}

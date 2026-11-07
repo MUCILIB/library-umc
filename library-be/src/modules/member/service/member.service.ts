@@ -287,12 +287,17 @@ export class MemberService {
         member.cardNumber ||
         this.generateCardNumber(member.id);
 
+      const oneYearLater = new Date();
+      oneYearLater.setFullYear(oneYearLater.getFullYear() + 1);
+
       const [updated] = await db
         .update(members)
         .set({
           cardStatus: "active",
           cardNumber: nextCardNumber,
           cardApprovedAt: new Date(),
+          cardExpiresAt: oneYearLater,
+          cardRenewalStatus: null,
           cardRejectedAt: null,
           cardRejectedReason: null,
           updatedAt: new Date()
@@ -381,6 +386,183 @@ export class MemberService {
       return {
         success: false,
         message: "Failed to get pending member card requests",
+        data: null
+      };
+    }
+  }
+
+  async requestCardRenewal(userId: string): Promise<ServiceResponse<any>> {
+    try {
+      const member = await db.query.members.findFirst({
+        where: and(eq(members.userId, userId), isNull(members.deletedAt))
+      });
+
+      if (!member) {
+        return {
+          success: false,
+          message: "Profil member tidak ditemukan.",
+          data: null
+        };
+      }
+
+      if (member.cardStatus !== "active" && member.cardStatus !== "expired") {
+        return {
+          success: false,
+          message: "Hanya kartu yang aktif atau kedaluwarsa yang dapat diperpanjang.",
+          data: null
+        };
+      }
+
+      if (member.cardRenewalStatus === "pending") {
+        return {
+          success: false,
+          message: "Pengajuan perpanjangan kartu Anda masih dalam proses peninjauan.",
+          data: null
+        };
+      }
+
+      const [updated] = await db
+        .update(members)
+        .set({
+          cardRenewalStatus: "pending",
+          cardRenewalRequestedAt: new Date(),
+          cardRejectedReason: null,
+          updatedAt: new Date()
+        })
+        .where(eq(members.id, member.id))
+        .returning();
+
+      return {
+        success: true,
+        message: "Pengajuan perpanjangan kartu member berhasil dikirim.",
+        data: updated
+      };
+    } catch (err) {
+      console.error("[MemberService] Error requesting card renewal:", err);
+      return {
+        success: false,
+        message: "Gagal mengajukan perpanjangan kartu member",
+        data: null
+      };
+    }
+  }
+
+  async getPendingCardRenewals(limit = 100): Promise<ServiceResponse<any[]>> {
+    try {
+      const pendingRenewals = await db.query.members.findMany({
+        where: and(
+          eq(members.cardRenewalStatus, "pending"),
+          isNull(members.deletedAt)
+        ),
+        with: {
+          user: true
+        },
+        limit
+      });
+
+      return {
+        success: true,
+        message: "Berhasil memuat daftar perpanjangan kartu",
+        data: pendingRenewals
+      };
+    } catch (err) {
+      console.error("[MemberService] Error getting pending card renewals:", err);
+      return {
+        success: false,
+        message: "Failed to fetch pending card renewals",
+        data: []
+      };
+    }
+  }
+
+  async approveCardRenewal(
+    memberId: string,
+    durationDays = 365
+  ): Promise<ServiceResponse<any>> {
+    try {
+      const member = await db.query.members.findFirst({
+        where: and(eq(members.id, memberId), isNull(members.deletedAt))
+      });
+
+      if (!member) {
+        return {
+          success: false,
+          message: "Member not found",
+          data: null
+        };
+      }
+
+      const baseDate =
+        member.cardExpiresAt && new Date(member.cardExpiresAt) > new Date()
+          ? new Date(member.cardExpiresAt)
+          : new Date();
+      const newExpiry = new Date(baseDate.getTime() + durationDays * 24 * 60 * 60 * 1000);
+
+      const [updated] = await db
+        .update(members)
+        .set({
+          cardStatus: "active",
+          cardRenewalStatus: "approved",
+          cardExpiresAt: newExpiry,
+          cardApprovedAt: new Date(),
+          cardRejectedReason: null,
+          updatedAt: new Date()
+        })
+        .where(eq(members.id, member.id))
+        .returning();
+
+      return {
+        success: true,
+        message: "Perpanjangan kartu member berhasil disetujui.",
+        data: updated
+      };
+    } catch (err) {
+      console.error("[MemberService] Error approving card renewal:", err);
+      return {
+        success: false,
+        message: "Failed to approve card renewal",
+        data: null
+      };
+    }
+  }
+
+  async rejectCardRenewal(
+    memberId: string,
+    reason: string
+  ): Promise<ServiceResponse<any>> {
+    try {
+      const member = await db.query.members.findFirst({
+        where: and(eq(members.id, memberId), isNull(members.deletedAt))
+      });
+
+      if (!member) {
+        return {
+          success: false,
+          message: "Member not found",
+          data: null
+        };
+      }
+
+      const [updated] = await db
+        .update(members)
+        .set({
+          cardRenewalStatus: "rejected",
+          cardRejectedReason: reason,
+          updatedAt: new Date()
+        })
+        .where(eq(members.id, member.id))
+        .returning();
+
+      return {
+        success: true,
+        message: "Pengajuan perpanjangan kartu member ditolak.",
+        data: updated
+      };
+    } catch (err) {
+      console.error("[MemberService] Error rejecting card renewal:", err);
+      return {
+        success: false,
+        message: "Failed to reject card renewal",
         data: null
       };
     }

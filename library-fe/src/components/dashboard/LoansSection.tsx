@@ -1,6 +1,8 @@
 // src/components/dashboard/LoansSection.tsx
 import { useState, useEffect, Fragment } from "react";
+import { useNavigate } from "react-router";
 import reservationService, { type Reservation } from "@/services/reservationService";
+import loanService from "@/services/loanService";
 import { 
   Clock,
   CheckCircle,
@@ -15,7 +17,8 @@ import {
   ChevronLeft,
   ChevronRight,
   Download,
-  Loader2
+  Loader2,
+  FileDown
 } from "lucide-react";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { API_BASE_URL } from "@/utils/api-config";
@@ -33,6 +36,10 @@ interface Loan {
   loanDate: string;
   dueDate: string;
   returnDate?: string | null;
+  returnStaffName?: string;
+  returnStaffSignature?: string;
+  returnCondition?: "good" | "damaged" | "lost";
+  returnReceiptNo?: string;
   purpose?: string;
   notes?: string;
   status: "pending" | "approved" | "rejected" | "returned" | "extended";
@@ -67,6 +74,7 @@ interface LoansSectionProps {
 }
 
 export default function LoansSection({ searchTerm, onSearchChange }: LoansSectionProps) {
+  const navigate = useNavigate();
   const [loans, setLoans] = useState<Loan[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<"all" | "pending" | "approved" | "returned" | "pending_extension" | "reservations">("pending");
@@ -681,15 +689,11 @@ export default function LoansSection({ searchTerm, onSearchChange }: LoansSectio
                     <div className="flex flex-wrap items-center gap-3 pt-5 mt-5 border-t border-border">
                       <button
                         id={`btn-return-${loan.id}`}
-                        onClick={() => {
-                          setReturnModalLoan(loan);
-                          setReturnResult(null);
-                        }}
-                        disabled={processingId === loan.id}
+                        onClick={() => navigate(`/dashboard/return-confirmation/${loan.id}`)}
                         className="flex items-center gap-2 bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-blue-400 border border-blue-200 dark:border-blue-800 px-5 py-2.5 rounded-xl text-sm font-bold hover:bg-blue-600 hover:text-white transition-all disabled:opacity-50"
                       >
                         <RotateCcw size={14} />
-                        {processingId === loan.id ? 'Memproses...' : 'Proses Pengembalian'}
+                        Proses Pengembalian & TTD
                       </button>
 
                       {loan.extensionStatus === 'pending' && (
@@ -710,6 +714,26 @@ export default function LoansSection({ searchTerm, onSearchChange }: LoansSectio
                           </button>
                         </>
                       )}
+                    </div>
+                  )}
+
+                  {/* Action Buttons - Returned */}
+                  {loan.status === 'returned' && (
+                    <div className="flex flex-wrap items-center gap-3 pt-5 mt-5 border-t border-border">
+                      <button
+                        onClick={async () => {
+                          try {
+                            await loanService.downloadReturnReceiptPdf(loan.id);
+                            toast.success("Berhasil", "Tanda terima pengembalian PDF berhasil diunduh");
+                          } catch (e: any) {
+                            toast.error("Gagal", e.message || "Gagal mengunduh tanda terima");
+                          }
+                        }}
+                        className="flex items-center gap-2 bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800 px-4 py-2 rounded-xl text-xs font-bold hover:bg-emerald-600 hover:text-white transition-all"
+                      >
+                        <FileDown size={14} />
+                        Unduh Berita Acara ({loan.returnReceiptNo || 'BA-RET'})
+                      </button>
                     </div>
                   )}
 

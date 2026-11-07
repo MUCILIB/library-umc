@@ -330,8 +330,10 @@ export const itemApi = {
   revokeQr: (id: string) =>
     apiFetch<Item>(`/api/items/${id}/qr/revoke`, { method: "POST" }),
 
-  generateCode: (bibliographyId: string) =>
-    apiFetch<{ itemCode: string }>(`/api/items/generate-code/${bibliographyId}`),
+  generateCode: (bibliographyId: string, pattern?: string) =>
+    apiFetch<{ itemCode: string }>(
+      `/api/items/generate-code/${bibliographyId}${pattern ? `?pattern=${encodeURIComponent(pattern)}` : ""}`
+    ),
 };
 
 // ==========================================
@@ -547,6 +549,7 @@ export interface ExportFilterParams {
   categoryId?: number | string;
   subject?: string;
   status?: string;
+  delimiter?: ";" | ",";
 }
 
 export const exportApi = {
@@ -557,8 +560,20 @@ export const exportApi = {
     if (params?.categoryId) query.set("categoryId", String(params.categoryId));
     if (params?.subject) query.set("subject", params.subject);
     if (params?.status) query.set("status", params.status);
+    if (params?.delimiter) query.set("delimiter", params.delimiter);
     const qs = query.toString();
     return apiFetchBlob(`/api/export/bibliographies${qs ? `?${qs}` : ""}`, "bibliographies_export.csv");
+  },
+
+  downloadBibliographiesPdf: (params?: ExportFilterParams) => {
+    const query = new URLSearchParams();
+    if (params?.facultyId) query.set("facultyId", String(params.facultyId));
+    if (params?.studyProgramId) query.set("studyProgramId", String(params.studyProgramId));
+    if (params?.categoryId) query.set("categoryId", String(params.categoryId));
+    if (params?.subject) query.set("subject", params.subject);
+    if (params?.status) query.set("status", params.status);
+    const qs = query.toString();
+    return apiFetchBlob(`/api/export/bibliographies/pdf${qs ? `?${qs}` : ""}`, "katalog_koleksi_umc.pdf");
   },
 
   downloadItems: (params?: ExportFilterParams) => {
@@ -568,6 +583,7 @@ export const exportApi = {
     if (params?.categoryId) query.set("categoryId", String(params.categoryId));
     if (params?.subject) query.set("subject", params.subject);
     if (params?.status) query.set("status", params.status);
+    if (params?.delimiter) query.set("delimiter", params.delimiter);
     const qs = query.toString();
     return apiFetchBlob(`/api/export/items${qs ? `?${qs}` : ""}`, "items_export.csv");
   },
@@ -672,3 +688,68 @@ export const guestApi = {
     return apiFetch<any[]>(`/api/guests${qs ? `?${qs}` : ""}`);
   },
 };
+
+// ==========================================
+// Roles & Dynamic RBAC API
+// ==========================================
+
+export interface Role {
+  id: string;
+  name: string;
+  description?: string | null;
+  isSystem: boolean;
+  createdAt: string;
+  updatedAt: string;
+  permissionsCount?: number;
+}
+
+export interface PermissionItem {
+  menuKey: string;
+  canView: boolean;
+  canAdd: boolean;
+  canEdit: boolean;
+  canDelete: boolean;
+}
+
+export interface RoleDetail extends Role {
+  permissions: PermissionItem[];
+}
+
+export interface SidebarMenuMeta {
+  key: string;
+  label: string;
+  group: string;
+  description: string;
+}
+
+export const roleApi = {
+  getMenus: () => apiFetch<SidebarMenuMeta[]>("/api/roles/menus"),
+  getMyPermissions: () =>
+    apiFetch<{
+      role: string;
+      permissions: Record<string, { canView: boolean; canAdd: boolean; canEdit: boolean; canDelete: boolean }>;
+    }>("/api/roles/me/permissions"),
+  getAll: () => apiFetch<Role[]>("/api/roles"),
+  getById: (id: string) => apiFetch<RoleDetail>(`/api/roles/${id}`),
+  create: (data: { name: string; description?: string }) =>
+    apiFetch<RoleDetail>("/api/roles", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    }),
+  update: (id: string, data: { name?: string; description?: string }) =>
+    apiFetch<Role>(`/api/roles/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    }),
+  delete: (id: string) =>
+    apiFetch<null>(`/api/roles/${id}`, { method: "DELETE" }),
+  updatePermissions: (id: string, permissions: PermissionItem[]) =>
+    apiFetch<RoleDetail>(`/api/roles/${id}/permissions`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ permissions }),
+    }),
+};
+
