@@ -12,12 +12,124 @@ import {
   webTraffic,
 } from "../../../db/schema";
 import { and, desc, eq, inArray, isNull, ne } from "drizzle-orm";
+import crypto from "crypto";
+import { hashPassword } from "better-auth/crypto";
 
 const ALLOWED_ROLES = ["super_admin", "staff", "student", "lecturer"] as const;
 
 type AllowedRole = (typeof ALLOWED_ROLES)[number];
 
 export const UserService = {
+  createUser: async (
+    payload: {
+      name: string;
+      email: string;
+      password?: string;
+      role?: string;
+      nimNidn?: string;
+      faculty?: string;
+      phone?: string;
+    },
+    _actorUserId?: string
+  ) => {
+    try {
+      const { name, email, password, role = "student", nimNidn, faculty, phone } = payload;
+      if (!name || !email) {
+        return {
+          success: false,
+          message: "Nama dan email wajib diisi",
+          data: null,
+        };
+      }
+
+      const cleanEmail = email.toLowerCase().trim();
+      const existing = await db.query.Users.findFirst({
+        where: eq(Users.email, cleanEmail),
+      });
+
+      if (existing) {
+        return {
+          success: false,
+          message: `Email '${cleanEmail}' sudah terdaftar`,
+          data: null,
+        };
+      }
+
+      const userId = crypto.randomUUID();
+      const rawPassword =
+        password && password.trim().length >= 6
+          ? password.trim()
+          : "Password123!";
+      const passwordHash = await hashPassword(rawPassword);
+      const now = new Date();
+
+      await db.insert(Users).values({
+        id: userId,
+        name: name.trim(),
+        email: cleanEmail,
+        emailVerified: true,
+        role: role.trim(),
+        passwordHash: passwordHash,
+        createdAt: now,
+        updatedAt: now,
+      });
+
+      await db.insert(account).values({
+        id: `account-${userId}-credential`,
+        accountId: cleanEmail,
+        providerId: "credential",
+        userId: userId,
+        password: passwordHash,
+        createdAt: now,
+        updatedAt: now,
+      });
+
+      const memberType =
+        role === "lecturer"
+          ? "lecturer"
+          : role === "staff"
+          ? "staff"
+          : role === "super_admin"
+          ? "super_admin"
+          : "student";
+
+      const [createdMember] = await db
+        .insert(members)
+        .values({
+          userId,
+          memberType,
+          nimNidn: nimNidn ? nimNidn.trim() : "-",
+          faculty: faculty ? faculty.trim() : "-",
+          phone: phone ? phone.trim() : null,
+          cardStatus: "active",
+          cardNumber: `MUCILIB-${Date.now().toString().slice(-6)}`,
+          createdAt: now,
+          updatedAt: now,
+        })
+        .returning();
+
+      return {
+        success: true,
+        message: "Pengguna baru berhasil dibuat",
+        data: {
+          id: userId,
+          name: name.trim(),
+          email: cleanEmail,
+          role: role.trim(),
+          memberId: createdMember?.id,
+          cardNumber: createdMember?.cardNumber,
+        },
+      };
+    } catch (err) {
+      console.error("[UserService] Error creating user:", err);
+      return {
+        success: false,
+        message: "Gagal membuat pengguna baru",
+        data: null,
+      };
+    }
+  },
+
   getAllUsers: async () => {
     try {
       const userRows = await db

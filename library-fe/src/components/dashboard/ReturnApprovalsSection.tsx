@@ -3,13 +3,11 @@ import { useNavigate } from "react-router";
 import { CheckCircle, Clock, BookOpen, ChevronLeft, ChevronRight, FileCheck2 } from "lucide-react";
 import loanService from "@/services/loanService";
 import { useToast } from "@/hooks/useToast";
-import { triggerBadgeRefresh } from "@/hooks/dashboard/useDashboardBadges";
 
 export default function ReturnApprovalsSection() {
   const navigate = useNavigate();
   const [requests, setRequests] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [processingId, setProcessingId] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
   const toast = useToast();
@@ -29,23 +27,6 @@ export default function ReturnApprovalsSection() {
   useEffect(() => {
     fetchRequests();
   }, []);
-
-  const handleApprove = async (requestId: string) => {
-    setProcessingId(requestId);
-    const loadingId = toast.loading("Memproses...", "Menyetujui pengembalian...");
-    try {
-      const res = await loanService.approveReturnRequest(requestId);
-      toast.removeToast(loadingId);
-      toast.success("Berhasil", res.message || "Pengembalian berhasil disetujui");
-      fetchRequests();
-      triggerBadgeRefresh();
-    } catch (err: any) {
-      toast.removeToast(loadingId);
-      toast.error("Gagal", err.message || "Gagal menyetujui pengembalian");
-    } finally {
-      setProcessingId(null);
-    }
-  };
 
   const totalPages = Math.max(1, Math.ceil(requests.length / itemsPerPage));
   const paginatedRequests = requests.slice(

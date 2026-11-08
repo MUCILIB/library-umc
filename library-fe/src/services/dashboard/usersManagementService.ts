@@ -46,14 +46,41 @@ export interface PendingMemberCardRequest {
 }
 
 const jsonOrThrow = async (res: Response) => {
-  const data = await res.json();
   if (!res.ok) {
-    throw new Error(data?.message || "Request failed");
+    let msg = `Request failed (${res.status})`;
+    try {
+      const errData = await res.json();
+      if (errData?.message) msg = errData.message;
+    } catch {
+      // Non-JSON response (e.g. 502 Bad Gateway / HTML error page)
+    }
+    throw new Error(msg);
   }
-  return data;
+  return await res.json();
 };
 
 export const usersManagementService = {
+  async createUser(payload: {
+    name: string;
+    email: string;
+    password?: string;
+    role: string;
+    nimNidn?: string;
+    faculty?: string;
+    phone?: string;
+  }) {
+    const res = await fetch(`${API_BASE_URL}/api/users`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...getAuthHeaders(),
+      },
+      credentials: "include",
+      body: JSON.stringify(payload),
+    });
+    return jsonOrThrow(res);
+  },
+
   async getUsers(): Promise<DashboardUser[]> {
     const res = await fetch(`${API_BASE_URL}/api/users/all`, {
       credentials: "include",

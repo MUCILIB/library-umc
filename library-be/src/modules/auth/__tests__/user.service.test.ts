@@ -77,6 +77,11 @@ vi.mock("../../../db", () => {
   return {
     db: {
       select: mockSelect,
+      insert: vi.fn().mockReturnValue({
+        values: vi.fn().mockReturnValue({
+          returning: vi.fn().mockResolvedValue([{ id: "mem-created-1", cardNumber: "MUCILIB-999999" }]),
+        }),
+      }),
       query: {
         Users: {
           findFirst: vi.fn(),
@@ -179,6 +184,50 @@ describe("UserService", () => {
       expect(res.success).toBe(true);
       expect(res.message).toContain("berhasil dihapus secara permanen");
       expect(db.transaction).toHaveBeenCalled();
+    });
+  });
+
+  describe("createUser", () => {
+    it("should reject when name or email is empty", async () => {
+      const res = await UserService.createUser({ name: "", email: "" }, "admin-1");
+      expect(res.success).toBe(false);
+      expect(res.message).toContain("Nama dan email wajib diisi");
+    });
+
+    it("should reject if email already exists", async () => {
+      vi.mocked(db.query.Users.findFirst).mockResolvedValueOnce({
+        id: "existing-id",
+        email: "test@example.com",
+      } as any);
+
+      const res = await UserService.createUser(
+        { name: "Existing User", email: "test@example.com", role: "student" },
+        "admin-1"
+      );
+      expect(res.success).toBe(false);
+      expect(res.message).toContain("sudah terdaftar");
+    });
+
+    it("should create user and member profile successfully", async () => {
+      vi.mocked(db.query.Users.findFirst).mockResolvedValueOnce(undefined as any);
+
+      const res = await UserService.createUser(
+        {
+          name: "Baru User",
+          email: "baru@umc.ac.id",
+          password: "Secret123!",
+          role: "lecturer",
+          nimNidn: "0412345678",
+          faculty: "Teknik",
+        },
+        "admin-1"
+      );
+
+      expect(res.success).toBe(true);
+      expect(res.message).toContain("Pengguna baru berhasil dibuat");
+      expect(res.data?.email).toBe("baru@umc.ac.id");
+      expect(res.data?.role).toBe("lecturer");
+      expect(db.insert).toHaveBeenCalled();
     });
   });
 });

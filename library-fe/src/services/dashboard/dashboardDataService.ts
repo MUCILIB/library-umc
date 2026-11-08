@@ -78,11 +78,17 @@ export interface GuestLogItem {
 }
 
 const jsonOrThrow = async (res: Response) => {
-  const data = await res.json();
   if (!res.ok) {
-    throw new Error(data?.message || "Request failed");
+    let msg = `Request failed (${res.status})`;
+    try {
+      const errData = await res.json();
+      if (errData?.message) msg = errData.message;
+    } catch {
+      // Non-JSON response (e.g. 502 Bad Gateway / HTML error page)
+    }
+    throw new Error(msg);
   }
-  return data;
+  return await res.json();
 };
 
 export const dashboardDataService = {
