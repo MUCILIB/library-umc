@@ -17,6 +17,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Download,
+  Info,
 } from "lucide-react";
 import Modal from "@/components/ui/modal";
 import { itemApi, bibliographyApi, locationApi, type Item, type Bibliography, type Location } from "@/api/client";

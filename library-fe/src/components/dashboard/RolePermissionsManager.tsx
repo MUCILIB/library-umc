@@ -6,7 +6,6 @@ import {
   Trash2,
   Edit2,
   Save,
-  RotateCcw,
   CheckCircle2,
   XCircle,
   AlertCircle,
@@ -180,7 +179,7 @@ export default function RolePermissionsManager() {
   const handleSetAll = (enable: boolean) => {
     if (selectedRoleId === "super_admin") return;
 
-    setMatrix((prev) => {
+    setMatrix(() => {
       const next: Record<string, PermissionItem> = {};
       for (const m of menus) {
         next[m.key] = {
@@ -380,7 +379,11 @@ export default function RolePermissionsManager() {
       </div>
 
       {/* Active Role Card & Matrix Controls */}
-      {selectedRoleDetail && (
+      {loading ? (
+        <div className="flex items-center justify-center p-12 bg-card border border-border rounded-[24px]">
+          <Loader2 className="animate-spin text-primary size-6" />
+        </div>
+      ) : selectedRoleDetail && (
         <div className="bg-card border border-border rounded-[24px] p-6 shadow-xs space-y-6">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-5 border-b border-border">
             <div>
@@ -484,18 +487,40 @@ export default function RolePermissionsManager() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border">
-                  {Object.entries(groupedMenus).map(([groupName, groupMenuList]) => (
-                    <Fragment key={groupName}>
-                      {/* Group Header Row */}
-                      <tr className="bg-muted/40 font-bold text-foreground">
-                        <td
-                          colSpan={5}
-                          className="py-2.5 px-4 text-xs font-extrabold text-primary flex items-center gap-2"
-                        >
-                          <Layers size={13} />
-                          {groupName}
-                        </td>
-                      </tr>
+                  {Object.entries(groupedMenus).map(([groupName, groupMenuList]) => {
+                    const groupTotalPerms = groupMenuList.length * 4;
+                    const groupActivePerms = groupMenuList.reduce((acc, m) => {
+                      const p = matrix[m.key] || {
+                        canView: isSuperAdminSelected,
+                        canAdd: isSuperAdminSelected,
+                        canEdit: isSuperAdminSelected,
+                        canDelete: isSuperAdminSelected,
+                      };
+                      return (
+                        acc +
+                        (p.canView ? 1 : 0) +
+                        (p.canAdd ? 1 : 0) +
+                        (p.canEdit ? 1 : 0) +
+                        (p.canDelete ? 1 : 0)
+                      );
+                    }, 0);
+
+                    return (
+                      <Fragment key={groupName}>
+                        {/* Group Header Row dengan ringkasan status izin */}
+                        <tr className="bg-muted/60 font-bold text-foreground">
+                          <td colSpan={5} className="py-2.5 px-4">
+                            <div className="flex items-center justify-between">
+                              <span className="text-xs font-bold text-foreground flex items-center gap-2">
+                                <Layers size={13} className="text-primary" />
+                                {groupName}
+                              </span>
+                              <span className="text-[11px] font-medium text-muted-foreground bg-background px-2.5 py-0.5 rounded-full border border-border shadow-2xs">
+                                {groupActivePerms} dari {groupTotalPerms} izin aktif
+                              </span>
+                            </div>
+                          </td>
+                        </tr>
 
                       {groupMenuList.map((menuItem) => {
                         const perm = matrix[menuItem.key] || {
@@ -575,7 +600,8 @@ export default function RolePermissionsManager() {
                         );
                       })}
                     </Fragment>
-                  ))}
+                  );
+                })}
                 </tbody>
               </table>
             </div>

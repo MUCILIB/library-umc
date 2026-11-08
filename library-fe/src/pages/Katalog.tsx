@@ -123,33 +123,6 @@ const Katalog = () => {
       )
     : studyPrograms;
 
-  const handleFacultyChange = (val: string) => {
-    const facultyId = val === "all" ? "" : val;
-    setSelectedFaculty(facultyId);
-    if (facultyId && selectedStudyProgram) {
-      const belongs = studyPrograms.some(
-        (sp) =>
-          String(sp.id) === selectedStudyProgram &&
-          (sp.facultyId === Number(facultyId) || sp.faculty?.id === Number(facultyId))
-      );
-      if (!belongs) {
-        setSelectedStudyProgram("");
-      }
-    }
-  };
-
-  const handleStudyProgramChange = (val: string) => {
-    const spId = val === "all" ? "" : val;
-    setSelectedStudyProgram(spId);
-    if (spId) {
-      const found = studyPrograms.find((sp) => String(sp.id) === spId);
-      const facId = found?.facultyId || found?.faculty?.id;
-      if (facId && (!selectedFaculty || Number(selectedFaculty) !== facId)) {
-        setSelectedFaculty(String(facId));
-      }
-    }
-  };
-
   // Update search query when URL changes
   useEffect(() => {
     setSearchQuery(searchParams.get("search") || "");
@@ -174,18 +147,6 @@ const Katalog = () => {
     if (e.key === "Enter") {
       handleSearch();
     }
-  };
-
-  // Reset all filters
-  const handleResetFilters = () => {
-    setSearchQuery("");
-    setSearchType("all");
-    setAvailabilityFilter([]);
-    setYearRange({ start: "", end: "" });
-    setCollectionTypeFilter(["physical_book"]);
-    setSelectedFaculty("");
-    setSelectedStudyProgram("");
-    setSearchParams({});
   };
 
   // Definisi grup filter untuk komponen FilterMenu (AffectUI Clean)

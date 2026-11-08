@@ -186,6 +186,13 @@ router.get(
   authController.getAllUsers
 );
 
+router.post(
+  "/users",
+  isAuthenticated,
+  requireRole(["super_admin"]),
+  authController.createUser
+);
+
 router.patch(
   "/users/:id/role",
   isAuthenticated,

@@ -18,7 +18,8 @@ import {
   Check,
   Trash2,
   MoreHorizontal,
-  CreditCard
+  CreditCard,
+  UserPlus
 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
@@ -46,7 +47,7 @@ import { useToast } from "@/hooks/useToast";
 import { useUsersManagement } from "@/hooks/dashboard/useUsersManagement";
 import { usersManagementService } from "@/services/dashboard/usersManagementService";
 import { dashboardDataService } from "@/services/dashboard/dashboardDataService";
-import { exportApi, importApi } from "@/api/client";
+import { exportApi, importApi, roleApi, type Role } from "@/api/client";
 import RolePermissionsManager from "./RolePermissionsManager";
 import { Shield, Users as UsersIcon } from "lucide-react";
 
@@ -146,6 +147,73 @@ export default function UsersSection() {
   const itemsPerPage = 10;
   const [exportingUsers, setExportingUsers] = useState(false);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [createLoading, setCreateLoading] = useState(false);
+  const [availableRoles, setAvailableRoles] = useState<Role[]>([]);
+  const [createForm, setCreateForm] = useState({
+    name: "",
+    email: "",
+    password: "",
+    role: "student",
+    nimNidn: "",
+    faculty: "",
+    phone: "",
+  });
+
+  // Load dynamic roles from RBAC
+  useEffect(() => {
+    roleApi
+      .getAll()
+      .then((res) => {
+        if (res.data && Array.isArray(res.data)) {
+          setAvailableRoles(res.data);
+        }
+      })
+      .catch((err) => {
+        console.warn("[UsersSection] Failed to load dynamic roles:", err);
+      });
+  }, []);
+
+  const handleCreateUser = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!createForm.name.trim() || !createForm.email.trim()) {
+      showErrorToast("Validasi Gagal", "Nama lengkap dan email wajib diisi.");
+      return;
+    }
+
+    try {
+      setCreateLoading(true);
+      await usersManagementService.createUser({
+        name: createForm.name.trim(),
+        email: createForm.email.trim(),
+        password: createForm.password.trim() || undefined,
+        role: createForm.role,
+        nimNidn: createForm.nimNidn.trim() || undefined,
+        faculty: createForm.faculty.trim() || undefined,
+        phone: createForm.phone.trim() || undefined,
+      });
+
+      success("Berhasil", `Pengguna '${createForm.name}' berhasil ditambahkan.`);
+      setIsCreateModalOpen(false);
+      setCreateForm({
+        name: "",
+        email: "",
+        password: "",
+        role: "student",
+        nimNidn: "",
+        faculty: "",
+        phone: "",
+      });
+      await refetch();
+    } catch (err: unknown) {
+      showErrorToast(
+        "Gagal Tambah Pengguna",
+        err instanceof Error ? err.message : "Terjadi kesalahan saat membuat pengguna"
+      );
+    } finally {
+      setCreateLoading(false);
+    }
+  };
 
   const handleExportUsers = async () => {
     setExportingUsers(true);
@@ -439,9 +507,27 @@ export default function UsersSection() {
 
             <div className="flex flex-wrap items-center gap-2">
               <button
+                onClick={() => setIsCreateModalOpen(true)}
+                className="bg-primary hover:bg-primary/90 text-white px-5 py-2.5 rounded-full text-sm font-bold flex items-center justify-center gap-2 shadow-lg shadow-red-500/20 transition-all cursor-pointer"
+                title="Tambah akun pengguna baru secara manual"
+              >
+                <UserPlus size={16} strokeWidth={2.5} />
+                Tambah Pengguna
+              </button>
+
+              <button
+                onClick={() => setIsImportModalOpen(true)}
+                className="bg-card hover:bg-muted text-foreground border border-border px-5 py-2.5 rounded-full text-sm font-bold flex items-center justify-center gap-2 shadow-xs transition-all cursor-pointer"
+                title="Import user dari file CSV"
+              >
+                <Upload size={16} strokeWidth={2.5} />
+                Import User CSV
+              </button>
+
+              <button
                 onClick={handleExportUsers}
                 disabled={exportingUsers}
-                className="bg-card hover:bg-muted text-foreground border border-border px-5 py-2.5 rounded-full text-sm font-bold flex items-center justify-center gap-2 shadow-sm transition-all disabled:opacity-50"
+                className="bg-card hover:bg-muted text-foreground border border-border px-5 py-2.5 rounded-full text-sm font-bold flex items-center justify-center gap-2 shadow-xs transition-all disabled:opacity-50 cursor-pointer"
                 title="Export data user ke CSV"
               >
                 {exportingUsers ? (
@@ -451,18 +537,8 @@ export default function UsersSection() {
                 )}
                 Export CSV
               </button>
-
-              <button
-                onClick={() => setIsImportModalOpen(true)}
-                className="bg-primary hover:bg-primary/90 text-white px-5 py-2.5 rounded-full text-sm font-bold flex items-center justify-center gap-2 shadow-lg shadow-red-500/20 transition-all"
-                title="Import user dari file CSV"
-              >
-                <Upload size={16} strokeWidth={2.5} />
-                Import User CSV
-              </button>
             </div>
           </div>
-      </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="bg-card rounded-2xl border border-border p-5">
@@ -766,10 +842,24 @@ export default function UsersSection() {
                                 )}
                               </SelectTrigger>
                               <SelectContent align="end">
-                                <SelectItem value="student" className="text-xs cursor-pointer">Mahasiswa</SelectItem>
-                                <SelectItem value="lecturer" className="text-xs cursor-pointer">Dosen</SelectItem>
-                                <SelectItem value="staff" className="text-xs cursor-pointer">Staff</SelectItem>
-                                <SelectItem value="super_admin" className="text-xs cursor-pointer">Super Admin</SelectItem>
+                                {availableRoles.length > 0 ? (
+                                  availableRoles.map((r) => (
+                                    <SelectItem
+                                      key={r.id}
+                                      value={r.id}
+                                      className="text-xs cursor-pointer"
+                                    >
+                                      {r.name}
+                                    </SelectItem>
+                                  ))
+                                ) : (
+                                  <>
+                                    <SelectItem value="student" className="text-xs cursor-pointer">Mahasiswa</SelectItem>
+                                    <SelectItem value="lecturer" className="text-xs cursor-pointer">Dosen</SelectItem>
+                                    <SelectItem value="staff" className="text-xs cursor-pointer">Staff</SelectItem>
+                                    <SelectItem value="super_admin" className="text-xs cursor-pointer">Super Admin</SelectItem>
+                                  </>
+                                )}
                               </SelectContent>
                             </Select>
 
@@ -1060,6 +1150,171 @@ export default function UsersSection() {
           success("Import Berhasil", "Data user telah diperbarui.");
         }}
       />
+
+      {/* Modal Tambah Pengguna Baru Manual */}
+      <Modal
+        isOpen={isCreateModalOpen}
+        onClose={() => {
+          if (!createLoading) setIsCreateModalOpen(false);
+        }}
+        title="Tambah Pengguna Baru"
+        size="md"
+      >
+        <form onSubmit={handleCreateUser} className="space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+            <div className="sm:col-span-2 space-y-1">
+              <label className="text-xs font-bold text-foreground">
+                Nama Lengkap <span className="text-destructive">*</span>
+              </label>
+              <input
+                type="text"
+                required
+                placeholder="Contoh: Muhammad Rizqi Fauzan"
+                value={createForm.name}
+                onChange={(e) =>
+                  setCreateForm({ ...createForm, name: e.target.value })
+                }
+                className="w-full px-3 py-2 bg-muted/40 border border-border rounded-xl text-xs text-foreground placeholder:text-muted-foreground outline-hidden focus:border-primary transition-colors"
+              />
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-xs font-bold text-foreground">
+                Email Kampus <span className="text-destructive">*</span>
+              </label>
+              <input
+                type="email"
+                required
+                placeholder="user@umc.ac.id"
+                value={createForm.email}
+                onChange={(e) =>
+                  setCreateForm({ ...createForm, email: e.target.value })
+                }
+                className="w-full px-3 py-2 bg-muted/40 border border-border rounded-xl text-xs text-foreground placeholder:text-muted-foreground outline-hidden focus:border-primary transition-colors"
+              />
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-xs font-bold text-foreground">
+                Password <span className="text-muted-foreground font-normal">(opsional)</span>
+              </label>
+              <input
+                type="password"
+                placeholder="Default: Password123!"
+                value={createForm.password}
+                onChange={(e) =>
+                  setCreateForm({ ...createForm, password: e.target.value })
+                }
+                className="w-full px-3 py-2 bg-muted/40 border border-border rounded-xl text-xs text-foreground placeholder:text-muted-foreground outline-hidden focus:border-primary transition-colors"
+              />
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-xs font-bold text-foreground">
+                Role Pengguna <span className="text-destructive">*</span>
+              </label>
+              <Select
+                value={createForm.role}
+                onValueChange={(val) =>
+                  setCreateForm({ ...createForm, role: val })
+                }
+              >
+                <SelectTrigger className="w-full h-9 text-xs font-semibold bg-muted/40 border-border cursor-pointer">
+                  <SelectValue placeholder="Pilih Role" />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableRoles.length > 0 ? (
+                    availableRoles.map((r) => (
+                      <SelectItem
+                        key={r.id}
+                        value={r.id}
+                        className="text-xs cursor-pointer"
+                      >
+                        {r.name}
+                      </SelectItem>
+                    ))
+                  ) : (
+                    <>
+                      <SelectItem value="student" className="text-xs cursor-pointer">Mahasiswa</SelectItem>
+                      <SelectItem value="lecturer" className="text-xs cursor-pointer">Dosen</SelectItem>
+                      <SelectItem value="staff" className="text-xs cursor-pointer">Staff</SelectItem>
+                      <SelectItem value="super_admin" className="text-xs cursor-pointer">Super Admin</SelectItem>
+                    </>
+                  )}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-xs font-bold text-foreground">
+                NIM / NIDN <span className="text-muted-foreground font-normal">(opsional)</span>
+              </label>
+              <input
+                type="text"
+                placeholder="202101001 / 0412345678"
+                value={createForm.nimNidn}
+                onChange={(e) =>
+                  setCreateForm({ ...createForm, nimNidn: e.target.value })
+                }
+                className="w-full px-3 py-2 bg-muted/40 border border-border rounded-xl text-xs text-foreground placeholder:text-muted-foreground outline-hidden focus:border-primary transition-colors"
+              />
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-xs font-bold text-foreground">
+                Fakultas / Unit <span className="text-muted-foreground font-normal">(opsional)</span>
+              </label>
+              <input
+                type="text"
+                placeholder="Fakultas Teknik / Perpustakaan"
+                value={createForm.faculty}
+                onChange={(e) =>
+                  setCreateForm({ ...createForm, faculty: e.target.value })
+                }
+                className="w-full px-3 py-2 bg-muted/40 border border-border rounded-xl text-xs text-foreground placeholder:text-muted-foreground outline-hidden focus:border-primary transition-colors"
+              />
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-xs font-bold text-foreground">
+                Nomor Telepon / WhatsApp <span className="text-muted-foreground font-normal">(opsional)</span>
+              </label>
+              <input
+                type="tel"
+                placeholder="08123456789"
+                value={createForm.phone}
+                onChange={(e) =>
+                  setCreateForm({ ...createForm, phone: e.target.value })
+                }
+                className="w-full px-3 py-2 bg-muted/40 border border-border rounded-xl text-xs text-foreground placeholder:text-muted-foreground outline-hidden focus:border-primary transition-colors"
+              />
+            </div>
+          </div>
+
+          <div className="flex justify-end gap-2 pt-3 border-t border-border">
+            <button
+              type="button"
+              disabled={createLoading}
+              onClick={() => setIsCreateModalOpen(false)}
+              className="px-4 py-2 rounded-xl text-xs font-bold text-muted-foreground hover:bg-muted transition-colors cursor-pointer"
+            >
+              Batal
+            </button>
+            <button
+              type="submit"
+              disabled={createLoading}
+              className="px-5 py-2 bg-primary hover:bg-primary/90 text-white rounded-xl text-xs font-bold shadow-md shadow-red-500/20 disabled:opacity-50 inline-flex items-center gap-1.5 cursor-pointer transition-all"
+            >
+              {createLoading ? (
+                <Loader2 size={14} className="animate-spin" />
+              ) : (
+                <UserPlus size={14} />
+              )}
+              <span>Simpan Pengguna</span>
+            </button>
+          </div>
+        </form>
+      </Modal>
 
       <Modal
         isOpen={Boolean(deleteConfirmUser)}

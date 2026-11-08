@@ -119,6 +119,39 @@ export class AuthController {
     }
   }
 
+  async createUser(req: Request, res: Response, next: NextFunction) {
+    try {
+      const actorUserId = String(req.user?.id || "");
+      const { name, email, password, role, nimNidn, faculty, phone } = req.body || {};
+
+      if (!name || !email) {
+        return sendError(res, "Nama dan email wajib diisi", 400);
+      }
+
+      const result = await UserService.createUser(
+        { name, email, password, role, nimNidn, faculty, phone },
+        actorUserId
+      );
+
+      if (!result.success) {
+        return sendError(res, result.message ?? "Gagal membuat pengguna", 400);
+      }
+
+      await auditService.createLog({
+        userId: actorUserId,
+        action: "create",
+        entity: "Users",
+        entityId: result.data?.id,
+        ipAddress: req.ip,
+        detail: `Dibuat pengguna manual: ${email} (${role || "student"})`
+      });
+
+      sendSuccess(res, "Pengguna baru berhasil ditambahkan", result.data, 201);
+    } catch (error) {
+      next(error);
+    }
+  }
+
   async updateUserRole(req: Request, res: Response, next: NextFunction) {
     try {
       const userId = String(req.params.id || "");

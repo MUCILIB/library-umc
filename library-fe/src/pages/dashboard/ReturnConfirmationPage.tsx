@@ -13,7 +13,6 @@ import {
   Barcode,
   Layers,
   ShieldCheck,
-  Building2,
   Check,
 } from "lucide-react";
 import loanService, { type Loan } from "@/services/loanService";
@@ -28,7 +27,7 @@ export default function ReturnConfirmationPage() {
   const [searchParams] = useSearchParams();
   const requestId = searchParams.get("requestId");
   const navigate = useNavigate();
-  const { toast } = useToast();
+  const { success, error: toastError, warning } = useToast();
 
   const { data: session } = authClient.useSession();
 
@@ -82,11 +81,7 @@ export default function ReturnConfirmationPage() {
     if (!loanId) return;
 
     if (!staffName.trim()) {
-      toast({
-        title: "Perhatian",
-        description: "Nama petugas pemeriksa wajib diisi.",
-        variant: "destructive",
-      });
+      warning("Perhatian", "Nama petugas pemeriksa wajib diisi.");
       return;
     }
 
@@ -109,16 +104,9 @@ export default function ReturnConfirmationPage() {
       const receiptNo = res.data?.returnReceiptNo || res.loan?.returnReceiptNo || `BA-RET-${Date.now()}`;
       setSuccessReceiptNo(receiptNo);
       setIsSuccessModalOpen(true);
-      toast({
-        title: "Pengembalian Berhasil",
-        description: "Berita acara pengembalian buku telah diterbitkan.",
-      });
+      success("Pengembalian Berhasil", "Berita acara pengembalian buku telah diterbitkan.");
     } catch (err: any) {
-      toast({
-        title: "Gagal Memproses",
-        description: err.message || "Terjadi kesalahan saat memproses pengembalian.",
-        variant: "destructive",
-      });
+      toastError("Gagal Memproses", err.message || "Terjadi kesalahan saat memproses pengembalian.");
     } finally {
       setSubmitting(false);
     }
@@ -128,16 +116,9 @@ export default function ReturnConfirmationPage() {
     if (!loanId) return;
     try {
       await loanService.downloadReturnReceiptPdf(loanId);
-      toast({
-        title: "Unduh Berhasil",
-        description: "Tanda terima pengembalian PDF berhasil diunduh.",
-      });
+      success("Unduh Berhasil", "Tanda terima pengembalian PDF berhasil diunduh.");
     } catch (err: any) {
-      toast({
-        title: "Gagal Mengunduh PDF",
-        description: err.message || "Terjadi kesalahan saat mengunduh dokumen.",
-        variant: "destructive",
-      });
+      toastError("Gagal Mengunduh PDF", err.message || "Terjadi kesalahan saat mengunduh dokumen.");
     }
   };
 

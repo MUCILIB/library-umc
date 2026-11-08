@@ -13,6 +13,8 @@ import { errorMiddleware } from "./middlewares/error.middleware";
 import { getSession } from "./utils/auth-utils";
 import { initCronJobs } from "./cron/fineScheduler";
 import { initBookingCancelScheduler } from "./cron/bookingCancelScheduler";
+import { migrate } from "drizzle-orm/node-postgres/migrator";
+import { db } from "./db";
 
 dotenv.config();
 
@@ -126,10 +128,22 @@ app.get("/health", (req, res) => {
 // Error Middleware (MuST be at the end)
 app.use(errorMiddleware);
 
+async function runPendingMigrations() {
+  try {
+    const migrationsFolder = path.join(__dirname, "../drizzle");
+    console.log(`[Database] Checking and running pending migrations from ${migrationsFolder}...`);
+    await migrate(db, { migrationsFolder });
+    console.log("[Database] Migrations verified and applied successfully.");
+  } catch (error) {
+    console.warn("[Database] Migration check failed or skipped:", error);
+  }
+}
+
 const PORT = Number(process.env.PORT) || 4000;
 // ponytail: explicit 0.0.0.0 bind required for Docker container bridge networking (Coolify/Traefik)
-app.listen(PORT, "0.0.0.0", () => {
+app.listen(PORT, "0.0.0.0", async () => {
   console.log(`SERVER RUNNING ON PORT ${PORT}`);
+  await runPendingMigrations();
   initCronJobs();
   initBookingCancelScheduler();
 });
