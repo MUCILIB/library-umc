@@ -142,6 +142,7 @@ export const SYSTEM_ROLE_IDS = [
   "staff",
   "lecturer",
   "student",
+  "external",
 ] as const;
 
 export type SystemRoleId = (typeof SYSTEM_ROLE_IDS)[number];
@@ -169,6 +170,12 @@ export const DEFAULT_SYSTEM_ROLES = [
     id: "student",
     name: "Mahasiswa",
     description: "Peminjaman buku umum, pencarian katalog, dan kartu anggota digital",
+    isSystem: true,
+  },
+  {
+    id: "external",
+    name: "Anggota Luar",
+    description: "Pengunjung umum atau civitas luar kampus (akses katalog dan baca di tempat)",
     isSystem: true,
   },
 ];
