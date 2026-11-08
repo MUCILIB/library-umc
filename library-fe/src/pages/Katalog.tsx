@@ -46,8 +46,8 @@ const Katalog = () => {
   const [collectionTypeFilter, setCollectionTypeFilter] = useState<string[]>(() => {
     const col = searchParams.get("collection");
     if (col === "ebook") return ["ebook"];
-    if (col === "all") return ["physical_book", "ebook"];
-    return ["physical_book"];
+    if (col === "physical") return ["physical_book"];
+    return ["physical_book", "ebook"];
   });
   const [collectionCounts, setCollectionCounts] = useState({
     physical: 0,
@@ -226,7 +226,7 @@ const Katalog = () => {
     // 2. Jenis Koleksi
     const nextCollection = nextVal.collection || [];
     setCollectionTypeFilter(
-      nextCollection.length > 0 ? nextCollection : ["physical_book"]
+      nextCollection.length > 0 ? nextCollection : ["physical_book", "ebook"]
     );
 
     // 3. Fakultas (single choice)
