@@ -16,7 +16,13 @@ import { and, desc, eq, inArray, isNull, ne } from "drizzle-orm";
 import crypto from "crypto";
 import { hashPassword } from "better-auth/crypto";
 
-const ALLOWED_ROLES = ["super_admin", "staff", "student", "lecturer"] as const;
+const ALLOWED_ROLES = [
+  "super_admin",
+  "staff",
+  "student",
+  "lecturer",
+  "external",
+] as const;
 
 type AllowedRole = (typeof ALLOWED_ROLES)[number];
 
@@ -118,6 +124,8 @@ export const UserService = {
           ? "staff"
           : normalizedRole === "super_admin"
           ? "super_admin"
+          : normalizedRole === "external"
+          ? "external"
           : "student";
 
       const [createdMember] = await db

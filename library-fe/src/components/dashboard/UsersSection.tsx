@@ -273,7 +273,21 @@ export default function UsersSection() {
   const roleBadgeClass = (role: string) => {
     if (role === "super_admin") return "bg-warning-bg text-destructive border-warning-border";
     if (role === "staff") return "bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-blue-400 border-blue-200 dark:border-blue-800";
+    if (role === "lecturer" || role === "dosen") return "bg-purple-50 dark:bg-purple-950 text-purple-700 dark:text-purple-400 border-purple-200 dark:border-purple-800";
+    if (role === "student") return "bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800";
+    if (role === "external") return "bg-amber-50 dark:bg-amber-950 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-800";
     return "bg-muted text-muted-foreground border-border";
+  };
+
+  const roleBadgeLabel = (role: string) => {
+    const found = availableRoles.find((r) => r.id === role);
+    if (found) return found.name;
+    if (role === "super_admin") return "Super Admin";
+    if (role === "staff") return "Staf";
+    if (role === "lecturer" || role === "dosen") return "Dosen";
+    if (role === "student") return "Mahasiswa";
+    if (role === "external") return "Anggota Luar";
+    return role;
   };
 
   const cardStatusLabel = (status?: string | null) => {
@@ -773,7 +787,7 @@ export default function UsersSection() {
                             {user.role === "super_admin" ? (
                               <ShieldCheck size={12} className="mr-1.5" />
                             ) : null}
-                            {user.role}
+                            {roleBadgeLabel(user.role)}
                           </span>
                         </TableCell>
                       )}
@@ -857,6 +871,7 @@ export default function UsersSection() {
                                     <SelectItem value="student" className="text-xs cursor-pointer">Mahasiswa</SelectItem>
                                     <SelectItem value="lecturer" className="text-xs cursor-pointer">Dosen</SelectItem>
                                     <SelectItem value="staff" className="text-xs cursor-pointer">Staff</SelectItem>
+                                    <SelectItem value="external" className="text-xs cursor-pointer">Anggota Luar</SelectItem>
                                     <SelectItem value="super_admin" className="text-xs cursor-pointer">Super Admin</SelectItem>
                                   </>
                                 )}
@@ -1238,6 +1253,7 @@ export default function UsersSection() {
                       <SelectItem value="student" className="text-xs cursor-pointer">Mahasiswa</SelectItem>
                       <SelectItem value="lecturer" className="text-xs cursor-pointer">Dosen</SelectItem>
                       <SelectItem value="staff" className="text-xs cursor-pointer">Staff</SelectItem>
+                      <SelectItem value="external" className="text-xs cursor-pointer">Anggota Luar</SelectItem>
                       <SelectItem value="super_admin" className="text-xs cursor-pointer">Super Admin</SelectItem>
                     </>
                   )}
