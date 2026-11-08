@@ -77,6 +77,20 @@ vi.mock("../../../db", () => {
   return {
     db: {
       select: mockSelect,
+      update: vi.fn().mockReturnValue({
+        set: vi.fn().mockReturnValue({
+          where: vi.fn().mockReturnValue({
+            returning: vi.fn().mockResolvedValue([
+              {
+                id: "user-target",
+                name: "Target User",
+                email: "target@example.com",
+                role: "custom_role",
+              },
+            ]),
+          }),
+        }),
+      }),
       insert: vi.fn().mockReturnValue({
         values: vi.fn().mockReturnValue({
           returning: vi.fn().mockResolvedValue([{ id: "mem-created-1", cardNumber: "MUCILIB-999999" }]),
@@ -228,6 +242,67 @@ describe("UserService", () => {
       expect(res.data?.email).toBe("baru@umc.ac.id");
       expect(res.data?.role).toBe("lecturer");
       expect(db.insert).toHaveBeenCalled();
+    });
+  });
+
+  describe("updateUserRole", () => {
+    it("should reject when targetUserId is missing", async () => {
+      const res = await UserService.updateUserRole("", "staff", "admin-1");
+      expect(res.success).toBe(false);
+      expect(res.message).toContain("User target tidak valid");
+    });
+
+    it("should reject updating self", async () => {
+      const res = await UserService.updateUserRole("admin-1", "staff", "admin-1");
+      expect(res.success).toBe(false);
+      expect(res.message).toContain("tidak bisa mengubah role dirinya sendiri");
+    });
+
+    it("should reject invalid role not in static list and not in roles table", async () => {
+      vi.mocked(db.select).mockReturnValueOnce({
+        from: vi.fn().mockReturnValue({
+          where: vi.fn().mockReturnValue({
+            limit: vi.fn().mockResolvedValueOnce([]),
+          }),
+        }),
+      } as any);
+
+      const res = await UserService.updateUserRole("user-target", "role_unknown", "admin-1");
+      expect(res.success).toBe(false);
+      expect(res.message).toBe("Role tidak valid");
+    });
+
+    it("should successfully update user role to a static role", async () => {
+      vi.mocked(db.query.Users.findFirst).mockResolvedValueOnce({
+        id: "user-target",
+        role: "student",
+      } as any);
+
+      const res = await UserService.updateUserRole("user-target", "staff", "admin-1");
+      expect(res.success).toBe(true);
+      expect(res.message).toBe("Role user berhasil diperbarui");
+      expect(db.update).toHaveBeenCalled();
+    });
+
+    it("should successfully update user role to a custom role from roles table", async () => {
+      // Mock db.select for checking roles table
+      vi.mocked(db.select).mockReturnValueOnce({
+        from: vi.fn().mockReturnValue({
+          where: vi.fn().mockReturnValue({
+            limit: vi.fn().mockResolvedValueOnce([{ id: "pustakawan_ahli" }]),
+          }),
+        }),
+      } as any);
+
+      vi.mocked(db.query.Users.findFirst).mockResolvedValueOnce({
+        id: "user-target",
+        role: "student",
+      } as any);
+
+      const res = await UserService.updateUserRole("user-target", "pustakawan_ahli", "admin-1");
+      expect(res.success).toBe(true);
+      expect(res.message).toBe("Role user berhasil diperbarui");
+      expect(db.update).toHaveBeenCalled();
     });
   });
 });

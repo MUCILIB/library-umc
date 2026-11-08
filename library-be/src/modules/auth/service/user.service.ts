@@ -7,6 +7,7 @@ import {
   logs,
   members,
   reservations,
+  roles,
   session,
   Users,
   webTraffic,
@@ -18,6 +19,21 @@ import { hashPassword } from "better-auth/crypto";
 const ALLOWED_ROLES = ["super_admin", "staff", "student", "lecturer"] as const;
 
 type AllowedRole = (typeof ALLOWED_ROLES)[number];
+
+async function isValidRole(roleName: string): Promise<boolean> {
+  const normalized = roleName.trim();
+  if (!normalized) return false;
+  if ((ALLOWED_ROLES as readonly string[]).includes(normalized)) {
+    return true;
+  }
+  const foundRole = await db
+    .select({ id: roles.id })
+    .from(roles)
+    .where(eq(roles.id, normalized))
+    .limit(1);
+
+  return foundRole.length > 0;
+}
 
 export const UserService = {
   createUser: async (
@@ -43,6 +59,17 @@ export const UserService = {
       }
 
       const cleanEmail = email.toLowerCase().trim();
+      const normalizedRole = (role || "student").trim();
+
+      const validRole = await isValidRole(normalizedRole);
+      if (!validRole) {
+        return {
+          success: false,
+          message: "Role tidak valid",
+          data: null,
+        };
+      }
+
       const existing = await db.query.Users.findFirst({
         where: eq(Users.email, cleanEmail),
       });
@@ -68,7 +95,7 @@ export const UserService = {
         name: name.trim(),
         email: cleanEmail,
         emailVerified: true,
-        role: role.trim(),
+        role: normalizedRole,
         passwordHash: passwordHash,
         createdAt: now,
         updatedAt: now,
@@ -85,11 +112,11 @@ export const UserService = {
       });
 
       const memberType =
-        role === "lecturer"
+        normalizedRole === "lecturer"
           ? "lecturer"
-          : role === "staff"
+          : normalizedRole === "staff"
           ? "staff"
-          : role === "super_admin"
+          : normalizedRole === "super_admin"
           ? "super_admin"
           : "student";
 
@@ -223,7 +250,9 @@ export const UserService = {
         };
       }
 
-      if (!ALLOWED_ROLES.includes(nextRole as AllowedRole)) {
+      const normalizedRole = (nextRole || "").trim();
+      const validRole = await isValidRole(normalizedRole);
+      if (!validRole) {
         return {
           success: false,
           message: "Role tidak valid",
@@ -251,7 +280,7 @@ export const UserService = {
         };
       }
 
-      if (targetUser.role === nextRole) {
+      if (targetUser.role === normalizedRole) {
         return {
           success: true,
           message: "Role sudah sama, tidak ada perubahan",
@@ -259,7 +288,7 @@ export const UserService = {
         };
       }
 
-      if (targetUser.role === "super_admin" && nextRole !== "super_admin") {
+      if (targetUser.role === "super_admin" && normalizedRole !== "super_admin") {
         const otherSuperAdmins = await db
           .select({ id: Users.id })
           .from(Users)
@@ -277,7 +306,7 @@ export const UserService = {
 
       const [updated] = await db
         .update(Users)
-        .set({ role: nextRole, updatedAt: new Date() })
+        .set({ role: normalizedRole, updatedAt: new Date() })
         .where(eq(Users.id, targetUserId))
         .returning({
           id: Users.id,
