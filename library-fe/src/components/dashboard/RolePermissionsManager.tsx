@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo, Fragment } from "react";
+import { useEffect, useState, useMemo } from "react";
 import {
   Shield,
   ShieldCheck,
@@ -9,7 +9,6 @@ import {
   CheckCircle2,
   XCircle,
   AlertCircle,
-  Layers,
   Lock,
   Loader2,
 } from "lucide-react";
@@ -22,65 +21,38 @@ import {
 } from "@/api/client";
 import { useToast } from "@/hooks/useToast";
 import Modal from "@/components/ui/modal";
-
-interface ToggleSwitchProps {
-  checked: boolean;
-  onChange: (val: boolean) => void;
-  disabled?: boolean;
-  label?: string;
-}
-
-function ToggleSwitch({ checked, onChange, disabled, label }: ToggleSwitchProps) {
-  return (
-    <button
-      type="button"
-      role="switch"
-      aria-checked={checked}
-      aria-label={label}
-      disabled={disabled}
-      onClick={() => onChange(!checked)}
-      className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-hidden focus:ring-2 focus:ring-primary/30 ${
-        checked ? "bg-primary" : "bg-muted-foreground/30"
-      } ${disabled ? "opacity-40 cursor-not-allowed" : ""}`}
-    >
-      <span
-        aria-hidden="true"
-        className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-xs ring-0 transition duration-200 ease-in-out ${
-          checked ? "translate-x-4" : "translate-x-0"
-        }`}
-      />
-    </button>
-  );
-}
+import { RoleMatrix, type PermissionGroup } from "@/components/blocks/RoleMatrix";
 
 export default function RolePermissionsManager() {
   const { success, error: showError, warning } = useToast();
 
   const [roles, setRoles] = useState<Role[]>([]);
+  const [menus, setMenus] = useState<SidebarMenuMeta[]>([]);
   const [selectedRoleId, setSelectedRoleId] = useState<string>("super_admin");
   const [selectedRoleDetail, setSelectedRoleDetail] = useState<RoleDetail | null>(null);
-  const [menus, setMenus] = useState<SidebarMenuMeta[]>([]);
+
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
-  // Matrix state: menuKey -> PermissionItem
-  const [matrix, setMatrix] = useState<Record<string, PermissionItem>>({});
-
-  // Modals
+  // Form states for Create Role Modal
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [createName, setCreateName] = useState("");
   const [createDescription, setCreateDescription] = useState("");
   const [createLoading, setCreateLoading] = useState(false);
 
+  // Form states for Edit Role Modal
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [editName, setEditName] = useState("");
   const [editDescription, setEditDescription] = useState("");
   const [editLoading, setEditLoading] = useState(false);
 
+  // Form states for Delete Role Modal
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
 
-  // Load roles & menus
+  // Current Matrix State for the selected role: menuKey -> PermissionItem
+  const [matrix, setMatrix] = useState<Record<string, PermissionItem>>({});
+
   const loadInitialData = async () => {
     try {
       setLoading(true);
@@ -88,15 +60,22 @@ export default function RolePermissionsManager() {
         roleApi.getAll(),
         roleApi.getMenus(),
       ]);
-      setRoles(rolesRes.data || []);
-      setMenus(menusRes.data || []);
 
-      const activeId = rolesRes.data?.[0]?.id || "super_admin";
-      setSelectedRoleId(activeId);
-      await loadRoleDetail(activeId, menusRes.data || []);
+      const allRoles = rolesRes.data || [];
+      const allMenus = menusRes.data || [];
+
+      setRoles(allRoles);
+      setMenus(allMenus);
+
+      if (allRoles.length > 0) {
+        const defaultRole =
+          allRoles.find((r) => r.id === "super_admin") || allRoles[0];
+        setSelectedRoleId(defaultRole.id);
+        await loadRoleDetail(defaultRole.id, allMenus);
+      }
     } catch (err) {
       console.error(err);
-      showError("Gagal", "Gagal memuat daftar role dan menu", 4000);
+      showError("Gagal", "Gagal memuat konfigurasi Role & Matriks", 4000);
     } finally {
       setLoading(false);
     }
@@ -135,45 +114,6 @@ export default function RolePermissionsManager() {
   const handleSelectRole = async (roleId: string) => {
     setSelectedRoleId(roleId);
     await loadRoleDetail(roleId, menus);
-  };
-
-  const handleToggle = (
-    menuKey: string,
-    action: "canView" | "canAdd" | "canEdit" | "canDelete",
-    val: boolean
-  ) => {
-    if (selectedRoleId === "super_admin") return;
-
-    setMatrix((prev) => {
-      const current = prev[menuKey] || {
-        menuKey,
-        canView: false,
-        canAdd: false,
-        canEdit: false,
-        canDelete: false,
-      };
-
-      const updated = {
-        ...current,
-        [action]: val,
-      };
-
-      // Jika add, edit, atau delete diaktifkan, otomatis pastikan canView juga true
-      if (val && action !== "canView") {
-        updated.canView = true;
-      }
-      // Jika canView dinonaktifkan, otomatis matikan add, edit, dan delete
-      if (!val && action === "canView") {
-        updated.canAdd = false;
-        updated.canEdit = false;
-        updated.canDelete = false;
-      }
-
-      return {
-        ...prev,
-        [menuKey]: updated,
-      };
-    });
   };
 
   const handleSetAll = (enable: boolean) => {
@@ -251,13 +191,16 @@ export default function RolePermissionsManager() {
     setIsEditOpen(true);
   };
 
-  const handleEditRole = async (e: React.FormEvent) => {
+  const handleUpdateRole = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedRoleDetail) return;
+    if (!selectedRoleDetail || !editName.trim()) {
+      warning("Perhatian", "Nama role wajib diisi", 3000);
+      return;
+    }
 
     try {
       setEditLoading(true);
-      await roleApi.update(selectedRoleId, {
+      await roleApi.update(selectedRoleDetail.id, {
         name: selectedRoleDetail.isSystem ? undefined : editName.trim(),
         description: editDescription.trim(),
       });
@@ -267,7 +210,7 @@ export default function RolePermissionsManager() {
 
       const rolesRes = await roleApi.getAll();
       setRoles(rolesRes.data || []);
-      await loadRoleDetail(selectedRoleId, menus);
+      await loadRoleDetail(selectedRoleDetail.id, menus);
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Gagal memperbarui role";
       showError("Gagal", msg, 4000);
@@ -282,16 +225,18 @@ export default function RolePermissionsManager() {
 
     try {
       setDeleteLoading(true);
-      await roleApi.delete(selectedRoleId);
-
+      await roleApi.delete(selectedRoleDetail.id);
       success("Berhasil", `Role '${selectedRoleDetail.name}' berhasil dihapus`, 3000);
       setIsDeleteOpen(false);
 
       const rolesRes = await roleApi.getAll();
       setRoles(rolesRes.data || []);
-      const nextRole = rolesRes.data?.[0]?.id || "super_admin";
-      setSelectedRoleId(nextRole);
-      await loadRoleDetail(nextRole, menus);
+
+      const nextRole = rolesRes.data?.find((r) => r.id === "super_admin") || rolesRes.data?.[0];
+      if (nextRole) {
+        setSelectedRoleId(nextRole.id);
+        await loadRoleDetail(nextRole.id, menus);
+      }
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Gagal menghapus role";
       showError("Gagal", msg, 4000);
@@ -313,6 +258,69 @@ export default function RolePermissionsManager() {
   }, [menus]);
 
   const isSuperAdminSelected = selectedRoleId === "super_admin";
+
+  // RoleMatrix Props Conversion
+  const matrixRoles = useMemo(() => {
+    if (!selectedRoleDetail) return [];
+    return [{ id: selectedRoleDetail.id, label: selectedRoleDetail.name }];
+  }, [selectedRoleDetail]);
+
+  const matrixGroups: PermissionGroup[] = useMemo(() => {
+    return Object.entries(groupedMenus).map(([groupName, groupMenuList]) => ({
+      resource: groupName,
+      permissions: groupMenuList.flatMap((m) => [
+        { id: `${m.key}:canView`, label: `${m.label}: Lihat / Akses Menu` },
+        { id: `${m.key}:canAdd`, label: `${m.label}: Tambah Data` },
+        { id: `${m.key}:canEdit`, label: `${m.label}: Ubah Data` },
+        { id: `${m.key}:canDelete`, label: `${m.label}: Hapus Data` },
+      ]),
+    }));
+  }, [groupedMenus]);
+
+  const matrixValue: Record<string, string[]> = useMemo(() => {
+    if (!selectedRoleDetail) return {};
+    const val: Record<string, string[]> = {};
+    for (const m of menus) {
+      const p = matrix[m.key];
+      if (!p) continue;
+      if (isSuperAdminSelected || p.canView) {
+        val[`${m.key}:canView`] = [selectedRoleDetail.id];
+      }
+      if (isSuperAdminSelected || p.canAdd) {
+        val[`${m.key}:canAdd`] = [selectedRoleDetail.id];
+      }
+      if (isSuperAdminSelected || p.canEdit) {
+        val[`${m.key}:canEdit`] = [selectedRoleDetail.id];
+      }
+      if (isSuperAdminSelected || p.canDelete) {
+        val[`${m.key}:canDelete`] = [selectedRoleDetail.id];
+      }
+    }
+    return val;
+  }, [matrix, menus, selectedRoleDetail, isSuperAdminSelected]);
+
+  const handleMatrixValueChange = (nextValue: Record<string, string[]>) => {
+    if (isSuperAdminSelected || !selectedRoleDetail) return;
+
+    setMatrix((prev) => {
+      const next = { ...prev };
+      for (const m of menus) {
+        const canView = Boolean(nextValue[`${m.key}:canView`]?.includes(selectedRoleDetail.id));
+        const canAdd = Boolean(nextValue[`${m.key}:canAdd`]?.includes(selectedRoleDetail.id));
+        const canEdit = Boolean(nextValue[`${m.key}:canEdit`]?.includes(selectedRoleDetail.id));
+        const canDelete = Boolean(nextValue[`${m.key}:canDelete`]?.includes(selectedRoleDetail.id));
+
+        next[m.key] = {
+          menuKey: m.key,
+          canView: canAdd || canEdit || canDelete ? true : canView,
+          canAdd,
+          canEdit,
+          canDelete,
+        };
+      }
+      return next;
+    });
+  };
 
   return (
     <div className="space-y-6">
@@ -384,362 +392,243 @@ export default function RolePermissionsManager() {
           <Loader2 className="animate-spin text-primary size-6" />
         </div>
       ) : selectedRoleDetail && (
-        <div className="bg-card border border-border rounded-[24px] p-6 shadow-xs space-y-6">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-5 border-b border-border">
-            <div>
-              <div className="flex items-center gap-2 flex-wrap">
-                <h3 className="text-lg font-bold text-foreground">
-                  {selectedRoleDetail.name}
-                </h3>
-                <span className="font-mono text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-md">
-                  id: {selectedRoleDetail.id}
-                </span>
-                {selectedRoleDetail.isSystem && (
-                  <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-400 border border-blue-200 dark:border-blue-800">
-                    <Lock size={10} /> Role Sistem Bawaan
+        <div className="space-y-6">
+          <div className="bg-card border border-border rounded-[24px] p-6 shadow-xs space-y-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-5 border-b border-border">
+              <div>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h3 className="text-lg font-bold text-foreground">
+                    {selectedRoleDetail.name}
+                  </h3>
+                  <span className="font-mono text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-md">
+                    id: {selectedRoleDetail.id}
                   </span>
+                  {selectedRoleDetail.isSystem && (
+                    <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-400 border border-blue-200 dark:border-blue-800">
+                      <Lock size={10} /> Role Sistem Bawaan
+                    </span>
+                  )}
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {selectedRoleDetail.description || "Tidak ada deskripsi role."}
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2 shrink-0">
+                <button
+                  type="button"
+                  onClick={handleOpenEdit}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-border text-xs font-semibold hover:bg-muted text-foreground transition-colors"
+                >
+                  <Edit2 size={12} /> Edit Role
+                </button>
+
+                {!selectedRoleDetail.isSystem && (
+                  <button
+                    type="button"
+                    onClick={() => setIsDeleteOpen(true)}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-destructive/20 text-xs font-semibold bg-destructive/10 text-destructive hover:bg-destructive/20 transition-colors"
+                  >
+                    <Trash2 size={12} /> Hapus
+                  </button>
                 )}
               </div>
-              <p className="text-xs text-muted-foreground mt-1">
-                {selectedRoleDetail.description || "Tidak ada deskripsi role."}
-              </p>
             </div>
 
-            <div className="flex items-center gap-2 shrink-0">
-              <button
-                type="button"
-                onClick={handleOpenEdit}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-border text-xs font-semibold hover:bg-muted text-foreground transition-colors"
-              >
-                <Edit2 size={12} /> Edit Role
-              </button>
-
-              {!selectedRoleDetail.isSystem && (
-                <button
-                  type="button"
-                  onClick={() => setIsDeleteOpen(true)}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-destructive/20 text-xs font-semibold bg-destructive/10 text-destructive hover:bg-destructive/20 transition-colors"
-                >
-                  <Trash2 size={12} /> Hapus
-                </button>
-              )}
-            </div>
-          </div>
-
-          {/* Super Admin Notice Banner */}
-          {isSuperAdminSelected ? (
-            <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-900 dark:text-amber-200 flex items-start gap-3">
-              <Lock className="size-5 shrink-0 text-amber-600 dark:text-amber-400 mt-0.5" />
-              <div className="text-xs leading-relaxed">
-                <span className="font-bold">Hak Akses Super Admin Terkunci Penuh:</span> Role ini
-                memiliki hak akses universal tanpa batas untuk memastikan sistem selalu dapat
-                dikonfigurasi dan tidak terkunci secara tidak sengaja.
+            {/* Super Admin Notice Banner */}
+            {isSuperAdminSelected ? (
+              <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-900 dark:text-amber-200 flex items-start gap-3">
+                <Lock className="size-5 shrink-0 text-amber-600 dark:text-amber-400 mt-0.5" />
+                <div className="text-xs leading-relaxed">
+                  <span className="font-bold">Hak Akses Super Admin Terkunci Penuh:</span> Role ini
+                  memiliki hak akses universal tanpa batas untuk memastikan sistem selalu dapat
+                  dikonfigurasi dan tidak terkunci secara tidak sengaja.
+                </div>
               </div>
-            </div>
-          ) : (
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-muted/40 p-4 rounded-2xl border border-border">
-              <div className="flex items-center gap-2">
+            ) : (
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-muted/40 p-4 rounded-2xl border border-border">
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => handleSetAll(true)}
+                    className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-card border border-border text-xs font-bold text-foreground hover:bg-muted transition-colors"
+                  >
+                    <CheckCircle2 size={13} className="text-emerald-500" />
+                    Aktifkan Semua
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleSetAll(false)}
+                    className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-card border border-border text-xs font-bold text-foreground hover:bg-muted transition-colors"
+                  >
+                    <XCircle size={13} className="text-rose-500" />
+                    Nonaktifkan Semua
+                  </button>
+                </div>
+
                 <button
                   type="button"
-                  onClick={() => handleSetAll(true)}
-                  className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-card border border-border text-xs font-bold text-foreground hover:bg-muted transition-colors"
+                  onClick={() => void handleSavePermissions()}
+                  disabled={saving}
+                  className="inline-flex items-center gap-2 px-5 py-2 rounded-xl bg-primary text-white text-xs font-bold hover:bg-primary/90 disabled:opacity-50 transition-colors shadow-xs"
                 >
-                  <CheckCircle2 size={13} className="text-emerald-500" />
-                  Aktifkan Semua
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleSetAll(false)}
-                  className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-card border border-border text-xs font-bold text-foreground hover:bg-muted transition-colors"
-                >
-                  <XCircle size={13} className="text-rose-500" />
-                  Nonaktifkan Semua
+                  {saving ? (
+                    <Loader2 size={14} className="animate-spin" />
+                  ) : (
+                    <Save size={14} />
+                  )}
+                  Simpan Perubahan Matriks
                 </button>
               </div>
-
-              <button
-                type="button"
-                onClick={() => void handleSavePermissions()}
-                disabled={saving}
-                className="inline-flex items-center gap-2 px-5 py-2 rounded-xl bg-primary text-white text-xs font-bold hover:bg-primary/90 disabled:opacity-50 transition-colors shadow-xs"
-              >
-                {saving ? (
-                  <Loader2 size={14} className="animate-spin" />
-                ) : (
-                  <Save size={14} />
-                )}
-                Simpan Perubahan Matriks
-              </button>
-            </div>
-          )}
-
-          {/* Matrix Table */}
-          <div className="border border-border rounded-2xl overflow-hidden shadow-2xs bg-card">
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs border-collapse">
-                <thead>
-                  <tr className="bg-muted/80 border-b border-border font-bold text-muted-foreground uppercase tracking-wider text-[11px]">
-                    <th className="py-3.5 px-4 w-[40%]">Sub-Menu Sidebar</th>
-                    <th className="py-3.5 px-3 text-center w-[15%]">Lihat (View)</th>
-                    <th className="py-3.5 px-3 text-center w-[15%]">Tambah (Add)</th>
-                    <th className="py-3.5 px-3 text-center w-[15%]">Ubah (Edit)</th>
-                    <th className="py-3.5 px-3 text-center w-[15%]">Hapus (Delete)</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-border">
-                  {Object.entries(groupedMenus).map(([groupName, groupMenuList]) => {
-                    const groupTotalPerms = groupMenuList.length * 4;
-                    const groupActivePerms = groupMenuList.reduce((acc, m) => {
-                      const p = matrix[m.key] || {
-                        canView: isSuperAdminSelected,
-                        canAdd: isSuperAdminSelected,
-                        canEdit: isSuperAdminSelected,
-                        canDelete: isSuperAdminSelected,
-                      };
-                      return (
-                        acc +
-                        (p.canView ? 1 : 0) +
-                        (p.canAdd ? 1 : 0) +
-                        (p.canEdit ? 1 : 0) +
-                        (p.canDelete ? 1 : 0)
-                      );
-                    }, 0);
-
-                    return (
-                      <Fragment key={groupName}>
-                        {/* Group Header Row dengan ringkasan status izin */}
-                        <tr className="bg-muted/60 font-bold text-foreground">
-                          <td colSpan={5} className="py-2.5 px-4">
-                            <div className="flex items-center justify-between">
-                              <span className="text-xs font-bold text-foreground flex items-center gap-2">
-                                <Layers size={13} className="text-primary" />
-                                {groupName}
-                              </span>
-                              <span className="text-[11px] font-medium text-muted-foreground bg-background px-2.5 py-0.5 rounded-full border border-border shadow-2xs">
-                                {groupActivePerms} dari {groupTotalPerms} izin aktif
-                              </span>
-                            </div>
-                          </td>
-                        </tr>
-
-                      {groupMenuList.map((menuItem) => {
-                        const perm = matrix[menuItem.key] || {
-                          menuKey: menuItem.key,
-                          canView: isSuperAdminSelected,
-                          canAdd: isSuperAdminSelected,
-                          canEdit: isSuperAdminSelected,
-                          canDelete: isSuperAdminSelected,
-                        };
-
-                        return (
-                          <tr
-                            key={menuItem.key}
-                            className="hover:bg-muted/30 transition-colors"
-                          >
-                            <td className="py-3 px-4">
-                              <p className="font-bold text-foreground text-sm">
-                                {menuItem.label}
-                              </p>
-                              <p className="text-[11px] text-muted-foreground mt-0.5">
-                                {menuItem.description}
-                              </p>
-                            </td>
-
-                            <td className="py-3 px-3 text-center align-middle">
-                              <div className="flex justify-center">
-                                <ToggleSwitch
-                                  checked={perm.canView}
-                                  onChange={(v) =>
-                                    handleToggle(menuItem.key, "canView", v)
-                                  }
-                                  disabled={isSuperAdminSelected}
-                                  label={`Lihat ${menuItem.label}`}
-                                />
-                              </div>
-                            </td>
-
-                            <td className="py-3 px-3 text-center align-middle">
-                              <div className="flex justify-center">
-                                <ToggleSwitch
-                                  checked={perm.canAdd}
-                                  onChange={(v) =>
-                                    handleToggle(menuItem.key, "canAdd", v)
-                                  }
-                                  disabled={isSuperAdminSelected}
-                                  label={`Tambah ${menuItem.label}`}
-                                />
-                              </div>
-                            </td>
-
-                            <td className="py-3 px-3 text-center align-middle">
-                              <div className="flex justify-center">
-                                <ToggleSwitch
-                                  checked={perm.canEdit}
-                                  onChange={(v) =>
-                                    handleToggle(menuItem.key, "canEdit", v)
-                                  }
-                                  disabled={isSuperAdminSelected}
-                                  label={`Ubah ${menuItem.label}`}
-                                />
-                              </div>
-                            </td>
-
-                            <td className="py-3 px-3 text-center align-middle">
-                              <div className="flex justify-center">
-                                <ToggleSwitch
-                                  checked={perm.canDelete}
-                                  onChange={(v) =>
-                                    handleToggle(menuItem.key, "canDelete", v)
-                                  }
-                                  disabled={isSuperAdminSelected}
-                                  label={`Hapus ${menuItem.label}`}
-                                />
-                              </div>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </Fragment>
-                  );
-                })}
-                </tbody>
-              </table>
-            </div>
+            )}
           </div>
+
+          {/* RoleMatrix Component from https://uipkge.dev/r/react/role-matrix.json */}
+          <RoleMatrix
+            title={`Matriks Hak Akses: ${selectedRoleDetail.name}`}
+            description="Tentukan hak akses granular (Lihat, Tambah, Ubah, Hapus) untuk setiap modul."
+            roles={matrixRoles}
+            groups={matrixGroups}
+            value={matrixValue}
+            onValueChange={handleMatrixValueChange}
+            readOnly={isSuperAdminSelected}
+          />
         </div>
       )}
 
-      {/* Modal: Tambah Custom Role */}
+      {/* Modal Tambah Role Kustom */}
       <Modal
         isOpen={isCreateOpen}
-        onClose={() => setIsCreateOpen(false)}
+        onClose={() => !createLoading && setIsCreateOpen(false)}
         title="Tambah Role Kustom Baru"
       >
         <form onSubmit={handleCreateRole} className="space-y-4">
           <div>
-            <label className="block text-xs font-bold text-foreground mb-1.5">
+            <label className="block text-xs font-semibold text-foreground mb-1.5">
               Nama Role <span className="text-destructive">*</span>
             </label>
             <input
               type="text"
               value={createName}
               onChange={(e) => setCreateName(e.target.value)}
-              placeholder="Contoh: Asisten Laboratorium"
-              className="w-full px-3.5 py-2.5 rounded-xl border border-border bg-muted/50 text-xs font-medium focus:ring-2 focus:ring-primary/20 focus:border-primary outline-hidden"
+              placeholder="Contoh: Asisten Laboratorium, Kepala Perpustakaan"
+              className="w-full px-3 py-2 text-xs rounded-xl bg-background border border-border text-foreground focus:outline-hidden focus:ring-2 focus:ring-primary/20"
               required
+              disabled={createLoading}
             />
           </div>
 
           <div>
-            <label className="block text-xs font-bold text-foreground mb-1.5">
-              Deskripsi Tugas & Tanggung Jawab
+            <label className="block text-xs font-semibold text-foreground mb-1.5">
+              Deskripsi Singkat (Opsional)
             </label>
             <textarea
               value={createDescription}
               onChange={(e) => setCreateDescription(e.target.value)}
-              placeholder="Tuliskan deskripsi cakupan tugas role ini..."
+              placeholder="Tugas pokok dan lingkup wewenang role ini..."
               rows={3}
-              className="w-full px-3.5 py-2.5 rounded-xl border border-border bg-muted/50 text-xs font-medium focus:ring-2 focus:ring-primary/20 focus:border-primary outline-hidden resize-none"
+              className="w-full px-3 py-2 text-xs rounded-xl bg-background border border-border text-foreground focus:outline-hidden focus:ring-2 focus:ring-primary/20 resize-none"
+              disabled={createLoading}
             />
           </div>
 
-          <div className="flex items-center justify-end gap-2 pt-3">
+          <div className="flex justify-end gap-2 pt-2 border-t border-border">
             <button
               type="button"
               onClick={() => setIsCreateOpen(false)}
-              className="px-4 py-2 rounded-xl border border-border text-xs font-semibold text-muted-foreground hover:bg-muted"
+              disabled={createLoading}
+              className="px-4 py-2 text-xs font-semibold rounded-xl text-muted-foreground hover:bg-muted transition-colors"
             >
               Batal
             </button>
             <button
               type="submit"
               disabled={createLoading}
-              className="px-4 py-2 rounded-xl bg-primary text-white text-xs font-bold hover:bg-primary/90 disabled:opacity-50"
+              className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold rounded-xl bg-primary text-white hover:bg-primary/90 disabled:opacity-50 transition-colors shadow-xs"
             >
-              {createLoading ? "Menyimpan..." : "Buat Role"}
+              {createLoading && <Loader2 size={12} className="animate-spin" />}
+              Simpan Role Baru
             </button>
           </div>
         </form>
       </Modal>
 
-      {/* Modal: Edit Role */}
+      {/* Modal Edit Role */}
       <Modal
         isOpen={isEditOpen}
-        onClose={() => setIsEditOpen(false)}
-        title="Edit Informasi Role"
+        onClose={() => !editLoading && setIsEditOpen(false)}
+        title={`Edit Role: ${selectedRoleDetail?.name}`}
       >
-        <form onSubmit={handleEditRole} className="space-y-4">
+        <form onSubmit={handleUpdateRole} className="space-y-4">
           <div>
-            <label className="block text-xs font-bold text-foreground mb-1.5">
-              Nama Role
+            <label className="block text-xs font-semibold text-foreground mb-1.5">
+              Nama Role <span className="text-destructive">*</span>
             </label>
             <input
               type="text"
               value={editName}
-              disabled={selectedRoleDetail?.isSystem}
               onChange={(e) => setEditName(e.target.value)}
-              className="w-full px-3.5 py-2.5 rounded-xl border border-border bg-muted/50 text-xs font-medium focus:ring-2 focus:ring-primary/20 focus:border-primary outline-hidden disabled:opacity-50"
+              className="w-full px-3 py-2 text-xs rounded-xl bg-background border border-border text-foreground focus:outline-hidden focus:ring-2 focus:ring-primary/20"
               required
+              disabled={editLoading}
             />
-            {selectedRoleDetail?.isSystem && (
-              <p className="text-[11px] text-muted-foreground mt-1">
-                Nama role sistem bawaan tidak dapat diubah.
-              </p>
-            )}
           </div>
 
           <div>
-            <label className="block text-xs font-bold text-foreground mb-1.5">
-              Deskripsi
+            <label className="block text-xs font-semibold text-foreground mb-1.5">
+              Deskripsi Singkat (Opsional)
             </label>
             <textarea
               value={editDescription}
               onChange={(e) => setEditDescription(e.target.value)}
               rows={3}
-              className="w-full px-3.5 py-2.5 rounded-xl border border-border bg-muted/50 text-xs font-medium focus:ring-2 focus:ring-primary/20 focus:border-primary outline-hidden resize-none"
+              className="w-full px-3 py-2 text-xs rounded-xl bg-background border border-border text-foreground focus:outline-hidden focus:ring-2 focus:ring-primary/20 resize-none"
+              disabled={editLoading}
             />
           </div>
 
-          <div className="flex items-center justify-end gap-2 pt-3">
+          <div className="flex justify-end gap-2 pt-2 border-t border-border">
             <button
               type="button"
               onClick={() => setIsEditOpen(false)}
-              className="px-4 py-2 rounded-xl border border-border text-xs font-semibold text-muted-foreground hover:bg-muted"
+              disabled={editLoading}
+              className="px-4 py-2 text-xs font-semibold rounded-xl text-muted-foreground hover:bg-muted transition-colors"
             >
               Batal
             </button>
             <button
               type="submit"
               disabled={editLoading}
-              className="px-4 py-2 rounded-xl bg-primary text-white text-xs font-bold hover:bg-primary/90 disabled:opacity-50"
+              className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold rounded-xl bg-primary text-white hover:bg-primary/90 disabled:opacity-50 transition-colors shadow-xs"
             >
-              {editLoading ? "Menyimpan..." : "Simpan Perubahan"}
+              {editLoading && <Loader2 size={12} className="animate-spin" />}
+              Perbarui Role
             </button>
           </div>
         </form>
       </Modal>
 
-      {/* Modal: Delete Confirmation */}
+      {/* Modal Hapus Role */}
       <Modal
         isOpen={isDeleteOpen}
-        onClose={() => setIsDeleteOpen(false)}
+        onClose={() => !deleteLoading && setIsDeleteOpen(false)}
         title="Konfirmasi Hapus Role"
       >
         <div className="space-y-4">
-          <div className="p-4 rounded-xl bg-destructive/10 border border-destructive/20 text-destructive flex items-start gap-3">
-            <AlertCircle className="size-5 shrink-0 mt-0.5" />
-            <div className="text-xs leading-relaxed">
-              Apakah Anda yakin ingin menghapus role{" "}
-              <span className="font-bold">{selectedRoleDetail?.name}</span>? Role ini hanya
-              dapat dihapus jika tidak ada akun pengguna yang sedang menggunakannya.
-            </div>
+          <div className="p-3 rounded-xl bg-destructive/10 text-destructive border border-destructive/20 flex items-start gap-2 text-xs leading-relaxed">
+            <AlertCircle size={16} className="shrink-0 mt-0.5" />
+            <span>
+              Apakah Anda yakin ingin menghapus role <strong>{selectedRoleDetail?.name}</strong>?
+              Tindakan ini tidak dapat dibatalkan.
+            </span>
           </div>
 
-          <div className="flex items-center justify-end gap-2 pt-2">
+          <div className="flex justify-end gap-2 pt-2 border-t border-border">
             <button
               type="button"
               onClick={() => setIsDeleteOpen(false)}
-              className="px-4 py-2 rounded-xl border border-border text-xs font-semibold text-muted-foreground hover:bg-muted"
+              disabled={deleteLoading}
+              className="px-4 py-2 text-xs font-semibold rounded-xl text-muted-foreground hover:bg-muted transition-colors"
             >
               Batal
             </button>
@@ -747,9 +636,10 @@ export default function RolePermissionsManager() {
               type="button"
               onClick={() => void handleDeleteRole()}
               disabled={deleteLoading}
-              className="px-4 py-2 rounded-xl bg-destructive text-white text-xs font-bold hover:bg-destructive/90 disabled:opacity-50"
+              className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold rounded-xl bg-destructive text-white hover:bg-destructive/90 disabled:opacity-50 transition-colors shadow-xs"
             >
-              {deleteLoading ? "Menghapus..." : "Ya, Hapus Role"}
+              {deleteLoading && <Loader2 size={12} className="animate-spin" />}
+              Hapus Role Permanen
             </button>
           </div>
         </div>
