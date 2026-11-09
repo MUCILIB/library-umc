@@ -369,10 +369,10 @@ async function main() {
 
       const hasNotifHeader = await page.locator("h4:has-text('Notifikasi')").isVisible();
       const hasEmptyOrList =
-        (await page.locator("text=Tidak ada notifikasi baru").isVisible()) ||
-        (await page.locator("text=Permohonan").isVisible()) ||
-        (await page.locator("text=Denda").isVisible()) ||
-        (await page.locator("text=Semua Terbaca").isVisible());
+        (await page.locator("text=Tidak ada notifikasi baru").first().isVisible().catch(() => false)) ||
+        (await page.locator("text=Permohonan").first().isVisible().catch(() => false)) ||
+        (await page.locator("p:has-text('Denda Belum Diselesaikan')").first().isVisible().catch(() => false)) ||
+        (await page.locator("text=Semua Terbaca").first().isVisible().catch(() => false));
 
       const notifDropdownPath = path.join(SCREENSHOT_DIR, "notification-bell-dropdown.png");
       await page.screenshot({ path: notifDropdownPath, fullPage: false });
