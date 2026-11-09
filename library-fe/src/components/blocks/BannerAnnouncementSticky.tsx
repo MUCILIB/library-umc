@@ -12,6 +12,7 @@ export interface BannerAnnouncementStickyProps {
   linkUrl?: string;
   storageKey?: string;
   dismissible?: boolean;
+  onDismiss?: () => void;
 }
 
 export function BannerAnnouncementSticky({
@@ -23,6 +24,7 @@ export function BannerAnnouncementSticky({
   linkUrl = "/katalog",
   storageKey = "mucilib_dismiss_banner_v1",
   dismissible = true,
+  onDismiss,
 }: BannerAnnouncementStickyProps) {
   const [isVisible, setIsVisible] = React.useState<boolean>(() => {
     if (!isActive) return false;
@@ -53,6 +55,7 @@ export function BannerAnnouncementSticky({
     } catch {
       // Ignore localStorage error
     }
+    onDismiss?.();
   };
 
   if (!isActive || !isVisible) return null;

@@ -77,7 +77,7 @@ export default function LoansSection({ searchTerm, onSearchChange }: LoansSectio
   const navigate = useNavigate();
   const [loans, setLoans] = useState<Loan[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState<"all" | "pending" | "approved" | "returned" | "pending_extension" | "reservations">("pending");
+  const [filter, setFilter] = useState<"all" | "pending" | "approved" | "returned" | "pending_extension" | "reservations">("all");
   const [reservations, setReservations] = useState<Reservation[]>([]);
   const [selectedLoan, setSelectedLoan] = useState<Loan | null>(null);
   const [actionNotes, setActionNotes] = useState("");
@@ -428,12 +428,12 @@ export default function LoansSection({ searchTerm, onSearchChange }: LoansSectio
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
+                <SelectItem value="all">Semua</SelectItem>
                 <SelectItem value="pending">Menunggu Persetujuan</SelectItem>
                 <SelectItem value="pending_extension">Menunggu Perpanjangan</SelectItem>
                 <SelectItem value="reservations">Antrean Reservasi</SelectItem>
                 <SelectItem value="approved">Sedang Dipinjam</SelectItem>
                 <SelectItem value="returned">Dikembalikan</SelectItem>
-                <SelectItem value="all">Semua</SelectItem>
               </SelectContent>
             </Select>
             

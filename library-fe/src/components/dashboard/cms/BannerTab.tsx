@@ -1,5 +1,5 @@
 import React from "react";
-import { Megaphone, Save, Loader2, Eye } from "lucide-react";
+import { Megaphone, Save, Loader2, Eye, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -15,12 +15,33 @@ interface BannerTabProps {
   isSaving: boolean;
 }
 
+const PREVIEW_STORAGE_KEY = "mucilib_banner_preview_temp";
+
 export const BannerTab: React.FC<BannerTabProps> = ({
   form,
   onChange,
   onSave,
   isSaving,
 }) => {
+  const [previewKey, setPreviewKey] = React.useState(0);
+  const [isPreviewDismissed, setIsPreviewDismissed] = React.useState(false);
+
+  const handleRestorePreview = React.useCallback(() => {
+    try {
+      localStorage.removeItem(PREVIEW_STORAGE_KEY);
+    } catch {
+      // Ignore localStorage error
+    }
+    setIsPreviewDismissed(false);
+    setPreviewKey((prev) => prev + 1);
+  }, []);
+
+  React.useEffect(() => {
+    if (form.isActive) {
+      handleRestorePreview();
+    }
+  }, [form.isActive, handleRestorePreview]);
+
   return (
     <div className="space-y-6">
       {/* Live Preview */}
@@ -33,31 +54,72 @@ export const BannerTab: React.FC<BannerTabProps> = ({
                 Pratinjau Langsung (Live Preview)
               </CardTitle>
             </div>
-            <span
-              className={`text-xs px-2.5 py-0.5 rounded-full font-medium ${
-                form.isActive
-                  ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-400"
-                  : "bg-muted text-muted-foreground"
-              }`}
-            >
-              {form.isActive ? "Status: AKTIF" : "Status: NONAKTIF"}
-            </span>
+            <div className="flex items-center gap-2">
+              {isPreviewDismissed && form.isActive && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={handleRestorePreview}
+                  className="h-7 text-xs px-2.5 gap-1.5 font-medium"
+                >
+                  <RotateCcw className="h-3 w-3 text-primary" />
+                  Munculkan Banner
+                </Button>
+              )}
+              <span
+                className={`text-xs px-2.5 py-0.5 rounded-full font-medium ${
+                  form.isActive
+                    ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-400"
+                    : "bg-muted text-muted-foreground"
+                }`}
+              >
+                {form.isActive ? "Status: AKTIF" : "Status: NONAKTIF"}
+              </span>
+            </div>
           </div>
           <CardDescription>
             Tampilan persis yang dilihat civitas akademika di atas bilah navigasi utama portal.
           </CardDescription>
         </CardHeader>
         <CardContent className="pt-2">
-          <div className="rounded-lg border overflow-hidden bg-background">
-            <BannerAnnouncementSticky
-              isActive={form.isActive}
-              badgeText={form.badgeText}
-              message={form.message}
-              linkText={form.linkText}
-              linkUrl={form.linkUrl}
-              dismissible={form.dismissible}
-            />
-          </div>
+          {!form.isActive ? (
+            <div className="rounded-lg border border-dashed border-border p-6 text-center bg-muted/20">
+              <p className="text-xs text-muted-foreground font-medium">
+                Bilah banner pengumuman sedang dinonaktifkan. Aktifkan sakelar di bawah untuk menampilkan banner ini di portal.
+              </p>
+            </div>
+          ) : isPreviewDismissed ? (
+            <div className="rounded-lg border border-dashed border-border p-6 text-center bg-muted/30 flex flex-col items-center justify-center gap-3">
+              <p className="text-xs text-muted-foreground font-medium">
+                Pratinjau banner disembunyikan sementara (simulasi klik tombol 'X' oleh pengunjung).
+              </p>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={handleRestorePreview}
+                className="gap-2 text-xs font-semibold"
+              >
+                <RotateCcw className="h-3.5 w-3.5 text-primary" />
+                Munculkan Kembali Pratinjau
+              </Button>
+            </div>
+          ) : (
+            <div className="rounded-lg border overflow-hidden bg-background">
+              <BannerAnnouncementSticky
+                key={previewKey}
+                storageKey={PREVIEW_STORAGE_KEY}
+                isActive={form.isActive}
+                badgeText={form.badgeText}
+                message={form.message}
+                linkText={form.linkText}
+                linkUrl={form.linkUrl}
+                dismissible={form.dismissible}
+                onDismiss={() => setIsPreviewDismissed(true)}
+              />
+            </div>
+          )}
         </CardContent>
       </Card>
 
