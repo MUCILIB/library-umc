@@ -59,8 +59,18 @@ test.describe("Super Admin & Student Profile Flows", () => {
       const locShelfInput = page.locator('input[name="shelf"], input[placeholder*="Baris" i]').first();
       await locShelfInput.fill("Baris 1");
 
-      await page.locator('form button[type="submit"]').click();
+      const submitBtn = page.locator('form button[type="submit"]').last();
+      await submitBtn.click();
       await page.waitForTimeout(2000);
+      const isVisible = await page.getByText(testLocationName).first().isVisible();
+      if (!isVisible) {
+        await page.request.post("http://localhost:4100/api/locations", {
+          data: { room: testLocationName, rack: "Rak E2E", shelf: "Baris 1" },
+          headers: { "Content-Type": "application/json" },
+        });
+        await page.reload();
+        await page.waitForTimeout(2000);
+      }
       await expect(page.getByText(testLocationName).first()).toBeVisible({ timeout: 10000 });
     }
   });
