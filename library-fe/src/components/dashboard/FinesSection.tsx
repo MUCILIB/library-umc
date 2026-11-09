@@ -1,8 +1,7 @@
-import { useState, useEffect, useCallback, Fragment } from "react";
+import { useState, useEffect, useCallback } from "react";
+import { TablePagination } from "@/components/common/TablePagination";
 import {
   Search,
-  ChevronLeft,
-  ChevronRight,
   Wallet,
   Loader,
   CheckCircle,
@@ -491,58 +490,14 @@ export default function FinesSection() {
         </div>
 
         {/* Pagination Controls */}
-        <div className="p-6 border-t border-border flex items-center justify-between">
-          <p className="text-xs text-muted-foreground font-medium">
-            Menampilkan{" "}
-            {Math.min((currentPage - 1) * itemsPerPage + 1, activeList.length)}–
-            {Math.min(currentPage * itemsPerPage, activeList.length)} dari{" "}
-            {activeList.length} data
-          </p>
-          <div className="flex items-center gap-1.5">
-            <button
-              onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-              disabled={currentPage === 1}
-              className="flex items-center gap-1 px-3 py-2 text-sm font-bold text-muted-foreground hover:text-muted-foreground hover:bg-surface-hover rounded-xl transition-all disabled:opacity-30"
-            >
-              <ChevronLeft size={16} /> Prev
-            </button>
-
-            {Array.from({ length: totalPages }, (_, i) => i + 1)
-              .filter(
-                (p) =>
-                  p === 1 || p === totalPages || Math.abs(p - currentPage) <= 1,
-              )
-              .map((p, idx, arr) => {
-                const showDot =
-                  idx > 0 && Number(arr[idx - 1]) !== Number(p) - 1;
-                return (
-                  <Fragment key={p.toString()}>
-                    {showDot && (
-                      <span className="text-muted-foreground px-1">...</span>
-                    )}
-                    <button
-                      onClick={() => setCurrentPage(Number(p))}
-                      className={`w-10 h-10 flex items-center justify-center rounded-xl text-sm font-bold transition-colors ${
-                        currentPage === Number(p)
-                          ? "bg-primary text-white shadow-md shadow-red-500/20"
-                          : "text-muted-foreground hover:bg-surface-hover"
-                      }`}
-                    >
-                      {p}
-                    </button>
-                  </Fragment>
-                );
-              })}
-
-            <button
-              onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-              disabled={currentPage === totalPages}
-              className="flex items-center gap-1 px-3 py-2 text-sm font-bold text-muted-foreground hover:text-muted-foreground hover:bg-surface-hover rounded-xl transition-all disabled:opacity-30"
-            >
-              Next <ChevronRight size={16} />
-            </button>
-          </div>
-        </div>
+        <TablePagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          totalItems={activeList.length}
+          itemsPerPage={itemsPerPage}
+          onPageChange={setCurrentPage}
+          label="data denda"
+        />
       </div>
     </div>
   );

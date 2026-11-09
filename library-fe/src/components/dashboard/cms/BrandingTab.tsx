@@ -70,7 +70,7 @@ export const BrandingTab: React.FC<BrandingTabProps> = ({
             accept="image/x-icon,image/png,image/svg+xml,image/vnd.microsoft.icon"
             maxSizeMb={1}
             previewHeight="h-16"
-            fallbackDefault="/favicon.ico"
+            fallbackDefault={LogoUmc}
           />
         </div>
 

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
+import { TablePagination } from "@/components/common/TablePagination";
 import {
-  Plus, Edit, Trash2, Loader, ChevronLeft, ChevronRight
+  Plus, Edit, Trash2, Loader
 } from "lucide-react";
 import Modal from "@/components/ui/modal";
 import { facultyApi, type Faculty } from "@/api/client";
@@ -144,13 +145,14 @@ export default function FakultasSection() {
             </table>
           </div>
 
-          {totalPages > 1 && (
-            <div className="flex justify-center items-center gap-2">
-              <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1} className="p-2 rounded-lg border border-border hover:bg-muted disabled:opacity-30"><ChevronLeft className="size-4" /></button>
-              <span className="text-sm text-muted-foreground">{currentPage} / {totalPages}</span>
-              <button onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages} className="p-2 rounded-lg border border-border hover:bg-muted disabled:opacity-30"><ChevronRight className="size-4" /></button>
-            </div>
-          )}
+          <TablePagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            totalItems={faculties.length}
+            itemsPerPage={itemsPerPage}
+            onPageChange={setCurrentPage}
+            label="fakultas"
+          />
         </>
       )}
 

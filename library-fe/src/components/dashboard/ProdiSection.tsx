@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
+import { TablePagination } from "@/components/common/TablePagination";
 import {
-  Plus, Edit, Trash2, Save, Loader, ChevronLeft, ChevronRight, GraduationCap
+  Plus, Edit, Trash2, Save, Loader, GraduationCap
 } from "lucide-react";
 import Modal from "@/components/ui/modal";
 import {
@@ -138,13 +139,14 @@ export default function ProdiSection() {
             </table>
           </div>
 
-          {totalPages > 1 && (
-            <div className="flex justify-center items-center gap-2">
-              <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1} className="p-2 rounded-lg border border-border hover:bg-muted disabled:opacity-30"><ChevronLeft className="size-4" /></button>
-              <span className="text-sm text-muted-foreground">{currentPage} / {totalPages}</span>
-              <button onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages} className="p-2 rounded-lg border border-border hover:bg-muted disabled:opacity-30"><ChevronRight className="size-4" /></button>
-            </div>
-          )}
+          <TablePagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            totalItems={programs.length}
+            itemsPerPage={itemsPerPage}
+            onPageChange={setCurrentPage}
+            label="program studi"
+          />
         </>
       )}
 

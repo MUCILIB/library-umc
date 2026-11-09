@@ -1,12 +1,11 @@
-import { useEffect, useState, Fragment } from "react";
+import { useEffect, useState } from "react";
+import { TablePagination } from "@/components/common/TablePagination";
 import {
   BadgeCheck,
   RefreshCw,
   UserCheck,
   UserX,
   IdCard,
-  ChevronLeft,
-  ChevronRight,
   Clock,
   Sparkles,
 } from "lucide-react";
@@ -356,61 +355,14 @@ export default function CardApprovalsSection() {
               ))}
             </div>
 
-            {totalPages > 1 && (
-              <div className="p-6 border-t border-border flex flex-col sm:flex-row items-center justify-between gap-4">
-                <p className="text-xs text-muted-foreground font-medium">
-                  Menampilkan {Math.min((currentPage - 1) * itemsPerPage + 1, filtered.length)}–
-                  {Math.min(currentPage * itemsPerPage, filtered.length)} dari {filtered.length} data
-                </p>
-                <div className="flex items-center gap-1.5">
-                  <button
-                    onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                    disabled={currentPage === 1}
-                    className="flex items-center gap-1 px-3 py-2 text-sm font-bold text-muted-foreground hover:bg-muted rounded-xl transition-all disabled:opacity-30"
-                  >
-                    <ChevronLeft size={16} /> Prev
-                  </button>
-
-                  {Array.from({ length: totalPages }, (_, i) => i + 1)
-                    .filter(
-                      (p) =>
-                        p === 1 ||
-                        p === totalPages ||
-                        Math.abs(p - currentPage) <= 1
-                    )
-                    .map((p, idx, arr) => {
-                      const showDot = idx > 0 && arr[idx - 1] !== p - 1;
-                      return (
-                        <Fragment key={p}>
-                          {showDot && (
-                            <span className="px-2 text-muted-foreground">...</span>
-                          )}
-                          <button
-                            onClick={() => setCurrentPage(p)}
-                            className={`w-9 h-9 flex items-center justify-center rounded-xl text-xs font-bold transition-all ${
-                              currentPage === p
-                                ? "bg-primary text-white shadow-xs"
-                                : "text-muted-foreground hover:bg-muted"
-                            }`}
-                          >
-                            {p}
-                          </button>
-                        </Fragment>
-                      );
-                    })}
-
-                  <button
-                    onClick={() =>
-                      setCurrentPage((p) => Math.min(totalPages, p + 1))
-                    }
-                    disabled={currentPage === totalPages}
-                    className="flex items-center gap-1 px-3 py-2 text-sm font-bold text-muted-foreground hover:bg-muted rounded-xl transition-all disabled:opacity-30"
-                  >
-                    Next <ChevronRight size={16} />
-                  </button>
-                </div>
-              </div>
-            )}
+            <TablePagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              totalItems={filtered.length}
+              itemsPerPage={itemsPerPage}
+              onPageChange={setCurrentPage}
+              label="data pengajuan"
+            />
           </>
         )}
       </div>

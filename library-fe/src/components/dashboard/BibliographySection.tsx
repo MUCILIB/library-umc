@@ -1,9 +1,8 @@
 import { useEffect, useState, useCallback, useRef } from "react";
+import { TablePagination } from "@/components/common/TablePagination";
 import {
   Book,
   Search,
-  ChevronLeft,
-  ChevronRight,
   Eye,
   Loader2,
   AlertCircle,
@@ -696,29 +695,14 @@ export default function BibliographySection({
           </Table>
 
           {/* Pagination */}
-          {data.totalPages > 1 && (
-            <div className="flex items-center justify-between border-t border-border px-4 py-3">
-              <p className="text-sm text-muted-foreground">
-                Halaman {data.page} dari {data.totalPages} ({data.total} total)
-              </p>
-              <div className="flex gap-1">
-                <button
-                  onClick={() => setPage((p) => Math.max(1, p - 1))}
-                  disabled={page === 1}
-                  className="rounded-lg border border-border p-2 text-muted-foreground hover:bg-surface-hover disabled:opacity-50"
-                >
-                  <ChevronLeft className="size-4" />
-                </button>
-                <button
-                  onClick={() => setPage((p) => Math.min(data.totalPages, p + 1))}
-                  disabled={page === data.totalPages}
-                  className="rounded-lg border border-border p-2 text-muted-foreground hover:bg-surface-hover disabled:opacity-50"
-                >
-                  <ChevronRight className="size-4" />
-                </button>
-              </div>
-            </div>
-          )}
+          <TablePagination
+            currentPage={data.page}
+            totalPages={data.totalPages}
+            totalItems={data.total}
+            itemsPerPage={data.limit || 10}
+            onPageChange={setPage}
+            label="bibliografi"
+          />
         </div>
       )}
     </div>

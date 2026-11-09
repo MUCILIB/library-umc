@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { TablePagination } from "@/components/common/TablePagination";
 import {
   BookOpen,
   Search,
@@ -448,31 +449,15 @@ export default function EbookSection() {
         )}
 
         {/* Pagination Footer */}
-        {!loading && totalPages > 1 && (
-          <div className="flex items-center justify-between px-4 py-3 border-t border-border bg-muted/20 text-sm">
-            <span className="text-muted-foreground">
-              Total {totalCount} e-book terdaftar
-            </span>
-            <div className="flex items-center gap-2">
-              <button
-                disabled={page <= 1}
-                onClick={() => setPage((p) => Math.max(1, p - 1))}
-                className="px-3 py-1.5 text-xs font-medium rounded-md border border-input bg-background hover:bg-muted disabled:opacity-50 min-h-[36px]"
-              >
-                Sebelumnya
-              </button>
-              <span className="text-xs font-medium px-2">
-                Halaman {page} dari {totalPages}
-              </span>
-              <button
-                disabled={page >= totalPages}
-                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                className="px-3 py-1.5 text-xs font-medium rounded-md border border-input bg-background hover:bg-muted disabled:opacity-50 min-h-[36px]"
-              >
-                Selanjutnya
-              </button>
-            </div>
-          </div>
+        {!loading && (
+          <TablePagination
+            currentPage={page}
+            totalPages={totalPages}
+            totalItems={totalCount}
+            itemsPerPage={10}
+            onPageChange={setPage}
+            label="e-book"
+          />
         )}
       </div>
 
