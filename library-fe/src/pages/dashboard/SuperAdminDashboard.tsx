@@ -21,7 +21,10 @@ import {
   MapPin,
   Tablet,
   Bell,
-  LayoutTemplate
+  LayoutTemplate,
+  ChevronDown,
+  Megaphone,
+  Globe
 } from "lucide-react";
 
 import Logo from "@/assets/logo_umc.png";
@@ -67,6 +70,9 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  SidebarMenuSub,
+  SidebarMenuSubButton,
+  SidebarMenuSubItem,
   SidebarProvider,
   SidebarTrigger
 } from "@/components/ui/sidebar";
@@ -101,7 +107,24 @@ type ActiveMenu =
   | "fakultas"
   | "prodi"
   | "locations"
-  | "cms";
+  | "cms"
+  | "cms-banner"
+  | "cms-branding"
+  | "cms-hero"
+  | "cms-location";
+
+export type CmsSubMenuKey = "cms-banner" | "cms-branding" | "cms-hero" | "cms-location";
+
+export const CMS_SUB_ITEMS: {
+  key: CmsSubMenuKey;
+  label: string;
+  icon: typeof Megaphone;
+}[] = [
+  { key: "cms-banner", label: "Banner Siaran", icon: Megaphone },
+  { key: "cms-branding", label: "Identitas & Logo", icon: Globe },
+  { key: "cms-hero", label: "Hero Landing Page", icon: LayoutTemplate },
+  { key: "cms-location", label: "Peta Lokasi & Footer", icon: MapPin },
+];
 
 type MenuConfig = {
   key: ActiveMenu;
@@ -169,6 +192,14 @@ function DashboardSidebar({
   badgeCounts
 }: DashboardSidebarProps) {
   const avatarUrl = getUserAvatar(user);
+  const isCmsGroupActive = activeMenu.startsWith("cms-") || activeMenu === "cms";
+  const [isCmsOpen, setIsCmsOpen] = useState(true);
+
+  useEffect(() => {
+    if (isCmsGroupActive) {
+      setIsCmsOpen(true);
+    }
+  }, [isCmsGroupActive]);
 
   return (
     <Sidebar
@@ -215,6 +246,86 @@ function DashboardSidebar({
               }
               if (!group) {
                 currentGroup = "";
+              }
+
+              if (key === "cms") {
+                const isParentActive = isCmsGroupActive;
+                items.push(
+                  <SidebarMenuItem key="cms" className="space-y-1">
+                    <SidebarMenuButton
+                      onClick={() => {
+                        if (!isCmsOpen) {
+                          setIsCmsOpen(true);
+                        }
+                        if (!activeMenu.startsWith("cms-")) {
+                          onMenuChange("cms-banner");
+                        } else {
+                          setIsCmsOpen((prev) => !prev);
+                        }
+                      }}
+                      isActive={isParentActive}
+                      tooltip="Manajemen Konten (CMS)"
+                      className={cn(
+                        "h-9.5 px-3 text-xs font-medium transition-all group-data-[collapsible=icon]:size-9 group-data-[collapsible=icon]:rounded-xl group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0 relative",
+                        isParentActive
+                          ? "bg-primary text-white font-semibold rounded-xl shadow-md shadow-primary/25 hover:bg-primary hover:text-white"
+                          : "text-sidebar-foreground/80 hover:bg-sidebar-accent/80 hover:text-white rounded-xl"
+                      )}
+                    >
+                      <div className="relative shrink-0 flex items-center justify-center">
+                        <Icon className={cn("size-4 shrink-0 transition-colors", isParentActive ? "text-white" : "text-sidebar-foreground/70")} />
+                      </div>
+                      <span className={cn("group-data-[collapsible=icon]:hidden truncate", isParentActive && "text-white font-semibold")}>
+                        {label}
+                      </span>
+                      <span
+                        role="button"
+                        tabIndex={0}
+                        aria-label={isCmsOpen ? "Tutup sub-menu CMS" : "Buka sub-menu CMS"}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setIsCmsOpen((prev) => !prev);
+                        }}
+                        className="group-data-[collapsible=icon]:hidden ml-auto p-0.5 rounded hover:bg-white/20 transition-transform cursor-pointer"
+                      >
+                        <ChevronDown
+                          className={cn(
+                            "size-3.5 transition-transform duration-200",
+                            isCmsOpen ? "rotate-0" : "-rotate-90",
+                            isParentActive ? "text-white" : "text-sidebar-foreground/70"
+                          )}
+                        />
+                      </span>
+                    </SidebarMenuButton>
+
+                    {isCmsOpen && (
+                      <SidebarMenuSub className="space-y-0.5 my-0.5 border-sidebar-border/60">
+                        {CMS_SUB_ITEMS.map((subItem) => {
+                          const isSubActive = activeMenu === subItem.key;
+                          const SubIcon = subItem.icon;
+                          return (
+                            <SidebarMenuSubItem key={subItem.key}>
+                              <SidebarMenuSubButton
+                                onClick={() => onMenuChange(subItem.key)}
+                                isActive={isSubActive}
+                                className={cn(
+                                  "h-8 px-2.5 text-[11px] font-medium transition-all rounded-lg flex items-center gap-2 cursor-pointer",
+                                  isSubActive
+                                    ? "bg-primary/15 text-primary font-semibold dark:bg-primary/25 dark:text-white"
+                                    : "text-sidebar-foreground/75 hover:bg-sidebar-accent/50 hover:text-white"
+                                )}
+                              >
+                                <SubIcon className={cn("size-3.5 shrink-0", isSubActive ? "text-primary dark:text-white" : "text-sidebar-foreground/60")} />
+                                <span className="truncate">{subItem.label}</span>
+                              </SidebarMenuSubButton>
+                            </SidebarMenuSubItem>
+                          );
+                        })}
+                      </SidebarMenuSub>
+                    )}
+                  </SidebarMenuItem>
+                );
+                return;
               }
 
               const isActive = activeMenu === key;
@@ -322,9 +433,20 @@ export default function SuperAdminDashboard() {
   const [searchParams, setSearchParams] = useSearchParams();
   const tabParam = (searchParams.get("tab") || searchParams.get("menu")) as ActiveMenu | null;
 
+  const isMenuValid = useCallback((menu: string | null): menu is ActiveMenu => {
+    if (!menu) return false;
+    return (
+      MENU_CONFIG.some((item) => item.key === menu) ||
+      menu === "cms-banner" ||
+      menu === "cms-branding" ||
+      menu === "cms-hero" ||
+      menu === "cms-location"
+    );
+  }, []);
+
   const [searchTerm, setSearchTerm] = useState("");
   const [activeMenu, setActiveMenuState] = useState<ActiveMenu>(() => {
-    if (tabParam && MENU_CONFIG.some((item) => item.key === tabParam)) {
+    if (isMenuValid(tabParam)) {
       return tabParam;
     }
     return "dashboard";
@@ -346,10 +468,10 @@ export default function SuperAdminDashboard() {
   );
 
   useEffect(() => {
-    if (tabParam && MENU_CONFIG.some((item) => item.key === tabParam) && tabParam !== activeMenu) {
+    if (isMenuValid(tabParam) && tabParam !== activeMenu) {
       setActiveMenuState(tabParam);
     }
-  }, [tabParam, activeMenu]);
+  }, [tabParam, activeMenu, isMenuValid]);
 
   const [isCommandOpen, setIsCommandOpen] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState<boolean>(() => {
@@ -517,7 +639,14 @@ export default function SuperAdminDashboard() {
       case "reports":
         return <ReportsSection />;
       case "cms":
-        return <CmsSection />;
+      case "cms-banner":
+        return <CmsSection subPage="banner" />;
+      case "cms-branding":
+        return <CmsSection subPage="branding" />;
+      case "cms-hero":
+        return <CmsSection subPage="hero" />;
+      case "cms-location":
+        return <CmsSection subPage="location" />;
       case "fakultas":
         return <FakultasSection />;
       case "prodi":
@@ -670,7 +799,11 @@ export default function SuperAdminDashboard() {
                     value={label}
                     className="data-[selected=true]:bg-red-600 data-[selected=true]:text-white flex items-center gap-2"
                     onSelect={() => {
-                      setActiveMenu(key);
+                      if (key === "cms") {
+                        setActiveMenu("cms-banner");
+                      } else {
+                        setActiveMenu(key);
+                      }
                       setSearchTerm("");
                       setIsCommandOpen(false);
                     }}
@@ -683,11 +816,30 @@ export default function SuperAdminDashboard() {
                       </span>
                     )}
                     <CommandShortcut className="text-red-500 dark:text-red-400">
-                      {activeMenu === key ? "Aktif" : ""}
+                      {activeMenu === key || (key === "cms" && activeMenu.startsWith("cms-")) ? "Aktif" : ""}
                     </CommandShortcut>
                   </CommandItem>
                 );
               })}
+              {visibleMenus.some((m) => m.key === "cms") &&
+                CMS_SUB_ITEMS.map(({ key, label, icon: SubIcon }) => (
+                  <CommandItem
+                    key={key}
+                    value={`CMS: ${label}`}
+                    className="data-[selected=true]:bg-red-600 data-[selected=true]:text-white flex items-center gap-2"
+                    onSelect={() => {
+                      setActiveMenu(key);
+                      setSearchTerm("");
+                      setIsCommandOpen(false);
+                    }}
+                  >
+                    <SubIcon className="size-4 shrink-0" />
+                    <span className="flex-1 truncate">CMS: {label}</span>
+                    <CommandShortcut className="text-red-500 dark:text-red-400">
+                      {activeMenu === key ? "Aktif" : ""}
+                    </CommandShortcut>
+                  </CommandItem>
+                ))}
             </CommandGroup>
           </CommandList>
         </CommandDialog>

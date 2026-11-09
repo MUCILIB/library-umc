@@ -3,7 +3,6 @@ import { Megaphone, Globe, Layout, MapPin, RefreshCw } from "lucide-react";
 import { useSiteSettings } from "@/hooks/useSiteSettings";
 import { useToast } from "@/hooks/useToast";
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { BannerTab } from "./cms/BannerTab";
 import { BrandingTab } from "./cms/BrandingTab";
 import { HeroTab } from "./cms/HeroTab";
@@ -16,11 +15,41 @@ import type {
   FooterSettings,
 } from "@/api/siteSettingApi";
 
-export const CmsSection: React.FC = () => {
+export type CmsSubPage = "banner" | "branding" | "hero" | "location";
+
+interface CmsSectionProps {
+  subPage?: CmsSubPage;
+}
+
+const SUBPAGE_METADATA: Record<
+  CmsSubPage,
+  { title: string; subtitle: string; icon: React.ComponentType<{ className?: string }> }
+> = {
+  banner: {
+    title: "Bilah Pengumuman (Banner Sticky)",
+    subtitle: "Sesuaikan siaran pengumuman penting, teks info, dan status aktif di atas navbar.",
+    icon: Megaphone,
+  },
+  branding: {
+    title: "Identitas Portal, Logo & SEO",
+    subtitle: "Atur judul web tab browser, slogan, favicon, serta upload logo resmi kampus ke S3.",
+    icon: Globe,
+  },
+  hero: {
+    title: "Hero Section (Halaman Utama)",
+    subtitle: "Sesuaikan sambutan utama, kotak pencarian, kata kunci cepat, dan upload latar belakang S3.",
+    icon: Layout,
+  },
+  location: {
+    title: "Peta Lokasi & Footer Kampus",
+    subtitle: "Atur alamat gedung, embed Google Maps, kontak operasional, motto, dan tautan sosial media.",
+    icon: MapPin,
+  },
+};
+
+export const CmsSection: React.FC<CmsSectionProps> = ({ subPage = "banner" }) => {
   const { settings, loading, refetch, updateSetting } = useSiteSettings();
   const toast = useToast();
-
-  const [activeTab, setActiveTab] = useState<string>("banner");
   const [savingKey, setSavingKey] = useState<string | null>(null);
 
   // Local state form per tab
@@ -59,17 +88,20 @@ export const CmsSection: React.FC = () => {
     }
   };
 
+  const meta = SUBPAGE_METADATA[subPage] || SUBPAGE_METADATA.banner;
+  const IconComponent = meta.icon;
+
   return (
     <div className="space-y-6">
-      {/* Header Halaman */}
+      {/* Header Halaman Spesifik Sub-Modul */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-2 border-b">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-foreground flex items-center gap-2">
-            <Layout className="h-6 w-6 text-primary" />
-            Manajemen Konten (CMS)
+            <IconComponent className="h-6 w-6 text-primary" />
+            {meta.title}
           </h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Sesuaikan siaran pengumuman, identitas web, logo resmi kampus (S3), hero, dan peta tanpa deploy ulang.
+            {meta.subtitle}
           </p>
         </div>
 
@@ -85,70 +117,46 @@ export const CmsSection: React.FC = () => {
         </Button>
       </div>
 
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid grid-cols-2 lg:grid-cols-4 w-full h-auto p-1 bg-muted/60">
-          <TabsTrigger value="banner" className="gap-2 py-2.5">
-            <Megaphone className="h-4 w-4" />
-            <span>Banner Siaran</span>
-          </TabsTrigger>
-          <TabsTrigger value="branding" className="gap-2 py-2.5">
-            <Globe className="h-4 w-4" />
-            <span>Identitas & SEO</span>
-          </TabsTrigger>
-          <TabsTrigger value="hero" className="gap-2 py-2.5">
-            <Layout className="h-4 w-4" />
-            <span>Hero Landing</span>
-          </TabsTrigger>
-          <TabsTrigger value="location" className="gap-2 py-2.5">
-            <MapPin className="h-4 w-4" />
-            <span>Peta & Footer</span>
-          </TabsTrigger>
-        </TabsList>
+      {/* Render langsung sub-halaman tanpa tab horizontal */}
+      {subPage === "banner" && (
+        <BannerTab
+          form={bannerForm}
+          onChange={setBannerForm}
+          onSave={() => handleSave("banner", bannerForm, "Banner Pengumuman")}
+          isSaving={savingKey === "banner"}
+        />
+      )}
 
-        {/* TAB 1: BANNER SIARAN */}
-        <TabsContent value="banner" className="space-y-6">
-          <BannerTab
-            form={bannerForm}
-            onChange={setBannerForm}
-            onSave={() => handleSave("banner", bannerForm, "Banner Pengumuman")}
-            isSaving={savingKey === "banner"}
-          />
-        </TabsContent>
+      {subPage === "branding" && (
+        <BrandingTab
+          form={brandingForm}
+          onChange={setBrandingForm}
+          onSave={() => handleSave("branding", brandingForm, "Identitas & SEO")}
+          isSaving={savingKey === "branding"}
+        />
+      )}
 
-        {/* TAB 2: IDENTITAS, LOGO & SEO */}
-        <TabsContent value="branding" className="space-y-6">
-          <BrandingTab
-            form={brandingForm}
-            onChange={setBrandingForm}
-            onSave={() => handleSave("branding", brandingForm, "Identitas & SEO")}
-            isSaving={savingKey === "branding"}
-          />
-        </TabsContent>
+      {subPage === "hero" && (
+        <HeroTab
+          form={heroForm}
+          onChange={setHeroForm}
+          onSave={() => handleSave("hero", heroForm, "Hero Landing Page")}
+          isSaving={savingKey === "hero"}
+        />
+      )}
 
-        {/* TAB 3: HERO LANDING PAGE */}
-        <TabsContent value="hero" className="space-y-6">
-          <HeroTab
-            form={heroForm}
-            onChange={setHeroForm}
-            onSave={() => handleSave("hero", heroForm, "Hero Landing Page")}
-            isSaving={savingKey === "hero"}
-          />
-        </TabsContent>
-
-        {/* TAB 4: PETA & FOOTER */}
-        <TabsContent value="location" className="space-y-6">
-          <FooterLocationTab
-            locationForm={locationForm}
-            onLocationChange={setLocationForm}
-            onSaveLocation={() => handleSave("location", locationForm, "Lokasi & Peta")}
-            isSavingLocation={savingKey === "location"}
-            footerForm={footerForm}
-            onFooterChange={setFooterForm}
-            onSaveFooter={() => handleSave("footer", footerForm, "Footer & Ekosistem")}
-            isSavingFooter={savingKey === "footer"}
-          />
-        </TabsContent>
-      </Tabs>
+      {subPage === "location" && (
+        <FooterLocationTab
+          locationForm={locationForm}
+          onLocationChange={setLocationForm}
+          onSaveLocation={() => handleSave("location", locationForm, "Lokasi & Peta")}
+          isSavingLocation={savingKey === "location"}
+          footerForm={footerForm}
+          onFooterChange={setFooterForm}
+          onSaveFooter={() => handleSave("footer", footerForm, "Footer & Ekosistem")}
+          isSavingFooter={savingKey === "footer"}
+        />
+      )}
     </div>
   );
 };

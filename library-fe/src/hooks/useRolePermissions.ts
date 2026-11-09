@@ -54,7 +54,8 @@ export function useRolePermissions() {
 
   const can = (menuKey: string, action: PermissionAction = "canView"): boolean => {
     if (isSuperAdmin) return true;
-    const menuPerm = permissions[menuKey];
+    const lookupKey = menuKey.startsWith("cms-") ? "cms" : menuKey;
+    const menuPerm = permissions[lookupKey];
     if (!menuPerm) return false;
     return Boolean(menuPerm[action]);
   };
