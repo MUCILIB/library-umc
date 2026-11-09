@@ -41,10 +41,10 @@ describe("CmsSection Component", () => {
   it("merender live preview dan form banner pada tab banner default", () => {
     render(<CmsSection />);
 
-    expect(screen.getByText("Pratinjau Banner Langsung (Live Preview)")).toBeInTheDocument();
-    expect(screen.getByLabelText("Aktifkan Penayangan Banner Pengumuman")).toBeInTheDocument();
-    expect(screen.getByLabelText("Label Badge / Tag")).toBeInTheDocument();
-    expect(screen.getByLabelText("Isi Pesan Pengumuman")).toBeInTheDocument();
+    expect(screen.getByText("Pratinjau Langsung (Live Preview)")).toBeInTheDocument();
+    expect(screen.getByLabelText("Tampilkan Banner (On/Off)")).toBeInTheDocument();
+    expect(screen.getByLabelText("Teks Label Badge")).toBeInTheDocument();
+    expect(screen.getByLabelText("Isi Pesan Siaran")).toBeInTheDocument();
   });
 
   it("berpindah ke tab Identitas & SEO saat tab diklik", async () => {
@@ -54,17 +54,17 @@ describe("CmsSection Component", () => {
     fireEvent.keyDown(seoTab, { key: "Enter" });
 
     await waitFor(() => {
-      expect(screen.getByLabelText("Judul Situs (Site Title)")).toBeInTheDocument();
-      expect(screen.getByLabelText("Slogan / Tagline")).toBeInTheDocument();
-      expect(screen.getByLabelText(/URL Favicon/i)).toBeInTheDocument();
+      expect(screen.getByLabelText("Judul Web (Title Tab Browser)")).toBeInTheDocument();
+      expect(screen.getByLabelText("Tagline Portal")).toBeInTheDocument();
+      expect(screen.getByText("Logo Perpustakaan (Navbar & Footer)")).toBeInTheDocument();
     });
   });
 
   it("memanggil updateSetting saat tombol simpan diklik", async () => {
     render(<CmsSection />);
 
-    const saveButton = screen.getByText("Simpan Pengaturan Banner");
-    fireEvent.click(saveButton);
+    const saveButtons = screen.getAllByText("Simpan Perubahan");
+    fireEvent.click(saveButtons[0]);
 
     await waitFor(() => {
       expect(mockUpdateSetting).toHaveBeenCalledWith("banner", expect.any(Object));

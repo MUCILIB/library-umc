@@ -69,7 +69,7 @@ export const DEFAULT_SITE_SETTINGS: AllSiteSettings = {
     siteTitle: "Perpustakaan Universitas Muhammadiyah Cirebon",
     siteTagline: "Portal Riset & Sumber Belajar Digital",
     faviconUrl: "/favicon.ico",
-    logoUrl: "/assets/logo_umc.png",
+    logoUrl: "",
     metaDescription: "Layanan perpustakaan digital resmi Universitas Muhammadiyah Cirebon.",
   },
   banner: {
