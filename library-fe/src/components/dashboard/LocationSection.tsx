@@ -251,6 +251,7 @@ export function LocationSection() {
                 <label className="text-xs font-semibold text-foreground">Ruangan</label>
                 <input
                   type="text"
+                  name="room"
                   required
                   value={formData.room}
                   onChange={(e) => setFormData({ ...formData, room: e.target.value })}
@@ -263,6 +264,7 @@ export function LocationSection() {
                 <label className="text-xs font-semibold text-foreground">Nomor / Nama Rak</label>
                 <input
                   type="text"
+                  name="rack"
                   required
                   value={formData.rack}
                   onChange={(e) => setFormData({ ...formData, rack: e.target.value })}

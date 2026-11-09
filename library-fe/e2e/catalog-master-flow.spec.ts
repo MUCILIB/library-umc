@@ -49,8 +49,14 @@ test.describe("Super Admin & Student Profile Flows", () => {
       await tambahLokasiBtn.click();
       await page.waitForTimeout(1000);
 
-      const locNameInput = page.locator('input[placeholder*="nama" i], input[name="name"]').first();
+      const locNameInput = page.locator('input[name="room"], input[placeholder*="Ruang" i], input[placeholder*="nama" i], input[name="name"]').first();
+      await locNameInput.waitFor({ state: "visible", timeout: 10000 });
       await locNameInput.fill(testLocationName);
+
+      const locRackInput = page.locator('input[name="rack"], input[placeholder*="Rak" i]').first();
+      if (await locRackInput.isVisible()) {
+        await locRackInput.fill("Rak E2E");
+      }
 
       await page.getByRole("button", { name: /simpan/i }).click();
       await page.waitForTimeout(2000);
