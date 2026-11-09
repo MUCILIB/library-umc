@@ -82,4 +82,28 @@ describe("CmsSection Component (Focused Sub-Page Views)", () => {
       );
     });
   });
+
+  it("dapat memunculkan kembali pratinjau banner setelah ditutup via icon x", async () => {
+    render(<CmsSection subPage="banner" />);
+
+    // Pastikan tombol tutup pengumuman ada di pratinjau
+    const closeBtn = screen.getByLabelText("Tutup pengumuman");
+    expect(closeBtn).toBeInTheDocument();
+
+    // Klik tombol tutup pengumuman
+    fireEvent.click(closeBtn);
+
+    // Verifikasi pesan pratinjau disembunyikan dan tombol pemulihan muncul
+    expect(
+      screen.getByText(/Pratinjau banner disembunyikan sementara/i)
+    ).toBeInTheDocument();
+    const restoreBtn = screen.getByRole("button", { name: /Munculkan Kembali Pratinjau/i });
+    expect(restoreBtn).toBeInTheDocument();
+
+    // Klik tombol pemulihan
+    fireEvent.click(restoreBtn);
+
+    // Verifikasi banner pratinjau muncul kembali
+    expect(screen.getByLabelText("Tutup pengumuman")).toBeInTheDocument();
+  });
 });

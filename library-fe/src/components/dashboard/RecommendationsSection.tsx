@@ -43,7 +43,7 @@ type FilterStatus = "all" | "pending" | "approved" | "rejected";
 export default function RecommendationsSection() {
   const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState<FilterStatus>("pending");
+  const [filter, setFilter] = useState<FilterStatus>("all");
   const [searchTerm, setSearchTerm] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
@@ -154,10 +154,10 @@ export default function RecommendationsSection() {
                 <SelectValue placeholder="Status" />
               </SelectTrigger>
               <SelectContent>
+                <SelectItem value="all">Semua</SelectItem>
                 <SelectItem value="pending">Menunggu</SelectItem>
                 <SelectItem value="approved">Disetujui</SelectItem>
                 <SelectItem value="rejected">Ditolak</SelectItem>
-                <SelectItem value="all">Semua</SelectItem>
               </SelectContent>
             </Select>
             
