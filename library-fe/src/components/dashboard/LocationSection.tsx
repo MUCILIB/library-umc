@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { TablePagination } from "@/components/common/TablePagination";
 import { locationApi, type Location } from "@/api/client";
 import {
   MapPin, Plus, Trash2, Edit2, Search,
@@ -9,7 +10,13 @@ export function LocationSection() {
   const [locations, setLocations] = useState<Location[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search]);
   const [success, setSuccess] = useState<string | null>(null);
 
   // Form Modal state
@@ -106,6 +113,12 @@ export function LocationSection() {
     );
   });
 
+  const totalPages = Math.max(1, Math.ceil(filteredLocations.length / itemsPerPage));
+  const paginatedLocations = filteredLocations.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -193,10 +206,10 @@ export function LocationSection() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
-                {filteredLocations.map((loc, idx) => (
+                {paginatedLocations.map((loc, idx) => (
                   <tr key={loc.id} className="hover:bg-muted/40">
                     <td className="px-4 py-3 font-mono text-xs text-muted-foreground sm:px-6">
-                      {idx + 1}
+                      {(currentPage - 1) * itemsPerPage + idx + 1}
                     </td>
                     <td className="px-4 py-3 font-medium text-foreground sm:px-6">
                       {loc.room}
@@ -231,6 +244,15 @@ export function LocationSection() {
                 ))}
               </tbody>
             </table>
+
+            <TablePagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              totalItems={filteredLocations.length}
+              itemsPerPage={itemsPerPage}
+              onPageChange={setCurrentPage}
+              label="lokasi rak"
+            />
           </div>
         )}
       </div>

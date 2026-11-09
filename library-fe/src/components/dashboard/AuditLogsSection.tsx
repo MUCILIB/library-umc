@@ -1,5 +1,6 @@
-import { useMemo, useState, Fragment } from "react";
-import { RefreshCw, ShieldCheck, Search, ChevronLeft, ChevronRight } from "lucide-react";
+import { useMemo, useState } from "react";
+import { TablePagination } from "@/components/common/TablePagination";
+import { RefreshCw, ShieldCheck, Search } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Select,
@@ -249,61 +250,14 @@ export default function AuditLogsSection() {
               </table>
             </div>
 
-            {totalPages > 1 && (
-              <div className="p-6 border-t border-border flex flex-col sm:flex-row items-center justify-between gap-4">
-                <p className="text-xs text-muted-foreground font-medium">
-                  Menampilkan {Math.min((currentPage - 1) * itemsPerPage + 1, filteredLogs.length)}–
-                  {Math.min(currentPage * itemsPerPage, filteredLogs.length)} dari {filteredLogs.length} data
-                </p>
-                <div className="flex items-center gap-1.5">
-                  <button
-                    onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                    disabled={currentPage === 1}
-                    className="flex items-center gap-1 px-3 py-2 text-sm font-bold text-muted-foreground hover:text-muted-foreground hover:bg-surface-hover rounded-xl transition-all disabled:opacity-30"
-                  >
-                    <ChevronLeft size={16} /> Prev
-                  </button>
-
-                  {Array.from({ length: totalPages }, (_, i) => i + 1)
-                    .filter(
-                      (p) =>
-                        p === 1 ||
-                        p === totalPages ||
-                        Math.abs(p - currentPage) <= 1
-                    )
-                    .map((p, idx, arr) => {
-                      const showDot = idx > 0 && arr[idx - 1] !== p - 1;
-                      return (
-                        <Fragment key={p}>
-                          {showDot && (
-                            <span className="px-2 text-muted-foreground">...</span>
-                          )}
-                          <button
-                            onClick={() => setCurrentPage(p)}
-                            className={`w-10 h-10 flex items-center justify-center rounded-xl text-sm font-bold transition-all ${
-                              currentPage === p
-                                ? "bg-primary text-white shadow-md shadow-red-500/20"
-                                : "text-muted-foreground hover:bg-surface-hover hover:text-muted-foreground"
-                            }`}
-                          >
-                            {p}
-                          </button>
-                        </Fragment>
-                      );
-                    })}
-
-                  <button
-                    onClick={() =>
-                      setCurrentPage((p) => Math.min(totalPages, p + 1))
-                    }
-                    disabled={currentPage === totalPages}
-                    className="flex items-center gap-1 px-3 py-2 text-sm font-bold text-muted-foreground hover:text-muted-foreground hover:bg-surface-hover rounded-xl transition-all disabled:opacity-30"
-                  >
-                    Next <ChevronRight size={16} />
-                  </button>
-                </div>
-              </div>
-            )}
+            <TablePagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              totalItems={filteredLogs.length}
+              itemsPerPage={itemsPerPage}
+              onPageChange={setCurrentPage}
+              label="log aktivitas"
+            />
           </>
         )}
       </div>

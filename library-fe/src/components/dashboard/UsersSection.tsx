@@ -1,12 +1,11 @@
-import { useEffect, useMemo, useState, Fragment, useRef } from "react";
+import { useEffect, useMemo, useState, useRef } from "react";
+import { TablePagination } from "@/components/common/TablePagination";
 import {
   Search,
   RefreshCw,
   Users2,
   ShieldCheck,
   UserX,
-  ChevronLeft,
-  ChevronRight,
   UserCheck,
   Download,
   Upload,
@@ -997,52 +996,14 @@ export default function UsersSection() {
             </div>
 
             {/* Pagination Controls */}
-            {totalPages > 1 && (
-              <div className="p-6 border-t border-border flex flex-col sm:flex-row items-center justify-between gap-4">
-                <p className="text-xs text-muted-foreground font-medium">
-                  Menampilkan {Math.min((currentPage - 1) * itemsPerPage + 1, filteredUsers.length)}–
-                  {Math.min(currentPage * itemsPerPage, filteredUsers.length)} dari {filteredUsers.length} user
-                </p>
-                <div className="flex items-center gap-1.5">
-                  <button 
-                    onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                    disabled={currentPage === 1}
-                    className="flex items-center gap-1 px-3 py-2 text-sm font-bold text-muted-foreground hover:text-muted-foreground hover:bg-surface-hover rounded-xl transition-all disabled:opacity-30 disabled:hover:bg-transparent"
-                  >
-                    <ChevronLeft size={16} /> Prev
-                  </button>
-                  
-                  {Array.from({ length: totalPages }, (_, i) => i + 1)
-                    .filter(p => p === 1 || p === totalPages || Math.abs(p - currentPage) <= 1)
-                    .map((p, idx, arr) => {
-                      const showDot = idx > 0 && arr[idx - 1] !== p - 1;
-                      return (
-                        <Fragment key={p}>
-                          {showDot && <span className="px-2 text-muted-foreground">...</span>}
-                          <button
-                            onClick={() => setCurrentPage(p)}
-                            className={`w-10 h-10 flex items-center justify-center rounded-xl text-sm font-bold transition-all ${
-                              currentPage === p
-                                ? "bg-primary text-white shadow-md shadow-red-500/20"
-                                : "text-muted-foreground hover:bg-surface-hover hover:text-muted-foreground"
-                            }`}
-                          >
-                            {p}
-                          </button>
-                        </Fragment>
-                      );
-                    })}
-
-                  <button 
-                    onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                    disabled={currentPage === totalPages}
-                    className="flex items-center gap-1 px-3 py-2 text-sm font-bold text-muted-foreground hover:text-muted-foreground hover:bg-surface-hover rounded-xl transition-all disabled:opacity-30 disabled:hover:bg-transparent"
-                  >
-                    Next <ChevronRight size={16} />
-                  </button>
-                </div>
-              </div>
-            )}
+            <TablePagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              totalItems={filteredUsers.length}
+              itemsPerPage={itemsPerPage}
+              onPageChange={setCurrentPage}
+              label="user"
+            />
           </>
         )}
       </div>

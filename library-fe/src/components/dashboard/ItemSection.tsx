@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
+import { TablePagination } from "@/components/common/TablePagination";
 import {
   Package,
   Search,
@@ -14,8 +15,6 @@ import {
   X,
   RotateCcw,
   Ban,
-  ChevronLeft,
-  ChevronRight,
   Download,
   Info,
 } from "lucide-react";
@@ -339,29 +338,14 @@ export default function ItemSection() {
           </div>
 
           {/* Pagination */}
-          {totalPages > 1 && (
-            <div className="flex items-center justify-between border-t border-border px-4 py-3 bg-muted/20">
-              <p className="text-sm text-muted-foreground">
-                Halaman {page} dari {totalPages} ({totalItems} total)
-              </p>
-              <div className="flex gap-1">
-                <button
-                  onClick={() => setPage((p) => Math.max(1, p - 1))}
-                  disabled={page === 1}
-                  className="rounded-lg border border-border p-2 text-muted-foreground hover:bg-surface-hover disabled:opacity-50"
-                >
-                  <ChevronLeft className="size-4" />
-                </button>
-                <button
-                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                  disabled={page === totalPages}
-                  className="rounded-lg border border-border p-2 text-muted-foreground hover:bg-surface-hover disabled:opacity-50"
-                >
-                  <ChevronRight className="size-4" />
-                </button>
-              </div>
-            </div>
-          )}
+          <TablePagination
+            currentPage={page}
+            totalPages={totalPages}
+            totalItems={totalItems}
+            itemsPerPage={limit}
+            onPageChange={setPage}
+            label="eksemplar"
+          />
         </div>
       )}
 

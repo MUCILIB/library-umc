@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { TablePagination } from "@/components/common/TablePagination";
 import {
   GraduationCap,
   Search,
@@ -42,6 +43,12 @@ export default function RepositorySection() {
   const [filterStatus, setFilterStatus] = useState<string>("all");
   const [filterCategory, setFilterCategory] = useState<string>("all");
   const [searchTerm, setSearchTerm] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filterStatus, filterCategory, searchTerm]);
 
   // Review modal state
   const [reviewModalItem, setReviewModalItem] = useState<RepositoryProposal | null>(null);
@@ -209,6 +216,12 @@ export default function RepositorySection() {
     return matchesSearch && matchesCategory;
   });
 
+  const totalPages = Math.max(1, Math.ceil(filteredProposals.length / itemsPerPage));
+  const paginatedProposals = filteredProposals.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
+
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "APPROVED":
@@ -318,7 +331,8 @@ export default function RepositorySection() {
             </p>
           </div>
         ) : (
-          <Table className="w-full text-left text-sm min-w-[850px]">
+          <>
+            <Table className="w-full text-left text-sm min-w-[850px]">
             <TableHeader>
               <TableRow className="border-b border-border bg-muted/50 hover:bg-transparent">
                 <TableHead className="px-4 py-3.5 font-bold text-xs uppercase tracking-wider text-muted-foreground whitespace-nowrap">Nomor & Kategori</TableHead>
@@ -329,7 +343,7 @@ export default function RepositorySection() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredProposals.map((item) => {
+              {paginatedProposals.map((item) => {
                 const rule = item.pageRules?.find(
                   (r) => r.roleScope?.toUpperCase() === "PUBLIC" || r.roleScope?.toUpperCase() === "ALL"
                 ) || item.pageRules?.[0];
@@ -454,6 +468,16 @@ export default function RepositorySection() {
               })}
             </TableBody>
           </Table>
+
+          <TablePagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            totalItems={filteredProposals.length}
+            itemsPerPage={itemsPerPage}
+            onPageChange={setCurrentPage}
+            label="berkas"
+          />
+          </>
         )}
       </div>
 
