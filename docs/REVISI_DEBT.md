@@ -35,26 +35,23 @@ Dokumentasi pelacakan status tiket revisi: fitur yang sudah 100% selesai di-depl
   - Tabel `roles` & `role_permissions` di database.
   - Matriks hak akses untuk 20 sub-menu admin di `RolePermissionsManager.tsx`.
   - Pendaftaran role bawaan `external` (Anggota Luar) serta dukungan role kustom tanpa error 400.
+- [x] **Tampilan Identitas Akademik Anggota (NIM, No. HP, Fakultas) di Tabel Admin** (Debt-1):
+  - `UserService.getAllUsers` di-join ke tabel `members` untuk mengambil `nimNidn`, `faculty`, dan `phone`.
+  - Kolom pengguna di `UsersSection.tsx` menampilkan badge identitas NIM mono, nomor HP, dan fakultas serta mendukung pencarian multi-kolom.
+- [x] **Integrasi Form Registrasi Cepat di Buku Tamu** (Debt-4):
+  - `AddMemberModal.tsx` di `GuestsSection` terhubung riil ke `usersManagementService.createUser` (`POST /api/users`).
+  - Pemetaan tipe akun ke role internal (`student`, `lecturer`, `staff`, `external`), feedback visual toast antislop tanpa `alert` browser.
 
 ---
 
 ## 2. Daftar Technical Debt (Ready for Discussion & Implementation)
 
-### Debt-1: Tampilan Identitas Mahasiswa (Nama, NIM, No. HP, Fakultas) di Tabel Admin
-* **Akar Masalah:**
-  - `UserService.getAllUsers` di BE saat ini hanya mengambil data dari tabel `users` dan sebagian kecil status kartu dari tabel `members`.
-  - Kolom `nim_nidn`, `phone`, dan `faculty` dari tabel `members` belum di-select ke response API.
-  - Komponen FE `UsersSection.tsx` belum menampilkan kolom atau popover detail identitas akademik ini.
-* **Solusi Rencana:**
-  1. Patch `UserService.getAllUsers` di backend untuk menambahkan field `memberNimNidn: members.nimNidn`, `memberPhone: members.phone`, `memberFaculty: members.faculty`.
-  2. Tambahkan sub-informasi pada kolom User di `UsersSection.tsx` atau sediakan dialog popover detail profil anggota.
-
 ### Debt-2: Otomatisasi Deteksi Status Mahasiswa dari NIM (Aktif vs Lulus)
 * **Akar Masalah:**
   - Sistem hanya menerima string NIM tanpa memvalidasi atau memprediksi status kelulusan / masa aktif studi.
 * **Solusi Rencana:**
-  1. Parsing pola tahun angkatan dari NIM UMC (misal 2 digit / 4 digit awal).
-  2. Tentukan batas toleransi masa studi reguler (misal: S1 maksimal 14 semester / 7 tahun).
+  1. Sesuaikan dengan API simulasi kampus (menunggu konfirmasi spesifikasi).
+  2. Parsing pola tahun angkatan dari NIM UMC (misal 2 digit / 4 digit awal).
   3. Berikan status badge visual: `Mahasiswa Aktif` atau `Alumni / Potensi Lulus` di profil dan admin review.
 
 ### Debt-3: Pengaturan Alur Persetujuan Dinamis oleh Admin (Workflow Approval Policy)
@@ -66,9 +63,3 @@ Dokumentasi pelacakan status tiket revisi: fitur yang sudah 100% selesai di-depl
      - *Auto-Approve Loan:* Peminjaman langsung disetujui jika stok eksemplar tersedia & peminjam tidak memiliki denda tertunggak.
      - *Require Librarian Approval:* Verifikasi manual sebelum buku diambil.
      - *Instant Renewal:* Perpanjangan mandiri langsung aktif jika belum lewat tenggat waktu.
-
-### Debt-4: Integrasi Form Registrasi Cepat di Buku Tamu (`GuestsSection`)
-* **Akar Masalah:**
-  - Di `AddMemberModal.tsx` pada menu Buku Tamu, tombol submit masih menggunakan `setTimeout` (mock) dan `alert("Demo: Berhasil...")`.
-* **Solusi Rencana:**
-  - Hubungkan form submit ke `usersManagementService.createUser` (`POST /api/users`) yang sudah tersedia di backend agar data anggota tamu tersimpan ke database.

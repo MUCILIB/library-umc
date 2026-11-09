@@ -20,6 +20,9 @@ vi.mock("../../../db", () => {
       memberCardApprovedAt: null,
       memberCardRejectedAt: null,
       memberCardRejectedReason: null,
+      memberNimNidn: "23010001",
+      memberFaculty: "Teknik",
+      memberPhone: "081234567890",
     },
     {
       id: "user-old",
@@ -37,6 +40,9 @@ vi.mock("../../../db", () => {
       memberCardApprovedAt: null,
       memberCardRejectedAt: null,
       memberCardRejectedReason: null,
+      memberNimNidn: null,
+      memberFaculty: null,
+      memberPhone: null,
     },
   ]);
 
@@ -123,8 +129,12 @@ describe("UserService", () => {
       expect(result.data).toHaveLength(2);
       expect(result.data![0].id).toBe("user-new");
       expect(result.data![0].hasSyncedMember).toBe(true);
+      expect(result.data![0].nimNidn).toBe("23010001");
+      expect(result.data![0].faculty).toBe("Teknik");
+      expect(result.data![0].phone).toBe("081234567890");
       expect(result.data![1].id).toBe("user-old");
       expect(result.data![1].hasSyncedMember).toBe(false);
+      expect(result.data![1].nimNidn).toBeNull();
     });
   });
 

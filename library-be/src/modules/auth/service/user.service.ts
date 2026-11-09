@@ -183,7 +183,10 @@ export const UserService = {
           memberCardRequestedAt: members.cardRequestedAt,
           memberCardApprovedAt: members.cardApprovedAt,
           memberCardRejectedAt: members.cardRejectedAt,
-          memberCardRejectedReason: members.cardRejectedReason
+          memberCardRejectedReason: members.cardRejectedReason,
+          memberNimNidn: members.nimNidn,
+          memberFaculty: members.faculty,
+          memberPhone: members.phone
         })
         .from(Users)
         .leftJoin(members, eq(members.userId, Users.id))
@@ -199,6 +202,12 @@ export const UserService = {
         banned: row.banned,
         createdAt: row.createdAt,
         hasSyncedMember: Boolean(row.memberId && !row.memberDeletedAt),
+        nimNidn:
+          row.memberId && !row.memberDeletedAt ? row.memberNimNidn : null,
+        faculty:
+          row.memberId && !row.memberDeletedAt ? row.memberFaculty : null,
+        phone:
+          row.memberId && !row.memberDeletedAt ? row.memberPhone : null,
         cardStatus:
           row.memberId && !row.memberDeletedAt ? row.memberCardStatus : null,
         cardNumber:

@@ -10,6 +10,9 @@ export interface DashboardUser {
   banned: boolean;
   createdAt: string;
   hasSyncedMember?: boolean;
+  nimNidn?: string | null;
+  faculty?: string | null;
+  phone?: string | null;
   cardStatus?:
     | "not_requested"
     | "pending"

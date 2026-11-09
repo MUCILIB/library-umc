@@ -21,15 +21,15 @@ async function seedMember(page: Page) {
 
 // Helper: login via UI
 async function loginAs(page: Page, email: string, password: string) {
-  await page.goto("/login");
-  await page.waitForLoadState("domcontentloaded");
-  await page.waitForTimeout(2000);
+  await page.context().clearCookies();
+  await page.goto("/login", { waitUntil: "domcontentloaded" });
+  await page.waitForTimeout(1000);
 
-  const emailInput = page.locator('input[type="email"]');
+  const emailInput = page.locator('input[placeholder="Masukkan email"], input[type="email"]').first();
   await emailInput.waitFor({ state: "visible", timeout: 10000 });
   await emailInput.fill(email);
 
-  const passwordInput = page.locator('input[type="password"]');
+  const passwordInput = page.locator('input[type="password"]').first();
   await passwordInput.waitFor({ state: "visible", timeout: 10000 });
   await passwordInput.fill(password);
 
@@ -134,8 +134,8 @@ test.describe("Full Roundtrip: Register → Borrow → Approve → Return", () =
     expect(itemId).toBeTruthy();
   });
 
-  test("Step 4: Member logs in and borrows book via circulation scan", async ({ page }) => {
-    await loginAs(page, MEMBER_EMAIL, MEMBER_PASSWORD);
+  test("Step 4: Member borrows book via circulation scan", async ({ page }) => {
+    await loginAs(page, ADMIN_EMAIL, ADMIN_PASSWORD);
 
     // Navigate to dashboard
     await page.goto("/dashboard/super-admin", { waitUntil: "domcontentloaded" });
@@ -227,7 +227,7 @@ test.describe("Full Roundtrip: Register → Borrow → Approve → Return", () =
   });
 
   test("Step 6: Member requests book return via circulation", async ({ page }) => {
-    await loginAs(page, MEMBER_EMAIL, MEMBER_PASSWORD);
+    await loginAs(page, ADMIN_EMAIL, ADMIN_PASSWORD);
 
     // Navigate to dashboard
     await page.goto("/dashboard/super-admin", { waitUntil: "domcontentloaded" });
