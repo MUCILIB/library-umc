@@ -11,9 +11,12 @@ import {
 } from "lucide-react";
 import Navbar from "@/components/ui/navbar";
 import Footer from "@/components/Footer";
+import { useSiteSettings } from "@/hooks/useSiteSettings";
 
 export default function TentangPage() {
-  const googleMapsUrl = "https://maps.app.goo.gl/v9gnnAVj762L1EbK8";
+  const { settings } = useSiteSettings();
+  const locationData = settings.location;
+  const googleMapsUrl = locationData.directUrl || "https://maps.app.goo.gl/v9gnnAVj762L1EbK8";
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-muted/30">
@@ -63,7 +66,7 @@ export default function TentangPage() {
                   Alamat Lengkap
                 </h3>
                 <p className="text-foreground font-bold text-base">
-                  Gedung Djuanda - Lantai 7 (Kampus 2 UMC)
+                  {locationData.building || "Gedung Djuanda - Lantai 7 (Kampus 2 UMC)"}
                 </p>
                 <p className="text-muted-foreground text-xs sm:text-sm leading-relaxed mt-1">
                   Jl. Fatahillah - Watubelah No. 40, Kelurahan Watubelah, Kec.
@@ -186,11 +189,14 @@ export default function TentangPage() {
               {/* Embed Google Map with coordinates (no intrusive place card) */}
               <div className="w-full h-[360px] sm:h-[400px]">
                 <iframe
-                  title="Lokasi Perpustakaan UMC Kampus 2"
+                  title="Lokasi Perpustakaan UMC"
                   width="100%"
                   height="100%"
                   style={{ border: 0 }}
-                  src="https://maps.google.com/maps?q=-6.742389,108.4931841&hl=id&z=17&iwloc=&output=embed"
+                  src={
+                    locationData.embedUrl ||
+                    "https://maps.google.com/maps?q=-6.742389,108.4931841&hl=id&z=17&iwloc=&output=embed"
+                  }
                   loading="lazy"
                   allowFullScreen
                   referrerPolicy="no-referrer-when-downgrade"

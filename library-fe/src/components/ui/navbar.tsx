@@ -15,6 +15,7 @@ import type { AuthUser } from "@/types/auth";
 import ThemeToggle from "@/components/ui/theme-toggle";
 import { getUserAvatar } from "@/lib/avatar";
 import { BannerAnnouncementSticky } from "@/components/blocks/BannerAnnouncementSticky";
+import { useSiteSettings } from "@/hooks/useSiteSettings";
 
 const Navbar = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -142,11 +143,20 @@ const Navbar = () => {
   // Email yang ditampilkan
   const displayEmail = activeUser?.email || "";
 
+  const { settings } = useSiteSettings();
+
   return (
     <>
       {/* WRAPPER NAVBAR & BANNER PENGUMUMAN */}
       <div className="sticky top-0 z-40 w-full">
-        <BannerAnnouncementSticky />
+        <BannerAnnouncementSticky
+          isActive={settings.banner.isActive}
+          badgeText={settings.banner.badgeText}
+          message={settings.banner.message}
+          linkText={settings.banner.linkText}
+          linkUrl={settings.banner.linkUrl}
+          dismissible={settings.banner.dismissible}
+        />
 
         {/* NAVBAR UTAMA */}
         <div className="flex justify-between items-center p-4 px-6 bg-background shadow-sm">
@@ -156,7 +166,7 @@ const Navbar = () => {
           onClick={() => navigate("/")}
         >
           <img
-            src={LogoUmc}
+            src={settings.branding.logoUrl || LogoUmc}
             alt="UMC Library Logo"
             className="w-10 h-10 rounded-full sm:w-12 sm:h-12"
           />
