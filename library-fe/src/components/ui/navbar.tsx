@@ -14,6 +14,7 @@ import { useNavigate, useLocation } from "react-router";
 import type { AuthUser } from "@/types/auth";
 import ThemeToggle from "@/components/ui/theme-toggle";
 import { getUserAvatar } from "@/lib/avatar";
+import { BannerAnnouncementSticky } from "@/components/blocks/BannerAnnouncementSticky";
 
 const Navbar = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -143,9 +144,12 @@ const Navbar = () => {
 
   return (
     <>
-      {/* NAVBAR UTAMA */}
-      {/* Diubah z-index ke z-40 agar berada di bawah Tirai Overlay HP */}
-      <div className="flex justify-between items-center p-4 px-6 bg-background shadow-sm sticky top-0 z-40">
+      {/* WRAPPER NAVBAR & BANNER PENGUMUMAN */}
+      <div className="sticky top-0 z-40 w-full">
+        <BannerAnnouncementSticky />
+
+        {/* NAVBAR UTAMA */}
+        <div className="flex justify-between items-center p-4 px-6 bg-background shadow-sm">
         {/* Logo & Teks */}
         <div
           className="flex items-center space-x-2 cursor-pointer"
@@ -370,6 +374,7 @@ const Navbar = () => {
           </svg>
         </button>
       </div>
+    </div>
 
       {/* SIDEBAR MOBILE - ANIMASI SMOOTH */}
       {/* Dinaikkan z-index ke z-50 agar menutupi area navbar belakang */}
