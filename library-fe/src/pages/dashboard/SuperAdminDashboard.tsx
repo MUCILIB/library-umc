@@ -20,7 +20,8 @@ import {
   GraduationCap,
   MapPin,
   Tablet,
-  Bell
+  Bell,
+  LayoutTemplate
 } from "lucide-react";
 
 import Logo from "@/assets/logo_umc.png";
@@ -44,6 +45,7 @@ import EbookSection from "@/components/dashboard/EbookSection";
 import FakultasSection from "@/components/dashboard/FakultasSection";
 import ProdiSection from "@/components/dashboard/ProdiSection";
 import LocationSection from "@/components/dashboard/LocationSection";
+import CmsSection from "@/components/dashboard/CmsSection";
 import {
   CommandDialog,
   CommandEmpty,
@@ -98,7 +100,8 @@ type ActiveMenu =
   | "recommendations"
   | "fakultas"
   | "prodi"
-  | "locations";
+  | "locations"
+  | "cms";
 
 type MenuConfig = {
   key: ActiveMenu;
@@ -137,7 +140,8 @@ const MENU_CONFIG: MenuConfig[] = [
   { key: "guests", label: "Data Pengunjung", icon: Users, group: "Pengaturan & Audit" },
   { key: "users", label: "Manajemen User", icon: Users, superAdminOnly: true, group: "Pengaturan & Audit" },
   { key: "audit", label: "Audit Log", icon: Shield, superAdminOnly: true, group: "Pengaturan & Audit" },
-  { key: "reports", label: "Laporan & Statistik", icon: BarChart3, group: "Pengaturan & Audit" }
+  { key: "reports", label: "Laporan & Statistik", icon: BarChart3, group: "Pengaturan & Audit" },
+  { key: "cms", label: "Manajemen Konten (CMS)", icon: LayoutTemplate, group: "Pengaturan & Audit" }
 ];
 
 const SIDEBAR_STORAGE_KEY = "umc-super-admin-sidebar-open";
@@ -512,6 +516,8 @@ export default function SuperAdminDashboard() {
         return <AuditLogsSection />;
       case "reports":
         return <ReportsSection />;
+      case "cms":
+        return <CmsSection />;
       case "fakultas":
         return <FakultasSection />;
       case "prodi":
