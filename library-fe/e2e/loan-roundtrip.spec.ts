@@ -37,8 +37,9 @@ async function syncMemberViaAPI(page: Page, userId: string) {
 
 // Helper: issue member card via admin API
 async function issueCardViaAPI(page: Page, userId: string) {
-  const res = await page.request.post(`${BACKEND}/api/users/${userId}/issue-card`, {
+  const res = await page.request.post(`${BACKEND}/api/members/${userId}/card/issue`, {
     headers: { "Content-Type": "application/json" },
+    data: {},
   });
   return res.json();
 }

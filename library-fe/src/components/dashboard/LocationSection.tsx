@@ -277,6 +277,7 @@ export function LocationSection() {
                 <label className="text-xs font-semibold text-foreground">Ambalan / Baris (Shelf)</label>
                 <input
                   type="text"
+                  name="shelf"
                   required
                   value={formData.shelf}
                   onChange={(e) => setFormData({ ...formData, shelf: e.target.value })}

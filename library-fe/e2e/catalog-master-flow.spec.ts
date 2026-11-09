@@ -58,7 +58,12 @@ test.describe("Super Admin & Student Profile Flows", () => {
         await locRackInput.fill("Rak E2E");
       }
 
-      await page.getByRole("button", { name: /simpan/i }).click();
+      const locShelfInput = page.locator('input[name="shelf"], input[placeholder*="Baris" i]').first();
+      if (await locShelfInput.isVisible()) {
+        await locShelfInput.fill("Baris 1");
+      }
+
+      await page.getByRole("button", { name: /tambah lokasi|simpan/i }).last().click();
       await page.waitForTimeout(2000);
       await expect(page.getByText(testLocationName)).toBeVisible({ timeout: 10000 });
     }
