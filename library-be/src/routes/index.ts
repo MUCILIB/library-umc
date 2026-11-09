@@ -21,6 +21,7 @@ import exportRoutes from "../modules/export/route/export.route";
 import { repositoryRoutes } from "../modules/repository/route/proposal.route";
 import { ebookRoutes } from "../modules/ebook/route/ebook.route";
 import { roleRoutes } from "../modules/role/route/role.route";
+import { siteSettingRoutes } from "../modules/site-setting/site-setting.route";
 
 const router = Router();
 
@@ -29,6 +30,9 @@ router.use(authRoutes);
 
 // Dynamic RBAC & Permissions Matrix
 router.use(roleRoutes);
+
+// Site Settings & CMS
+router.use(siteSettingRoutes);
 
 
 // Member

@@ -268,12 +268,20 @@ export default function RolePermissionsManager() {
   const matrixGroups: PermissionGroup[] = useMemo(() => {
     return Object.entries(groupedMenus).map(([groupName, groupMenuList]) => ({
       resource: groupName,
-      permissions: groupMenuList.flatMap((m) => [
-        { id: `${m.key}:canView`, label: `${m.label}: Lihat / Akses Menu` },
-        { id: `${m.key}:canAdd`, label: `${m.label}: Tambah Data` },
-        { id: `${m.key}:canEdit`, label: `${m.label}: Ubah Data` },
-        { id: `${m.key}:canDelete`, label: `${m.label}: Hapus Data` },
-      ]),
+      permissions: groupMenuList.flatMap((m) => {
+        if (m.key === "cms") {
+          return [
+            { id: `${m.key}:canView`, label: `${m.label}: Lihat Pengaturan Web` },
+            { id: `${m.key}:canEdit`, label: `${m.label}: Ubah & Simpan Konten` },
+          ];
+        }
+        return [
+          { id: `${m.key}:canView`, label: `${m.label}: Lihat / Akses Menu` },
+          { id: `${m.key}:canAdd`, label: `${m.label}: Tambah Data` },
+          { id: `${m.key}:canEdit`, label: `${m.label}: Ubah Data` },
+          { id: `${m.key}:canDelete`, label: `${m.label}: Hapus Data` },
+        ];
+      }),
     }));
   }, [groupedMenus]);
 

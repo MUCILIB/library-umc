@@ -7,6 +7,7 @@ import DialogUnauthorized from "@/components/DialogUnauthorized";
 import Footer from "@/components/Footer";
 import HomeBookList from "@/components/HomeBookList";
 import { authClient } from "@/utils/auth-client";
+import { useSiteSettings } from "@/hooks/useSiteSettings";
 import {
   Select,
   SelectContent,
@@ -26,6 +27,8 @@ import {
 export default function Home() {
   const navigate = useNavigate();
   const { data: session } = authClient.useSession();
+  const { settings } = useSiteSettings();
+  const heroData = settings.hero;
 
   // Redirect admin to dashboard
   useEffect(() => {
@@ -78,7 +81,7 @@ export default function Home() {
         <div
           className="relative w-full min-h-[100dvh] sm:min-h-[580px] lg:min-h-[640px] flex flex-col justify-center pt-20 pb-12 sm:pt-28 sm:pb-20"
           style={{
-            backgroundImage: `linear-gradient(to bottom right, rgba(28, 7, 10, 0.94) 0%, rgba(28, 7, 10, 0.78) 50%, rgba(28, 7, 10, 0.40) 100%), url(${Background})`,
+            backgroundImage: `linear-gradient(to bottom right, rgba(28, 7, 10, 0.94) 0%, rgba(28, 7, 10, 0.78) 50%, rgba(28, 7, 10, 0.40) 100%), url(${heroData.backgroundImage || Background})`,
             backgroundSize: "cover",
             backgroundPosition: "center",
             backgroundRepeat: "no-repeat",
@@ -87,15 +90,19 @@ export default function Home() {
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
             <div className="max-w-3xl text-left">
               {/* Heading */}
-              <h1 className="text-2xl xs:text-3xl sm:text-4xl md:text-5xl lg:text-[54px] font-black text-white leading-[1.18] sm:leading-[1.12] tracking-tight">
-                Perpustakaan
-                <br />
-                Universitas Muhammadiyah Cirebon
+              <h1 className="text-2xl xs:text-3xl sm:text-4xl md:text-5xl lg:text-[54px] font-black text-white leading-[1.18] sm:leading-[1.12] tracking-tight whitespace-pre-line">
+                {heroData.title || (
+                  <>
+                    Perpustakaan
+                    <br />
+                    Universitas Muhammadiyah Cirebon
+                  </>
+                )}
               </h1>
 
               {/* Subtitle */}
               <p className="text-xs sm:text-base md:text-lg text-white/85 font-normal mt-2 sm:mt-4 max-w-xl">
-                Akses Koleksi buku, jurnal, dan e-book resmi UMC
+                {heroData.subtitle || "Akses Koleksi buku, jurnal, dan e-book resmi UMC"}
               </p>
 
               {/* Search Bar Capsule */}
@@ -106,7 +113,7 @@ export default function Home() {
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   onKeyDown={handleKeyPress}
-                  placeholder="Cari judul, penulis, ISBN..."
+                  placeholder={heroData.searchPlaceholder || "Cari judul, penulis, ISBN..."}
                   className="w-full bg-transparent border-0 outline-none focus:outline-none focus:ring-0 text-slate-800 text-xs sm:text-sm md:text-base placeholder:text-slate-400 px-1 sm:px-2 min-w-0"
                 />
 
@@ -139,7 +146,10 @@ export default function Home() {
               {/* Contoh Pencarian Chips */}
               <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 mt-4 sm:mt-5 text-xs sm:text-sm text-white/90">
                 <span className="text-white/80 font-normal text-[11px] sm:text-xs">Contoh:</span>
-                {["Pemrograman", "Manajemen", "Algoritma", "Jurnal"].map((tag) => (
+                {(heroData.quickChips && heroData.quickChips.length > 0
+                  ? heroData.quickChips
+                  : ["Pemrograman", "Manajemen", "Algoritma", "Jurnal"]
+                ).map((tag) => (
                   <button
                     key={tag}
                     type="button"

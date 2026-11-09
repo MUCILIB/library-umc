@@ -164,7 +164,7 @@ export function getAuthHeaders(): Record<string, string> {
 // HTTP Client
 // ==========================================
 
-async function apiFetch<T>(
+export async function apiFetch<T>(
   path: string,
   options: RequestInit = {}
 ): Promise<ApiSuccessResponse<T>> {
@@ -746,10 +746,20 @@ export const roleApi = {
   delete: (id: string) =>
     apiFetch<null>(`/api/roles/${id}`, { method: "DELETE" }),
   updatePermissions: (id: string, permissions: PermissionItem[]) =>
-    apiFetch<RoleDetail>(`/api/roles/${id}/permissions`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ permissions }),
-    }),
-};
+  apiFetch<RoleDetail>(`/api/roles/${id}/permissions`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ permissions }),
+  }),
+  };
+
+  export { siteSettingApi } from "./siteSettingApi";
+  export type {
+  AllSiteSettings,
+  BrandingSettings,
+  BannerSettings,
+  HeroSettings,
+  LocationSettings,
+  FooterSettings,
+  } from "./siteSettingApi";
 

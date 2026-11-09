@@ -7,8 +7,13 @@ import {
   IconBrandX,
   IconBrandYoutubeFilled,
 } from "@tabler/icons-react";
+import { useSiteSettings } from "@/hooks/useSiteSettings";
 
 const Footer = () => {
+  const { settings } = useSiteSettings();
+  const footerData = settings.footer;
+  const brandingData = settings.branding;
+
   return (
     <footer className="bg-[#8E0C17] text-white pt-12 sm:pt-16 pb-6 px-4 sm:px-8 lg:px-14 w-full">
       <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 sm:gap-10 lg:gap-12">
@@ -16,7 +21,7 @@ const Footer = () => {
         <div className="flex flex-col md:order-1 lg:order-1">
           <div className="flex items-center gap-3.5 sm:gap-4">
             <img
-              src={LogoUmc}
+              src={brandingData.logoUrl || LogoUmc}
               alt="Logo Universitas Muhammadiyah Cirebon"
               className="w-14 h-14 sm:w-16 sm:h-16 shrink-0 object-contain"
             />
@@ -27,118 +32,110 @@ const Footer = () => {
                 Muhammadiyah Cirebon
               </h3>
               <p className="font-motto text-white text-lg sm:text-xl tracking-wide leading-tight mt-0.5 opacity-95">
-                Unggul, Islami, Mandiri &amp; Profesional
+                {footerData.motto || "Unggul, Islami, Mandiri & Profesional"}
               </p>
             </div>
           </div>
 
-          {/* Ikon Media Sosial (Sesuai Desain Referensi) */}
+          {/* Ikon Media Sosial Dinamis */}
           <div className="flex items-center gap-4 mt-6 text-white">
-            <a
-              href="https://facebook.com/umc"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-white hover:opacity-80 transition-opacity"
-              aria-label="Facebook"
-            >
-              <IconBrandFacebookFilled size={20} />
-            </a>
-            <a
-              href="https://instagram.com/umc"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-white hover:opacity-80 transition-opacity"
-              aria-label="Instagram"
-            >
-              <IconBrandInstagram size={20} stroke={2} />
-            </a>
-            <a
-              href="https://twitter.com/umc"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-white hover:opacity-80 transition-opacity"
-              aria-label="Twitter / X"
-            >
-              <IconBrandX size={20} stroke={2} />
-            </a>
-            <a
-              href="https://youtube.com/umc"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-white hover:opacity-80 transition-opacity"
-              aria-label="YouTube"
-            >
-              <IconBrandYoutubeFilled size={20} />
-            </a>
-            <a
-              href="https://wa.me/6281234567890"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-white hover:opacity-80 transition-opacity"
-              aria-label="WhatsApp"
-            >
-              <IconBrandWhatsappFilled size={20} />
-            </a>
+            {footerData.socialMedia?.facebook && (
+              <a
+                href={footerData.socialMedia.facebook}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-white hover:opacity-80 transition-opacity"
+                aria-label="Facebook"
+              >
+                <IconBrandFacebookFilled size={20} />
+              </a>
+            )}
+            {footerData.socialMedia?.instagram && (
+              <a
+                href={footerData.socialMedia.instagram}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-white hover:opacity-80 transition-opacity"
+                aria-label="Instagram"
+              >
+                <IconBrandInstagram size={20} stroke={2} />
+              </a>
+            )}
+            {footerData.socialMedia?.twitter && (
+              <a
+                href={footerData.socialMedia.twitter}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-white hover:opacity-80 transition-opacity"
+                aria-label="Twitter / X"
+              >
+                <IconBrandX size={20} stroke={2} />
+              </a>
+            )}
+            {footerData.socialMedia?.youtube && (
+              <a
+                href={footerData.socialMedia.youtube}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-white hover:opacity-80 transition-opacity"
+                aria-label="YouTube"
+              >
+                <IconBrandYoutubeFilled size={20} />
+              </a>
+            )}
+            {footerData.socialMedia?.whatsapp && (
+              <a
+                href={footerData.socialMedia.whatsapp}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-white hover:opacity-80 transition-opacity"
+                aria-label="WhatsApp"
+              >
+                <IconBrandWhatsappFilled size={20} />
+              </a>
+            )}
           </div>
         </div>
 
-        {/* Kolom 2: Lembaga dan Pusat (2 Kolom Berdampingan pada Layar Tablet) */}
+        {/* Kolom 2: Lembaga dan Pusat */}
         <div className="md:col-span-2 lg:col-span-1 md:order-3 lg:order-2">
           <h4 className="font-bold text-sm sm:text-base text-white mb-5 sm:mb-6">
             Lembaga dan Pusat
           </h4>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-x-8 gap-y-3.5 sm:gap-y-4 text-xs sm:text-[13px] font-bold text-white">
-            {/* Kolom Kiri: Lembaga */}
             <ul className="space-y-3.5 sm:space-y-4">
-              <li>
-                <a href="#" className="hover:underline">
-                  Lembaga Penjamin Mutu (LPM) UMC
-                </a>
-              </li>
-              <li>
-                <a href="#" className="hover:underline">
-                  Lembaga Pengembangan Kurikulum dan Pembelajaran
-                </a>
-              </li>
-              <li>
-                <a href="#" className="hover:underline">
-                  Lembaga Penelitian dan Pengabdian Masyarakat (LPPM)
-                </a>
-              </li>
-              <li>
-                <a href="#" className="hover:underline">
-                  Lembaga Pengembangan dan Kajian Al-Islam (LPAIK)
-                </a>
-              </li>
-              <li>
-                <a href="#" className="hover:underline">
-                  Lembaga Pengembangan Unit Usaha (LPUU)
-                </a>
-              </li>
-            </ul>
-
-            {/* Kolom Kanan: Pusat & Biro */}
-            <ul className="space-y-3.5 sm:space-y-4">
-              <li>
-                <a href="#" className="hover:underline">
-                  Kantor Urusan Kerjasama dan Internasional (KUI)
-                </a>
-              </li>
-              <li>
-                <a href="#" className="hover:underline">
-                  Career Development Center (CDC)
-                </a>
-              </li>
-              <li>
-                <a href="#" className="hover:underline">
-                  Alumni UMC
-                </a>
-              </li>
-              <li>
-                <a href="#" className="hover:underline">
-                  Kemahasiswaan UMC
-                </a>
-              </li>
+              {footerData.campusLinks && footerData.campusLinks.length > 0 ? (
+                footerData.campusLinks.map((link, idx) => (
+                  <li key={idx}>
+                    <a
+                      href={link.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="hover:underline"
+                    >
+                      {link.title}
+                    </a>
+                  </li>
+                ))
+              ) : (
+                <>
+                  <li>
+                    <a href="https://lpm.umc.ac.id" className="hover:underline">
+                      Lembaga Penjamin Mutu (LPM) UMC
+                    </a>
+                  </li>
+                  <li>
+                    <a href="https://lppm.umc.ac.id" className="hover:underline">
+                      Lembaga Penelitian dan Pengabdian Masyarakat (LPPM)
+                    </a>
+                  </li>
+                  <li>
+                    <a href="https://lpaik.umc.ac.id" className="hover:underline">
+                      Lembaga Pengembangan dan Kajian Al-Islam (LPAIK)
+                    </a>
+                  </li>
+                </>
+              )}
             </ul>
           </div>
         </div>
@@ -149,24 +146,23 @@ const Footer = () => {
             Hubungi Kami
           </h4>
           <div className="space-y-4 text-xs sm:text-[13px]">
-            <div>
-              <p className="font-bold text-white">Kampus 1 :</p>
-              <p className="text-white leading-relaxed mt-1">
-                Jl. Tuparev No. 70 Cirebon No. Telp. (0231) 209608, 209617
-              </p>
-            </div>
-            <div>
-              <p className="font-bold text-white">Kampus 2 :</p>
-              <p className="text-white leading-relaxed mt-1">
-                Kampus Utama Jl. Watubelah No. 40 – Sumber No. Telp. (0231) 209608, 209617
-              </p>
-            </div>
-            <div>
-              <p className="font-bold text-white">Kampus 3 :</p>
-              <p className="text-white leading-relaxed mt-1">
-                Jl. Watubelah – Sumber No. Telp. (0231) 209608, 209617
-              </p>
-            </div>
+            {footerData.campuses && footerData.campuses.length > 0 ? (
+              footerData.campuses.map((c, idx) => (
+                <div key={idx}>
+                  <p className="font-bold text-white">{c.name} :</p>
+                  <p className="text-white leading-relaxed mt-1">
+                    {c.address} {c.phone ? `No. Telp. ${c.phone}` : ""}
+                  </p>
+                </div>
+              ))
+            ) : (
+              <div>
+                <p className="font-bold text-white">Kampus 1 (Pusat) :</p>
+                <p className="text-white leading-relaxed mt-1">
+                  Jl. Tuparev No. 70 Cirebon No. Telp. (0231) 209608, 209617
+                </p>
+              </div>
+            )}
           </div>
         </div>
       </div>

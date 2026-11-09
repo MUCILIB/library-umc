@@ -882,4 +882,22 @@ export const rolePermissionRelations = relations(rolePermissions, ({ one }) => (
   role: one(roles, { fields: [rolePermissions.roleId], references: [roles.id] })
 }));
 
+// ==========================================
+// 13. SITE SETTINGS & CMS
+// ==========================================
+
+export const siteSettings = pgTable("site_settings", {
+  key: varchar("key", { length: 100 }).primaryKey(),
+  value: jsonb("value").notNull(),
+  description: text("description"),
+  updatedBy: varchar("updated_by", { length: 50 }).references(() => Users.id, { onDelete: "set null" }),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow()
+});
+
+export const siteSettingsRelations = relations(siteSettings, ({ one }) => ({
+  updater: one(Users, { fields: [siteSettings.updatedBy], references: [Users.id] })
+}));
+
+
 

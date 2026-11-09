@@ -135,6 +135,12 @@ export const SIDEBAR_MENUS: SidebarMenuItem[] = [
     group: "Pengaturan & Audit",
     description: "Laporan analitik sirkulasi, pengunjung, dan keterlambatan",
   },
+  {
+    key: "cms",
+    label: "Manajemen Konten (CMS)",
+    group: "Pengaturan & Audit",
+    description: "Kelola banner pengumuman, favicon, identitas web, hero section, footer, dan peta lokasi",
+  },
 ];
 
 export const SYSTEM_ROLE_IDS = [
