@@ -10,7 +10,5 @@
   "author": "",
   "license": "ISC",
   "type": "module",
-  "devDependencies": {
-    "cypress": "^15.11.0"
-  }
+  "devDependencies": {}
 }
