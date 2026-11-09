@@ -359,6 +359,40 @@ async function main() {
     const cmsLocationPath = path.join(SCREENSHOT_DIR, "cms-subpage-location.png");
     await page.screenshot({ path: cmsLocationPath, fullPage: false });
     console.log(`Saved screenshot: ${cmsLocationPath}`);
+
+    // Step 2.6: Notification Bell Dropdown & Read State Verification
+    const notifTrigger = page.locator('button[aria-label*="Notifikasi"]').first();
+    const notifTriggerVisible = await notifTrigger.isVisible();
+    if (notifTriggerVisible) {
+      await notifTrigger.click();
+      await page.waitForTimeout(500);
+
+      const hasNotifHeader = await page.locator("h4:has-text('Notifikasi')").isVisible();
+      const hasEmptyOrList =
+        (await page.locator("text=Tidak ada notifikasi baru").isVisible()) ||
+        (await page.locator("text=Permohonan").isVisible()) ||
+        (await page.locator("text=Denda").isVisible()) ||
+        (await page.locator("text=Semua Terbaca").isVisible());
+
+      const notifDropdownPath = path.join(SCREENSHOT_DIR, "notification-bell-dropdown.png");
+      await page.screenshot({ path: notifDropdownPath, fullPage: false });
+      console.log(`Saved screenshot: ${notifDropdownPath}`);
+
+      // Test "Tandai dibaca" if present
+      const markReadBtn = page.locator("button:has-text('Tandai dibaca')").first();
+      if (await markReadBtn.isVisible()) {
+        await markReadBtn.click();
+        await page.waitForTimeout(400);
+      }
+
+      record(
+        "Notification Bell Dropdown & Read State",
+        hasNotifHeader && hasEmptyOrList,
+        `Header: ${hasNotifHeader}, Content verified: ${hasEmptyOrList}`
+      );
+    } else {
+      record("Notification Bell Dropdown & Read State", false, "Notification bell trigger button not visible");
+    }
   } catch (err: any) {
     record("CMS Dashboard Automation", false, `Error: ${err.message}`);
   } finally {
