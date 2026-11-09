@@ -165,3 +165,4 @@ export class StorageService {
 
 export const storageService = new StorageService();
 export const coverStorageService = new StorageService("covers");
+export const cmsStorageService = new StorageService("cms");

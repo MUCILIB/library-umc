@@ -71,7 +71,7 @@ export const DEFAULT_SITE_SETTINGS: AllSiteSettings = {
     siteTitle: "Perpustakaan Universitas Muhammadiyah Cirebon",
     siteTagline: "Portal Riset & Sumber Belajar Digital",
     faviconUrl: "/favicon.ico",
-    logoUrl: "/assets/logo_umc.png",
+    logoUrl: "",
     metaDescription: "Layanan perpustakaan digital resmi Universitas Muhammadiyah Cirebon.",
   },
   banner: {
@@ -142,4 +142,12 @@ export const siteSettingApi = {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ value }),
     }),
+  uploadAsset: (file: File) => {
+    const formData = new FormData();
+    formData.append("file", file);
+    return apiFetch<{ url: string; key: string; filename: string }>("/api/site-settings/upload-asset", {
+      method: "POST",
+      body: formData,
+    });
+  },
 };

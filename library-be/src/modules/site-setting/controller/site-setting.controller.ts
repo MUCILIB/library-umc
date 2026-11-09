@@ -1,6 +1,10 @@
 import { Request, Response, NextFunction } from "express";
+import path from "path";
+import crypto from "crypto";
 import { SiteSettingService } from "../service/site-setting.service";
 import { VALID_SETTING_KEYS, type ValidSettingKey } from "../site-setting.constants";
+import { cmsStorageService } from "../../repository/service/storage.service";
+import { sendSuccess, sendError } from "../../../utils/api-utils";
 
 export class SiteSettingController {
   static async getAllSettings(req: Request, res: Response, next: NextFunction) {
@@ -62,6 +66,85 @@ export class SiteSettingController {
         message: `Pengaturan ${key} berhasil diperbarui`,
         data: updated,
       });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async uploadAsset(req: Request, res: Response, next: NextFunction) {
+    try {
+      if (!req.file) {
+        return sendError(res, "Berkas gambar wajib diunggah", 400);
+      }
+
+      const originalExt = path.extname(req.file.originalname).toLowerCase();
+      const safeExt = [".jpg", ".jpeg", ".png", ".webp", ".svg", ".ico"].includes(originalExt)
+        ? originalExt
+        : ".png";
+
+      const filename = `cms-${Date.now()}-${crypto.randomBytes(4).toString("hex")}${safeExt}`;
+      const s3Key = await cmsStorageService.save(
+        filename,
+        req.file.buffer,
+        req.file.mimetype || "image/png"
+      );
+
+      return sendSuccess(
+        res,
+        "Berkas gambar berhasil diunggah ke S3",
+        {
+          url: `/api/site-settings/assets/${filename}`,
+          key: s3Key,
+          filename,
+        },
+        201
+      );
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async getAsset(req: Request, res: Response, next: NextFunction) {
+    try {
+      const rawParam = req.params.filename as string;
+
+      if (!rawParam || rawParam.includes("..") || rawParam.includes("/") || rawParam.includes("\\")) {
+        return sendError(res, "Nama berkas gambar tidak valid", 400);
+      }
+
+      const filename = path.basename(rawParam);
+      if (!filename || filename === ".") {
+        return sendError(res, "Nama berkas gambar tidak valid", 400);
+      }
+
+      let buffer: Buffer | null = null;
+      try {
+        buffer = await cmsStorageService.read(`library/cms/${filename}`);
+      } catch {
+        try {
+          buffer = await cmsStorageService.read(filename);
+        } catch {
+          buffer = null;
+        }
+      }
+
+      if (!buffer) {
+        return sendError(res, "Berkas gambar tidak ditemukan di penyimpanan server", 404);
+      }
+
+      const ext = path.extname(filename).toLowerCase();
+      const mimeMap: Record<string, string> = {
+        ".png": "image/png",
+        ".jpg": "image/jpeg",
+        ".jpeg": "image/jpeg",
+        ".webp": "image/webp",
+        ".svg": "image/svg+xml",
+        ".ico": "image/x-icon",
+      };
+
+      res.setHeader("Content-Type", mimeMap[ext] || "image/png");
+      res.setHeader("Cache-Control", "public, max-age=86400, stale-while-revalidate=604800");
+      return res.status(200).send(buffer);
     } catch (error) {
       next(error);
     }

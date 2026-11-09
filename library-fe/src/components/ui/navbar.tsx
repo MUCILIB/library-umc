@@ -168,7 +168,10 @@ const Navbar = () => {
           <img
             src={settings.branding.logoUrl || LogoUmc}
             alt="UMC Library Logo"
-            className="w-10 h-10 rounded-full sm:w-12 sm:h-12"
+            className="w-10 h-10 rounded-full sm:w-12 sm:h-12 object-contain"
+            onError={(e) => {
+              (e.currentTarget as HTMLImageElement).src = LogoUmc;
+            }}
           />
           <div className="text-sm font-bold text-foreground">
             <span className="block">UMC</span>
@@ -404,9 +407,12 @@ const Navbar = () => {
               }}
             >
               <img
-                src={LogoUmc}
+                src={settings.branding.logoUrl || LogoUmc}
                 alt="UMC Library Logo"
-                className="w-10 h-10 rounded-full"
+                className="w-10 h-10 rounded-full object-contain"
+                onError={(e) => {
+                  (e.currentTarget as HTMLImageElement).src = LogoUmc;
+                }}
               />
               <div className="text-sm font-bold text-foreground">
                 <span className="block">UMC</span>

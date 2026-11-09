@@ -24,6 +24,9 @@ const Footer = () => {
               src={brandingData.logoUrl || LogoUmc}
               alt="Logo Universitas Muhammadiyah Cirebon"
               className="w-14 h-14 sm:w-16 sm:h-16 shrink-0 object-contain"
+              onError={(e) => {
+                (e.currentTarget as HTMLImageElement).src = LogoUmc;
+              }}
             />
             <div>
               <h3 className="font-bold text-base sm:text-lg text-white leading-tight">
