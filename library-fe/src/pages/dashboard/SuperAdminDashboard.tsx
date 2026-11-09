@@ -20,7 +20,6 @@ import {
   GraduationCap,
   MapPin,
   Tablet,
-  Bell,
   LayoutTemplate,
   ChevronDown,
   Megaphone,
@@ -49,6 +48,7 @@ import FakultasSection from "@/components/dashboard/FakultasSection";
 import ProdiSection from "@/components/dashboard/ProdiSection";
 import LocationSection from "@/components/dashboard/LocationSection";
 import CmsSection from "@/components/dashboard/CmsSection";
+import { NotificationBellDropdown } from "@/components/dashboard/NotificationBellDropdown";
 import {
   CommandDialog,
   CommandEmpty,
@@ -526,7 +526,7 @@ export default function SuperAdminDashboard() {
     refetch: refetchGuests
   } = useGuestsData(activeMenu === "guests");
 
-  const { badges } = useDashboardBadges();
+  const { badges, refetch: refetchBadges } = useDashboardBadges();
 
   const activeLoading = useMemo(() => {
     if (activeMenu === "dashboard") return statsLoading;
@@ -705,30 +705,11 @@ export default function SuperAdminDashboard() {
           </button>
 
           <div className="ml-auto flex items-center gap-3 sm:gap-4">
-            <button
-              type="button"
-              onClick={() => {
-                if (badges.returnApprovals > 0) setActiveMenu("returnApprovals");
-                else if (badges.loans > 0) setActiveMenu("loans");
-                else if (badges.cardApprovals > 0) setActiveMenu("cardApprovals");
-                else if (badges.repository > 0) setActiveMenu("repository");
-                else if (badges.recommendations > 0) setActiveMenu("recommendations");
-                else setIsCommandOpen(true);
-              }}
-              title={
-                badges.total > 0
-                  ? `${badges.total} permintaan menunggu persetujuan`
-                  : "Tidak ada permintaan menunggu"
-              }
-              className="relative flex size-9 items-center justify-center rounded-xl border border-border bg-card text-muted-foreground hover:bg-muted hover:text-foreground transition-colors cursor-pointer"
-            >
-              <Bell className="size-4" />
-              {badges.total > 0 && (
-                <span className="absolute -top-1 -right-1 flex h-4 min-w-4 px-1 items-center justify-center rounded-full bg-rose-600 text-white font-extrabold text-[9px] shadow-sm ring-2 ring-background animate-in zoom-in-75 duration-200">
-                  {badges.total > 99 ? "99+" : badges.total}
-                </span>
-              )}
-            </button>
+            <NotificationBellDropdown
+              badges={badges}
+              onSelectMenu={(menuKey) => setActiveMenu(menuKey as ActiveMenu)}
+              onRefresh={refetchBadges}
+            />
             <ThemeToggle />
             <div className="flex items-center gap-3 border-l border-border pl-3 sm:pl-4">
               <div className="hidden text-right sm:block">
