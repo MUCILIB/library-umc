@@ -251,6 +251,7 @@ export function LocationSection() {
                 <label className="text-xs font-semibold text-foreground">Ruangan</label>
                 <input
                   type="text"
+                  name="room"
                   required
                   value={formData.room}
                   onChange={(e) => setFormData({ ...formData, room: e.target.value })}
@@ -263,6 +264,7 @@ export function LocationSection() {
                 <label className="text-xs font-semibold text-foreground">Nomor / Nama Rak</label>
                 <input
                   type="text"
+                  name="rack"
                   required
                   value={formData.rack}
                   onChange={(e) => setFormData({ ...formData, rack: e.target.value })}
@@ -275,6 +277,7 @@ export function LocationSection() {
                 <label className="text-xs font-semibold text-foreground">Ambalan / Baris (Shelf)</label>
                 <input
                   type="text"
+                  name="shelf"
                   required
                   value={formData.shelf}
                   onChange={(e) => setFormData({ ...formData, shelf: e.target.value })}
@@ -295,6 +298,7 @@ export function LocationSection() {
                 <button
                   type="submit"
                   disabled={submitting}
+                  onClick={handleSubmit}
                   className="inline-flex h-9 items-center gap-2 rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
                 >
                   {submitting && <Loader2 className="size-4 animate-spin" />}

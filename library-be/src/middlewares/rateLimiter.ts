@@ -15,10 +15,13 @@ import auditService from "../modules/audit/service/audit.service";
  * justru akan memunculkan ValidationError: ERR_ERL_KEY_GEN_IPV6.
  */
 
+const isTestOrCI = process.env.NODE_ENV === "test" || Boolean(process.env.CI);
+
 // 1. STRICT - Authentication endpoints (login, register, password reset)
 export const authLimiter = rateLimit({
   windowMs: 10 * 60 * 1000, // 10 menit
   limit: 5, // maks 5 request per windowMs
+  skip: () => isTestOrCI,
   message: {
     status: 429,
     message:
@@ -54,6 +57,7 @@ export const authLimiter = rateLimit({
 export const publicApiLimiter = rateLimit({
   windowMs: 10 * 60 * 1000, // 10 menit
   limit: 300, // maks 100 request per windowMs
+  skip: () => isTestOrCI,
   message: {
     status: 429,
     message: "Terlalu banyak permintaan dari IP ini. Silakan coba lagi nanti.",
@@ -67,6 +71,7 @@ export const publicApiLimiter = rateLimit({
 export const generalLimiter = rateLimit({
   windowMs: 1 * 60 * 1000, // 1 menit
   limit: 500, // maks 300 request per menit
+  skip: () => isTestOrCI,
   message: {
     status: 429,
     message:
@@ -80,6 +85,7 @@ export const generalLimiter = rateLimit({
 export const strictLimiter = rateLimit({
   windowMs: 60 * 60 * 1000, // 1 jam
   limit: 10, // maks 10 request per jam
+  skip: () => isTestOrCI,
   message: {
     status: 429,
     message: "Terlalu banyak operasi sensitif. Silakan coba lagi dalam 1 jam.",
@@ -92,6 +98,7 @@ export const strictLimiter = rateLimit({
 export const guestCheckinLimiter = rateLimit({
   windowMs: 1 * 60 * 1000, // 1 menit
   limit: 60, // maks 60 check-in per menit per IP
+  skip: () => isTestOrCI,
   message: {
     status: 429,
     message: "Terlalu banyak permintaan presensi. Silakan coba sesaat lagi.",

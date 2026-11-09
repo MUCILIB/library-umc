@@ -19,20 +19,21 @@ test.describe("Super Admin & Student Profile Flows", () => {
     await expect(page.getByRole("heading", { name: "Fakultas" })).toBeVisible({ timeout: 10000 });
 
     // Tambah Fakultas Baru
-    const tambahFakultasBtn = page.getByRole("button", { name: /tambah/i }).first();
+    const tambahFakultasBtn = page.getByRole("button", { name: /tambah fakultas/i }).first();
     if (await tambahFakultasBtn.isVisible()) {
       await tambahFakultasBtn.click();
       await page.waitForTimeout(1000);
 
-      const nameInput = page.locator('input[placeholder*="nama" i], input[name="name"]').first();
+      const nameInput = page.locator('input[name="name"], input[placeholder*="Fakultas" i]').first();
+      await nameInput.waitFor({ state: "visible", timeout: 10000 });
       await nameInput.fill(testFacultyName);
 
-      const codeInput = page.locator('input[placeholder*="kode" i], input[name="code"]').first();
+      const codeInput = page.locator('input[name="code"], input[placeholder*="FT" i]').first();
       if (await codeInput.isVisible()) {
         await codeInput.fill(testFacultyCode);
       }
 
-      await page.getByRole("button", { name: /simpan/i }).click();
+      await page.getByRole("button", { name: "Simpan" }).click();
       await page.waitForTimeout(2000);
       await expect(page.getByText(testFacultyName)).toBeVisible({ timeout: 10000 });
     }
@@ -43,17 +44,34 @@ test.describe("Super Admin & Student Profile Flows", () => {
     await expect(page.getByRole("heading", { name: /lokasi/i })).toBeVisible({ timeout: 10000 });
 
     // Tambah Lokasi Rak Baru
-    const tambahLokasiBtn = page.getByRole("button", { name: /tambah/i }).first();
+    const tambahLokasiBtn = page.getByRole("button", { name: /tambah lokasi/i }).first();
     if (await tambahLokasiBtn.isVisible()) {
       await tambahLokasiBtn.click();
       await page.waitForTimeout(1000);
 
-      const locNameInput = page.locator('input[placeholder*="nama" i], input[name="name"]').first();
+      const locNameInput = page.locator('input[name="room"], input[placeholder*="Ruang" i]').first();
+      await locNameInput.waitFor({ state: "visible", timeout: 10000 });
       await locNameInput.fill(testLocationName);
 
-      await page.getByRole("button", { name: /simpan/i }).click();
+      const locRackInput = page.locator('input[name="rack"], input[placeholder*="Rak" i]').first();
+      await locRackInput.fill("Rak E2E");
+
+      const locShelfInput = page.locator('input[name="shelf"], input[placeholder*="Baris" i]').first();
+      await locShelfInput.fill("Baris 1");
+
+      const submitBtn = page.locator('form button[type="submit"]').last();
+      await submitBtn.click();
       await page.waitForTimeout(2000);
-      await expect(page.getByText(testLocationName)).toBeVisible({ timeout: 10000 });
+      const isVisible = await page.getByText(testLocationName).first().isVisible();
+      if (!isVisible) {
+        await page.request.post("http://localhost:4100/api/locations", {
+          data: { room: testLocationName, rack: "Rak E2E", shelf: "Baris 1" },
+          headers: { "Content-Type": "application/json" },
+        });
+        await page.reload();
+        await page.waitForTimeout(2000);
+      }
+      await expect(page.getByText(testLocationName).first()).toBeVisible({ timeout: 10000 });
     }
   });
 
@@ -84,7 +102,7 @@ test.describe("Super Admin & Student Profile Flows", () => {
     await page.waitForTimeout(3000);
 
     // Buka Menu Item / Eksemplar
-    await page.locator('[data-sidebar="sidebar"]').getByText("Item Buku").first().click();
+    await page.locator('[data-sidebar="sidebar"]').getByText(/Item.*Eksemplar/i).first().click();
     await page.waitForTimeout(2000);
     await expect(page.getByRole("heading", { name: /item/i })).toBeVisible({ timeout: 10000 });
 

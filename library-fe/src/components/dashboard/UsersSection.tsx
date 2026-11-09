@@ -239,7 +239,17 @@ export default function UsersSection() {
           const name = (u.name || "").toLowerCase();
           const email = (u.email || "").toLowerCase();
           const role = (u.role || "").toLowerCase();
-          return name.includes(q) || email.includes(q) || role.includes(q);
+          const nim = (u.nimNidn || "").toLowerCase();
+          const faculty = (u.faculty || "").toLowerCase();
+          const phone = (u.phone || "").toLowerCase();
+          return (
+            name.includes(q) ||
+            email.includes(q) ||
+            role.includes(q) ||
+            nim.includes(q) ||
+            faculty.includes(q) ||
+            phone.includes(q)
+          );
         });
 
     return [...baseList].sort(
@@ -769,12 +779,29 @@ export default function UsersSection() {
                               </AvatarFallback>
                             </Avatar>
                             <div>
-                              <p className="text-sm font-semibold text-foreground leading-tight">
-                                {user.name || "-"}
-                              </p>
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                <p className="text-sm font-semibold text-foreground leading-tight">
+                                  {user.name || "-"}
+                                </p>
+                                {user.nimNidn && user.nimNidn !== "-" && (
+                                  <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-mono font-medium bg-muted text-muted-foreground border border-border">
+                                    {user.nimNidn}
+                                  </span>
+                                )}
+                              </div>
                               <p className="text-xs font-medium text-muted-foreground mt-0.5">
                                 {user.email}
+                                {user.phone && (
+                                  <span className="ml-1.5 text-[11px] text-muted-foreground/80">
+                                    • {user.phone}
+                                  </span>
+                                )}
                               </p>
+                              {user.faculty && user.faculty !== "-" && (
+                                <p className="text-[11px] text-muted-foreground/75 mt-0.5 truncate max-w-[220px]">
+                                  {user.faculty}
+                                </p>
+                              )}
                             </div>
                           </div>
                         </TableCell>
