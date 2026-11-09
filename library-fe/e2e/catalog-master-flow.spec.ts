@@ -24,15 +24,16 @@ test.describe("Super Admin & Student Profile Flows", () => {
       await tambahFakultasBtn.click();
       await page.waitForTimeout(1000);
 
-      const nameInput = page.locator('input[placeholder*="nama" i], input[name="name"]').first();
+      const nameInput = page.locator('input[name="name"], input[placeholder*="Fakultas" i]').first();
+      await nameInput.waitFor({ state: "visible", timeout: 10000 });
       await nameInput.fill(testFacultyName);
 
-      const codeInput = page.locator('input[placeholder*="kode" i], input[name="code"]').first();
+      const codeInput = page.locator('input[name="code"], input[placeholder*="FT" i]').first();
       if (await codeInput.isVisible()) {
         await codeInput.fill(testFacultyCode);
       }
 
-      await page.getByRole("button", { name: /simpan/i }).click();
+      await page.getByRole("button", { name: "Simpan" }).click();
       await page.waitForTimeout(2000);
       await expect(page.getByText(testFacultyName)).toBeVisible({ timeout: 10000 });
     }

@@ -159,6 +159,7 @@ export default function FakultasSection() {
           <div>
             <label className="mb-1 block text-xs font-semibold text-foreground">Nama Fakultas *</label>
             <input
+              name="name"
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
               placeholder="Contoh: Fakultas Teknik"
@@ -168,6 +169,7 @@ export default function FakultasSection() {
           <div>
             <label className="mb-1 block text-xs font-semibold text-foreground">Kode Fakultas</label>
             <input
+              name="code"
               value={formData.code}
               onChange={(e) => setFormData({ ...formData, code: e.target.value })}
               placeholder="Contoh: FT (opsional)"
