@@ -445,6 +445,7 @@ export default function SuperAdminDashboard() {
   }, []);
 
   const [searchTerm, setSearchTerm] = useState("");
+  const [selectedBibForItem, setSelectedBibForItem] = useState<{ id: string; title: string } | null>(null);
   const [activeMenu, setActiveMenuState] = useState<ActiveMenu>(() => {
     if (isMenuValid(tabParam)) {
       return tabParam;
@@ -454,6 +455,9 @@ export default function SuperAdminDashboard() {
 
   const setActiveMenu = useCallback(
     (menu: ActiveMenu) => {
+      if (menu !== "items") {
+        setSelectedBibForItem(null);
+      }
       setActiveMenuState(menu);
       setSearchParams(
         (prev) => {
@@ -576,10 +580,20 @@ export default function SuperAdminDashboard() {
           <BibliographySection
             searchTerm={searchTerm}
             onSearchChange={setSearchTerm}
+            onViewItems={(bib) => {
+              setSelectedBibForItem({ id: bib.id, title: bib.title });
+              setActiveMenu("items");
+            }}
           />
         );
       case "items":
-        return <ItemSection />;
+        return (
+          <ItemSection
+            key={selectedBibForItem ? `item-bib-${selectedBibForItem.id}` : "item-all"}
+            initialBibliographyId={selectedBibForItem?.id}
+            initialSearchTerm={selectedBibForItem ? selectedBibForItem.title : ""}
+          />
+        );
       case "repository":
         return <RepositorySection />;
       case "ebooks":

@@ -29,15 +29,26 @@ import {
 } from "@/components/ui/select";
 import { API_BASE_URL } from "@/utils/api-config";
 
-export default function ItemSection() {
+interface ItemSectionProps {
+  initialSearchTerm?: string;
+  initialBibliographyId?: string;
+}
+
+export default function ItemSection({
+  initialSearchTerm = "",
+  initialBibliographyId = "",
+}: ItemSectionProps = {}) {
   const [items, setItems] = useState<Item[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalItems, setTotalItems] = useState(0);
-  const [searchInput, setSearchInput] = useState("");
-  const [searchTerm, setSearchTerm] = useState("");
+  const [searchInput, setSearchInput] = useState(initialSearchTerm);
+  const [searchTerm, setSearchTerm] = useState(initialSearchTerm);
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [locationFilter, setLocationFilter] = useState<string>("all");
+  const [locations, setLocations] = useState<Location[]>([]);
   const [selectedItem, setSelectedItem] = useState<Item | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
   const [showForm, setShowForm] = useState(false);
@@ -47,11 +58,27 @@ export default function ItemSection() {
   const [qrModalItem, setQrModalItem] = useState<Item | null>(null);
   const limit = 10;
 
+  useEffect(() => {
+    locationApi.list().then((res) => {
+      setLocations(res.data || []);
+    }).catch(() => {
+      // non-blocking fallback
+    });
+  }, []);
+
   const fetchData = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const url = `${API_BASE_URL}/api/items?page=${page}&limit=${limit}${searchTerm ? `&q=${encodeURIComponent(searchTerm)}` : ""}`;
+      const params = new URLSearchParams();
+      params.set("page", String(page));
+      params.set("limit", String(limit));
+      if (searchTerm) params.set("q", searchTerm);
+      if (initialBibliographyId) params.set("bibliographyId", initialBibliographyId);
+      if (statusFilter && statusFilter !== "all") params.set("status", statusFilter);
+      if (locationFilter && locationFilter !== "all") params.set("locationId", locationFilter);
+
+      const url = `${API_BASE_URL}/api/items?${params.toString()}`;
       const response = await fetch(url, { credentials: "include" });
       if (!response.ok) throw new Error("Gagal memuat data");
       const result = await response.json();
@@ -63,7 +90,7 @@ export default function ItemSection() {
     } finally {
       setLoading(false);
     }
-  }, [page, searchTerm]);
+  }, [page, searchTerm, initialBibliographyId, statusFilter, locationFilter]);
 
   useEffect(() => {
     fetchData();
@@ -197,15 +224,35 @@ export default function ItemSection() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h2 className="text-3xl font-bold text-foreground">Item / Eksemplar</h2>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Kelola item fisik dari bibliografi
-          </p>
+      <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h2 className="text-3xl font-bold text-foreground">Item / Eksemplar</h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Kelola item fisik dari bibliografi
+            </p>
+          </div>
+          <div className="flex gap-2">
+            <button
+              onClick={handleCreate}
+              className="flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700 transition-colors"
+            >
+              <Plus className="size-4" />
+              Tambah
+            </button>
+            <button
+              onClick={() => setShowBulkForm(true)}
+              className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 transition-colors"
+            >
+              <Package className="size-4" />
+              Bulk
+            </button>
+          </div>
         </div>
-        <div className="flex gap-2">
-          <div className="relative flex-1 sm:w-64">
+
+        {/* Filter Bar Antislop */}
+        <div className="flex flex-wrap items-center gap-2.5 rounded-xl border border-border bg-card p-3">
+          <div className="relative flex-1 min-w-[200px] sm:min-w-[260px]">
             <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
             <input
               type="text"
@@ -213,29 +260,76 @@ export default function ItemSection() {
               value={searchInput}
               onChange={(e) => setSearchInput(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && handleSearch()}
-              className="w-full rounded-lg border border-border bg-card py-2 pl-10 pr-4 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+              className="w-full rounded-lg border border-border bg-background py-2 pl-9 pr-3 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
             />
           </div>
+
+          <div className="w-[140px] sm:w-[160px]">
+            <Select
+              value={statusFilter}
+              onValueChange={(val) => {
+                setStatusFilter(val);
+                setPage(1);
+              }}
+            >
+              <SelectTrigger className="h-9 w-full text-xs">
+                <SelectValue placeholder="Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Semua Status</SelectItem>
+                <SelectItem value="available">Tersedia</SelectItem>
+                <SelectItem value="loaned">Dipinjam</SelectItem>
+                <SelectItem value="damaged">Rusak</SelectItem>
+                <SelectItem value="lost">Hilang</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="w-[150px] sm:w-[180px]">
+            <Select
+              value={locationFilter}
+              onValueChange={(val) => {
+                setLocationFilter(val);
+                setPage(1);
+              }}
+            >
+              <SelectTrigger className="h-9 w-full text-xs">
+                <SelectValue placeholder="Lokasi" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Semua Lokasi</SelectItem>
+                {locations.map((loc) => (
+                  <SelectItem key={loc.id} value={String(loc.id)}>
+                    {loc.room} {loc.rack ? `- Rak ${loc.rack}` : ""}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
           <button
             onClick={handleSearch}
-            className="rounded-lg bg-primary px-4 py-2 text-base font-bold text-white hover:bg-primary/90"
+            className="rounded-lg bg-primary px-3.5 py-2 text-xs font-semibold text-white hover:bg-primary/90 transition-colors"
           >
             Cari
           </button>
-          <button
-            onClick={handleCreate}
-            className="flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-base font-bold text-white hover:bg-emerald-700"
-          >
-            <Plus className="size-4" />
-            Tambah
-          </button>
-          <button
-            onClick={() => setShowBulkForm(true)}
-            className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-base font-bold text-white hover:bg-blue-700"
-          >
-            <Package className="size-4" />
-            Bulk
-          </button>
+
+          {(searchTerm || statusFilter !== "all" || locationFilter !== "all") && (
+            <button
+              onClick={() => {
+                setSearchInput("");
+                setSearchTerm("");
+                setStatusFilter("all");
+                setLocationFilter("all");
+                setPage(1);
+              }}
+              className="flex items-center gap-1.5 rounded-lg border border-border px-3 py-2 text-xs font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+              title="Reset filter"
+            >
+              <RotateCcw className="size-3.5" />
+              Reset
+            </button>
+          )}
         </div>
       </div>
 

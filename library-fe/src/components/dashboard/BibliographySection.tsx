@@ -61,11 +61,13 @@ import {
 interface BibliographySectionProps {
   searchTerm: string;
   onSearchChange: (value: string) => void;
+  onViewItems?: (bib: Bibliography) => void;
 }
 
 export default function BibliographySection({
   searchTerm,
   onSearchChange,
+  onViewItems,
 }: BibliographySectionProps) {
   const [data, setData] = useState<BibliographyListResponse | null>(null);
   const [loading, setLoading] = useState(true);
@@ -323,6 +325,7 @@ export default function BibliographySection({
         onBack={closeDetail}
         onEdit={handleEdit}
         onDelete={handleDelete}
+        onViewItems={onViewItems}
       />
     );
   }
@@ -658,14 +661,35 @@ export default function BibliographySection({
                   )}
                   {visibleColumns.has("stok") && (
                     <TableCell className="px-4 py-3.5 text-center">
-                      <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 dark:bg-emerald-950 px-2 py-0.5 text-xs font-medium text-emerald-700 dark:text-emerald-400">
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (onViewItems) onViewItems(bib);
+                        }}
+                        className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium transition-colors ${
+                          onViewItems
+                            ? "bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-100 dark:hover:bg-emerald-900 cursor-pointer"
+                            : "bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-400"
+                        }`}
+                        title={onViewItems ? "Lihat eksemplar buku ini" : undefined}
+                      >
                         <Package className="size-3" />
                         {bib.availableItems}/{bib.totalItems}
-                      </span>
+                      </button>
                     </TableCell>
                   )}
                   <TableCell className="px-4 py-3.5 text-center">
                     <div className="flex items-center justify-center gap-1">
+                      {onViewItems && (
+                        <button
+                          onClick={() => onViewItems(bib)}
+                          className="rounded-lg p-1.5 text-emerald-600 hover:bg-emerald-50 dark:bg-emerald-950/60 hover:text-emerald-700 transition-colors cursor-pointer"
+                          title="Lihat eksemplar"
+                        >
+                          <Package className="size-4" />
+                        </button>
+                      )}
                       <button
                         onClick={() => openDetail(bib.id)}
                         className="rounded-lg p-1.5 text-muted-foreground hover:bg-muted hover:text-muted-foreground transition-colors cursor-pointer"
@@ -719,12 +743,14 @@ function BibliographyDetail({
   onBack,
   onEdit,
   onDelete,
+  onViewItems,
 }: {
   bib: Bibliography;
   loading: boolean;
   onBack: () => void;
   onEdit: (bib: Bibliography) => void;
   onDelete: (bib: Bibliography) => void;
+  onViewItems?: (bib: Bibliography) => void;
 }) {
   if (loading) {
     return (
@@ -746,6 +772,15 @@ function BibliographyDetail({
           Kembali ke daftar
         </button>
         <div className="flex gap-2">
+          {onViewItems && (
+            <button
+              onClick={() => onViewItems(bib)}
+              className="flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700 transition-colors"
+            >
+              <Package className="size-4" />
+              Kelola Eksemplar
+            </button>
+          )}
           <button
             onClick={() => onEdit(bib)}
             className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"

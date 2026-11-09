@@ -18,6 +18,10 @@ vi.mock("@/api/client", () => ({
   bibliographyApi: {
     list: vi.fn(),
   },
+  locationApi: {
+    list: vi.fn().mockResolvedValue({ data: [] }),
+    getById: vi.fn(),
+  },
 }));
 
 const mockFetch = vi.fn();
