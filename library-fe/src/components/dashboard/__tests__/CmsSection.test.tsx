@@ -23,45 +23,53 @@ vi.mock("@/hooks/useToast", () => ({
   useToast: () => mockToast,
 }));
 
-describe("CmsSection Component", () => {
+describe("CmsSection Component (Focused Sub-Page Views)", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it("merender judul dan 4 tab navigasi CMS", () => {
-    render(<CmsSection />);
+  it("merender sub-halaman banner secara default", () => {
+    render(<CmsSection subPage="banner" />);
 
-    expect(screen.getByText("Manajemen Konten (CMS)")).toBeInTheDocument();
-    expect(screen.getByText("Banner Siaran")).toBeInTheDocument();
-    expect(screen.getByText("Identitas & SEO")).toBeInTheDocument();
-    expect(screen.getByText("Hero Landing")).toBeInTheDocument();
-    expect(screen.getByText("Peta & Footer")).toBeInTheDocument();
-  });
-
-  it("merender live preview dan form banner pada tab banner default", () => {
-    render(<CmsSection />);
-
+    expect(screen.getByText("Bilah Pengumuman (Banner Sticky)")).toBeInTheDocument();
     expect(screen.getByText("Pratinjau Langsung (Live Preview)")).toBeInTheDocument();
     expect(screen.getByLabelText("Tampilkan Banner (On/Off)")).toBeInTheDocument();
     expect(screen.getByLabelText("Teks Label Badge")).toBeInTheDocument();
     expect(screen.getByLabelText("Isi Pesan Siaran")).toBeInTheDocument();
   });
 
-  it("berpindah ke tab Identitas & SEO saat tab diklik", async () => {
-    render(<CmsSection />);
+  it("merender sub-halaman identitas dan branding saat subPage='branding'", () => {
+    render(<CmsSection subPage="branding" />);
 
-    const seoTab = screen.getByRole("tab", { name: /Identitas/i });
-    fireEvent.keyDown(seoTab, { key: "Enter" });
-
-    await waitFor(() => {
-      expect(screen.getByLabelText("Judul Web (Title Tab Browser)")).toBeInTheDocument();
-      expect(screen.getByLabelText("Tagline Portal")).toBeInTheDocument();
-      expect(screen.getByText("Logo Perpustakaan (Navbar & Footer)")).toBeInTheDocument();
-    });
+    expect(
+      screen.getByRole("heading", { name: /Identitas Portal, Logo & SEO/i, level: 1 })
+    ).toBeInTheDocument();
+    expect(screen.getByLabelText("Judul Web (Title Tab Browser)")).toBeInTheDocument();
+    expect(screen.getByLabelText("Tagline Portal")).toBeInTheDocument();
+    expect(screen.getByText("Logo Perpustakaan (Navbar & Footer)")).toBeInTheDocument();
+    expect(screen.getByText("Favicon Tab Browser")).toBeInTheDocument();
   });
 
-  it("memanggil updateSetting saat tombol simpan diklik", async () => {
-    render(<CmsSection />);
+  it("merender sub-halaman hero landing saat subPage='hero'", () => {
+    render(<CmsSection subPage="hero" />);
+
+    expect(screen.getByText("Hero Section (Halaman Utama)")).toBeInTheDocument();
+    expect(screen.getByLabelText("Judul Utama Hero (Heading 1)")).toBeInTheDocument();
+    expect(screen.getByLabelText("Subjudul / Deskripsi Sambutan")).toBeInTheDocument();
+    expect(screen.getByText("Gambar Latar Hero (Hero Background Image)")).toBeInTheDocument();
+  });
+
+  it("merender sub-halaman lokasi dan peta saat subPage='location'", () => {
+    render(<CmsSection subPage="location" />);
+
+    expect(screen.getByText("Peta Lokasi & Footer Kampus")).toBeInTheDocument();
+    expect(screen.getByLabelText("Nama Gedung & Lantai")).toBeInTheDocument();
+    expect(screen.getByLabelText("URL Iframe Sematan Google Maps")).toBeInTheDocument();
+    expect(screen.getByLabelText("Motto Universitas / Perpustakaan")).toBeInTheDocument();
+  });
+
+  it("memanggil updateSetting saat tombol simpan diklik pada sub-halaman banner", async () => {
+    render(<CmsSection subPage="banner" />);
 
     const saveButtons = screen.getAllByText("Simpan Perubahan");
     fireEvent.click(saveButtons[0]);
