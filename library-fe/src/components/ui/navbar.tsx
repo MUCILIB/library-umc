@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import LogoUmc from "@/assets/logo_umc.png";
 import { authClient } from "@/utils/auth-client";
+import { clearAuthToken } from "@/api/client";
 import {
   LogOut,
   User,
@@ -76,7 +77,9 @@ const Navbar = () => {
     if (session) {
       await authClient.signOut();
     }
+    clearAuthToken();
     localStorage.removeItem("umc_library_bookmarks");
+    localStorage.removeItem("mucilib_banner_preview_temp");
     window.dispatchEvent(new Event("storage"));
 
     setIsDropdownOpen(false);

@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { authClient } from "@/utils/auth-client";
+import { clearAuthToken } from "@/api/client";
 import { useNavigate } from "react-router";
 import Modal from "./ui/modal";
 import { Button } from "./ui/button";
@@ -47,6 +48,7 @@ const DialogUnauthorized = () => {
   }, [session, modalType]);
 
   const handleLogout = async () => {
+    clearAuthToken();
     await authClient.signOut();
     navigate("/login");
     setIsOpen(false);

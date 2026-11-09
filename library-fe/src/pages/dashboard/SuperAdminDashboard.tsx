@@ -540,6 +540,7 @@ export default function SuperAdminDashboard() {
 
   const handleSignOut = async () => {
     clearAuthToken();
+    localStorage.removeItem("mucilib_banner_preview_temp");
     await authClient.signOut();
     navigate("/login");
   };

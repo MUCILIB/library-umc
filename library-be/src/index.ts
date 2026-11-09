@@ -86,6 +86,7 @@ app.use(
     "/api/auth/sign-in",
     "/api/auth/sign-up",
     "/api/auth/forget-password",
+    "/api/auth/forgot-password",
     "/api/auth/reset-password"
   ],
   authLimiter
