@@ -193,6 +193,27 @@ test.describe("All 21 Super Admin Sub-Menus E2E Suite (Production)", () => {
     await expect(exportBibBtn).toBeVisible({ timeout: 5000 });
   });
 
+  test("6. Group 5 Verification: Guests, Users, Audit Logs, and Reports", async ({ page }) => {
+    // 17. Data Pengunjung (guests)
+    await page.goto("/dashboard/super-admin?tab=guests", { waitUntil: "domcontentloaded" });
+    await expect(page.getByText("Input Pengunjung").or(page.getByRole("button", { name: /Input Pengunjung/i }))).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText(/Export CSV/i).first()).toBeVisible({ timeout: 10000 });
+
+    // 18. Manajemen User (users)
+    await page.goto("/dashboard/super-admin?tab=users", { waitUntil: "domcontentloaded" });
+    await expect(page.getByRole("heading", { name: /Manajemen User/i })).toBeVisible({ timeout: 10000 });
+    await expect(page.getByRole("button", { name: /Tambah Pengguna/i })).toBeVisible({ timeout: 10000 });
+
+    // 19. Audit Log (audit)
+    await page.goto("/dashboard/super-admin?tab=audit", { waitUntil: "domcontentloaded" });
+    await expect(page.getByText(/Audit Log Sistem/i).first()).toBeVisible({ timeout: 10000 });
+
+    // 20. Laporan & Statistik (reports)
+    await page.goto("/dashboard/super-admin?tab=reports", { waitUntil: "domcontentloaded" });
+    await expect(page.getByRole("heading", { name: /Laporan & Statistik/i })).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText(/Export Laporan/i).first()).toBeVisible({ timeout: 10000 });
+  });
+
   test.afterAll(async ({ request }) => {
     // Teardown API fallback untuk memastikan semua data ber-prefix E2E-AUTO- terhapus dari production DB
     try {
