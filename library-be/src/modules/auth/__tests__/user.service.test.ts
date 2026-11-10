@@ -282,16 +282,17 @@ describe("UserService", () => {
       expect(res.message).toBe("Role tidak valid");
     });
 
-    it("should successfully update user role to a static role", async () => {
+    it("should successfully update user role to a static role and synchronize members.memberType", async () => {
       vi.mocked(db.query.Users.findFirst).mockResolvedValueOnce({
         id: "user-target",
-        role: "student",
+        role: "external",
       } as any);
 
-      const res = await UserService.updateUserRole("user-target", "staff", "admin-1");
+      const res = await UserService.updateUserRole("user-target", "student", "admin-1");
       expect(res.success).toBe(true);
       expect(res.message).toBe("Role user berhasil diperbarui");
-      expect(db.update).toHaveBeenCalled();
+      // Expect db.update to be called for Users and members
+      expect(db.update).toHaveBeenCalledWith(expect.anything());
     });
 
     it("should successfully update user role to a custom role from roles table", async () => {

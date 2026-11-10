@@ -236,6 +236,28 @@ router.get(
   loanController.getPendingReturnRequests
 );
 
+/**
+ * @swagger
+ * /loans/history:
+ *   get:
+ *     summary: Get my loan history
+ *     description: Member view their own loan history.
+ *     tags: [Loans]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: My loan history
+ *       401:
+ *         description: Unauthorized
+ */
+router.get(
+  "/loans/history",
+  publicApiLimiter,
+  isAuthenticated,
+  loanController.getMyLoans,
+);
+
 router.get(
   "/loans/:loanId/return-receipt",
   publicApiLimiter,
@@ -285,28 +307,6 @@ router.get(
   isAuthenticated,
   requireRole(["super_admin", "staff"]),
   loanController.getAllLoans,
-);
-
-/**
- * @swagger
- * /loans/history:
- *   get:
- *     summary: Get my loan history
- *     description: Member view their own loan history.
- *     tags: [Loans]
- *     security:
- *       - bearerAuth: []
- *     responses:
- *       200:
- *         description: My loan history
- *       401:
- *         description: Unauthorized
- */
-router.get(
-  "/loans/history",
-  publicApiLimiter,
-  isAuthenticated,
-  loanController.getMyLoans,
 );
 
 /**

@@ -77,6 +77,26 @@ export class MemberService {
         };
       }
 
+      const validMemberTypes = ["student", "lecturer", "staff", "super_admin", "external"];
+      if (
+        member.user?.role &&
+        validMemberTypes.includes(member.user.role) &&
+        member.memberType !== member.user.role
+      ) {
+        try {
+          await db
+            .update(members)
+            .set({
+              memberType: member.user.role as any,
+              updatedAt: new Date()
+            })
+            .where(eq(members.id, member.id));
+          member.memberType = member.user.role as any;
+        } catch (_syncErr) {
+          // Keep read path resilient
+        }
+      }
+
       return {
         success: true,
         message: "Member retrieved successfully",

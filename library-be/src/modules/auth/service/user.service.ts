@@ -335,6 +335,18 @@ export const UserService = {
           createdAt: Users.createdAt
         });
 
+      // Synchronize members.memberType if nextRole maps to a memberType
+      const validMemberTypes = ["student", "lecturer", "staff", "super_admin", "external"];
+      if (validMemberTypes.includes(normalizedRole)) {
+        await db
+          .update(members)
+          .set({
+            memberType: normalizedRole as "student" | "lecturer" | "staff" | "super_admin" | "external",
+            updatedAt: new Date()
+          })
+          .where(eq(members.userId, targetUserId));
+      }
+
       return {
         success: true,
         message: "Role user berhasil diperbarui",
