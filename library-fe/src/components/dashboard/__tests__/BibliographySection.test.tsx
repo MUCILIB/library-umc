@@ -10,6 +10,18 @@ vi.mock("@/api/client", () => ({
     create: vi.fn(),
     update: vi.fn(),
     delete: vi.fn(),
+    deduplicate: vi.fn(),
+  },
+  locationApi: {
+    list: vi.fn().mockResolvedValue({
+      data: [{ id: 13, room: "Ruang Server", rack: "Rak 01", shelf: "Lantai 1" }],
+    }),
+  },
+  itemApi: {
+    bulkCreate: vi.fn().mockResolvedValue({
+      success: true,
+      data: { created: 3, items: [], errors: [] },
+    }),
   },
   facultyApi: {
     list: vi.fn().mockResolvedValue({ data: [{ id: 1, name: "Teknik" }] }),
@@ -22,7 +34,7 @@ vi.mock("@/api/client", () => ({
   },
 }));
 
-import { bibliographyApi, exportApi } from "@/api/client";
+import { bibliographyApi, exportApi, itemApi } from "@/api/client";
 
 const mockBibliographies = {
   items: [
@@ -294,6 +306,44 @@ describe("BibliographySection", () => {
 
     await waitFor(() => {
       expect(bibliographyApi.deduplicate).toHaveBeenCalled();
+    });
+  });
+
+  it("should open quick add item modal and submit bulk items", async () => {
+    render(<BibliographySection searchTerm="" onSearchChange={vi.fn()} />);
+
+    // Wait for table to load
+    await waitFor(() => {
+      expect(screen.getByText("Test Book")).toBeInTheDocument();
+    });
+
+    // Find the quick add exemplar button for Test Book
+    const addExemplarBtn = screen.getByLabelText("Tambah eksemplar fisik untuk Test Book");
+    expect(addExemplarBtn).toBeInTheDocument();
+
+    fireEvent.click(addExemplarBtn);
+
+    // Modal should be opened
+    await waitFor(() => {
+      expect(screen.getByText("Tambah Eksemplar Fisik Buku")).toBeInTheDocument();
+      expect(screen.getByText("Buku Induk (Katalog)")).toBeInTheDocument();
+    });
+
+    // Click submit button in modal
+    const submitBtn = screen.getByRole("button", { name: /Simpan Eksemplar/i });
+    expect(submitBtn).toBeInTheDocument();
+
+    fireEvent.click(submitBtn);
+
+    await waitFor(() => {
+      expect(itemApi.bulkCreate).toHaveBeenCalledWith("1", expect.objectContaining({
+        defaults: expect.objectContaining({ locationId: 13 }),
+        items: expect.arrayContaining([
+          expect.objectContaining({
+            locationId: 13,
+          }),
+        ]),
+      }));
     });
   });
 });
