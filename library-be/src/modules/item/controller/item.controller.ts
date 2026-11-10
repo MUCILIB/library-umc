@@ -14,9 +14,11 @@ export class ItemController {
     try {
       const bibliographyId = req.query.bibliographyId as string | undefined;
       const q = req.query.q as string | undefined;
+      const status = req.query.status as string | undefined;
+      const locationId = req.query.locationId ? parseInt(req.query.locationId as string) || undefined : undefined;
       const page = Math.max(1, parseInt(req.query.page as string) || 1);
       const limit = Math.min(100, Math.max(1, parseInt(req.query.limit as string) || 20));
-      const result = await itemService.getAllItems(bibliographyId, page, limit, q);
+      const result = await itemService.getAllItems(bibliographyId, page, limit, q, status, locationId);
       sendSuccess(res, result.message, { items: result.data, pagination: result.pagination });
     } catch (error) { next(error); }
   }

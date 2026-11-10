@@ -7,12 +7,27 @@ import crypto from "crypto";
 
 export class ItemService {
 
-  async getAllItems(bibliographyId?: string, page: number = 1, limit: number = 20, q?: string) {
+  async getAllItems(
+    bibliographyId?: string,
+    page: number = 1,
+    limit: number = 20,
+    q?: string,
+    status?: string,
+    locationId?: number
+  ) {
     const skip = (page - 1) * limit;
     let whereClause: any = isNull(items.deletedAt);
     
     if (bibliographyId) {
-      whereClause = and(eq(items.bibliographyId, bibliographyId), isNull(items.deletedAt));
+      whereClause = and(whereClause, eq(items.bibliographyId, bibliographyId));
+    }
+
+    if (status && ["available", "loaned", "damaged", "lost"].includes(status)) {
+      whereClause = and(whereClause, eq(items.status, status as any));
+    }
+
+    if (locationId) {
+      whereClause = and(whereClause, eq(items.locationId, locationId));
     }
     
     if (q) {
