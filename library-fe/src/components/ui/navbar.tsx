@@ -45,6 +45,12 @@ const Navbar = () => {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  // Tutup menu saat rute berpindah
+  useEffect(() => {
+    setIsMenuOpen(false);
+    setIsDropdownOpen(false);
+  }, [location.pathname]);
+
   // Tutup menu saat tekan Escape
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
@@ -361,9 +367,10 @@ const Navbar = () => {
 
         {/* Hamburger Menu - Mobile */}
         <button
-          className="md:hidden hamburger p-2 hover:bg-muted rounded-xl transition-all"
+          className="md:hidden hamburger p-2 hover:bg-muted rounded-xl transition-all cursor-pointer"
           onClick={() => setIsMenuOpen(!isMenuOpen)}
           aria-label="Toggle menu"
+          aria-expanded={isMenuOpen}
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -390,109 +397,67 @@ const Navbar = () => {
           </svg>
         </button>
       </div>
-    </div>
 
-      {/* SIDEBAR MOBILE - ANIMASI SMOOTH */}
-      {/* Dinaikkan z-index ke z-50 agar menutupi area navbar belakang */}
+      {/* COLLAPSIBLE TOP DROPDOWN MOBILE (Opsi B) */}
       <div
-        className={`fixed top-0 right-0 w-68 h-full bg-card shadow-2xl z-50 flex flex-col
-          transform transition-transform duration-300 ease-in-out
-          ${isMenuOpen ? "translate-x-0" : "translate-x-full"}`}
+        className={`md:hidden overflow-hidden transition-all duration-300 ease-in-out bg-background/98 backdrop-blur-md border-b border-border shadow-xl ${
+          isMenuOpen
+            ? "max-h-[85vh] opacity-100 border-t border-border/40"
+            : "max-h-0 opacity-0 pointer-events-none"
+        }`}
       >
-        <div className="p-5 flex flex-col h-full">
-          {/* Header */}
-          <div className="flex items-center justify-between pb-4 border-b border-border mb-6">
-            <div
-              className="flex items-center space-x-2 cursor-pointer"
-              onClick={() => {
-                navigate("/");
-                setIsMenuOpen(false);
-              }}
-            >
-              <img
-                src={settings.branding.logoUrl || LogoUmc}
-                alt="UMC Library Logo"
-                className="w-10 h-10 rounded-full object-contain"
-                onError={(e) => {
-                  (e.currentTarget as HTMLImageElement).src = LogoUmc;
-                }}
-              />
-              <div className="text-sm font-bold text-foreground">
-                <span className="block">UMC</span>
-                <span className="block">Library</span>
-              </div>
-            </div>
-            <button
-              onClick={() => setIsMenuOpen(false)}
-              className="p-2 text-muted-foreground hover:text-muted-foreground hover:bg-muted rounded-xl transition-all"
-              aria-label="Close menu"
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-5 w-5"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M6 18L18 6M6 6l12 12"
-                />
-              </svg>
-            </button>
-          </div>
-
-          {/* Navigation Items (Tanpa UL/LI, Tombol lebih bersih) */}
-          <nav className="flex flex-col space-y-1.5">
-            {navItems.map((item) => (
-              <a
-                key={item.name}
-                href={item.href}
-                onClick={(e) => {
-                  e.preventDefault();
-                  navigate(item.href);
-                  setIsMenuOpen(false);
-                }}
-                className={`text-sm font-semibold py-3 px-4 rounded-xl transition-all relative flex items-center ${
-                  isActive(item.href)
-                    ? "bg-accent text-primary font-bold"
-                    : "text-muted-foreground hover:bg-muted hover:text-primary"
-                }`}
-              >
-                <span>{item.name}</span>
-                {isActive(item.href) && (
-                  <span className="absolute left-2 w-1 h-4 bg-primary rounded-full"></span>
-                )}
-              </a>
-            ))}
+        <div className="max-h-[80vh] overflow-y-auto px-5 py-4 space-y-4">
+          {/* Navigation Links */}
+          <nav className="flex flex-col space-y-1">
+            {navItems.map((item) => {
+              const active = isActive(item.href);
+              return (
+                <a
+                  key={item.name}
+                  href={item.href}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    navigate(item.href);
+                    setIsMenuOpen(false);
+                  }}
+                  className={`flex items-center justify-between text-sm font-semibold py-2.5 px-3.5 rounded-xl transition-all min-h-[44px] ${
+                    active
+                      ? "bg-primary/10 text-primary font-bold border-l-2 border-primary"
+                      : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                  }`}
+                >
+                  <span>{item.name}</span>
+                </a>
+              );
+            })}
           </nav>
 
-          {/* User Menu / Login - Mobile (Dropdown Mode di Sidebar) */}
-          <div className="mt-auto pt-4 border-t border-border">
-            <div className="flex items-center justify-between mb-3">
+          {/* Theme & User Profile Section */}
+          <div className="pt-3 border-t border-border space-y-3">
+            <div className="flex items-center justify-between px-1">
               <span className="text-xs font-semibold text-muted-foreground">
-                Tema
+                Tema Tampilan
               </span>
               <ThemeToggle />
             </div>
+
             {isLoggedIn ? (
               <div className="space-y-2">
-                {/* Kotak Akun Utama (Bertindak sebagai Trigger Accordion/Dropdown) */}
+                {/* Kotak Akun Utama */}
                 <button
+                  type="button"
                   onClick={() => setIsMobileSubMenuOpen(!isMobileSubMenuOpen)}
-                  className="w-full flex items-center justify-between p-3 bg-muted hover:bg-muted/80 rounded-2xl transition-all text-left"
+                  className="w-full flex items-center justify-between p-3 bg-muted hover:bg-muted/80 rounded-2xl transition-all text-left cursor-pointer"
                 >
                   <div className="flex items-center space-x-3 overflow-hidden">
-                    <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center text-white border border-white flex-shrink-0 overflow-hidden">
+                    <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center text-white border border-border shrink-0 overflow-hidden">
                       <img
                         src={getUserAvatar(activeUser)}
                         alt={displayName || "User"}
                         className="w-full h-full object-cover"
                       />
                     </div>
-                    <div className="overflow-hidden">
+                    <div className="overflow-hidden min-w-0">
                       <p className="text-xs font-bold text-foreground truncate">
                         {displayName || "User"}
                       </p>
@@ -504,13 +469,13 @@ const Navbar = () => {
                     </div>
                   </div>
                   <ChevronDown
-                    className={`w-4 h-4 text-muted-foreground transition-transform duration-200 ${
+                    className={`w-4 h-4 text-muted-foreground transition-transform duration-200 shrink-0 ${
                       isMobileSubMenuOpen ? "rotate-180" : ""
                     }`}
                   />
                 </button>
 
-                {/* Sub Menu Dropdown Akun di Mobile */}
+                {/* Sub Menu Dropdown Akun */}
                 <div
                   className={`space-y-1 pl-2 transition-all duration-200 ${
                     isMobileSubMenuOpen ? "block" : "hidden"
@@ -520,25 +485,25 @@ const Navbar = () => {
                     <>
                       <button
                         onClick={handleProfileClick}
-                        className="w-full flex items-center space-x-3 px-4 py-2.5 text-xs font-medium text-muted-foreground hover:bg-muted rounded-xl transition-all"
+                        className="w-full flex items-center space-x-3 px-4 py-2.5 text-xs font-medium text-foreground hover:bg-muted rounded-xl transition-all cursor-pointer min-h-[44px]"
                       >
-                        <User className="w-4 h-4 text-muted-foreground" />
+                        <User className="w-4 h-4 text-muted-foreground shrink-0" />
                         <span>Profil Saya</span>
                       </button>
 
                       <button
                         onClick={handleMyLoansClick}
-                        className="w-full flex items-center space-x-3 px-4 py-2.5 text-xs font-medium text-muted-foreground hover:bg-muted rounded-xl transition-all"
+                        className="w-full flex items-center space-x-3 px-4 py-2.5 text-xs font-medium text-foreground hover:bg-muted rounded-xl transition-all cursor-pointer min-h-[44px]"
                       >
-                        <BookOpen className="w-4 h-4 text-muted-foreground" />
+                        <BookOpen className="w-4 h-4 text-muted-foreground shrink-0" />
                         <span>Peminjaman Saya</span>
                       </button>
 
                       <button
                         onClick={handleRepositoryClick}
-                        className="w-full flex items-center space-x-3 px-4 py-2.5 text-xs font-medium text-muted-foreground hover:bg-muted rounded-xl transition-all cursor-pointer"
+                        className="w-full flex items-center space-x-3 px-4 py-2.5 text-xs font-medium text-foreground hover:bg-muted rounded-xl transition-all cursor-pointer min-h-[44px]"
                       >
-                        <GraduationCap className="w-4 h-4 text-red-600 dark:text-red-400" />
+                        <GraduationCap className="w-4 h-4 text-red-600 dark:text-red-400 shrink-0" />
                         <span>Repositori Saya</span>
                       </button>
 
@@ -548,9 +513,9 @@ const Navbar = () => {
                             navigate("/rekomendasi-buku");
                             setIsMenuOpen(false);
                           }}
-                          className="w-full flex items-center space-x-3 px-4 py-2.5 text-xs font-medium text-muted-foreground hover:bg-muted rounded-xl transition-all cursor-pointer"
+                          className="w-full flex items-center space-x-3 px-4 py-2.5 text-xs font-medium text-foreground hover:bg-muted rounded-xl transition-all cursor-pointer min-h-[44px]"
                         >
-                          <BookMarked className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                          <BookMarked className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
                           <span>Rekomendasi Buku</span>
                         </button>
                       )}
@@ -560,19 +525,23 @@ const Navbar = () => {
                   {isSuperAdmin && (
                     <a
                       href="/dashboard/super-admin"
-                      onClick={() => setIsMenuOpen(false)}
-                      className="w-full flex items-center space-x-3 px-4 py-2.5 text-xs font-medium text-muted-foreground hover:bg-muted rounded-xl transition-all"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        navigate("/dashboard/super-admin");
+                        setIsMenuOpen(false);
+                      }}
+                      className="w-full flex items-center space-x-3 px-4 py-2.5 text-xs font-medium text-foreground hover:bg-muted rounded-xl transition-all cursor-pointer min-h-[44px]"
                     >
-                      <LayoutDashboard className="w-4 h-4 text-purple-500" />
+                      <LayoutDashboard className="w-4 h-4 text-purple-500 shrink-0" />
                       <span>Dashboard Admin</span>
                     </a>
                   )}
 
                   <button
                     onClick={handleLogout}
-                    className="w-full flex items-center space-x-3 px-4 py-2.5 text-xs font-bold text-primary hover:bg-accent rounded-xl transition-all mt-1"
+                    className="w-full flex items-center space-x-3 px-4 py-2.5 text-xs font-bold text-destructive hover:bg-destructive/10 rounded-xl transition-all mt-1 cursor-pointer min-h-[44px]"
                   >
-                    <LogOut className="w-4 h-4 text-primary" />
+                    <LogOut className="w-4 h-4 text-destructive shrink-0" />
                     <span>Keluar Akun</span>
                   </button>
                 </div>
@@ -583,7 +552,7 @@ const Navbar = () => {
                   navigate("/login");
                   setIsMenuOpen(false);
                 }}
-                className="w-full bg-gradient-to-r from-primary to-primary/90 text-white px-4 py-3 rounded-xl text-sm font-bold flex items-center justify-center space-x-2 shadow-md"
+                className="w-full bg-linear-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary text-white px-4 py-3 rounded-xl text-sm font-bold flex items-center justify-center space-x-2 shadow-md transition-all cursor-pointer min-h-[44px]"
               >
                 <span>Login</span>
               </button>
@@ -591,15 +560,15 @@ const Navbar = () => {
           </div>
         </div>
       </div>
+    </div>
 
-      {/* OVERLAY / BACKDROP GELAP */}
-      {/* Menggunakan z-45 agar berada tepat di atas navbar utama tetapi di bawah sidebar */}
-      {isMenuOpen && (
-        <div
-          className="fixed inset-0 bg-black/50 backdrop-blur-sm z-45 transition-all duration-300 animate-fade-in"
-          onClick={() => setIsMenuOpen(false)}
-        ></div>
-      )}
+    {/* OVERLAY / BACKDROP GELAP DI BAWAH NAVBAR */}
+    {isMenuOpen && (
+      <div
+        className="md:hidden fixed inset-0 bg-black/40 backdrop-blur-xs z-30 transition-opacity animate-fade-in"
+        onClick={() => setIsMenuOpen(false)}
+      />
+    )}
     </>
   );
 };
