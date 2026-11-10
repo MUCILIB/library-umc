@@ -10,6 +10,7 @@
     "db:seed": "tsx src/db/seed.ts",
     "seed:catalog": "tsx scripts/seed-catalog-data.ts",
     "deduplicate:catalog": "tsx scripts/deduplicate-catalog.ts",
+    "populate:stock": "tsx scripts/populate-stock-10.ts",
     "db:test:up": "docker compose -f docker-compose.test.yml up -d",
     "db:test:down": "docker compose -f docker-compose.test.yml down -v",
     "db:test:migrate": "TEST_DATABASE_URL=postgresql://mucilib_test:mucilib_test_password@localhost:55432/mucilib_test drizzle-kit migrate --config=drizzle.test.config.ts",
