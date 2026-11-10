@@ -109,6 +109,23 @@ export class BibliographyService {
     });
   }
 
+  async findConflictByTitle(targetTitle: string, excludeId?: string) {
+    const trimmed = targetTitle?.trim().toLowerCase();
+    if (!trimmed) return null;
+
+    const conditions: any[] = [
+      isNull(bibliographies.deletedAt),
+      sql`LOWER(TRIM(${bibliographies.title})) = ${trimmed}`,
+    ];
+    if (excludeId) {
+      conditions.push(ne(bibliographies.id, excludeId));
+    }
+
+    return db.query.bibliographies.findFirst({
+      where: and(...conditions),
+      columns: { id: true, title: true, isbn: true, issn: true, isbnIssn: true },
+    });
+  }
 
   private async resolveOrCreateAuthor(tx: any, authorName: string): Promise<number> {
     const normalized = normalizeName(authorName);
@@ -206,6 +223,15 @@ export class BibliographyService {
       if (!resolvedLegacyIsbnIssn) {
         resolvedLegacyIsbnIssn = resolvedIsbn || (resolvedIssn ? `ISSN ${resolvedIssn}` : null);
       }
+
+if (data.title) {
+  const conflict = await this.findConflictByTitle(data.title);
+  if (conflict) {
+    throw new BadRequestError(
+      `Buku dengan judul '${conflict.title}' sudah ada di katalog. Duplikat buku fisik harus dimasukkan ke menu Item (Eksemplar).`
+    );
+  }
+}
 
 if (resolvedIsbn && isValidCode(resolvedIsbn)) {
         const conflict = await this.findConflictByIsbn(resolvedIsbn);
@@ -319,6 +345,15 @@ if (resolvedIsbn && isValidCode(resolvedIsbn)) {
       if (publicationPlaceId !== undefined) {
         updateData.publicationPlaceId = publicationPlaceId;
       }
+if (updateData.title) {
+  const conflict = await this.findConflictByTitle(updateData.title, id);
+  if (conflict) {
+    throw new BadRequestError(
+      `Buku dengan judul '${conflict.title}' sudah ada di katalog. Duplikat buku fisik harus dimasukkan ke menu Item (Eksemplar).`
+    );
+  }
+}
+
 if (updateData.isbn && isValidCode(updateData.isbn)) {
         const conflict = await this.findConflictByIsbn(updateData.isbn, id);
         if (conflict) {
