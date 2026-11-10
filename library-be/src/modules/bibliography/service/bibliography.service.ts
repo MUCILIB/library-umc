@@ -2,7 +2,8 @@ import { db } from "../../../db";
 import {
   bibliographies, bibliographyAuthors, bibliographySubjects,
   bibliographyFaculties, bibliographyStudyPrograms,
-  authors, subjects, publishers, publicationPlaces, items, studyPrograms
+  authors, subjects, publishers, publicationPlaces, items, studyPrograms,
+  reservations
 } from "../../../db/schema";
 import { eq, ne, and, isNull, ilike, or, sql, desc, asc, inArray, notExists } from "drizzle-orm";
 import type { CreateBibliographyData, UpdateBibliographyData, BibliographyQuery } from "../validation/bibliography.validation";
@@ -674,6 +675,80 @@ if (updateData.isbn && isValidCode(updateData.isbn)) {
       where: and(eq(items.bibliographyId, bibliographyId), isNull(items.deletedAt)),
       with: { location: true, vendor: true, collectionType: true },
     });
+  }
+
+  async deduplicateBibliographies(): Promise<{
+    processedGroups: number;
+    mergedCount: number;
+    cleanedDuplicates: number;
+  }> {
+    const all = await db.query.bibliographies.findMany({
+      where: isNull(bibliographies.deletedAt),
+      with: {
+        items: { where: isNull(items.deletedAt) },
+      },
+      orderBy: [asc(bibliographies.createdAt)],
+    });
+
+    const groups = new Map<string, typeof all>();
+    for (const b of all) {
+      const normTitle = normalizeName(b.title || "");
+      const normIsbn = cleanIsbn(b.isbn || b.isbnIssn || "");
+      const key = normIsbn && normIsbn.length >= 8 ? `isbn:${normIsbn}` : `title:${normTitle}`;
+      if (!groups.has(key)) {
+        groups.set(key, []);
+      }
+      groups.get(key)!.push(b);
+    }
+
+    let processedGroups = 0;
+    let mergedCount = 0;
+    let cleanedDuplicates = 0;
+
+    for (const [, bibList] of groups.entries()) {
+      if (bibList.length <= 1) continue;
+
+      processedGroups++;
+
+      // Sort candidate: prefer the one with most items, then oldest createdAt
+      bibList.sort((a, b) => {
+        if (b.items.length !== a.items.length) {
+          return b.items.length - a.items.length;
+        }
+        return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+      });
+
+      const canonical = bibList[0];
+      const dupes = bibList.slice(1);
+
+      await db.transaction(async (tx) => {
+        for (const dupe of dupes) {
+          if (dupe.items.length > 0) {
+            await tx
+              .update(items)
+              .set({ bibliographyId: canonical.id, updatedAt: new Date() })
+              .where(eq(items.bibliographyId, dupe.id));
+            mergedCount += dupe.items.length;
+          }
+
+          await tx
+            .update(reservations)
+            .set({ bibliographyId: canonical.id, updatedAt: new Date() })
+            .where(eq(reservations.bibliographyId, dupe.id));
+
+          await tx
+            .update(bibliographies)
+            .set({ deletedAt: new Date(), updatedAt: new Date() })
+            .where(eq(bibliographies.id, dupe.id));
+
+          cleanedDuplicates++;
+        }
+
+        await syncCollectionAvailableStock(tx, canonical.id);
+      });
+    }
+
+    return { processedGroups, mergedCount, cleanedDuplicates };
   }
 }
 

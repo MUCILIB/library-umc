@@ -24,7 +24,9 @@ import {
   Check,
   FileDown,
   Columns3,
+  Layers,
 } from "lucide-react";
+import { useToast } from "@/hooks/useToast";
 import {
   Select,
   SelectContent,
@@ -256,6 +258,9 @@ export default function BibliographySection({
     setPage(1);
   };
 
+  const { success: toastSuccess, error: toastError } = useToast();
+  const [deduplicating, setDeduplicating] = useState(false);
+
   const handleExport = async () => {
     setExporting(true);
     try {
@@ -267,6 +272,30 @@ export default function BibliographySection({
       setError(err instanceof Error ? err.message : "Export gagal");
     } finally {
       setExporting(false);
+    }
+  };
+
+  const handleDeduplicate = async () => {
+    if (
+      !confirm(
+        "Jalankan deduplikasi katalog? Sistem akan menggabungkan eksemplar ke satu judul utama dan membersihkan record duplikat yang kosong."
+      )
+    ) {
+      return;
+    }
+    setDeduplicating(true);
+    try {
+      const res = await bibliographyApi.deduplicate();
+      const d = res.data;
+      await fetchData(1, searchTerm || undefined);
+      toastSuccess(
+        "Deduplikasi Berhasil",
+        `Diproses: ${d.processedGroups} grup judul, ${d.cleanedDuplicates} record duplikat dibersihkan.`
+      );
+    } catch (err: unknown) {
+      toastError("Gagal Deduplikasi", err instanceof Error ? err.message : "Terjadi kesalahan saat deduplikasi");
+    } finally {
+      setDeduplicating(false);
     }
   };
 
@@ -453,6 +482,19 @@ export default function BibliographySection({
             )}
           </div>
 
+          <button
+            onClick={handleDeduplicate}
+            disabled={deduplicating}
+            className="flex items-center gap-2 rounded-lg border border-border bg-card px-3 py-2 text-sm font-medium text-foreground hover:bg-surface-hover disabled:opacity-50"
+            title="Gabungkan eksemplar dan bersihkan data bibliografi yang terduplikasi"
+          >
+            {deduplicating ? (
+              <Loader2 className="size-4 animate-spin text-primary" />
+            ) : (
+              <Layers className="size-4 text-primary" />
+            )}
+            <span className="hidden sm:inline">Deduplikasi</span>
+          </button>
           <button
             onClick={handleExport}
             disabled={exporting}

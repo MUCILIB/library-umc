@@ -277,4 +277,23 @@ describe("BibliographySection", () => {
       expect(screen.queryByRole("columnheader", { name: "Tahun" })).not.toBeInTheDocument();
     });
   });
+
+  it("should render deduplicate button and call bibliographyApi.deduplicate when confirmed", async () => {
+    const { bibliographyApi } = await import("@/api/client");
+    (bibliographyApi.deduplicate as any) = vi.fn().mockResolvedValue({
+      data: { processedGroups: 2, mergedCount: 4, cleanedDuplicates: 3 },
+    });
+    vi.spyOn(window, "confirm").mockReturnValue(true);
+
+    render(<BibliographySection searchTerm="" onSearchChange={vi.fn()} />);
+
+    const dedupBtn = await screen.findByRole("button", { name: /Deduplikasi/i });
+    expect(dedupBtn).toBeInTheDocument();
+
+    fireEvent.click(dedupBtn);
+
+    await waitFor(() => {
+      expect(bibliographyApi.deduplicate).toHaveBeenCalled();
+    });
+  });
 });

@@ -40,6 +40,7 @@ router.get(
 
 router.get("/bibliographies/check-duplicate", publicApiLimiter, (req, res, next) => bibliographyController.checkDuplicate(req, res, next));
 router.get("/bibliographies", publicApiLimiter, (req, res, next) => bibliographyController.list(req, res, next));
+router.post("/bibliographies/deduplicate", publicApiLimiter, isAuthenticated, requireRole(["super_admin"]), (req, res, next) => bibliographyController.deduplicate(req, res, next));
 router.get("/bibliographies/:id", publicApiLimiter, (req, res, next) => bibliographyController.getById(req, res, next));
 router.get("/bibliographies/:id/items", publicApiLimiter, (req, res, next) => bibliographyController.getItems(req, res, next));
 router.post("/bibliographies", publicApiLimiter, isAuthenticated, requireRole(["super_admin", "staff"]), (req, res, next) => bibliographyController.create(req, res, next));
