@@ -99,6 +99,20 @@ export class BibliographyController {
       sendSuccess(res, "Items retrieved", bibItems);
     } catch (error) { next(error); }
   }
+
+  async deduplicate(req: Request, res: Response, next: NextFunction) {
+    try {
+      const result = await bibliographyService.deduplicateBibliographies();
+      await auditService.createLog({
+        action: "update",
+        entity: "bibliography",
+        entityId: "batch-deduplicate",
+        userId: (req as any).user?.id,
+        ipAddress: req.ip,
+      });
+      sendSuccess(res, "Deduplikasi bibliografi berhasil dijalankan", result);
+    } catch (error) { next(error); }
+  }
 }
 
 export const bibliographyController = new BibliographyController();

@@ -271,6 +271,12 @@ export const bibliographyApi = {
       `/api/bibliographies/check-duplicate?${search.toString()}`
     );
   },
+
+  deduplicate: () =>
+    apiFetch<{ processedGroups: number; mergedCount: number; cleanedDuplicates: number }>(
+      "/api/bibliographies/deduplicate",
+      { method: "POST" }
+    ),
 };
 
 // ==========================================

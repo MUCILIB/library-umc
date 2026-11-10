@@ -127,7 +127,15 @@ export function ToastProvider({ children }: { children: ReactNode }) {
 export function useToast(): ToastContextValue {
   const ctx = useContext(ToastContext);
   if (!ctx) {
-    throw new Error('useToast harus dipakai di dalam <ToastProvider>');
+    return {
+      notifications: [],
+      removeToast: () => {},
+      success: () => 0,
+      error: () => 0,
+      warning: () => 0,
+      info: () => 0,
+      loading: () => 0,
+    };
   }
   return ctx;
 }
