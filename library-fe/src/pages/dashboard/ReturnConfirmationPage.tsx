@@ -44,12 +44,14 @@ export default function ReturnConfirmationPage() {
   const [submitting, setSubmitting] = useState(false);
   const [successReceiptNo, setSuccessReceiptNo] = useState<string | null>(null);
   const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false);
+  const staffNameInitialized = React.useRef(false);
 
   useEffect(() => {
-    if (session?.user?.name && !staffName) {
+    if (session?.user?.name && !staffNameInitialized.current) {
       setStaffName(session.user.name);
+      staffNameInitialized.current = true;
     }
-  }, [session, staffName]);
+  }, [session?.user?.name]);
 
   useEffect(() => {
     if (!loanId) {
@@ -140,7 +142,7 @@ export default function ReturnConfirmationPage() {
           <AlertTriangle className="w-12 h-12 text-destructive mx-auto mb-3" />
           <h2 className="text-lg font-bold text-foreground mb-1">Terjadi Kesalahan</h2>
           <p className="text-sm text-muted-foreground mb-6">{error || "Peminjaman tidak ditemukan"}</p>
-          <Button onClick={() => navigate("/dashboard?tab=loans")} className="w-full">
+          <Button onClick={() => navigate("/dashboard/super-admin?tab=loans")} className="w-full">
             Kembali ke Dashboard
           </Button>
         </div>
@@ -164,7 +166,7 @@ export default function ReturnConfirmationPage() {
         {/* Navigation Breadcrumb */}
         <div className="flex items-center justify-between">
           <Link
-            to={requestId ? "/dashboard?tab=return-approvals" : "/dashboard?tab=loans"}
+            to={requestId ? "/dashboard/super-admin?tab=return-approvals" : "/dashboard/super-admin?tab=loans"}
             className="inline-flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
           >
             <ArrowLeft size={16} />
@@ -392,9 +394,20 @@ export default function ReturnConfirmationPage() {
 
                 {/* Nama Petugas Penerima */}
                 <div className="space-y-1.5">
-                  <label htmlFor="staffName" className="text-xs font-medium text-foreground">
-                    Nama Petugas Penerima <span className="text-destructive">*</span>
-                  </label>
+                  <div className="flex items-center justify-between">
+                    <label htmlFor="staffName" className="text-xs font-medium text-foreground">
+                      Nama Petugas Penerima <span className="text-destructive">*</span>
+                    </label>
+                    {session?.user?.name && staffName !== session.user.name && (
+                      <button
+                        type="button"
+                        onClick={() => setStaffName(session.user.name)}
+                        className="text-[11px] text-primary hover:underline font-medium"
+                      >
+                        Gunakan nama saya ({session.user.name})
+                      </button>
+                    )}
+                  </div>
                   <div className="relative">
                     <input
                       id="staffName"
@@ -407,6 +420,9 @@ export default function ReturnConfirmationPage() {
                     />
                     <ShieldCheck size={15} className="absolute left-3 top-3 text-muted-foreground" />
                   </div>
+                  <p className="text-[11px] text-muted-foreground">
+                    Dapat disesuaikan jika pengembalian fisik diperiksa oleh pustakawan atau staf lain.
+                  </p>
                 </div>
 
                 {/* Canvas Tanda Tangan Digital */}
@@ -480,7 +496,7 @@ export default function ReturnConfirmationPage() {
               </Button>
               <Button
                 type="button"
-                onClick={() => navigate(requestId ? "/dashboard?tab=return-approvals" : "/dashboard?tab=loans")}
+                onClick={() => navigate(requestId ? "/dashboard/super-admin?tab=return-approvals" : "/dashboard/super-admin?tab=loans")}
                 className="flex-1 text-xs"
               >
                 Ke Dashboard

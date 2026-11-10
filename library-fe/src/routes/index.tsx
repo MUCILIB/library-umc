@@ -111,6 +111,9 @@ const AppRoutes = () => {
         <Route path="/item" element={<Navigate to="/dashboard/super-admin?tab=items" replace />} />
         <Route path="/exemplar" element={<Navigate to="/dashboard/super-admin?tab=items" replace />} />
         <Route path="/eksemplar" element={<Navigate to="/dashboard/super-admin?tab=items" replace />} />
+        <Route path="/dashboard" element={<Navigate to="/dashboard/super-admin" replace />} />
+        <Route path="/dashboard/loans" element={<Navigate to="/dashboard/super-admin?tab=loans" replace />} />
+        <Route path="/dashboard/return-approvals" element={<Navigate to="/dashboard/super-admin?tab=return-approvals" replace />} />
 
         <Route path="*" element={<NotFound />} />
       </Routes>

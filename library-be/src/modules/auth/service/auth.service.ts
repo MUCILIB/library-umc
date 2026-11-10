@@ -228,7 +228,7 @@ export class AuthService {
         .insert(MemberTable)
         .values({
           userId,
-          memberType: memberPayload.memberType,
+          memberType: user.role === "super_admin" ? "super_admin" : memberPayload.memberType,
           nimNidn: memberPayload.nimNidn,
           faculty: memberPayload.faculty,
           phone: memberPayload.phone,
