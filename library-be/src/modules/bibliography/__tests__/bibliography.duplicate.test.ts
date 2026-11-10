@@ -183,4 +183,32 @@ describe('BibliographyService - checkDuplicate', () => {
       } as any)
     ).rejects.toThrow(BadRequestError);
   });
+
+  it('harus tolak create jika judul sudah ada di database (guard anti-duplikat)', async () => {
+    vi.spyOn(service, 'findConflictByTitle').mockResolvedValue({
+      id: 'existing-id',
+      title: 'Dasar-Dasar Psikologi Pendidikan',
+      isbn: null,
+    } as any);
+
+    await expect(
+      service.create({
+        title: 'dasar-dasar psikologi pendidikan',
+      } as any)
+    ).rejects.toThrow(/sudah ada di katalog/i);
+  });
+
+  it('harus tolak update jika judul bentrok dengan buku lain', async () => {
+    vi.spyOn(service, 'findConflictByTitle').mockResolvedValue({
+      id: 'other-id',
+      title: 'Judul Lain Yang Sudah Ada',
+      isbn: null,
+    } as any);
+
+    await expect(
+      service.update('current-id', {
+        title: 'Judul Lain Yang Sudah Ada',
+      } as any)
+    ).rejects.toThrow(/sudah ada di katalog/i);
+  });
 });
