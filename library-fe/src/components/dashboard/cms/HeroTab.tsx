@@ -1,5 +1,5 @@
 import React from "react";
-import { Layout, Save, Loader2 } from "lucide-react";
+import { Save, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -22,16 +22,18 @@ export const HeroTab: React.FC<HeroTabProps> = ({
 }) => {
   return (
     <Card>
-      <CardHeader>
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Layout className="h-5 w-5 text-primary" />
-            <CardTitle className="text-lg">Tampilan Hero Beranda Publik</CardTitle>
+      <CardHeader className="pb-4">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div>
+            <CardTitle className="text-base font-semibold">Konfigurasi Konten & Visual Hero</CardTitle>
+            <CardDescription className="text-xs text-muted-foreground mt-0.5">
+              Sesuaikan teks sambutan utama, gambar latar beranda, serta topik pencarian cepat.
+            </CardDescription>
           </div>
           <Button
             onClick={onSave}
             disabled={isSaving}
-            className="gap-2"
+            className="gap-2 shrink-0"
             size="sm"
           >
             {isSaving ? (
@@ -42,9 +44,6 @@ export const HeroTab: React.FC<HeroTabProps> = ({
             Simpan Perubahan
           </Button>
         </div>
-        <CardDescription>
-          Kustomisasi teks sambutan utama, gambar latar banner beranda (S3), dan rekomendasi topik cepat.
-        </CardDescription>
       </CardHeader>
 
       <CardContent className="space-y-6">
