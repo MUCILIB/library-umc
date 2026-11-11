@@ -1,6 +1,7 @@
 import { Camera, Mail, Phone, MapPin, ShieldCheck, User as UserIcon } from 'lucide-react';
-import { type MemberProfile } from '@/services/memberService';
+import type { MemberProfile } from '@/services/memberService';
 import { getUserAvatar } from '@/lib/avatar';
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 interface ProfileHeaderProps {
   profile: MemberProfile | null;
@@ -20,11 +21,14 @@ const ProfileHeader = ({ profile, onEditClick }: ProfileHeaderProps) => {
       <div className="flex flex-col md:flex-row items-center md:items-start gap-8 px-4">
         {/* Avatar Section */}
         <div className="relative group">
-          <div className="w-32 h-32 md:w-40 md:h-40 bg-card rounded-[40px] shadow-2xl shadow-primary/10 flex items-center justify-center border-4 border-white overflow-hidden ring-4 ring-primary/10 transition-all group-hover:scale-105 duration-500">
-            <img src={getUserAvatar(user)} alt={user?.name || "Member"} className="w-full h-full object-cover" />
-          </div>
+          <Avatar className="w-32 h-32 md:w-40 md:h-40 rounded-full shadow-2xl shadow-primary/10 border-4 border-background overflow-hidden ring-4 ring-primary/10 transition-all group-hover:scale-105 duration-500 bg-muted">
+            <AvatarImage src={getUserAvatar(user)} alt={user?.name || "Member"} className="w-full h-full object-cover" />
+            <AvatarFallback className="text-3xl font-bold bg-muted text-foreground">
+              {(user?.name || "U")[0]?.toUpperCase()}
+            </AvatarFallback>
+          </Avatar>
           <button 
-            className="absolute bottom-2 right-2 bg-foreground text-white p-3 rounded-2xl shadow-lg hover:bg-foreground/90 transition-all active:scale-90"
+            className="absolute bottom-2 right-2 bg-foreground text-white p-3 rounded-full shadow-lg hover:bg-foreground/90 transition-all active:scale-90"
             onClick={onEditClick}
           >
             <Camera size={18} />

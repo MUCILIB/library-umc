@@ -43,6 +43,13 @@ export class LoanController {
           where: and(eq(members.id, requestedMemberId), isNull(members.deletedAt)),
         });
         if (targetMember) {
+          if (targetMember.cardStatus !== "active" || !targetMember.cardNumber) {
+            return sendError(
+              res,
+              "Member belum memiliki kartu anggota yang aktif dan diterbitkan. Peminjaman hanya dapat dilakukan jika kartu sudah terbit.",
+              400
+            );
+          }
           memberIdToUse = targetMember.id;
         }
       }

@@ -399,4 +399,73 @@ describe("LoanService Unit Tests", () => {
       expect(res.message).toContain("telah tercatat dikembalikan sebelumnya");
     });
   });
+
+  describe("generateReturnReceiptPdf", () => {
+    it("harus mencetak nomor kartu member yang benar dan bukan '-'", async () => {
+      const mockLoan = {
+        id: "loan-pdf-1",
+        loanDate: "2026-11-01",
+        dueDate: "2026-11-08",
+        returnDate: "2026-11-05",
+        returnReceiptNo: "BA-RET-20261105-001",
+        returnCondition: "good",
+        member: {
+          id: "member-1",
+          cardNumber: "UMCLIB-2026-0008",
+          nimNidn: "22010199",
+          user: { name: "Ahmad Fauzi" }
+        },
+        item: {
+          inventoryCode: "INV-001",
+          itemCode: "ITEM-001",
+          bibliography: { title: "Pemrograman Web Modern" }
+        }
+      };
+
+      vi.spyOn(loanService, "getLoanById").mockResolvedValueOnce(mockLoan as any);
+
+      const chunks: Buffer[] = [];
+      const dummyRes = {
+        write: (chunk: any) => chunks.push(Buffer.from(chunk)),
+        end: (chunk?: any) => {
+          if (chunk) chunks.push(Buffer.from(chunk));
+        },
+        on: vi.fn(),
+        once: vi.fn(),
+        emit: vi.fn(),
+      } as any;
+
+      await new Promise<void>((resolve, reject) => {
+        dummyRes.on = (event: string, cb: any) => {
+          if (event === "finish") dummyRes.finishCb = cb;
+          return dummyRes;
+        };
+        dummyRes.end = (chunk?: any) => {
+          if (chunk) chunks.push(Buffer.from(chunk));
+          if (dummyRes.finishCb) dummyRes.finishCb();
+          resolve();
+        };
+        loanService.generateReturnReceiptPdf("loan-pdf-1", dummyRes).catch(reject);
+      });
+      const zlib = await import("zlib");
+      const rawBuffer = Buffer.concat(chunks);
+      // Decode Flate stream jika ada kompresi zlib
+      const streamStart = rawBuffer.indexOf(Buffer.from("stream\n")) + 7;
+      const streamEnd = rawBuffer.indexOf(Buffer.from("\nendstream"));
+      let decoded = "";
+      if (streamStart > 6 && streamEnd > streamStart) {
+        try {
+          decoded = zlib.inflateSync(rawBuffer.subarray(streamStart, streamEnd)).toString();
+        } catch {
+          decoded = rawBuffer.toString();
+        }
+      } else {
+        decoded = rawBuffer.toString();
+      }
+
+      const hexExpected = Buffer.from("UMCLIB-2026-0008").toString("hex");
+      expect(decoded).toContain(hexExpected);
+      expect(decoded).not.toContain("[<3a> 50 <202d> 0]");
+    });
+  });
 });

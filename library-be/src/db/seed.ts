@@ -41,6 +41,64 @@ async function seed() {
     console.log("Admin credential account already exists");
   }
 
+  // 1b. External User (Member Biasa / Eksternal)
+  const EXTERNAL_EMAIL = "external@mucilib.ac.id";
+  const EXTERNAL_PASSWORD = "External123456!";
+  const existingExternal = await db.query.Users.findFirst({ where: eq(Users.email, EXTERNAL_EMAIL) });
+  let externalId: string;
+  if (!existingExternal) {
+    const now = new Date();
+    externalId = "external-seed-001";
+    await db.insert(Users).values({
+      id: externalId,
+      name: "Budi Santoso (External)",
+      email: EXTERNAL_EMAIL,
+      emailVerified: true,
+      role: "external",
+      createdAt: now,
+      updatedAt: now
+    });
+    console.log("Created external user");
+  } else {
+    externalId = existingExternal.id;
+    if (existingExternal.role !== "external") {
+      await db.update(Users).set({ role: "external" }).where(eq(Users.id, externalId));
+    }
+  }
+
+  const existingExtAccount = await db.query.account.findFirst({ where: eq(accountTable.userId, externalId) });
+  if (!existingExtAccount) {
+    const hashedExtPassword = await hashPassword(EXTERNAL_PASSWORD);
+    const now = new Date();
+    await db.insert(accountTable).values({
+      id: `account-${externalId}-credential`,
+      accountId: externalId,
+      providerId: "credential",
+      userId: externalId,
+      password: hashedExtPassword,
+      createdAt: now,
+      updatedAt: now
+    });
+    console.log("Created external credential account");
+  }
+
+  const existingExtMember = await db.query.members.findFirst({ where: eq(members.userId, externalId) });
+  if (!existingExtMember) {
+    const now = new Date();
+    await db.insert(members).values({
+      userId: externalId,
+      memberType: "external",
+      cardNumber: "EXT-2026-0001",
+      cardStatus: "active",
+      institution: "Universitas Muhammadiyah Cirebon (Tamu)",
+      originRegion: "Cirebon",
+      phone: "081234567890",
+      createdAt: now,
+      updatedAt: now
+    });
+    console.log("Created external member profile");
+  }
+
   // 2. Categories
   const categoryNames = ["Pendidikan", "Psikologi", "PAUD", "FAI", "BK", "Komunikasi", "Pemerintahan", "Umum", "Bahasa Inggris", "Matematika"];
   for (const name of categoryNames) {

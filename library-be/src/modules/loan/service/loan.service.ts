@@ -1087,9 +1087,16 @@ export class LoanService {
     doc.rect(40, startY, 515, 175).strokeColor("#CBD5E1").lineWidth(1).stroke();
 
     doc.fontSize(9).fillColor("#0F172A");
+    const memberCodeVal =
+      (loan.member as any)?.cardNumber ||
+      (loan.member as any)?.nimNidn ||
+      (loan.member as any)?.memberCode ||
+      (loan.member as any)?.nim ||
+      "-";
+
     const fields = [
       ["Nama Peminjam / Anggota", ": " + ((loan.member as any)?.user?.name || (loan.member as any)?.name || "-")],
-      ["Nomor Induk / Kode Member", ": " + ((loan.member as any)?.memberCode || (loan.member as any)?.nim || "-")],
+      ["Nomor Induk / Kode Member", ": " + memberCodeVal],
       ["Judul Buku / Bahan Pustaka", ": " + ((loan.item as any)?.bibliography?.title || "-")],
       ["No. Inventaris / Kode Eksemplar", ": " + ((loan.item as any)?.inventoryCode || (loan.item as any)?.itemCode || "-")],
       ["Tanggal Peminjaman", ": " + (loan.loanDate || "-")],

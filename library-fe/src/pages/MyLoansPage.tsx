@@ -315,7 +315,7 @@ function LoanCard({ loan, status, isExtending, isReturning, isCanceling, onExten
         {status === "late" && (
           <div className="w-full bg-red-50 text-primary py-3 rounded-xl font-bold text-xs flex items-center justify-center gap-2">
             <AlertCircle size={13} />
-            TERLAMBAT — KEMBALIKAN KE PERPUSTAKAAN
+            TERLAMBAT: KEMBALIKAN KE PERPUSTAKAAN
           </div>
         )}
       </div>
