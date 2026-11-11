@@ -33,5 +33,13 @@ export default defineConfig({
       },
       dependencies: ["setup-prod"],
     },
+    {
+      name: "catalog-prod",
+      testMatch: /catalog-populate-and-verify\.spec\.ts/,
+      use: {
+        ...devices["Desktop Chrome"],
+        launchOptions: { ...(CHROMIUM ? { executablePath: CHROMIUM } : {}) },
+      },
+    },
   ],
 });

@@ -157,7 +157,7 @@ const Katalog = () => {
         label: "Ketersediaan Koleksi",
         chipPrefix: "Status: ",
         options: [
-          { id: "available", label: "Tersedia Dipinjam" },
+          { id: "available", label: "Tersedia" },
           { id: "borrowed", label: "Sedang Dipinjam" },
         ],
       },
@@ -205,7 +205,8 @@ const Katalog = () => {
     if (availabilityFilter.length > 0) {
       val.availability = availabilityFilter;
     }
-    if (collectionTypeFilter.length > 0) {
+    // Hanya tampilkan chip jika user secara spesifik memilih salah satu jenis (bukan semua)
+    if (collectionTypeFilter.length === 1) {
       val.collection = collectionTypeFilter;
     }
     if (selectedFaculty) {
@@ -496,6 +497,7 @@ const Katalog = () => {
                           defaultOpen={["availability", "collection"]}
                           title="Filter Koleksi"
                           clearLabel="Reset Semua"
+                          hints={false}
                           className="w-full"
                         />
 

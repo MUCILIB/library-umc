@@ -17,6 +17,9 @@ export function isValidImageUrl(image: string | null | undefined): boolean {
   // Endpoint API Covers
   if (trimmed.startsWith("/api/covers/") || trimmed.startsWith("api/covers/")) return true;
 
+  // Local static public covers (/covers/...)
+  if (trimmed.startsWith("/covers/") || trimmed.startsWith("covers/")) return true;
+
   // S3 Storage Key
   if (trimmed.startsWith("library/covers/")) return true;
 
@@ -38,6 +41,9 @@ export function resolveCoverUrl(image: string | null | undefined): string | null
   }
 
   const cleanPath = trimmed.startsWith("/") ? trimmed : `/${trimmed}`;
+  if (cleanPath.startsWith("/covers/")) {
+    return cleanPath;
+  }
   if (cleanPath.startsWith("/api/covers/")) {
     return `${API_BASE_URL}${cleanPath}`;
   }

@@ -179,51 +179,101 @@ async function seed() {
     console.log("Catalog data already exists. Skipping.");
   }
 
-  // 11. Faculties
-  const facultyData = [
-    { name: "Fakultas Ilmu Komputer", code: "FIK" },
-    { name: "Fakultas Ekonomi dan Bisnis", code: "FEB" },
-    { name: "Fakultas Teknik", code: "FT" },
-    { name: "Fakultas Keguruan dan Ilmu Pendidikan", code: "FKIP" },
-    { name: "Fakultas Hukum", code: "FH" },
-    { name: "Fakultas Pertanian", code: "FP" },
+  // 11. Faculties & Study Programs (Data Riil UMC)
+  const realFaculties = [
+    {
+      name: "Fakultas Ekonomi & Bisnis",
+      code: "FEB",
+      prodis: [
+        { name: "S1 Akuntansi", code: "AKT-S1" },
+        { name: "S1 Manajemen", code: "MNJ-S1" },
+      ],
+    },
+    {
+      name: "Fakultas Ilmu Sosial & Politik",
+      code: "FISIP",
+      prodis: [
+        { name: "D3 Hubungan Masyarakat", code: "HUMAS-D3" },
+        { name: "S1 Ilmu Komunikasi", code: "ILKOM-S1" },
+        { name: "S1 Ilmu Pemerintahan", code: "IPEM-S1" },
+      ],
+    },
+    {
+      name: "Fakultas Teknik",
+      code: "FT",
+      prodis: [
+        { name: "D3 Teknik Informatika", code: "TI-D3" },
+        { name: "S1 Teknik Industri", code: "TIND-S1" },
+        { name: "S1 Teknik Informatika", code: "TI-S1" },
+        { name: "S1 Peternakan", code: "PTR-S1" },
+      ],
+    },
+    {
+      name: "Fakultas Keguruan & Ilmu Pendidikan",
+      code: "FKIP",
+      prodis: [
+        { name: "S1 PG-PAUD", code: "PAUD-S1" },
+        { name: "S1 PGSD", code: "PGSD-S1" },
+        { name: "S1 Pendidikan Bahasa Inggris", code: "PBI-S1" },
+        { name: "S1 Pendidikan IPA", code: "PIPA-S1" },
+        { name: "S1 Pendidikan Kimia", code: "PKIM-S1" },
+        { name: "S1 Pendidikan Matematika", code: "PMAT-S1" },
+      ],
+    },
+    {
+      name: "Fakultas Hukum",
+      code: "FH",
+      prodis: [
+        { name: "S1 Ilmu Hukum", code: "IH-S1" },
+      ],
+    },
+    {
+      name: "Fakultas Ilmu Kesehatan",
+      code: "FIKES",
+      prodis: [
+        { name: "S1 Ilmu Keperawatan", code: "KEP-S1" },
+        { name: "S1 Gizi", code: "GIZI-S1" },
+        { name: "S1 Ilmu Keolahragaan", code: "IKOR-S1" },
+        { name: "Profesi Ners A", code: "NERS-A" },
+        { name: "Profesi Ners B", code: "NERS-B" },
+      ],
+    },
+    {
+      name: "Fakultas Agama Islam",
+      code: "FAI",
+      prodis: [
+        { name: "S1 Ilmu Al-Qur'an dan Tafsir", code: "IAT-S1" },
+        { name: "S1 Tasawuf dan Psikoterapi", code: "TP-S1" },
+      ],
+    },
   ];
-  const facultyMap = new Map<string, number>();
-  for (const f of facultyData) {
-    const existing = await db.query.faculties.findFirst({ where: eq(faculties.name, f.name) });
-    if (!existing) {
-      const [created] = await db.insert(faculties).values(f).returning();
-      facultyMap.set(f.code, created.id);
-    } else {
-      facultyMap.set(f.code, existing.id);
-    }
-  }
-  console.log(`Seeded ${facultyData.length} faculties`);
 
-  // 12. Study Programs
-  const spData = [
-    { name: "Teknik Informatika", code: "TI", facultyCode: "FIK" },
-    { name: "Sistem Informasi", code: "SI", facultyCode: "FIK" },
-    { name: "Manajemen", code: "MNJ", facultyCode: "FEB" },
-    { name: "Akuntansi", code: "AKT", facultyCode: "FEB" },
-    { name: "Teknik Sipil", code: "TS", facultyCode: "FT" },
-    { name: "Teknik Mesin", code: "TM", facultyCode: "FT" },
-    { name: "Pendidikan Matematika", code: "PM", facultyCode: "FKIP" },
-    { name: "Pendidikan Bahasa Inggris", code: "PBI", facultyCode: "FKIP" },
-    { name: "Ilmu Hukum", code: "IH", facultyCode: "FH" },
-    { name: "Agroteknologi", code: "AGRO", facultyCode: "FP" },
-  ];
-  for (const sp of spData) {
-    const fid = facultyMap.get(sp.facultyCode);
-    if (!fid) continue;
-    const existing = await db.query.studyPrograms.findFirst({
-      where: eq(studyPrograms.name, sp.name),
-    });
-    if (!existing) {
-      await db.insert(studyPrograms).values({ name: sp.name, code: sp.code, facultyId: fid });
+  let totalFac = 0;
+  let totalProdi = 0;
+
+  for (const f of realFaculties) {
+    let fac = await db.query.faculties.findFirst({ where: eq(faculties.name, f.name) });
+    if (!fac) {
+      const [created] = await db.insert(faculties).values({ name: f.name, code: f.code }).returning();
+      fac = created;
+    }
+    totalFac++;
+
+    for (const p of f.prodis) {
+      const existingSp = await db.query.studyPrograms.findFirst({
+        where: eq(studyPrograms.name, p.name),
+      });
+      if (!existingSp) {
+        await db.insert(studyPrograms).values({
+          facultyId: fac.id,
+          name: p.name,
+          code: p.code,
+        });
+      }
+      totalProdi++;
     }
   }
-  console.log(`Seeded ${spData.length} study programs`);
+  console.log(`Seeded ${totalFac} faculties and ${totalProdi} study programs.`);
 
   console.log("Seeding complete.");
   process.exit(0);

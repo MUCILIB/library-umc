@@ -63,5 +63,10 @@ describe("imageUrl utilities", () => {
       const s3Key = "library/covers/cover-1234.png";
       expect(resolveCoverUrl(s3Key)).toBe(`${API_BASE_URL}/api/covers/cover-1234.png`);
     });
+
+    it("should resolve public /covers/ static paths as clean relative paths", () => {
+      expect(resolveCoverUrl("/covers/clean-code.jpg")).toBe("/covers/clean-code.jpg");
+      expect(resolveCoverUrl("covers/clean-code.jpg")).toBe("/covers/clean-code.jpg");
+    });
   });
 });
