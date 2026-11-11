@@ -193,7 +193,7 @@ export default function Home() {
 
           {/* Card 2: Repositori Digital */}
           <Link
-            to="/e-resource"
+            to="/repositori"
             className="bg-white dark:bg-card rounded-2xl p-4 sm:p-6 shadow-sm hover:shadow-xl border border-slate-100 dark:border-border/60 transition-all duration-300 hover:-translate-y-1.5 group flex flex-col justify-between"
           >
             <div className="flex items-center justify-between">

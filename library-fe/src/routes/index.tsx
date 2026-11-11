@@ -14,7 +14,7 @@ import SuperAdminDashboard from "../pages/dashboard/SuperAdminDashboard";
 import ReturnConfirmationPage from "../pages/dashboard/ReturnConfirmationPage";
 import Profile from "../pages/Profile";
 import RepositoryDetailPage from "../pages/RepositoryDetailPage";
-import Eresource from "../pages/EResoucePage";
+import RepositoriPage from "../pages/RepositoriPage";
 import MyRepositoryPage from "../pages/MyRepositoryPage";
 import LecturerRecommendationsPage from "../pages/LecturerRecommendationsPage";
 import NotFound from "../pages/NotFound";
@@ -37,13 +37,13 @@ const AppRoutes = () => {
         <Route path="/katalog/:id" element={<NonAdminRoute><DetailKatalog /></NonAdminRoute>} />
         <Route path="/repository/:id" element={<NonAdminRoute><RepositoryDetailPage /></NonAdminRoute>} />
         <Route path="/profile" element={<NonAdminRoute><Profile /></NonAdminRoute>} />
-        <Route path="/e-resource" element={<NonAdminRoute><Eresource /></NonAdminRoute>} />
+        <Route path="/repositori" element={<NonAdminRoute><RepositoriPage /></NonAdminRoute>} />
+        <Route path="/e-resource" element={<Navigate to="/repositori" replace />} />
         <Route path="/tentang" element={<NonAdminRoute><TentangPage /></NonAdminRoute>} />
         <Route path="/lokasi" element={<NonAdminRoute><TentangPage /></NonAdminRoute>} />
         <Route path="/absensi" element={<NonAdminRoute><AbsensiPage /></NonAdminRoute>} />
         <Route path="/input-kunjungan" element={<NonAdminRoute><AbsensiPage /></NonAdminRoute>} />
         <Route path="/buku-tamu" element={<NonAdminRoute><AbsensiPage /></NonAdminRoute>} />
-        <Route path="/repositori" element={<Navigate to="/e-resource" replace />} />
         <Route path="/repositori-saya" element={<Navigate to="/my-repository" replace />} />
         <Route path="/my-loans" element={<Navigate to="/profile?tab=peminjaman-aktif" replace />} />
 

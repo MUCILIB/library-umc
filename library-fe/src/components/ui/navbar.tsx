@@ -67,13 +67,13 @@ const Navbar = () => {
   const navItems = [
     { name: "Beranda", href: "/" },
     { name: "Katalog", href: "/katalog" },
-    { name: "Repositori", href: "/e-resource" },
+    { name: "Repositori", href: "/repositori" },
     { name: "Tentang", href: "/tentang" },
   ];
 
   // Cek apakah link aktif
   const isActive = (href: string) => {
-    if (href === "/e-resource" && (location.pathname === "/e-resource" || location.pathname === "/repositori")) {
+    if (href === "/repositori" && (location.pathname === "/repositori" || location.pathname === "/e-resource" || location.pathname.startsWith("/repository/"))) {
       return true;
     }
     return location.pathname === href;
