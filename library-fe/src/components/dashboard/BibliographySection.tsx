@@ -818,7 +818,7 @@ interface QuickAddItemModalProps {
 
 function QuickAddItemModal({ bib, onClose, onSuccess }: QuickAddItemModalProps) {
   const { success: toastSuccess, error: toastError } = useToast();
-  const [quantity, setQuantity] = useState<number>(1);
+  const [quantity, setQuantity] = useState<string>("1");
   const [locations, setLocations] = useState<Location[]>([]);
   const [locationId, setLocationId] = useState<number | null>(null);
   const [codePrefix, setCodePrefix] = useState<string>("");
@@ -828,7 +828,7 @@ function QuickAddItemModal({ bib, onClose, onSuccess }: QuickAddItemModalProps) 
 
   useEffect(() => {
     if (!bib) return;
-    setQuantity(1);
+    setQuantity("1");
     setError(null);
 
     // Awalan kode eksemplar default yang rapi
@@ -864,14 +864,7 @@ function QuickAddItemModal({ bib, onClose, onSuccess }: QuickAddItemModalProps) 
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (quantity < 1) {
-      setError("Jumlah eksemplar minimal 1");
-      return;
-    }
-    if (quantity > 50) {
-      setError("Maksimal 50 eksemplar sekaligus");
-      return;
-    }
+    const qtyNum = Math.max(1, Math.min(50, parseInt(quantity, 10) || 1));
     if (!locationId) {
       setError("Silakan pilih lokasi rak");
       return;
@@ -886,7 +879,7 @@ function QuickAddItemModal({ bib, onClose, onSuccess }: QuickAddItemModalProps) 
         `UMC-${bib.id.replace(/-/g, "").slice(0, 6).toUpperCase()}`;
       const startSeq = bib.totalItems || 0;
 
-      const itemsToCreate = Array.from({ length: quantity }, (_, idx) => {
+      const itemsToCreate = Array.from({ length: qtyNum }, (_, idx) => {
         const seq = startSeq + idx + 1;
         const code = `${cleanPrefix}-${String(seq).padStart(2, "0")}`;
         return {
@@ -908,7 +901,7 @@ function QuickAddItemModal({ bib, onClose, onSuccess }: QuickAddItemModalProps) 
 
       toastSuccess(
         "Eksemplar Ditambahkan",
-        `Berhasil menambahkan ${quantity} eksemplar fisik untuk "${bib.title}".`
+        `Berhasil menambahkan ${qtyNum} eksemplar fisik untuk "${bib.title}".`
       );
       onSuccess();
       onClose();
@@ -955,18 +948,29 @@ function QuickAddItemModal({ bib, onClose, onSuccess }: QuickAddItemModalProps) 
 
         {/* Input Jumlah Eksemplar */}
         <div className="space-y-1.5">
-          <label className="block text-xs font-semibold text-foreground">
+          <label htmlFor="quick-add-quantity" className="block text-xs font-semibold text-foreground">
             Jumlah Eksemplar Fisik Baru *
           </label>
           <div className="flex items-center gap-2">
             <input
-              type="number"
-              min={1}
-              max={50}
+              id="quick-add-quantity"
+              type="text"
+              inputMode="numeric"
+              pattern="[0-9]*"
               value={quantity}
-              onChange={(e) =>
-                setQuantity(Math.max(1, Math.min(50, parseInt(e.target.value) || 1)))
-              }
+              onChange={(e) => {
+                const onlyDigits = e.target.value.replace(/\D/g, "");
+                setQuantity(onlyDigits);
+              }}
+              onBlur={() => {
+                const parsed = parseInt(quantity, 10);
+                if (!parsed || parsed < 1) {
+                  setQuantity("1");
+                } else if (parsed > 50) {
+                  setQuantity("50");
+                }
+              }}
+              placeholder="Contoh: 5"
               className="w-24 rounded-lg border border-border bg-background px-3 py-2 text-sm font-semibold text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
               required
             />
@@ -975,9 +979,9 @@ function QuickAddItemModal({ bib, onClose, onSuccess }: QuickAddItemModalProps) 
                 <button
                   key={num}
                   type="button"
-                  onClick={() => setQuantity(num)}
-                  className={`rounded-lg border px-2.5 py-1.5 text-xs font-medium transition-colors ${
-                    quantity === num
+                  onClick={() => setQuantity(String(num))}
+                  className={`rounded-lg border px-2.5 py-1.5 text-xs font-medium transition-colors cursor-pointer ${
+                    quantity === String(num)
                       ? "border-primary bg-primary/10 text-primary font-bold"
                       : "border-border bg-card text-muted-foreground hover:bg-muted"
                   }`}
