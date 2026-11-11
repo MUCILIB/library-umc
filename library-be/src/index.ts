@@ -138,6 +138,59 @@ async function runPendingMigrations() {
   } catch (error) {
     console.warn("[Database] Migration check failed or skipped:", error);
   }
+
+  // Auto-seed default external demo user if missing
+  try {
+    const { Users, account: accountTable, members } = await import("./db/schema");
+    const { eq } = await import("drizzle-orm");
+    const { hashPassword } = await import("better-auth/crypto");
+
+    const EXTERNAL_EMAIL = "external@mucilib.ac.id";
+    const existing = await db.query.Users.findFirst({
+      where: eq(Users.email, EXTERNAL_EMAIL),
+    });
+
+    if (!existing) {
+      console.log("[Database] Seeding default demo external user...");
+      const now = new Date();
+      const extId = "external-seed-001";
+      await db.insert(Users).values({
+        id: extId,
+        name: "Budi Santoso (External)",
+        email: EXTERNAL_EMAIL,
+        emailVerified: true,
+        role: "external",
+        createdAt: now,
+        updatedAt: now,
+      });
+
+      const hashed = await hashPassword("External123456!");
+      await db.insert(accountTable).values({
+        id: `account-${extId}-credential`,
+        accountId: extId,
+        providerId: "credential",
+        userId: extId,
+        password: hashed,
+        createdAt: now,
+        updatedAt: now,
+      });
+
+      await db.insert(members).values({
+        userId: extId,
+        memberType: "external",
+        cardNumber: "EXT-2026-0001",
+        cardStatus: "active",
+        institution: "Universitas Muhammadiyah Cirebon (Tamu)",
+        originRegion: "Cirebon",
+        phone: "081234567890",
+        createdAt: now,
+        updatedAt: now,
+      });
+      console.log("[Database] Demo external user created successfully.");
+    }
+  } catch (seedErr) {
+    console.warn("[Database] Demo external seed skipped:", seedErr);
+  }
 }
 
 const PORT = Number(process.env.PORT) || 4000;
