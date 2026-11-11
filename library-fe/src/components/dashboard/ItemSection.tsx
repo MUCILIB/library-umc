@@ -1039,7 +1039,7 @@ function BulkCreateForm({
   const [success, setSuccess] = useState<string | null>(null);
   const [bibliographies, setBibliographies] = useState<Bibliography[]>([]);
   const [selectedBibId, setSelectedBibId] = useState("");
-  const [quantity, setQuantity] = useState(1);
+  const [quantity, setQuantity] = useState("1");
   const [prefix, setPrefix] = useState("ITEM");
   const [locationId, setLocationId] = useState("");
   const [items, setItems] = useState<Array<{ itemCode: string; inventoryCode: string }>>([]);
@@ -1062,7 +1062,8 @@ function BulkCreateForm({
   const generateItems = () => {
     const newItems = [];
     const cleanPrefix = (prefix.trim() || "PND-01").toUpperCase().replace(/[\s/\\_]+/g, "-");
-    for (let i = 1; i <= quantity; i++) {
+    const qtyNum = Math.max(1, Math.min(1000, parseInt(quantity, 10) || 1));
+    for (let i = 1; i <= qtyNum; i++) {
       const code = `${cleanPrefix}-${String(i).padStart(2, "0")}`;
       newItems.push({ itemCode: code, inventoryCode: code });
     }
@@ -1205,13 +1206,28 @@ function BulkCreateForm({
             </div>
 
             <div>
-              <label className="mb-1 block text-xs font-medium text-muted-foreground">Jumlah Item *</label>
+              <label htmlFor="bulk-item-quantity" className="mb-1 block text-xs font-medium text-muted-foreground">
+                Jumlah Item *
+              </label>
               <input
-                type="number"
+                id="bulk-item-quantity"
+                type="text"
+                inputMode="numeric"
+                pattern="[0-9]*"
                 value={quantity}
-                onChange={(e) => setQuantity(Math.max(1, Math.min(1000, parseInt(e.target.value) || 1)))}
-                min="1"
-                max="1000"
+                onChange={(e) => {
+                  const onlyDigits = e.target.value.replace(/\D/g, "");
+                  setQuantity(onlyDigits);
+                }}
+                onBlur={() => {
+                  const parsed = parseInt(quantity, 10);
+                  if (!parsed || parsed < 1) {
+                    setQuantity("1");
+                  } else if (parsed > 1000) {
+                    setQuantity("1000");
+                  }
+                }}
+                placeholder="Contoh: 10"
                 required
                 className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
               />

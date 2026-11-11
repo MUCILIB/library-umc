@@ -118,6 +118,23 @@ export default function SecurePdfViewer({
     ? totalPhysicalPages
     : Math.min(allowedPublicPages, totalPhysicalPages);
 
+  const directPdfUrl = `${API_BASE_URL}/api/repository/proposals/${proposalId}/view-pdf`;
+
+  const handleOpenMobileDocument = () => {
+    if (!blobUrl) return;
+    const link = document.createElement("a");
+    link.href = blobUrl;
+    const cleanTitle = title
+      .replace(/[^a-zA-Z0-9_\- ]/g, "")
+      .trim()
+      .replace(/\s+/g, "_")
+      .substring(0, 40);
+    link.download = `${cleanTitle || "naskah"}_preview.pdf`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   return (
     <div className={`space-y-6 ${fullscreen ? "fixed inset-0 z-50 bg-background p-6 overflow-y-auto" : ""}`}>
       {/* Header Info Dokumen */}
@@ -187,25 +204,74 @@ export default function SecurePdfViewer({
         </div>
       </div>
 
-      {/* PDF Frame Container */}
-      <div className="relative rounded-2xl border border-border bg-muted/20 overflow-hidden shadow-sm">
-        {/* Banner petunjuk tampilan mobile */}
-        {blobUrl && (
-          <div className="md:hidden flex items-center justify-between px-4 py-2.5 bg-primary/10 border-b border-border text-xs text-primary font-medium">
-            <span className="flex items-center gap-1.5">
-              <Smartphone className="w-4 h-4 shrink-0" />
-              Mode Ponsel: Gunakan tab baru untuk navigasi lancar
+      {/* MOBILE ADAPTIVE VIEWER (Khusus Smartphone & Layar Ponsel) */}
+      <div
+        className="md:hidden bg-card border border-border rounded-2xl p-5 shadow-xs space-y-4"
+        data-testid="mobile-pdf-card"
+      >
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
+            <Smartphone className="w-5 h-5" />
+          </div>
+          <div>
+            <h4 className="text-sm font-bold text-foreground">
+              Naskah Siap Dibaca di Ponsel
+            </h4>
+            <p className="text-[11px] text-muted-foreground">
+              Format PDF telah disiapkan untuk pembaca dokumen bawaan perangkat Anda.
+            </p>
+          </div>
+        </div>
+
+        <div className="rounded-xl bg-muted/40 p-3 text-xs space-y-1.5 border border-border/60">
+          <div className="flex justify-between text-muted-foreground">
+            <span>Halaman Tersedia:</span>
+            <span className="font-semibold text-foreground">
+              {visiblePagesCount} dari {totalPhysicalPages} Halaman
             </span>
+          </div>
+          <div className="flex justify-between text-muted-foreground">
+            <span>Akses Membaca:</span>
+            <span className="font-semibold text-foreground">
+              {isAuthenticated ? "Akses Civitas Lengkap" : `Pratinjau Publik (${allowedPublicPages} Hlm)`}
+            </span>
+          </div>
+        </div>
+
+        {loadingPdf ? (
+          <div className="py-6 text-center text-xs text-muted-foreground animate-pulse">
+            Menyiapkan naskah dokumen...
+          </div>
+        ) : loadError ? (
+          <div className="p-3 text-xs text-destructive bg-destructive/10 rounded-xl border border-destructive/20 text-center">
+            {loadError}
+          </div>
+        ) : (
+          <div className="space-y-2 pt-1">
+            <button
+              type="button"
+              onClick={handleOpenMobileDocument}
+              className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground text-xs font-semibold shadow-xs transition-colors cursor-pointer"
+            >
+              <FileText className="w-4 h-4" />
+              <span>Buka & Baca Dokumen PDF</span>
+            </button>
+
             <a
-              href={blobUrl}
+              href={directPdfUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="font-bold underline ml-2 shrink-0"
+              className="w-full flex items-center justify-center gap-2 py-2 px-4 rounded-xl border border-border hover:bg-muted text-foreground text-xs font-medium transition-colors"
             >
-              Buka PDF
+              <ExternalLink className="w-3.5 h-3.5 text-muted-foreground" />
+              <span>Buka via Tautan Langsung</span>
             </a>
           </div>
         )}
+      </div>
+
+      {/* DESKTOP PDF Frame Container (Elemen iframe di-hidden di mobile agar tidak menampilkan ruang kosong rusak) */}
+      <div className="hidden md:block relative rounded-2xl border border-border bg-muted/20 overflow-hidden shadow-sm">
 
         {/* Iframe yang memanggil potongan PDF dari backend */}
         <div className="w-full h-[620px] md:h-[750px] bg-slate-100 dark:bg-slate-900 relative">

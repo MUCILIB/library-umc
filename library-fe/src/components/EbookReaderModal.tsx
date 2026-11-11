@@ -8,7 +8,8 @@ import {
   Lock,
   ExternalLink,
   FileWarning,
-  Smartphone
+  Smartphone,
+  FileText
 } from "lucide-react";
 import { authClient } from "@/utils/auth-client";
 import { API_BASE_URL } from "@/utils/api-config";
@@ -41,6 +42,23 @@ export default function EbookReaderModal({
   const [blobUrl, setBlobUrl] = useState<string | null>(null);
   const [loadingPdf, setLoadingPdf] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
+
+  const directEbookUrl = `${API_BASE_URL}/api/ebooks/${ebookId}/stream`;
+
+  const handleOpenMobileEbook = () => {
+    if (!blobUrl) return;
+    const link = document.createElement("a");
+    link.href = blobUrl;
+    const cleanTitle = title
+      .replace(/[^a-zA-Z0-9_\- ]/g, "")
+      .trim()
+      .replace(/\s+/g, "_")
+      .substring(0, 40);
+    link.download = `ebook_${cleanTitle || "buku"}.pdf`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
   useEffect(() => {
     if (!isOpen) return;
@@ -109,16 +127,15 @@ export default function EbookReaderModal({
 
           <div className="flex items-center gap-2 flex-shrink-0">
             {blobUrl && (
-              <a
-                href={blobUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                title="Buka e-book di tab baru atau aplikasi pembaca PDF bawaan perangkat"
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-primary bg-primary/10 hover:bg-primary/20 rounded-lg transition-colors min-h-[38px]"
+              <button
+                type="button"
+                onClick={handleOpenMobileEbook}
+                title="Buka e-book atau simpan ke perangkat"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-primary bg-primary/10 hover:bg-primary/20 rounded-lg transition-colors min-h-[38px] cursor-pointer"
               >
-                <ExternalLink className="h-4 w-4" />
-                <span className="hidden sm:inline">Buka di Tab Baru</span>
-              </a>
+                <FileText className="h-4 w-4" />
+                <span className="hidden sm:inline">Buka Dokumen</span>
+              </button>
             )}
             <button
               onClick={() => setFullscreen(!fullscreen)}
@@ -138,24 +155,57 @@ export default function EbookReaderModal({
         </div>
 
         {/* Reader Frame */}
-        <div className="flex-1 bg-muted relative flex flex-col">
-          {/* Banner petunjuk mobile */}
-          {blobUrl && (
-            <div className="md:hidden flex items-center justify-between px-4 py-2 bg-primary/10 border-b border-border text-xs text-primary font-medium">
-              <span className="flex items-center gap-1.5">
-                <Smartphone className="w-4 h-4 shrink-0" />
-                Mode Ponsel: Buka tab baru untuk navigasi lancar
-              </span>
-              <a
-                href={blobUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="font-bold underline ml-2 shrink-0"
-              >
-                Buka PDF
-              </a>
+        <div className="flex-1 bg-muted relative flex flex-col overflow-y-auto">
+          {/* MOBILE ADAPTIVE VIEWER (Khusus Smartphone & Layar Ponsel) */}
+          <div
+            className="md:hidden p-4 space-y-3 bg-card border-b border-border"
+            data-testid="mobile-ebook-card"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                <Smartphone className="w-5 h-5" />
+              </div>
+              <div>
+                <h4 className="text-xs font-bold text-foreground">
+                  Baca E-Book di Ponsel
+                </h4>
+                <p className="text-[11px] text-muted-foreground">
+                  Gunakan pembaca dokumen PDF bawaan smartphone Anda untuk navigasi yang lancar.
+                </p>
+              </div>
             </div>
-          )}
+
+            {loadingPdf ? (
+              <div className="py-4 text-center text-xs text-muted-foreground animate-pulse">
+                Membuka berkas e-book...
+              </div>
+            ) : loadError ? (
+              <div className="p-3 text-xs text-destructive bg-destructive/10 rounded-xl border border-destructive/20 text-center">
+                {loadError}
+              </div>
+            ) : (
+              <div className="space-y-2 pt-1">
+                <button
+                  type="button"
+                  onClick={handleOpenMobileEbook}
+                  className="w-full flex items-center justify-center gap-2 py-2 px-3 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground text-xs font-semibold shadow-xs transition-colors cursor-pointer"
+                >
+                  <FileText className="w-4 h-4" />
+                  <span>Buka & Baca E-Book (PDF)</span>
+                </button>
+
+                <a
+                  href={directEbookUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-full flex items-center justify-center gap-2 py-1.5 px-3 rounded-xl border border-border hover:bg-muted text-foreground text-[11px] font-medium transition-colors"
+                >
+                  <ExternalLink className="w-3.5 h-3.5 text-muted-foreground" />
+                  <span>Buka via Tautan Langsung</span>
+                </a>
+              </div>
+            )}
+          </div>
 
           {loadingPdf && (
             <div className="absolute inset-0 flex items-center justify-center bg-background/60 z-10">
@@ -177,17 +227,19 @@ export default function EbookReaderModal({
               </p>
             </div>
           ) : blobUrl ? (
-            <object
-              data={blobUrl}
-              type="application/pdf"
-              className="w-full h-full flex-1"
-            >
-              <iframe
-                src={`${blobUrl}#toolbar=0&navpanes=0&scrollbar=1`}
-                title={title}
-                className="w-full h-full border-0"
-              />
-            </object>
+            <div className="hidden md:flex flex-1 w-full h-full">
+              <object
+                data={blobUrl}
+                type="application/pdf"
+                className="w-full h-full flex-1"
+              >
+                <iframe
+                  src={`${blobUrl}#toolbar=0&navpanes=0&scrollbar=1`}
+                  title={title}
+                  className="w-full h-full border-0"
+                />
+              </object>
+            </div>
           ) : null}
         </div>
 
