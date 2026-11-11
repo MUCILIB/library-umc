@@ -20,6 +20,12 @@ import { Settings, Mail, BookOpen, Clock, AlertCircle, Bookmark, CreditCard, Spa
 import type { AuthUser } from "@/types/auth";
 import { getUserAvatar } from "@/lib/avatar";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 const Profile = () => {
   const navigate = useNavigate();
@@ -40,6 +46,7 @@ const Profile = () => {
   const [activeLoanCount, setActiveLoanCount] = useState(0);
   const [unpaidFineCount, setUnpaidFineCount] = useState(0);
   const [avatarUploading, setAvatarUploading] = useState(false);
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [savedCount, setSavedCount] = useState(0);
   const { success, error } = useToast();
   const currentUserId = session?.user?.id;
@@ -334,16 +341,23 @@ const Profile = () => {
         {/* Master Identity Card */}
         <div className="px-3 sm:px-6 -mt-12 sm:-mt-16 flex flex-col sm:flex-row items-center sm:items-end gap-4 sm:gap-6 mb-8 relative z-10">
           <div className="relative group shrink-0">
-            <Avatar className="w-24 h-24 sm:w-32 sm:h-32 rounded-full ring-4 ring-background shadow-lg border-2 border-border overflow-hidden bg-muted">
-              <AvatarImage
-                src={getUserAvatar(profile?.user || authUser)}
-                alt={profile?.user?.name || authUser?.name || "User"}
-                className="object-cover w-full h-full"
-              />
-              <AvatarFallback className="text-xl font-bold bg-muted text-foreground">
-                {(profile?.user?.name || authUser?.name || "U")[0]?.toUpperCase()}
-              </AvatarFallback>
-            </Avatar>
+            <button
+              type="button"
+              onClick={() => setIsPreviewOpen(true)}
+              className="cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded-full transition-transform hover:scale-105 active:scale-95 block"
+              title="Klik untuk memperbesar foto profil"
+            >
+              <Avatar className="w-24 h-24 sm:w-32 sm:h-32 rounded-full ring-4 ring-background shadow-lg border-2 border-border overflow-hidden bg-muted">
+                <AvatarImage
+                  src={getUserAvatar(profile?.user || authUser)}
+                  alt={profile?.user?.name || authUser?.name || "User"}
+                  className="object-cover w-full h-full"
+                />
+                <AvatarFallback className="text-xl font-bold bg-muted text-foreground">
+                  {(profile?.user?.name || authUser?.name || "U")[0]?.toUpperCase()}
+                </AvatarFallback>
+              </Avatar>
+            </button>
 
             <label
               htmlFor="avatar-upload-input"
@@ -669,6 +683,30 @@ const Profile = () => {
           </section>
         </div>
       </main>
+
+      {/* Dialog Preview Foto Profil */}
+      <Dialog open={isPreviewOpen} onOpenChange={setIsPreviewOpen}>
+        <DialogContent className="sm:max-w-md p-6 bg-card border-border">
+          <DialogHeader className="mb-4 text-center sm:text-left">
+            <DialogTitle className="text-base font-bold text-foreground">
+              Foto Profil
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="flex flex-col items-center justify-center py-2">
+            <div className="w-64 h-64 sm:w-80 sm:h-80 rounded-2xl overflow-hidden border border-border shadow-md bg-muted flex items-center justify-center">
+              <img
+                src={getUserAvatar(profile?.user || authUser)}
+                alt={profile?.user?.name || authUser?.name || "Foto Profil"}
+                className="w-full h-full object-cover"
+              />
+            </div>
+            <p className="mt-4 text-xs text-muted-foreground text-center font-medium">
+              {profile?.user?.name || authUser?.name}
+            </p>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <Footer />
     </div>
