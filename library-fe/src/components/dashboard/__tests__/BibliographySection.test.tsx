@@ -346,4 +346,35 @@ describe("BibliographySection", () => {
       }));
     });
   });
+
+  it("opens delete confirmation modal with active items warning and confirms deletion", async () => {
+    vi.mocked(bibliographyApi.delete).mockResolvedValue({ success: true, message: "Deleted" } as any);
+
+    render(<BibliographySection searchTerm="" onSearchChange={vi.fn()} />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Test Book")).toBeInTheDocument();
+    });
+
+    // Cari tombol hapus untuk baris buku pertama
+    const deleteButtons = screen.getAllByTitle("Hapus Bibliografi");
+    expect(deleteButtons.length).toBeGreaterThan(0);
+
+    fireEvent.click(deleteButtons[0]);
+
+    // Modal konfirmasi harus muncul dengan peringatan eksemplar fisik
+    await waitFor(() => {
+      expect(screen.getByText("Konfirmasi Penghapusan Bibliografi")).toBeInTheDocument();
+      expect(screen.getByText("Peringatan Eksemplar Fisik Aktif")).toBeInTheDocument();
+      expect(screen.getByText(/5 eksemplar fisik aktif/i)).toBeInTheDocument();
+    });
+
+    // Klik tombol konfirmasi Hapus Bibliografi
+    const confirmDeleteBtn = screen.getByTestId("confirm-delete-bib-btn");
+    fireEvent.click(confirmDeleteBtn);
+
+    await waitFor(() => {
+      expect(bibliographyApi.delete).toHaveBeenCalledWith("1");
+    });
+  });
 });

@@ -1,6 +1,6 @@
 import { db } from "../../../db";
 import { items, bibliographies, locations, logs, loans } from "../../../db/schema";
-import { eq, and, like, ilike, or, isNull, sql } from "drizzle-orm";
+import { eq, and, like, ilike, or, isNull, sql, asc, desc } from "drizzle-orm";
 import type { CreateItemData, BulkCreateItemData, UpdateItemData } from "../validation/item.validation";
 import { syncCollectionAvailableStock } from "../../shared/utils/stock-sync";
 import crypto from "crypto";
@@ -13,7 +13,9 @@ export class ItemService {
     limit: number = 20,
     q?: string,
     status?: string,
-    locationId?: number
+    locationId?: number,
+    sortBy?: string,
+    sortOrder?: "asc" | "desc"
   ) {
     const skip = (page - 1) * limit;
     let whereClause: any = isNull(items.deletedAt);
@@ -45,11 +47,27 @@ export class ItemService {
       );
     }
 
+    let orderClause: any[];
+    if (sortBy === "created_at" || sortBy === "createdAt") {
+      orderClause = sortOrder === "asc"
+        ? [asc(items.createdAt), asc(items.itemCode)]
+        : [desc(items.createdAt), asc(items.itemCode)];
+    } else if (sortBy === "inventory_code" || sortBy === "inventoryCode") {
+      orderClause = sortOrder === "desc" ? [desc(items.inventoryCode)] : [asc(items.inventoryCode)];
+    } else if (sortBy === "status") {
+      orderClause = sortOrder === "desc"
+        ? [desc(items.status), asc(items.itemCode)]
+        : [asc(items.status), asc(items.itemCode)];
+    } else {
+      // Default: Urutkan berdasarkan itemCode menaik agar eksemplar 1, 2, 3 selalu rapi
+      orderClause = sortOrder === "desc" ? [desc(items.itemCode)] : [asc(items.itemCode)];
+    }
+
     const [data, total] = await Promise.all([
       db.query.items.findMany({
         where: whereClause,
         with: { bibliography: true, location: true, vendor: true, collectionType: true },
-        orderBy: (items, { desc }) => [desc(items.createdAt)],
+        orderBy: orderClause,
         offset: skip,
         limit,
       }),

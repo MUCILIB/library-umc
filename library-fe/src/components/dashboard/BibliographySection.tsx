@@ -13,7 +13,6 @@ import {
   Tag,
   Plus,
   Pencil,
-  Archive,
   Trash2,
   X,
   Info,
@@ -25,6 +24,7 @@ import {
   FileDown,
   Columns3,
   Layers,
+  AlertTriangle,
 } from "lucide-react";
 import { useToast } from "@/hooks/useToast";
 import {
@@ -325,14 +325,32 @@ export default function BibliographySection({
     setShowForm(true);
   };
 
-  const handleDelete = async (bib: Bibliography) => {
-    if (!confirm(`Arsipkan bibliografi "${bib.title}"?`)) return;
+  const [bibToDelete, setBibToDelete] = useState<Bibliography | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const handleDelete = (bib: Bibliography) => {
+    setBibToDelete(bib);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!bibToDelete) return;
+    setIsDeleting(true);
     try {
-      await bibliographyApi.delete(bib.id);
+      await bibliographyApi.delete(bibToDelete.id);
+      toastSuccess(
+        "Bibliografi Dihapus",
+        `Bibliografi "${bibToDelete.title}" beserta seluruh eksemplarnya telah dihapus.`
+      );
+      if (selectedBib?.id === bibToDelete.id) setSelectedBib(null);
+      setBibToDelete(null);
       await fetchData(page, searchTerm || undefined);
-      if (selectedBib?.id === bib.id) setSelectedBib(null);
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Gagal mengarsipkan");
+      toastError(
+        "Gagal Menghapus",
+        err instanceof Error ? err.message : "Terjadi kesalahan saat menghapus bibliografi."
+      );
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -350,14 +368,23 @@ export default function BibliographySection({
   // Detail View
   if (selectedBib) {
     return (
-      <BibliographyDetail
-        bib={selectedBib}
-        loading={detailLoading}
-        onBack={closeDetail}
-        onEdit={handleEdit}
-        onDelete={handleDelete}
-        onViewItems={onViewItems}
-      />
+      <>
+        <BibliographyDetail
+          bib={selectedBib}
+          loading={detailLoading}
+          onBack={closeDetail}
+          onEdit={handleEdit}
+          onDelete={handleDelete}
+          onViewItems={onViewItems}
+        />
+        <DeleteBibliographyDialog
+          bib={bibToDelete}
+          isOpen={Boolean(bibToDelete)}
+          onClose={() => setBibToDelete(null)}
+          onConfirm={handleConfirmDelete}
+          isDeleting={isDeleting}
+        />
+      </>
     );
   }
 
@@ -772,10 +799,10 @@ export default function BibliographySection({
                       </button>
                       <button
                         onClick={() => handleDelete(bib)}
-                        className="rounded-lg p-1.5 text-amber-500 hover:bg-amber-50 dark:bg-amber-950/60 hover:text-amber-700 dark:text-amber-400 transition-colors cursor-pointer"
-                        title="Arsipkan"
+                        className="rounded-lg p-1.5 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/60 hover:text-rose-700 dark:text-rose-400 transition-colors cursor-pointer"
+                        title="Hapus Bibliografi"
                       >
-                        <Archive className="size-4" />
+                        <Trash2 className="size-4" />
                       </button>
                     </div>
                   </TableCell>
@@ -801,6 +828,15 @@ export default function BibliographySection({
         bib={quickAddBib}
         onClose={() => setQuickAddBib(null)}
         onSuccess={() => fetchData(page, searchTerm || undefined)}
+      />
+
+      {/* Modal Konfirmasi Hapus Bibliografi & Eksemplar */}
+      <DeleteBibliographyDialog
+        bib={bibToDelete}
+        isOpen={Boolean(bibToDelete)}
+        onClose={() => setBibToDelete(null)}
+        onConfirm={handleConfirmDelete}
+        isDeleting={isDeleting}
       />
     </div>
   );
@@ -1076,6 +1112,101 @@ function QuickAddItemModal({ bib, onClose, onSuccess }: QuickAddItemModalProps) 
 }
 
 // ==========================================
+// DELETE BIBLIOGRAPHY DIALOG COMPONENT
+// ==========================================
+
+interface DeleteBibliographyDialogProps {
+  bib: Bibliography | null;
+  isOpen: boolean;
+  onClose: () => void;
+  onConfirm: () => void;
+  isDeleting: boolean;
+}
+
+function DeleteBibliographyDialog({
+  bib,
+  isOpen,
+  onClose,
+  onConfirm,
+  isDeleting,
+}: DeleteBibliographyDialogProps) {
+  if (!isOpen || !bib) return null;
+
+  const itemCount = bib.totalItems ?? 0;
+
+  return (
+    <Modal isOpen={isOpen} onClose={onClose} title="Hapus Bibliografi" size="md">
+      <div className="space-y-4">
+        <div className="flex items-start gap-3">
+          <div className="w-10 h-10 rounded-xl bg-destructive/10 text-destructive flex items-center justify-center shrink-0">
+            <Trash2 className="w-5 h-5" />
+          </div>
+          <div className="space-y-1">
+            <h4 className="text-sm font-bold text-foreground">
+              Konfirmasi Penghapusan Bibliografi
+            </h4>
+            <p className="text-xs text-muted-foreground">
+              Apakah Anda yakin ingin menghapus data buku{" "}
+              <span className="font-semibold text-foreground">"{bib.title}"</span>?
+            </p>
+          </div>
+        </div>
+
+        {itemCount > 0 ? (
+          <div className="rounded-xl bg-amber-500/10 border border-amber-500/20 p-3.5 space-y-2 text-xs">
+            <div className="flex items-center gap-2 font-bold text-amber-700 dark:text-amber-400">
+              <AlertTriangle className="w-4 h-4 shrink-0" />
+              <span>Peringatan Eksemplar Fisik Aktif</span>
+            </div>
+            <p className="text-muted-foreground leading-relaxed">
+              Bibliografi ini memiliki{" "}
+              <strong className="text-foreground">{itemCount} eksemplar fisik aktif</strong>.
+              Menghapus bibliografi ini akan{" "}
+              <strong className="text-destructive font-semibold">sekaligus menghapus seluruh eksemplar fisik terkait</strong>{" "}
+              dari sistem sirkulasi dan katalog perpustakaan.
+            </p>
+          </div>
+        ) : (
+          <p className="text-xs text-muted-foreground bg-muted/40 p-3 rounded-xl border border-border">
+            Bibliografi ini belum memiliki eksemplar fisik. Menghapusnya aman dan tidak memengaruhi sirkulasi.
+          </p>
+        )}
+
+        <div className="flex items-center justify-end gap-2.5 pt-2">
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={isDeleting}
+            className="rounded-xl border border-border bg-card px-4 py-2 text-xs font-semibold text-muted-foreground hover:bg-muted hover:text-foreground transition-colors cursor-pointer"
+          >
+            Batal
+          </button>
+          <button
+            type="button"
+            onClick={onConfirm}
+            disabled={isDeleting}
+            data-testid="confirm-delete-bib-btn"
+            className="rounded-xl bg-destructive px-4 py-2 text-xs font-semibold text-destructive-foreground hover:bg-destructive/90 transition-colors flex items-center gap-2 cursor-pointer disabled:opacity-50"
+          >
+            {isDeleting ? (
+              <>
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                <span>Menghapus...</span>
+              </>
+            ) : (
+              <>
+                <Trash2 className="w-3.5 h-3.5" />
+                <span>Hapus Bibliografi</span>
+              </>
+            )}
+          </button>
+        </div>
+      </div>
+    </Modal>
+  );
+}
+
+// ==========================================
 // BIBLIOGRAPHY DETAIL COMPONENT
 // ==========================================
 
@@ -1132,10 +1263,10 @@ function BibliographyDetail({
           </button>
           <button
             onClick={() => onDelete(bib)}
-            className="flex items-center gap-2 rounded-lg bg-amber-600 px-4 py-2 text-sm font-medium text-white hover:bg-amber-700"
+            className="flex items-center gap-2 rounded-lg bg-destructive px-4 py-2 text-sm font-semibold text-destructive-foreground hover:bg-destructive/90 transition-colors cursor-pointer"
           >
-            <Archive className="size-4" />
-            Arsipkan
+            <Trash2 className="size-4" />
+            Hapus
           </button>
         </div>
       </div>
@@ -1265,6 +1396,7 @@ interface BibliographyFormProps {
 }
 
 function BibliographyForm({ bib, onClose, onSuccess }: BibliographyFormProps) {
+  const toast = useToast();
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -1649,12 +1781,20 @@ function BibliographyForm({ bib, onClose, onSuccess }: BibliographyFormProps) {
     const file = e.target.files?.[0];
     if (!file) return;
 
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("Berkas Terlalu Besar", "Ukuran maksimal gambar sampul adalah 5 MB.");
+      e.target.value = "";
+      return;
+    }
+
+    const toastId = toast.loading("Mengunggah Sampul...", `Mengirim ${file.name} ke penyimpanan S3.`);
+    setIsUploadingCover(true);
+
     // Coba upload berkas fisik langsung ke S3 backend
     const uploadData = new FormData();
     uploadData.append("file", file);
 
     try {
-      setIsUploadingCover(true);
       const res = await fetch(`${API_BASE_URL}/api/upload/cover`, {
         method: "POST",
         body: uploadData,
@@ -1665,15 +1805,22 @@ function BibliographyForm({ bib, onClose, onSuccess }: BibliographyFormProps) {
         const json = await res.json();
         if (json.data?.url) {
           setFormData((prev) => ({ ...prev, image: json.data.url }));
+          toast.removeToast(toastId);
+          toast.success("Sampul Berhasil Diunggah", "Berkas gambar sampul telah tersimpan di S3.");
           return;
         }
       }
       // Fallback ke kompresi client jika offline / error
       compressAndSetBase64(file);
+      toast.removeToast(toastId);
+      toast.info("Sampul Disimpan Lokal", "Berhasil dikompresi sebagai data lokal.");
     } catch {
       compressAndSetBase64(file);
+      toast.removeToast(toastId);
+      toast.info("Sampul Disimpan Lokal", "Berhasil dikompresi sebagai data lokal.");
     } finally {
       setIsUploadingCover(false);
+      e.target.value = "";
     }
   };
 
