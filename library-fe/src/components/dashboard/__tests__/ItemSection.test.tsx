@@ -169,4 +169,28 @@ describe("ItemSection", () => {
       expect(screen.queryByText('QR Code Salinan (Exemplar)')).not.toBeInTheDocument();
     });
   });
+
+  it("should request items with sortBy and sortOrder and toggle sort on header click", async () => {
+    render(<ItemSection />);
+    await waitFor(() => {
+      expect(screen.getByText("ITEM-001")).toBeInTheDocument();
+    });
+
+    // Initial fetch should sort by itemCode asc
+    expect(mockFetch).toHaveBeenCalledWith(
+      expect.stringContaining("sortBy=itemCode&sortOrder=asc"),
+      expect.any(Object)
+    );
+
+    // Click header Kode Item to toggle to desc
+    const headerCode = screen.getByTitle("Klik untuk mengubah urutan kode item");
+    fireEvent.click(headerCode);
+
+    await waitFor(() => {
+      expect(mockFetch).toHaveBeenCalledWith(
+        expect.stringContaining("sortBy=itemCode&sortOrder=desc"),
+        expect.any(Object)
+      );
+    });
+  });
 });

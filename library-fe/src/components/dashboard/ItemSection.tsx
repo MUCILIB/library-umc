@@ -17,6 +17,9 @@ import {
   Ban,
   Download,
   Info,
+  ArrowUpDown,
+  ArrowUp,
+  ArrowDown,
 } from "lucide-react";
 import Modal from "@/components/ui/modal";
 import { itemApi, bibliographyApi, locationApi, type Item, type Bibliography, type Location } from "@/api/client";
@@ -56,6 +59,8 @@ export default function ItemSection({
   const [editingItem, setEditingItem] = useState<Item | null>(null);
   const [showQrModal, setShowQrModal] = useState(false);
   const [qrModalItem, setQrModalItem] = useState<Item | null>(null);
+  const [sortBy, setSortBy] = useState<string>("itemCode");
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
   const limit = 10;
 
   useEffect(() => {
@@ -73,6 +78,8 @@ export default function ItemSection({
       const params = new URLSearchParams();
       params.set("page", String(page));
       params.set("limit", String(limit));
+      params.set("sortBy", sortBy);
+      params.set("sortOrder", sortOrder);
       if (searchTerm) params.set("q", searchTerm);
       if (initialBibliographyId) params.set("bibliographyId", initialBibliographyId);
       if (statusFilter && statusFilter !== "all") params.set("status", statusFilter);
@@ -90,7 +97,7 @@ export default function ItemSection({
     } finally {
       setLoading(false);
     }
-  }, [page, searchTerm, initialBibliographyId, statusFilter, locationFilter]);
+  }, [page, searchTerm, initialBibliographyId, statusFilter, locationFilter, sortBy, sortOrder]);
 
   useEffect(() => {
     fetchData();
@@ -307,6 +314,28 @@ export default function ItemSection({
             </Select>
           </div>
 
+          <div className="w-[160px] sm:w-[185px]">
+            <Select
+              value={`${sortBy}-${sortOrder}`}
+              onValueChange={(val) => {
+                const [sb, so] = val.split("-") as [string, "asc" | "desc"];
+                setSortBy(sb);
+                setSortOrder(so);
+                setPage(1);
+              }}
+            >
+              <SelectTrigger className="h-9 w-full text-xs">
+                <SelectValue placeholder="Urutan" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="itemCode-asc">Kode Item (1, 2, 3...)</SelectItem>
+                <SelectItem value="itemCode-desc">Kode Item (3, 2, 1...)</SelectItem>
+                <SelectItem value="createdAt-desc">Terbaru Ditambahkan</SelectItem>
+                <SelectItem value="createdAt-asc">Terlama Ditambahkan</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
           <button
             onClick={handleSearch}
             className="rounded-lg bg-primary px-3.5 py-2 text-xs font-semibold text-white hover:bg-primary/90 transition-colors"
@@ -314,16 +343,18 @@ export default function ItemSection({
             Cari
           </button>
 
-          {(searchTerm || statusFilter !== "all" || locationFilter !== "all") && (
+          {(searchTerm || statusFilter !== "all" || locationFilter !== "all" || sortBy !== "itemCode" || sortOrder !== "asc") && (
             <button
               onClick={() => {
                 setSearchInput("");
                 setSearchTerm("");
                 setStatusFilter("all");
                 setLocationFilter("all");
+                setSortBy("itemCode");
+                setSortOrder("asc");
                 setPage(1);
               }}
-              className="flex items-center gap-1.5 rounded-lg border border-border px-3 py-2 text-xs font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+              className="flex items-center gap-1.5 rounded-lg border border-border px-3 py-2 text-xs font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors cursor-pointer"
               title="Reset filter"
             >
               <RotateCcw className="size-3.5" />
@@ -348,7 +379,32 @@ export default function ItemSection({
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-border bg-muted">
-                  <th className="px-4 py-3 text-left font-semibold text-muted-foreground">Kode Item</th>
+                  <th
+                    onClick={() => {
+                      if (sortBy === "itemCode") {
+                        setSortOrder(sortOrder === "asc" ? "desc" : "asc");
+                      } else {
+                        setSortBy("itemCode");
+                        setSortOrder("asc");
+                      }
+                      setPage(1);
+                    }}
+                    className="px-4 py-3 text-left font-semibold text-muted-foreground cursor-pointer hover:text-foreground select-none"
+                    title="Klik untuk mengubah urutan kode item"
+                  >
+                    <div className="flex items-center gap-1.5">
+                      <span>Kode Item</span>
+                      {sortBy === "itemCode" ? (
+                        sortOrder === "asc" ? (
+                          <ArrowUp className="size-3.5 text-primary" />
+                        ) : (
+                          <ArrowDown className="size-3.5 text-primary" />
+                        )
+                      ) : (
+                        <ArrowUpDown className="size-3.5 opacity-40" />
+                      )}
+                    </div>
+                  </th>
                   <th className="px-4 py-3 text-left font-semibold text-muted-foreground">Bibliografi</th>
                   <th className="px-4 py-3 text-left font-semibold text-muted-foreground">Lokasi</th>
                   <th className="px-4 py-3 text-center font-semibold text-muted-foreground">Status</th>

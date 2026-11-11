@@ -418,7 +418,11 @@ if (updateData.isbn && isValidCode(updateData.isbn)) {
         bibliographySubjects: { with: { subject: true } },
         bibliographyFaculties: { with: { faculty: true } },
         bibliographyStudyPrograms: { with: { studyProgram: { with: { faculty: true } } } },
-        items: { where: isNull(items.deletedAt), with: { location: true } },
+        items: {
+          where: isNull(items.deletedAt),
+          with: { location: true },
+          orderBy: (items, { asc }) => [asc(items.itemCode)],
+        },
       },
     });
     if (!bib) return null;
@@ -570,7 +574,17 @@ if (updateData.isbn && isValidCode(updateData.isbn)) {
   }
 
   async softDelete(id: string) {
-    await db.update(bibliographies).set({ deletedAt: new Date(), updatedAt: new Date() }).where(eq(bibliographies.id, id));
+    await db.transaction(async (tx) => {
+      const now = new Date();
+      await tx
+        .update(items)
+        .set({ deletedAt: now, updatedAt: now })
+        .where(and(eq(items.bibliographyId, id), isNull(items.deletedAt)));
+      await tx
+        .update(bibliographies)
+        .set({ deletedAt: now, updatedAt: now })
+        .where(eq(bibliographies.id, id));
+    });
   }
 
   async checkDuplicate(params: { isbn?: string; issn?: string; title?: string; author?: string; excludeId?: string }) {
