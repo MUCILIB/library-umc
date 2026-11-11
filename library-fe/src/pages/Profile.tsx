@@ -323,10 +323,10 @@ const Profile = () => {
       `}} />
 
       <main className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 pb-20">
-        {/* Banner with Refined Architectural Grid */}
-        <div className="relative rounded-xl overflow-hidden h-32 sm:h-40 bg-neutral-900 border border-border shadow-xs">
-          <div className="absolute inset-0 bg-[radial-gradient(#ffffff0d_1px,transparent_1px)] [background-size:16px_16px]" />
-          <div className="absolute bottom-3 left-4 sm:left-6 text-[11px] font-mono tracking-widest text-neutral-400 uppercase">
+        {/* Banner with Refined Brand Gradient */}
+        <div className="relative rounded-2xl overflow-hidden h-32 sm:h-40 bg-gradient-to-r from-primary/10 via-accent to-background border border-border shadow-xs">
+          <div className="absolute inset-0 bg-[radial-gradient(currentColor_1px,transparent_1px)] [background-size:16px_16px] text-primary/10" />
+          <div className="absolute bottom-3 left-4 sm:left-6 text-[11px] font-mono tracking-widest text-primary/80 uppercase font-semibold">
             Identitas Anggota Perpustakaan
           </div>
         </div>
