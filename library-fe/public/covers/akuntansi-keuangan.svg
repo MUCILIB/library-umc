@@ -1,0 +1,70 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 600" width="400" height="600">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#14532d" />
+      <stop offset="100%" stop-color="#15803d" />
+    </linearGradient>
+    <linearGradient id="spineShadow" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#000000" stop-opacity="0.4" />
+      <stop offset="3%" stop-color="#ffffff" stop-opacity="0.1" />
+      <stop offset="7%" stop-color="#000000" stop-opacity="0.25" />
+      <stop offset="100%" stop-color="#000000" stop-opacity="0" />
+    </linearGradient>
+    <filter id="shadow" x="-5%" y="-5%" width="110%" height="110%">
+      <feDropShadow dx="0" dy="4" stdDeviation="6" flood-opacity="0.3"/>
+    </filter>
+  </defs>
+
+  <!-- Background -->
+  <rect width="400" height="600" fill="url(#bgGrad)" />
+
+  <!-- Geometric Decorative Lines -->
+  <circle cx="340" cy="90" r="120" fill="none" stroke="#4ade80" stroke-width="1.5" stroke-opacity="0.15" />
+  <circle cx="340" cy="90" r="80" fill="none" stroke="#4ade80" stroke-width="1" stroke-opacity="0.1" />
+  <path d="M 40 480 L 360 480" stroke="#4ade80" stroke-width="1" stroke-opacity="0.3" />
+
+  <!-- Top Header / Tag -->
+  <g transform="translate(45, 60)">
+    <rect x="0" y="0" width="6" height="24" fill="#4ade80" rx="3" />
+    <text x="16" y="16" fill="#4ade80" font-family="system-ui, -apple-system, sans-serif" font-size="11" font-weight="700" letter-spacing="2">
+      EKONOMI & AKUNTANSI
+    </text>
+    <text x="16" y="32" fill="#94a3b8" font-family="system-ui, -apple-system, sans-serif" font-size="10" font-weight="500">
+      PERPUSTAKAAN UNIVERSITAS MUHAMMADIYAH CIREBON
+    </text>
+  </g>
+
+  <!-- Title & Subtitle -->
+  <g transform="translate(45, 170)">
+    <!-- Multi-line title wrap -->
+    <foreignObject x="0" y="0" width="310" height="180">
+      <div xmlns="http://www.w3.org/1999/xhtml" style="font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; color: #ffffff;">
+        <h1 style="margin: 0; font-size: 26px; font-weight: 800; line-height: 1.25; letter-spacing: -0.02em; text-shadow: 0 2px 4px rgba(0,0,0,0.4);">
+          Akuntansi Keuangan Menengah
+        </h1>
+        <p style="margin: 12px 0 0 0; font-size: 13px; font-weight: 400; line-height: 1.45; color: #cbd5e1; opacity: 0.95;">
+          Standar Akuntansi Keuangan (SAK) Berbasis IFRS Terkini
+        </p>
+      </div>
+    </foreignObject>
+  </g>
+
+  <!-- Author & Meta Footer -->
+  <g transform="translate(45, 500)">
+    <text x="0" y="16" fill="#94a3b8" font-family="system-ui, -apple-system, sans-serif" font-size="10" font-weight="600" letter-spacing="1">
+      PENULIS / PENGARANG
+    </text>
+    <text x="0" y="38" fill="#ffffff" font-family="system-ui, -apple-system, sans-serif" font-size="15" font-weight="700">
+      Dwi Martani & Tim
+    </text>
+    
+    <!-- Mini Badge -->
+    <rect x="220" y="10" width="90" height="26" rx="6" fill="#000000" fill-opacity="0.3" stroke="#4ade80" stroke-width="1" stroke-opacity="0.4" />
+    <text x="265" y="27" fill="#4ade80" font-family="system-ui, -apple-system, sans-serif" font-size="9" font-weight="700" text-anchor="middle" letter-spacing="1">
+      KOLEKSI REAL
+    </text>
+  </g>
+
+  <!-- Realistic Left Spine Shadow -->
+  <rect x="0" y="0" width="28" height="600" fill="url(#spineShadow)" />
+</svg>
