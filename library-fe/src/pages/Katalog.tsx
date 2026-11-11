@@ -289,7 +289,7 @@ const Katalog = () => {
 
       {/* Hero Search Section */}
       <div
-        className="relative w-full flex flex-col justify-center items-center px-4 md:px-8 pt-24 sm:pt-28 pb-12 sm:pb-16"
+        className="relative w-full flex flex-col justify-center items-center px-4 sm:px-6 md:px-8 pt-10 sm:pt-14 pb-8 sm:pb-12"
         style={{
           backgroundImage: `linear-gradient(to bottom right, rgba(28, 7, 10, 0.92) 0%, rgba(28, 7, 10, 0.78) 50%, rgba(28, 7, 10, 0.40) 100%), url(${Background})`,
           backgroundSize: "cover",
@@ -314,7 +314,7 @@ const Katalog = () => {
               onChange={(e) => setSearchQuery(e.target.value)}
               onKeyDown={handleKeyPress}
               placeholder="Cari judul, penulis, ISBN, atau kata kunci..."
-              className="w-full bg-transparent border-0 outline-none focus:outline-none focus:ring-0 text-slate-800 text-xs sm:text-sm placeholder:text-slate-400 px-1 sm:px-2 min-w-0"
+              className="w-full bg-transparent border-0 outline-none focus:outline-none focus:ring-0 text-slate-800 text-xs sm:text-sm placeholder:text-slate-400 placeholder:truncate px-1 sm:px-2 min-w-0"
             />
 
             {/* Filter Dropdown */}
@@ -462,7 +462,7 @@ const Katalog = () => {
                       className={`
                         fixed inset-0 z-40 lg:relative lg:inset-auto lg:z-0 lg:w-72 xl:w-80 shrink-0
                         transition-transform duration-300 ease-in-out lg:translate-x-0
-                        ${isSidebarOpen ? "translate-x-0" : "-translate-x-full"}
+                        ${isSidebarOpen ? "translate-x-0" : "-translate-x-full pointer-events-none lg:pointer-events-auto"}
                       `}
                     >
                       {/* Backdrop for mobile */}

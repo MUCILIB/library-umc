@@ -2,7 +2,6 @@ import { Routes, Route, Navigate } from "react-router";
 
 // Pages
 import Home from "../pages/Home";
-import About from "../pages/About";
 import Katalog from "../pages/Katalog";
 import DetailKatalog from "../pages/KatalogDetail";
 import Login from "../pages/LoginPage";
@@ -32,7 +31,7 @@ const AppRoutes = () => {
       <Routes>
         {/* Rute Publik (Akses terbatas untuk Admin) */}
         <Route path="/" element={<NonAdminRoute><Home /></NonAdminRoute>} />
-        <Route path="/about" element={<NonAdminRoute><About /></NonAdminRoute>} />
+        <Route path="/about" element={<Navigate to="/tentang" replace />} />
         <Route path="/katalog" element={<NonAdminRoute><Katalog /></NonAdminRoute>} />
         <Route path="/katalog/:id" element={<NonAdminRoute><DetailKatalog /></NonAdminRoute>} />
         <Route path="/repository/:id" element={<NonAdminRoute><RepositoryDetailPage /></NonAdminRoute>} />

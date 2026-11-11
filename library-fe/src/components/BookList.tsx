@@ -553,14 +553,14 @@ const BookList = ({
 
           <nav
             aria-label="Navigasi Halaman Katalog"
-            className="flex items-center gap-1.5 flex-wrap justify-center order-1 sm:order-2"
+            className="flex items-center gap-1 sm:gap-1.5 flex-wrap justify-center order-1 sm:order-2 max-w-full"
           >
             {/* Tombol Sebelumnya */}
             <button
               type="button"
               onClick={() => handlePageChange(safeCurrentPage - 1)}
               disabled={safeCurrentPage === 1}
-              className="inline-flex items-center gap-1 h-9 px-3 border border-slate-200 dark:border-border bg-white dark:bg-card rounded-xl text-xs font-semibold text-slate-700 dark:text-foreground hover:bg-slate-50 dark:hover:bg-muted disabled:opacity-40 disabled:pointer-events-none transition-all shadow-xs cursor-pointer"
+              className="inline-flex items-center gap-1 h-8 px-2.5 sm:h-9 sm:px-3 border border-slate-200 dark:border-border bg-white dark:bg-card rounded-xl text-xs font-semibold text-slate-700 dark:text-foreground hover:bg-slate-50 dark:hover:bg-muted disabled:opacity-40 disabled:pointer-events-none transition-all shadow-xs cursor-pointer"
               aria-label="Halaman Sebelumnya"
             >
               <ChevronLeft size={16} />
@@ -573,7 +573,7 @@ const BookList = ({
                 return (
                   <span
                     key={`ellipsis-${index}`}
-                    className="w-9 h-9 flex items-center justify-center text-slate-400 select-none text-xs font-bold"
+                    className="w-7 h-7 sm:w-9 sm:h-9 flex items-center justify-center text-slate-400 select-none text-xs font-bold"
                   >
                     ...
                   </span>
@@ -590,7 +590,7 @@ const BookList = ({
                   onClick={() => handlePageChange(pageNum)}
                   aria-current={isActive ? "page" : undefined}
                   aria-label={`Halaman ${pageNum}`}
-                  className={`w-9 h-9 rounded-xl font-bold transition-all text-xs cursor-pointer flex items-center justify-center ${
+                  className={`w-7 h-7 sm:w-9 sm:h-9 rounded-xl font-bold transition-all text-xs cursor-pointer flex items-center justify-center ${
                     isActive
                       ? "bg-[#9D171D] text-white shadow-sm shadow-[#9D171D]/25 border border-[#9D171D]"
                       : "bg-white dark:bg-card border border-slate-200 dark:border-border hover:bg-slate-50 dark:hover:bg-muted text-slate-700 dark:text-foreground"
@@ -606,7 +606,7 @@ const BookList = ({
               type="button"
               onClick={() => handlePageChange(safeCurrentPage + 1)}
               disabled={safeCurrentPage === totalPages}
-              className="inline-flex items-center gap-1 h-9 px-3 border border-slate-200 dark:border-border bg-white dark:bg-card rounded-xl text-xs font-semibold text-slate-700 dark:text-foreground hover:bg-slate-50 dark:hover:bg-muted disabled:opacity-40 disabled:pointer-events-none transition-all shadow-xs cursor-pointer"
+              className="inline-flex items-center gap-1 h-8 px-2.5 sm:h-9 sm:px-3 border border-slate-200 dark:border-border bg-white dark:bg-card rounded-xl text-xs font-semibold text-slate-700 dark:text-foreground hover:bg-slate-50 dark:hover:bg-muted disabled:opacity-40 disabled:pointer-events-none transition-all shadow-xs cursor-pointer"
               aria-label="Halaman Selanjutnya"
             >
               <span className="hidden sm:inline">Selanjutnya</span>
