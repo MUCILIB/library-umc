@@ -26,12 +26,12 @@ test.describe("Responsive Landing Page & Public Pages Across Devices", () => {
       const searchInput = page.locator('input[placeholder*="Cari" i]').first();
       await expect(searchInput).toBeVisible();
 
-      // Verifikasi 4 Pintasan Fitur Utama
-      const katalogLink = page.locator('a[href="/katalog"]').first();
-      await expect(katalogLink).toBeVisible();
+      // Verifikasi 4 Pintasan Fitur Utama di Halaman
+      const katalogCard = page.locator('a[href="/katalog"]:has-text("Katalog Online")');
+      await expect(katalogCard).toBeVisible();
 
-      const repositoriLink = page.locator('a[href="/repositori"]').first();
-      await expect(repositoriLink).toBeVisible();
+      const repositoriCard = page.locator('a[href="/repositori"]:has-text("Repositori Digital")');
+      await expect(repositoriCard).toBeVisible();
 
       // Verifikasi Section Koleksi Terbaru
       const koleksiHeading = page.getByRole("heading", { name: "Koleksi Terbaru" });
