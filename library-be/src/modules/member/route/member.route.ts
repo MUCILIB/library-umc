@@ -1,4 +1,5 @@
 import { Router } from "express";
+import multer from "multer";
 import {
   isAuthenticated,
   requireRole
@@ -7,6 +8,23 @@ import { MemberController } from "../controller/member.controller";
 
 const router = Router();
 const memberController = new MemberController();
+
+const avatarUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 5 * 1024 * 1024, // 5MB
+  },
+  fileFilter: (_req, file, cb) => {
+    const isImage =
+      file.mimetype.startsWith("image/") ||
+      ["image/jpeg", "image/png", "image/webp"].includes(file.mimetype);
+    if (isImage) {
+      cb(null, true);
+    } else {
+      cb(new Error("Hanya file gambar (JPG, PNG, WebP) yang diperbolehkan"));
+    }
+  },
+});
 
 /**
  * @swagger
@@ -61,6 +79,19 @@ router.get("/members/me", isAuthenticated, memberController.getMyProfile);
  *             schema:
  *               $ref: '#/components/schemas/Member'
  */
+// Public: Stream avatar
+router.get("/members/avatar/:filename", (req, res, next) =>
+  memberController.getAvatar(req, res, next)
+);
+
+// Terproteksi: Upload avatar profil user
+router.post(
+  "/members/me/avatar",
+  isAuthenticated,
+  avatarUpload.single("avatar"),
+  (req, res, next) => memberController.uploadMyAvatar(req, res, next)
+);
+
 router.patch("/members/me", isAuthenticated, memberController.updateMyProfile);
 
 router.get(

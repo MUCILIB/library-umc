@@ -2032,7 +2032,7 @@ function BibliographyForm({ bib, onClose, onSuccess }: BibliographyFormProps) {
                   <p className={`text-sm font-medium truncate ${d.similarity === 'isbn' || d.similarity === 'issn' ? 'text-destructive font-bold' : 'text-amber-900'}`}>{d.title}</p>
                   <p className={`text-xs ${d.similarity === 'isbn' || d.similarity === 'issn' ? 'text-destructive/80' : 'text-amber-700'}`}>
                     {d.authors.map((a) => a.name).join(", ")}
-                    {d.isbn ? ` — ISBN: ${cleanIsbn(d.isbn)}` : d.issn ? ` — ISSN: ${d.issn}` : d.isbnIssn ? ` — ${cleanIsbn(d.isbnIssn)}` : ""}
+                    {d.isbn ? ` | ISBN: ${cleanIsbn(d.isbn)}` : d.issn ? ` | ISSN: ${d.issn}` : d.isbnIssn ? ` | ${cleanIsbn(d.isbnIssn)}` : ""}
                   </p>
                 </div>
                 <button

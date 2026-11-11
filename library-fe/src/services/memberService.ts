@@ -37,10 +37,33 @@ export interface UpdateProfilePayload {
   originRegion?: string;
   institution?: string;
   phone?: string;
+  image?: string;
 }
 
 class MemberService {
   private baseUrl = API_BASE_URL;
+
+  async uploadMyAvatar(file: File): Promise<{ url: string; key: string; filename: string }> {
+    const authHeaders = getAuthHeaders();
+    const formData = new FormData();
+    formData.append("avatar", file);
+
+    const headers: Record<string, string> = { ...authHeaders };
+    delete headers["Content-Type"];
+
+    const response = await fetch(`${this.baseUrl}/api/members/me/avatar`, {
+      method: "POST",
+      credentials: "include",
+      headers,
+      body: formData,
+    });
+
+    const result = await response.json();
+    if (!result.success) {
+      throw new Error(result.message || "Gagal mengunggah foto profil");
+    }
+    return result.data;
+  }
 
   async getMyProfile(): Promise<MemberProfile> {
     const authHeaders = getAuthHeaders();

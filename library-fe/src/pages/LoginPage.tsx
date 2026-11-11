@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router";
 import { authClient } from "@/utils/auth-client";
 import { setAuthToken } from "@/api/client";
-import { Mail, Lock, UserCircle2, UserPlus, Eye, EyeOff, ShieldCheck } from "lucide-react";
+import { Mail, Lock, UserCircle2, UserPlus, Eye, EyeOff, ShieldCheck, UserCheck } from "lucide-react";
 import { useToast } from "@/hooks/useToast";
 
 const GoogleIcon = ({ className = "w-4 h-4" }: { className?: string }) => (
@@ -241,20 +241,36 @@ const LoginPage = () => {
               </label>
             </div>
 
-            {/* Auto Fill Super Admin */}
-            <button
-              type="button"
-              onClick={() => {
-                setEmail("admin@mucilib.ac.id");
-                setPassword("Admin123456!");
-                info("Super Admin", "Kredensial Super Admin berhasil diisi.");
-              }}
-              disabled={isLoading}
-              className="w-full flex items-center justify-center gap-1.5 h-8 bg-primary/10 hover:bg-primary/15 border border-dashed border-primary/40 text-primary rounded-xl font-semibold text-[11px] transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <ShieldCheck size={14} className="text-primary" />
-              <span>Auto Fill Super Admin</span>
-            </button>
+            {/* Demo Accounts Auto Fill */}
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setEmail("admin@mucilib.ac.id");
+                  setPassword("Admin123456!");
+                  info("Super Admin", "Kredensial Super Admin berhasil diisi.");
+                }}
+                disabled={isLoading}
+                className="w-full flex items-center justify-center gap-1.5 h-8 bg-primary/10 hover:bg-primary/15 border border-dashed border-primary/40 text-primary rounded-xl font-semibold text-[11px] transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <ShieldCheck size={13} className="text-primary shrink-0" />
+                <span className="truncate">Super Admin</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setEmail("external@mucilib.ac.id");
+                  setPassword("External123456!");
+                  info("Member External", "Kredensial User External berhasil diisi.");
+                }}
+                disabled={isLoading}
+                className="w-full flex items-center justify-center gap-1.5 h-8 bg-muted hover:bg-muted/80 border border-dashed border-border text-foreground rounded-xl font-semibold text-[11px] transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <UserCheck size={13} className="text-foreground shrink-0" />
+                <span className="truncate">Member External</span>
+              </button>
+            </div>
 
             {/* Submit Button */}
             <button

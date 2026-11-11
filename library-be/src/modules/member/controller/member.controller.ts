@@ -1,5 +1,8 @@
 import { type NextFunction, type Request, type Response } from "express";
+import path from "path";
+import crypto from "crypto";
 import { MemberService } from "../service/member.service";
+import { avatarStorageService } from "../../repository/service/storage.service";
 import {
   approveCardSchema,
   rejectCardSchema,
@@ -64,6 +67,87 @@ export class MemberController {
       }
 
       sendSuccess(res, "Profil berhasil diperbarui", result.data);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * POST /members/me/avatar — Upload foto profil user ke S3
+   */
+  async uploadMyAvatar(req: Request, res: Response, next: NextFunction) {
+    try {
+      if (!req.user?.id) {
+        return sendError(res, "Tidak terautentikasi", 401);
+      }
+
+      if (!req.file) {
+        return sendError(res, "Berkas gambar wajib diunggah", 400);
+      }
+
+      const originalExt = path.extname(req.file.originalname).toLowerCase();
+      const safeExt = [".jpg", ".jpeg", ".png", ".webp"].includes(originalExt)
+        ? originalExt
+        : ".png";
+
+      const filename = `avatar-${req.user.id}-${Date.now()}-${crypto.randomBytes(4).toString("hex")}${safeExt}`;
+      const s3Key = await avatarStorageService.save(
+        filename,
+        req.file.buffer,
+        req.file.mimetype || "image/png"
+      );
+
+      const avatarUrl = `/api/members/avatar/${filename}`;
+
+      // Update user image automatically
+      await memberService.updateProfile(req.user.id, {
+        image: avatarUrl
+      });
+
+      return sendSuccess(
+        res,
+        "Foto profil berhasil diunggah",
+        {
+          url: avatarUrl,
+          key: s3Key,
+          filename
+        },
+        201
+      );
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * GET /members/avatar/:filename — Stream foto profil
+   */
+  async getAvatar(req: Request, res: Response, next: NextFunction) {
+    try {
+      const rawParam = req.params.filename as string;
+      if (!rawParam || rawParam.includes("..") || rawParam.includes("/") || rawParam.includes("\\")) {
+        return sendError(res, "Nama berkas avatar tidak valid", 400);
+      }
+
+      const ext = path.extname(rawParam).toLowerCase();
+      const mimeMap: Record<string, string> = {
+        ".jpg": "image/jpeg",
+        ".jpeg": "image/jpeg",
+        ".png": "image/png",
+        ".webp": "image/webp"
+      };
+      const contentType = mimeMap[ext] || "image/jpeg";
+
+      let buffer: Buffer;
+      try {
+        buffer = await avatarStorageService.read(`library/avatars/${rawParam}`);
+      } catch {
+        buffer = await avatarStorageService.read(rawParam);
+      }
+
+      res.setHeader("Content-Type", contentType);
+      res.setHeader("Cache-Control", "public, max-age=86400, stale-while-revalidate=43200");
+      res.send(buffer);
     } catch (error) {
       next(error);
     }

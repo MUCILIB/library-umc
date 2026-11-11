@@ -5,7 +5,8 @@ export const updateProfileSchema = z.object({
   faculty: z.string().max(200).optional().or(z.literal("")),
   originRegion: z.string().max(255).optional().or(z.literal("")),
   institution: z.string().max(200).optional().or(z.literal("")),
-  phone: z.string().max(100).optional().or(z.literal(""))
+  phone: z.string().max(100).optional().or(z.literal("")),
+  image: z.string().url("URL avatar tidak valid").or(z.string().startsWith("/api/")).optional().or(z.literal(""))
 });
 
 export const approveCardSchema = z.object({

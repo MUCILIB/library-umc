@@ -16,9 +16,10 @@ import SavedBooksTab from "@/components/SavedBooksTab";
 import LecturerRecommendationList from "@/components/LecturerRecommendationList";
 import { useToast } from "@/hooks/useToast";
 import { getSavedBookIds } from "@/utils/bookmarks";
-import { Settings, Mail, BookOpen, Clock, AlertCircle, Bookmark, CreditCard, Sparkles, ChevronRight, ChevronDown, Check, SlidersHorizontal } from "lucide-react";
+import { Settings, Mail, BookOpen, Clock, AlertCircle, Bookmark, CreditCard, Sparkles, ChevronRight, ChevronDown, Check, SlidersHorizontal, Camera, Loader2 } from "lucide-react";
 import type { AuthUser } from "@/types/auth";
 import { getUserAvatar } from "@/lib/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 const Profile = () => {
   const navigate = useNavigate();
@@ -38,6 +39,7 @@ const Profile = () => {
   const [renewalLoading, setRenewalLoading] = useState(false);
   const [activeLoanCount, setActiveLoanCount] = useState(0);
   const [unpaidFineCount, setUnpaidFineCount] = useState(0);
+  const [avatarUploading, setAvatarUploading] = useState(false);
   const [savedCount, setSavedCount] = useState(0);
   const { success, error } = useToast();
   const currentUserId = session?.user?.id;
@@ -178,6 +180,42 @@ const Profile = () => {
     }
   };
 
+  const handleAvatarFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      error("Format berkas harus berupa gambar (JPG, PNG, WebP)");
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      error("Ukuran foto maksimal 5MB");
+      return;
+    }
+
+    try {
+      setAvatarUploading(true);
+      const res = await memberService.uploadMyAvatar(file);
+      success("Foto profil berhasil diperbarui");
+      // Update local state profil
+      if (profile && profile.user) {
+        setProfile({
+          ...profile,
+          user: {
+            ...profile.user,
+            image: res.url
+          }
+        });
+      }
+    } catch (err: any) {
+      error(err.message || "Gagal mengunggah foto profil");
+    } finally {
+      setAvatarUploading(false);
+      e.target.value = "";
+    }
+  };
+
   const handleRequestCard = async () => {
     try {
       setCardActionLoading(true);
@@ -295,14 +333,37 @@ const Profile = () => {
 
         {/* Master Identity Card */}
         <div className="px-3 sm:px-6 -mt-12 sm:-mt-16 flex flex-col sm:flex-row items-center sm:items-end gap-4 sm:gap-6 mb-8 relative z-10">
-          <div className="w-24 h-32 sm:w-32 sm:h-40 bg-card rounded-lg shadow-md border border-border overflow-hidden flex items-center justify-center p-1 shrink-0">
-            <div className="w-full h-full bg-muted rounded-md overflow-hidden flex items-center justify-center">
-              <img
+          <div className="relative group shrink-0">
+            <Avatar className="w-24 h-24 sm:w-32 sm:h-32 rounded-full ring-4 ring-background shadow-lg border-2 border-border overflow-hidden bg-muted">
+              <AvatarImage
                 src={getUserAvatar(profile?.user || authUser)}
                 alt={profile?.user?.name || authUser?.name || "User"}
-                className="w-full h-full object-cover"
+                className="object-cover w-full h-full"
               />
-            </div>
+              <AvatarFallback className="text-xl font-bold bg-muted text-foreground">
+                {(profile?.user?.name || authUser?.name || "U")[0]?.toUpperCase()}
+              </AvatarFallback>
+            </Avatar>
+
+            <label
+              htmlFor="avatar-upload-input"
+              className="absolute bottom-0 right-0 p-2 sm:p-2.5 rounded-full bg-primary text-primary-foreground shadow-md hover:bg-primary/90 cursor-pointer transition-transform hover:scale-105 active:scale-95 flex items-center justify-center border-2 border-background"
+              title="Ubah Foto Profil"
+            >
+              {avatarUploading ? (
+                <Loader2 size={16} className="animate-spin" />
+              ) : (
+                <Camera size={16} />
+              )}
+              <input
+                id="avatar-upload-input"
+                type="file"
+                accept="image/png,image/jpeg,image/webp"
+                className="sr-only"
+                disabled={avatarUploading}
+                onChange={handleAvatarFileChange}
+              />
+            </label>
           </div>
           <div className="flex-1 pb-1 text-center sm:text-left flex flex-col items-center sm:items-start w-full">
             <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2.5 mb-1">

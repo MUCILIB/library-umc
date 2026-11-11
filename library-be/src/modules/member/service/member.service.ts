@@ -1,5 +1,5 @@
 import { db } from "../../../db";
-import { members } from "../../../db/schema";
+import { members, Users } from "../../../db/schema";
 import { eq, and, isNull } from "drizzle-orm";
 
 type ServiceResponse<T> = {
@@ -14,6 +14,7 @@ type UpdateProfileData = {
   originRegion?: string;
   institution?: string;
   phone?: string;
+  image?: string;
 };
 
 type MemberCardStatus =
@@ -665,6 +666,17 @@ export class MemberService {
         phone: data.phone !== undefined ? data.phone.trim() : member.phone,
         updatedAt: new Date()
       };
+
+      // Update user image if provided
+      if (data.image !== undefined) {
+        await db
+          .update(Users)
+          .set({
+            image: data.image.trim() || null,
+            updatedAt: new Date()
+          })
+          .where(eq(Users.id, userId));
+      }
 
       // Update member
       const [updatedMember] = await db
