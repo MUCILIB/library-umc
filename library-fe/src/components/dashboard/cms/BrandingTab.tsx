@@ -1,5 +1,5 @@
 import React from "react";
-import { Globe, Save, Loader2 } from "lucide-react";
+import { Save, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -23,16 +23,18 @@ export const BrandingTab: React.FC<BrandingTabProps> = ({
 }) => {
   return (
     <Card>
-      <CardHeader>
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Globe className="h-5 w-5 text-primary" />
-            <CardTitle className="text-lg">Identitas Portal, Logo & SEO</CardTitle>
+      <CardHeader className="pb-4">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div>
+            <CardTitle className="text-base font-semibold">Aset Visual & Metadata Situs</CardTitle>
+            <CardDescription className="text-xs text-muted-foreground mt-0.5">
+              Unggah logo kampus, favicon peramban, serta kelola informasi metadata SEO.
+            </CardDescription>
           </div>
           <Button
             onClick={onSave}
             disabled={isSaving}
-            className="gap-2"
+            className="gap-2 shrink-0"
             size="sm"
           >
             {isSaving ? (
@@ -43,9 +45,6 @@ export const BrandingTab: React.FC<BrandingTabProps> = ({
             Simpan Perubahan
           </Button>
         </div>
-        <CardDescription>
-          Kustomisasi judul tab browser, ikon favicon, logo resmi kampus (S3), dan metadata pencarian.
-        </CardDescription>
       </CardHeader>
 
       <CardContent className="space-y-6">
