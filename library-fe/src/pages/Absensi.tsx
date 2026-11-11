@@ -311,48 +311,48 @@ export default function Absensi() {
       </div>
 
       {/* TOP HEADER BAR */}
-      <header className="relative w-full z-20 flex items-center justify-between px-6 sm:px-12 lg:px-16 pt-6 sm:pt-8">
+      <header className="relative w-full z-20 flex items-center justify-between px-4 sm:px-12 lg:px-16 pt-4 sm:pt-8">
         {/* Left: UMC Library Logo & Title */}
-        <div className="flex items-center gap-3 sm:gap-3.5">
+        <div className="flex items-center gap-2.5 sm:gap-3.5">
           <img
             src={LogoUmc}
             alt="Logo UMC"
-            className="w-11 h-11 sm:w-12 sm:h-12 object-contain shrink-0 drop-shadow-xs"
+            className="w-10 h-10 sm:w-12 sm:h-12 object-contain shrink-0 drop-shadow-xs"
           />
           <div>
-            <h1 className="font-extrabold text-slate-900 dark:text-foreground text-sm sm:text-base leading-tight tracking-tight">
+            <h1 className="font-extrabold text-slate-900 dark:text-foreground text-xs sm:text-base leading-tight tracking-tight">
               UMC Library
             </h1>
-            <p className="text-[11px] sm:text-xs text-slate-500 dark:text-muted-foreground font-medium leading-tight">
+            <p className="text-[10px] sm:text-xs text-slate-500 dark:text-muted-foreground font-medium leading-tight">
               Digital Library System
             </p>
           </div>
         </div>
 
         {/* Right: Real-time Live Date & Digital Clock */}
-        <div className="text-right">
-          <p className="text-xs sm:text-sm font-semibold text-slate-700 dark:text-slate-300">
+        <div className="text-right shrink-0">
+          <p className="text-[10px] sm:text-sm font-semibold text-slate-700 dark:text-slate-300">
             {formattedDate}
           </p>
-          <p className="text-2xl sm:text-4xl font-black text-slate-900 dark:text-foreground tracking-tight leading-none mt-0.5">
+          <p className="text-xl sm:text-4xl font-black text-slate-900 dark:text-foreground tracking-tight leading-none mt-0.5">
             {formattedTime}
           </p>
         </div>
       </header>
 
       {/* MAIN CONTENT AREA */}
-      <main className="relative z-10 w-full max-w-7xl mx-auto px-6 sm:px-12 lg:px-16 py-8 sm:py-12 flex-1 flex flex-col lg:flex-row items-center justify-between gap-10 lg:gap-16">
+      <main className="relative z-10 w-full max-w-7xl mx-auto px-4 sm:px-12 lg:px-16 py-6 sm:py-12 flex-1 flex flex-col lg:flex-row items-center justify-between gap-6 sm:gap-10 lg:gap-16">
         {/* LEFT COLUMN: Glassmorphism Welcome Card */}
         <div className="w-full lg:max-w-xl">
-          <div className="backdrop-blur-md bg-white/70 dark:bg-card/70 border border-white/70 dark:border-border/60 rounded-3xl p-8 sm:p-12 shadow-[0_20px_50px_rgba(0,0,0,0.06)] transition-all">
-            <h2 className="text-3xl sm:text-4xl lg:text-[44px] font-black text-slate-900 dark:text-foreground leading-[1.15] tracking-tight">
+          <div className="backdrop-blur-md bg-white/70 dark:bg-card/70 border border-white/70 dark:border-border/60 rounded-2xl sm:rounded-3xl p-6 sm:p-12 shadow-[0_20px_50px_rgba(0,0,0,0.06)] transition-all">
+            <h2 className="text-2xl sm:text-4xl lg:text-[44px] font-black text-slate-900 dark:text-foreground leading-[1.15] tracking-tight">
               Selamat Datang di
             </h2>
-            <h2 className="text-3xl sm:text-4xl lg:text-[44px] font-black text-[#9D171D] leading-[1.15] tracking-tight mt-1">
+            <h2 className="text-2xl sm:text-4xl lg:text-[44px] font-black text-[#9D171D] leading-[1.15] tracking-tight mt-1">
               Perpustakaan UMC
             </h2>
 
-            <p className="text-slate-600 dark:text-muted-foreground text-sm sm:text-base font-normal leading-relaxed mt-4 sm:mt-6 max-w-md">
+            <p className="text-slate-600 dark:text-muted-foreground text-xs sm:text-base font-normal leading-relaxed mt-3 sm:mt-6 max-w-md">
               Silahkan lakukan absen kunjungan sebelum memasuki area perpustakaan
             </p>
           </div>
@@ -360,7 +360,7 @@ export default function Absensi() {
 
         {/* RIGHT COLUMN: Clean White Form Card ("Absen Pengunjung") */}
         <div className="w-full max-w-md sm:max-w-lg">
-          <div className="bg-white dark:bg-card rounded-3xl p-7 sm:p-10 shadow-[0_25px_60px_rgba(0,0,0,0.12)] border border-slate-100 dark:border-border/80">
+          <div className="bg-white dark:bg-card rounded-2xl sm:rounded-3xl p-6 sm:p-10 shadow-[0_25px_60px_rgba(0,0,0,0.12)] border border-slate-100 dark:border-border/80">
             <h3 className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-foreground tracking-tight mb-6 sm:mb-8">
               Absen Pengunjung
             </h3>

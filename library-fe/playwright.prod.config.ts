@@ -44,6 +44,13 @@ export default defineConfig({
       dependencies: ["setup-prod"],
     },
     {
+      name: "responsive-prod",
+      testMatch: /responsive-landing-devices\.spec\.ts/,
+      use: {
+        launchOptions: { ...(CHROMIUM ? { executablePath: CHROMIUM } : {}) },
+      },
+    },
+    {
       name: "catalog-prod",
       testMatch: /catalog-populate-and-verify\.spec\.ts/,
       use: {
