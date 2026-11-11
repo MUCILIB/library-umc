@@ -74,6 +74,38 @@ const LoginPage = () => {
 
       if (authError) {
         const msg = authError.message ?? "";
+        // Jika gagal karena belum terdaftar, coba registrasi demo otomatis bila akun eksternal demo
+        if (
+          email.toLowerCase().trim() === "external@mucilib.ac.id" &&
+          (msg.toLowerCase().includes("invalid") ||
+            msg.toLowerCase().includes("password") ||
+            msg.toLowerCase().includes("credentials") ||
+            msg.toLowerCase().includes("user") ||
+            msg.toLowerCase().includes("not found"))
+        ) {
+          try {
+            await authClient.signUp.email({
+              name: "Budi Santoso (External)",
+              email: "external@mucilib.ac.id",
+              password,
+            });
+            // Coba login kembali setelah auto-register
+            const retry = await authClient.signIn.email({
+              email: "external@mucilib.ac.id",
+              password,
+              rememberMe,
+            });
+            if (retry.data?.user) {
+              removeToast(loadingId);
+              success("Login Berhasil!", `Selamat datang, ${retry.data.user.name || retry.data.user.email}! 🎉`, 2500);
+              setTimeout(() => navigate("/", { replace: true }), 1500);
+              return;
+            }
+          } catch (_err) {
+            // lanjut ke error handling reguler
+          }
+        }
+
         if (
           msg.toLowerCase().includes("invalid") ||
           msg.toLowerCase().includes("credentials") ||
@@ -259,13 +291,26 @@ const LoginPage = () => {
 
               <button
                 type="button"
-                onClick={() => {
-                  setEmail("external@mucilib.ac.id");
-                  setPassword("External123456!");
+                onClick={async () => {
+                  const demoEmail = "external@mucilib.ac.id";
+                  const demoPass = "External123456!";
+                  setEmail(demoEmail);
+                  setPassword(demoPass);
+
+                  // Auto-register jika belum ada di database server
+                  try {
+                    await authClient.signUp.email({
+                      name: "Budi Santoso (External)",
+                      email: demoEmail,
+                      password: demoPass,
+                    });
+                  } catch (_ignore) {
+                    // Abaikan error jika sudah terdaftar
+                  }
                   info("Member External", "Kredensial User External berhasil diisi.");
                 }}
                 disabled={isLoading}
-                className="w-full flex items-center justify-center gap-1.5 h-8 bg-muted hover:bg-muted/80 border border-dashed border-border text-foreground rounded-xl font-semibold text-[11px] transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full flex items-center justify-center gap-1.5 h-8 bg-muted hover:bg-muted/80 border border-dashed border-border text-foreground rounded-xl font-semibold text-[11px] transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
               >
                 <UserCheck size={13} className="text-foreground shrink-0" />
                 <span className="truncate">Member External</span>
