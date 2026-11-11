@@ -34,6 +34,16 @@ export default defineConfig({
       dependencies: ["setup-prod"],
     },
     {
+      name: "fixes-prod",
+      testMatch: /fixes-verification-prod\.spec\.ts/,
+      use: {
+        ...devices["Desktop Chrome"],
+        storageState: "playwright/.auth/admin-prod.json",
+        launchOptions: { ...(CHROMIUM ? { executablePath: CHROMIUM } : {}) },
+      },
+      dependencies: ["setup-prod"],
+    },
+    {
       name: "catalog-prod",
       testMatch: /catalog-populate-and-verify\.spec\.ts/,
       use: {
