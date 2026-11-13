@@ -15,7 +15,7 @@ import MemberCard from "@/components/MemberCard";
 import SavedBooksTab from "@/components/SavedBooksTab";
 import LecturerRecommendationList from "@/components/LecturerRecommendationList";
 import { useToast } from "@/hooks/useToast";
-import { getSavedBookIds } from "@/utils/bookmarks";
+import { getSavedBookIds, syncBookmarksFromDb } from "@/utils/bookmarks";
 import { Settings, Mail, BookOpen, Clock, AlertCircle, Bookmark, CreditCard, Sparkles, ChevronRight, ChevronDown, Check, SlidersHorizontal, Camera, Loader2 } from "lucide-react";
 import type { AuthUser } from "@/types/auth";
 import { getUserAvatar } from "@/lib/avatar";
@@ -120,6 +120,11 @@ const Profile = () => {
     const updateCount = () => {
       const savedIds = getSavedBookIds(currentUserId);
       setSavedCount(savedIds.length);
+      if (currentUserId) {
+        syncBookmarksFromDb(currentUserId).then((ids) => {
+          setSavedCount(ids.length);
+        });
+      }
     };
     updateCount();
     window.addEventListener("storage", updateCount);

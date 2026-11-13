@@ -1,6 +1,9 @@
+import { bookmarkApi } from "@/api/client";
+
 /**
- * Utility untuk mengelola buku yang disimpan (bookmarks/favorit) di localStorage
- * dengan isolasi per-pengguna (user-scoped storage).
+ * Utility untuk mengelola buku yang disimpan (bookmarks/favorit).
+ * Mendukung dual-storage: sync ke Backend Database saat login,
+ * serta caching di localStorage agar UI instan dan tetap responsif.
  */
 
 export function getBookmarkStorageKey(userId?: string | null): string {
@@ -31,7 +34,6 @@ export function getSavedBookIds(userId?: string | null): string[] {
   }
 
   // Jika belum ada data di key user, cek apakah ada legacy data di 'umc_library_bookmarks'
-  // Pindahkan ke key user saat ini dan bersihkan legacy key agar tidak bocor ke akun lain
   const legacyData = localStorage.getItem("umc_library_bookmarks");
   if (legacyData) {
     try {
@@ -53,6 +55,9 @@ export function isBookSaved(bookId: string, userId?: string | null): boolean {
   return savedIds.includes(bookId);
 }
 
+/**
+ * Simpan buku ke LocalStorage dan Backend Database jika user login
+ */
 export function saveBook(bookId: string, userId?: string | null): boolean {
   if (!bookId) return false;
   const key = getBookmarkStorageKey(userId);
@@ -61,11 +66,22 @@ export function saveBook(bookId: string, userId?: string | null): boolean {
     savedIds.push(bookId);
     localStorage.setItem(key, JSON.stringify(savedIds));
     window.dispatchEvent(new Event("storage"));
+
+    // Async sync ke DB jika user terautentikasi
+    if (userId) {
+      bookmarkApi.add(bookId).catch((err) => {
+        console.warn("Gagal sinkronisasi bookmark ke database:", err);
+      });
+    }
+
     return true;
   }
   return false;
 }
 
+/**
+ * Hapus buku dari LocalStorage dan Backend Database jika user login
+ */
 export function removeBook(bookId: string, userId?: string | null): boolean {
   if (!bookId) return false;
   const key = getBookmarkStorageKey(userId);
@@ -73,5 +89,40 @@ export function removeBook(bookId: string, userId?: string | null): boolean {
   const updated = savedIds.filter((id) => id !== bookId);
   localStorage.setItem(key, JSON.stringify(updated));
   window.dispatchEvent(new Event("storage"));
+
+  // Async hapus dari DB jika user terautentikasi
+  if (userId) {
+    bookmarkApi.remove(bookId).catch((err) => {
+      console.warn("Gagal menghapus bookmark dari database:", err);
+    });
+  }
+
   return true;
+}
+
+/**
+ * Mengambil daftar ID terbaru dari Database dan memperbarui cache LocalStorage
+ */
+export async function syncBookmarksFromDb(userId: string): Promise<string[]> {
+  if (!userId) return [];
+  try {
+    const localIds = getSavedBookIds(userId);
+    // Sinkronisasi dua arah: kirim localIds ke DB terlebih dahulu
+    let ids: string[] = [];
+    if (localIds.length > 0) {
+      const res = await bookmarkApi.sync(localIds);
+      ids = res.data || [];
+    } else {
+      const res = await bookmarkApi.getMyIds();
+      ids = res.data || [];
+    }
+
+    const key = getBookmarkStorageKey(userId);
+    localStorage.setItem(key, JSON.stringify(ids));
+    window.dispatchEvent(new Event("storage"));
+    return ids;
+  } catch (err) {
+    console.warn("Gagal sync bookmarks dari DB, fallback ke local:", err);
+    return getSavedBookIds(userId);
+  }
 }

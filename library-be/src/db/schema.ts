@@ -899,5 +899,26 @@ export const siteSettingsRelations = relations(siteSettings, ({ one }) => ({
   updater: one(Users, { fields: [siteSettings.updatedBy], references: [Users.id] })
 }));
 
+// ==========================================
+// 14. BOOKMARKS / FAVORITES
+// ==========================================
+
+export const bookmarks = pgTable("bookmarks", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  userId: text("user_id").notNull().references(() => Users.id, { onDelete: "cascade" }),
+  bibliographyId: uuid("bibliography_id").notNull().references(() => bibliographies.id, { onDelete: "cascade" }),
+  createdAt: timestamp("created_at").notNull().defaultNow()
+}, (table) => ({
+  userBibUnique: unique("bookmark_user_bib_unique").on(table.userId, table.bibliographyId),
+  userIdIdx: index("bookmark_user_id_idx").on(table.userId),
+  bibliographyIdIdx: index("bookmark_bibliography_id_idx").on(table.bibliographyId)
+}));
+
+export const bookmarksRelations = relations(bookmarks, ({ one }) => ({
+  user: one(Users, { fields: [bookmarks.userId], references: [Users.id] }),
+  bibliography: one(bibliographies, { fields: [bookmarks.bibliographyId], references: [bibliographies.id] })
+}));
+
+
 
 

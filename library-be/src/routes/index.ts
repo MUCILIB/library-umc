@@ -9,6 +9,7 @@ import { notificationRoutes } from "../modules/notification/route/notification.r
 import { reservationRoutes } from "../modules/reservation/route/reservation.route";
 import finesRoutes from "../modules/fines/route/fines.route";
 import { recommendationRoutes } from "../modules/recommendation/route/recommendations.route";
+import bookmarkRoutes from "../modules/bookmark/route/bookmark.route";
 import { auditRoutes } from "../modules/audit/route/audit.route";
 import { reportRoutes } from "../modules/report/route/report.route";
 import { locationRoutes } from "../modules/location/route/location.route";
@@ -79,6 +80,9 @@ router.use(finesRoutes);
 
 // Recommendations
 router.use(recommendationRoutes);
+
+// Bookmarks / Saved Books
+router.use(bookmarkRoutes);
 
 // Audit
 router.use(auditRoutes);

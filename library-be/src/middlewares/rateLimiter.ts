@@ -15,7 +15,7 @@ import auditService from "../modules/audit/service/audit.service";
  * justru akan memunculkan ValidationError: ERR_ERL_KEY_GEN_IPV6.
  */
 
-const isTestOrCI = process.env.NODE_ENV === "test" || Boolean(process.env.CI);
+const isTestOrCI = process.env.NODE_ENV === "test" || Boolean(process.env.CI) || process.env.NODE_ENV === "development";
 
 // 1. STRICT - Authentication endpoints (login, register, password reset)
 export const authLimiter = rateLimit({
