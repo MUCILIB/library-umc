@@ -21,7 +21,12 @@ import {
 } from "@/api/client";
 import { useToast } from "@/hooks/useToast";
 import Modal from "@/components/ui/modal";
-import { RoleMatrix, type PermissionGroup } from "@/components/blocks/RoleMatrix";
+import {
+  RoleMatrix,
+  type PermissionAction,
+  applySmartPermissionToggle,
+  toggleAllMenuPermissions,
+} from "@/components/blocks/RoleMatrix";
 
 export default function RolePermissionsManager() {
   const { success, error: showError, warning } = useToast();
@@ -245,86 +250,61 @@ export default function RolePermissionsManager() {
     }
   };
 
-  // Grouped menus for organized matrix presentation
-  const groupedMenus = useMemo(() => {
-    const groups: Record<string, SidebarMenuMeta[]> = {};
-    for (const m of menus) {
-      if (!groups[m.group]) {
-        groups[m.group] = [];
-      }
-      groups[m.group].push(m);
-    }
-    return groups;
-  }, [menus]);
-
   const isSuperAdminSelected = selectedRoleId === "super_admin";
 
-  // RoleMatrix Props Conversion
-  const matrixRoles = useMemo(() => {
-    if (!selectedRoleDetail) return [];
-    return [{ id: selectedRoleDetail.id, label: selectedRoleDetail.name }];
-  }, [selectedRoleDetail]);
+  const handlePermissionChange = (menuKey: string, action: PermissionAction) => {
+    if (isSuperAdminSelected) return;
 
-  const matrixGroups: PermissionGroup[] = useMemo(() => {
-    return Object.entries(groupedMenus).map(([groupName, groupMenuList]) => ({
-      resource: groupName,
-      permissions: groupMenuList.flatMap((m) => {
-        if (m.key === "cms") {
-          return [
-            { id: `${m.key}:canView`, label: `${m.label}: Lihat Pengaturan Web` },
-            { id: `${m.key}:canEdit`, label: `${m.label}: Ubah & Simpan Konten` },
-          ];
-        }
-        return [
-          { id: `${m.key}:canView`, label: `${m.label}: Lihat / Akses Menu` },
-          { id: `${m.key}:canAdd`, label: `${m.label}: Tambah Data` },
-          { id: `${m.key}:canEdit`, label: `${m.label}: Ubah Data` },
-          { id: `${m.key}:canDelete`, label: `${m.label}: Hapus Data` },
-        ];
-      }),
-    }));
-  }, [groupedMenus]);
+    setMatrix((prev) => {
+      const current = prev[menuKey] || {
+        menuKey,
+        canView: false,
+        canAdd: false,
+        canEdit: false,
+        canDelete: false,
+      };
+      const updated = applySmartPermissionToggle(current, action);
+      return {
+        ...prev,
+        [menuKey]: updated,
+      };
+    });
+  };
 
-  const matrixValue: Record<string, string[]> = useMemo(() => {
-    if (!selectedRoleDetail) return {};
-    const val: Record<string, string[]> = {};
-    for (const m of menus) {
-      const p = matrix[m.key];
-      if (!p) continue;
-      if (isSuperAdminSelected || p.canView) {
-        val[`${m.key}:canView`] = [selectedRoleDetail.id];
-      }
-      if (isSuperAdminSelected || p.canAdd) {
-        val[`${m.key}:canAdd`] = [selectedRoleDetail.id];
-      }
-      if (isSuperAdminSelected || p.canEdit) {
-        val[`${m.key}:canEdit`] = [selectedRoleDetail.id];
-      }
-      if (isSuperAdminSelected || p.canDelete) {
-        val[`${m.key}:canDelete`] = [selectedRoleDetail.id];
-      }
-    }
-    return val;
-  }, [matrix, menus, selectedRoleDetail, isSuperAdminSelected]);
+  const handleRowToggleAll = (menuKey: string) => {
+    if (isSuperAdminSelected) return;
 
-  const handleMatrixValueChange = (nextValue: Record<string, string[]>) => {
-    if (isSuperAdminSelected || !selectedRoleDetail) return;
+    setMatrix((prev) => {
+      const current = prev[menuKey] || {
+        menuKey,
+        canView: false,
+        canAdd: false,
+        canEdit: false,
+        canDelete: false,
+      };
+      const updated = toggleAllMenuPermissions(current);
+      return {
+        ...prev,
+        [menuKey]: updated,
+      };
+    });
+  };
+
+  const handleGroupToggleAll = (groupName: string, enable: boolean) => {
+    if (isSuperAdminSelected) return;
 
     setMatrix((prev) => {
       const next = { ...prev };
       for (const m of menus) {
-        const canView = Boolean(nextValue[`${m.key}:canView`]?.includes(selectedRoleDetail.id));
-        const canAdd = Boolean(nextValue[`${m.key}:canAdd`]?.includes(selectedRoleDetail.id));
-        const canEdit = Boolean(nextValue[`${m.key}:canEdit`]?.includes(selectedRoleDetail.id));
-        const canDelete = Boolean(nextValue[`${m.key}:canDelete`]?.includes(selectedRoleDetail.id));
-
-        next[m.key] = {
-          menuKey: m.key,
-          canView: canAdd || canEdit || canDelete ? true : canView,
-          canAdd,
-          canEdit,
-          canDelete,
-        };
+        if ((m.group || "Lainnya") === groupName) {
+          next[m.key] = {
+            menuKey: m.key,
+            canView: enable,
+            canAdd: enable,
+            canEdit: enable,
+            canDelete: enable,
+          };
+        }
       }
       return next;
     });
@@ -491,14 +471,13 @@ export default function RolePermissionsManager() {
             )}
           </div>
 
-          {/* RoleMatrix Component from https://uipkge.dev/r/react/role-matrix.json */}
+          {/* Horizontal RoleMatrix Table */}
           <RoleMatrix
-            title={`Matriks Hak Akses: ${selectedRoleDetail.name}`}
-            description="Tentukan hak akses granular (Lihat, Tambah, Ubah, Hapus) untuk setiap modul."
-            roles={matrixRoles}
-            groups={matrixGroups}
-            value={matrixValue}
-            onValueChange={handleMatrixValueChange}
+            menus={menus}
+            matrix={matrix}
+            onPermissionChange={handlePermissionChange}
+            onRowToggleAll={handleRowToggleAll}
+            onGroupToggleAll={handleGroupToggleAll}
             readOnly={isSuperAdminSelected}
           />
         </div>

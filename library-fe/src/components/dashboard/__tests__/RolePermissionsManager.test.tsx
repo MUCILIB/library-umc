@@ -125,4 +125,177 @@ describe("RolePermissionsManager Component", () => {
       expect(screen.getByText("Nonaktifkan Semua")).toBeInTheDocument();
     });
   });
+
+  it("merender tabel matriks switch horizontal dengan kolom Lihat, Tambah, Ubah, Hapus", async () => {
+    render(<RolePermissionsManager />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Staf Perpustakaan")).toBeInTheDocument();
+    });
+
+    const staffButton = screen.getByText("Staf Perpustakaan").closest("button");
+    if (staffButton) fireEvent.click(staffButton);
+
+    await waitFor(() => {
+      // Header tabel
+      expect(screen.getByText("Modul / Sub-Menu")).toBeInTheDocument();
+      expect(screen.getByText("Lihat (View)")).toBeInTheDocument();
+      expect(screen.getByText("Tambah (Add)")).toBeInTheDocument();
+      expect(screen.getByText("Ubah (Edit)")).toBeInTheDocument();
+      expect(screen.getByText("Hapus (Delete)")).toBeInTheDocument();
+      expect(screen.getByText("Aksi Cepat")).toBeInTheDocument();
+
+      // Baris menu
+      expect(screen.getByText("Sirkulasi & Scan")).toBeInTheDocument();
+      expect(screen.getByText("Bibliografi (Buku)")).toBeInTheDocument();
+    });
+  });
+
+  it("menerapkan smart dependency: mengaktifkan canAdd otomatis mengaktifkan canView", async () => {
+    render(<RolePermissionsManager />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Staf Perpustakaan")).toBeInTheDocument();
+    });
+
+    const staffButton = screen.getByText("Staf Perpustakaan").closest("button");
+    if (staffButton) fireEvent.click(staffButton);
+
+    await waitFor(() => {
+      expect(screen.getByTestId("switch-bibliographies-canAdd")).toBeInTheDocument();
+    });
+
+    const viewSwitch = screen.getByTestId("switch-bibliographies-canView");
+    const addSwitch = screen.getByTestId("switch-bibliographies-canAdd");
+
+    // Awalnya canAdd adalah false untuk bibliographies pada staff
+    expect(addSwitch).toHaveAttribute("aria-checked", "false");
+
+    // Klik toggle addSwitch
+    fireEvent.click(addSwitch);
+
+    // canAdd menjadi true dan canView dipastikan true
+    expect(addSwitch).toHaveAttribute("aria-checked", "true");
+    expect(viewSwitch).toHaveAttribute("aria-checked", "true");
+  });
+
+  it("menerapkan smart dependency: mematikan canView otomatis mematikan canAdd, canEdit, canDelete", async () => {
+    render(<RolePermissionsManager />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Staf Perpustakaan")).toBeInTheDocument();
+    });
+
+    const staffButton = screen.getByText("Staf Perpustakaan").closest("button");
+    if (staffButton) fireEvent.click(staffButton);
+
+    await waitFor(() => {
+      expect(screen.getByTestId("switch-circulation-canView")).toBeInTheDocument();
+    });
+
+    const viewSwitch = screen.getByTestId("switch-circulation-canView");
+    const addSwitch = screen.getByTestId("switch-circulation-canAdd");
+    const editSwitch = screen.getByTestId("switch-circulation-canEdit");
+
+    // Pada staff mock, circulation canView=true, canAdd=true, canEdit=true
+    expect(viewSwitch).toHaveAttribute("aria-checked", "true");
+    expect(addSwitch).toHaveAttribute("aria-checked", "true");
+    expect(editSwitch).toHaveAttribute("aria-checked", "true");
+
+    // Matikan canView
+    fireEvent.click(viewSwitch);
+
+    // Seluruh aksi otomatis mati
+    expect(viewSwitch).toHaveAttribute("aria-checked", "false");
+    expect(addSwitch).toHaveAttribute("aria-checked", "false");
+    expect(editSwitch).toHaveAttribute("aria-checked", "false");
+  });
+
+  it("tombol aksi cepat per baris mengaktifkan dan mengosongkan semua izin modul", async () => {
+    render(<RolePermissionsManager />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Staf Perpustakaan")).toBeInTheDocument();
+    });
+
+    const staffButton = screen.getByText("Staf Perpustakaan").closest("button");
+    if (staffButton) fireEvent.click(staffButton);
+
+    await waitFor(() => {
+      expect(screen.getByTestId("btn-quick-toggle-bibliographies")).toBeInTheDocument();
+    });
+
+    const quickBtn = screen.getByTestId("btn-quick-toggle-bibliographies");
+    fireEvent.click(quickBtn);
+
+    const viewSwitch = screen.getByTestId("switch-bibliographies-canView");
+    const addSwitch = screen.getByTestId("switch-bibliographies-canAdd");
+    const editSwitch = screen.getByTestId("switch-bibliographies-canEdit");
+    const deleteSwitch = screen.getByTestId("switch-bibliographies-canDelete");
+
+    expect(viewSwitch).toHaveAttribute("aria-checked", "true");
+    expect(addSwitch).toHaveAttribute("aria-checked", "true");
+    expect(editSwitch).toHaveAttribute("aria-checked", "true");
+    expect(deleteSwitch).toHaveAttribute("aria-checked", "true");
+  });
+
+  it("pada role super_admin, seluruh switch berstatus checked dan disabled", async () => {
+    render(<RolePermissionsManager />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId("switch-circulation-canView")).toBeInTheDocument();
+    });
+
+    const circulationView = screen.getByTestId("switch-circulation-canView");
+    const circulationAdd = screen.getByTestId("switch-circulation-canAdd");
+    const circulationEdit = screen.getByTestId("switch-circulation-canEdit");
+    const circulationDelete = screen.getByTestId("switch-circulation-canDelete");
+
+    expect(circulationView).toHaveAttribute("aria-checked", "true");
+    expect(circulationAdd).toHaveAttribute("aria-checked", "true");
+    expect(circulationEdit).toHaveAttribute("aria-checked", "true");
+    expect(circulationDelete).toHaveAttribute("aria-checked", "true");
+
+    expect(circulationView).toBeDisabled();
+    expect(circulationAdd).toBeDisabled();
+    expect(circulationEdit).toBeDisabled();
+    expect(circulationDelete).toBeDisabled();
+  });
+
+  it("menyimpan perubahan matriks mengirim data permissions yang diperbarui", async () => {
+    (roleApi.updatePermissions as any).mockResolvedValue({ success: true });
+
+    render(<RolePermissionsManager />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Staf Perpustakaan")).toBeInTheDocument();
+    });
+
+    const staffButton = screen.getByText("Staf Perpustakaan").closest("button");
+    if (staffButton) fireEvent.click(staffButton);
+
+    await waitFor(() => {
+      expect(screen.getByTestId("switch-bibliographies-canAdd")).toBeInTheDocument();
+    });
+
+    // Nyalakan canAdd untuk bibliographies
+    const addSwitch = screen.getByTestId("switch-bibliographies-canAdd");
+    fireEvent.click(addSwitch);
+
+    const saveButton = screen.getByText("Simpan Perubahan Matriks");
+    fireEvent.click(saveButton);
+
+    await waitFor(() => {
+      expect(roleApi.updatePermissions).toHaveBeenCalledWith(
+        "staff",
+        expect.arrayContaining([
+          expect.objectContaining({
+            menuKey: "bibliographies",
+            canView: true,
+            canAdd: true,
+          }),
+        ])
+      );
+    });
+  });
 });
