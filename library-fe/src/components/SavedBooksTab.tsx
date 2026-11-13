@@ -5,7 +5,7 @@ import { generateColorFromSeed } from "@/utils/format";
 import { Bookmark, Trash2, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/useToast";
 import { authClient } from "@/utils/auth-client";
-import { getSavedBookIds, removeBook, syncBookmarksFromDb } from "@/utils/bookmarks";
+import { removeBook, syncBookmarksFromDb } from "@/utils/bookmarks";
 import { resolveCoverUrl } from "@/utils/imageUrl";
 
 export default function SavedBooksTab() {
