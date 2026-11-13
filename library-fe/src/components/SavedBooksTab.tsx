@@ -5,7 +5,8 @@ import { generateColorFromSeed } from "@/utils/format";
 import { Bookmark, Trash2, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/useToast";
 import { authClient } from "@/utils/auth-client";
-import { getSavedBookIds, removeBook } from "@/utils/bookmarks";
+import { removeBook, syncBookmarksFromDb } from "@/utils/bookmarks";
+import { resolveCoverUrl } from "@/utils/imageUrl";
 
 export default function SavedBooksTab() {
   const { data: session } = authClient.useSession();
@@ -23,7 +24,8 @@ export default function SavedBooksTab() {
           return;
         }
 
-        const savedIds: string[] = getSavedBookIds(userId);
+        // Sinkronisasi data bookmark dari database saat membuka tab profil
+        const savedIds: string[] = await syncBookmarksFromDb(userId);
         
         if (savedIds.length === 0) {
           setSavedBooks([]);
@@ -119,6 +121,7 @@ export default function SavedBooksTab() {
         {savedBooks.map((book) => {
           const isEbook = book.type === "ebook";
           const seedColor = generateColorFromSeed(book.id);
+          const coverUrl = resolveCoverUrl(book.image);
           const authorNames = book.authors && book.authors.length > 0
             ? book.authors.map((a) => a.name).join(", ")
             : "";
@@ -131,9 +134,9 @@ export default function SavedBooksTab() {
             >
               {/* Cover Image */}
               <div className="shrink-0 w-16 h-24 rounded-xl overflow-hidden shadow-xs bg-muted border border-border/30 relative">
-                {book.image ? (
+                {coverUrl ? (
                   <img
-                    src={book.image}
+                    src={coverUrl}
                     alt={book.title}
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                   />

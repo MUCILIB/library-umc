@@ -23,7 +23,7 @@ import {
   BookOpen
 } from "lucide-react";
 import { generateColorFromSeed, cleanIsbn } from "@/utils/format";
-import { isBookSaved, saveBook, removeBook } from "@/utils/bookmarks";
+import { isBookSaved, saveBook, removeBook, syncBookmarksFromDb } from "@/utils/bookmarks";
 import { resolveCoverUrl } from "@/utils/imageUrl";
 import EbookReaderModal from "@/components/EbookReaderModal";
 
@@ -110,6 +110,11 @@ const KatalogDetail = () => {
     }
     const checkSaved = () => {
       setIsSaved(isBookSaved(bibliography.id, currentUser?.id));
+      if (currentUser?.id) {
+        syncBookmarksFromDb(currentUser.id).then((ids) => {
+          setIsSaved(ids.includes(bibliography.id));
+        });
+      }
     };
     checkSaved();
     window.addEventListener("storage", checkSaved);

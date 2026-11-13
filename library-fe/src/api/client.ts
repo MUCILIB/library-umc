@@ -769,3 +769,29 @@ export const roleApi = {
   FooterSettings,
   } from "./siteSettingApi";
 
+export const bookmarkApi = {
+  getMyIds: () => apiFetch<string[]>("/api/bookmarks"),
+  getMyBooks: () => apiFetch<Bibliography[]>("/api/bookmarks?full=true"),
+  check: (bibliographyId: string) =>
+    apiFetch<{ isSaved: boolean }>(`/api/bookmarks/check/${bibliographyId}`),
+  toggle: (bibliographyId: string) =>
+    apiFetch<{ saved: boolean }>(`/api/bookmarks/toggle/${bibliographyId}`, {
+      method: "POST",
+    }),
+  add: (bibliographyId: string) =>
+    apiFetch<{ saved: boolean }>(`/api/bookmarks/${bibliographyId}`, {
+      method: "POST",
+    }),
+  remove: (bibliographyId: string) =>
+    apiFetch<{ removed: boolean }>(`/api/bookmarks/${bibliographyId}`, {
+      method: "DELETE",
+    }),
+  sync: (bibliographyIds: string[]) =>
+    apiFetch<string[]>("/api/bookmarks/sync", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ bibliographyIds }),
+    }),
+};
+
+
