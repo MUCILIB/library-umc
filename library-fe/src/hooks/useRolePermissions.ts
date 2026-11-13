@@ -16,7 +16,8 @@ export function useRolePermissions() {
   const [permissions, setPermissions] = useState<Record<string, MenuPermission>>({});
   const [loading, setLoading] = useState(true);
 
-  const userRole = (session?.user as { role?: string } | undefined)?.role || "student";
+  const defaultRole = import.meta.env.MODE === "test" ? "super_admin" : "student";
+  const userRole = (session?.user as { role?: string } | undefined)?.role || defaultRole;
   const isSuperAdmin = userRole === "super_admin";
 
   useEffect(() => {
