@@ -33,11 +33,11 @@ export default defineConfig({
         launchOptions: { ...(CHROMIUM ? { executablePath: CHROMIUM } : {}) },
       },
       dependencies: ["setup"],
-      testIgnore: /(unauthenticated|bookmark-external)\.spec\.ts/,
+      testIgnore: /(unauthenticated|bookmark-external|rbac-dynamic-sidebar)\.spec\.ts/,
     },
     {
       name: "unauth",
-      testMatch: /(unauthenticated|bookmark-external)\.spec\.ts/,
+      testMatch: /(unauthenticated|bookmark-external|rbac-dynamic-sidebar)\.spec\.ts/,
       use: { launchOptions: { ...(CHROMIUM ? { executablePath: CHROMIUM } : {}) } },
     },
   ],

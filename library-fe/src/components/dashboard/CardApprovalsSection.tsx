@@ -17,9 +17,11 @@ import {
   type PendingMemberCardRequest,
 } from "@/services/dashboard/usersManagementService";
 import { triggerBadgeRefresh } from "@/hooks/dashboard/useDashboardBadges";
+import { useRolePermissions } from "@/hooks/useRolePermissions";
 
 export default function CardApprovalsSection() {
   const { success, error, warning } = useToast();
+  const { canEdit } = useRolePermissions();
 
   const [activeTab, setActiveTab] = useState<"new" | "renewals">("new");
   const [newRequests, setNewRequests] = useState<PendingMemberCardRequest[]>([]);
@@ -303,52 +305,58 @@ export default function CardApprovalsSection() {
                   </div>
 
                   <div className="flex flex-wrap items-center gap-2 lg:justify-end">
-                    {activeTab === "new" ? (
-                      <>
-                        <button
-                          onClick={() => void handleApprove(item)}
-                          disabled={actionId === item.id}
-                          className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-green-600 text-white text-xs font-bold hover:bg-green-700 disabled:opacity-50"
-                        >
-                          <UserCheck size={14} />
-                          Setujui
-                        </button>
-                        <button
-                          onClick={() => void handleReject(item)}
-                          disabled={actionId === item.id}
-                          className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-rose-600 text-white text-xs font-bold hover:bg-rose-700 disabled:opacity-50"
-                        >
-                          <UserX size={14} />
-                          Tolak
-                        </button>
-                        <button
-                          onClick={() => void handleIssueDirect(item)}
-                          disabled={actionId === item.id}
-                          className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-primary text-white text-xs font-bold hover:bg-primary/90 disabled:opacity-50"
-                        >
-                          <IdCard size={14} />
-                          Terbitkan Langsung
-                        </button>
-                      </>
+                    {canEdit("cardApprovals") ? (
+                      activeTab === "new" ? (
+                        <>
+                          <button
+                            onClick={() => void handleApprove(item)}
+                            disabled={actionId === item.id}
+                            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-green-600 text-white text-xs font-bold hover:bg-green-700 disabled:opacity-50"
+                          >
+                            <UserCheck size={14} />
+                            Setujui
+                          </button>
+                          <button
+                            onClick={() => void handleReject(item)}
+                            disabled={actionId === item.id}
+                            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-rose-600 text-white text-xs font-bold hover:bg-rose-700 disabled:opacity-50"
+                          >
+                            <UserX size={14} />
+                            Tolak
+                          </button>
+                          <button
+                            onClick={() => void handleIssueDirect(item)}
+                            disabled={actionId === item.id}
+                            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-primary text-white text-xs font-bold hover:bg-primary/90 disabled:opacity-50"
+                          >
+                            <IdCard size={14} />
+                            Terbitkan Langsung
+                          </button>
+                        </>
+                      ) : (
+                        <>
+                          <button
+                            onClick={() => void handleApproveRenewal(item)}
+                            disabled={actionId === item.id}
+                            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-600 text-white text-xs font-bold hover:bg-emerald-700 disabled:opacity-50"
+                          >
+                            <UserCheck size={14} />
+                            Setujui Perpanjangan (+1 Thn)
+                          </button>
+                          <button
+                            onClick={() => void handleRejectRenewal(item)}
+                            disabled={actionId === item.id}
+                            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-rose-600 text-white text-xs font-bold hover:bg-rose-700 disabled:opacity-50"
+                          >
+                            <UserX size={14} />
+                            Tolak
+                          </button>
+                        </>
+                      )
                     ) : (
-                      <>
-                        <button
-                          onClick={() => void handleApproveRenewal(item)}
-                          disabled={actionId === item.id}
-                          className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-600 text-white text-xs font-bold hover:bg-emerald-700 disabled:opacity-50"
-                        >
-                          <UserCheck size={14} />
-                          Setujui Perpanjangan (+1 Thn)
-                        </button>
-                        <button
-                          onClick={() => void handleRejectRenewal(item)}
-                          disabled={actionId === item.id}
-                          className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-rose-600 text-white text-xs font-bold hover:bg-rose-700 disabled:opacity-50"
-                        >
-                          <UserX size={14} />
-                          Tolak
-                        </button>
-                      </>
+                      <span className="text-xs text-muted-foreground italic">
+                        Hanya Lihat
+                      </span>
                     )}
                   </div>
                 </div>

@@ -26,6 +26,7 @@ import { useToast } from "@/hooks/useToast";
 import { exportApi } from "@/api/client";
 import Modal from "@/components/ui/modal";
 import { triggerBadgeRefresh } from "@/hooks/dashboard/useDashboardBadges";
+import { useRolePermissions } from "@/hooks/useRolePermissions";
 
 
 interface Loan {
@@ -74,6 +75,7 @@ interface LoansSectionProps {
 
 export default function LoansSection({ searchTerm, onSearchChange }: LoansSectionProps) {
   const navigate = useNavigate();
+  const { canEdit } = useRolePermissions();
   const [loans, setLoans] = useState<Loan[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<"all" | "pending" | "approved" | "returned" | "pending_extension" | "reservations">("all");
@@ -661,7 +663,7 @@ export default function LoansSection({ searchTerm, onSearchChange }: LoansSectio
                   </div>
 
                   {/* Action Buttons - Pending: Setujui / Tolak */}
-                  {loan.status === 'pending' && (
+                  {loan.status === 'pending' && canEdit("loans") && (
                     <div className="flex flex-col sm:flex-row gap-3 pt-5 mt-5 border-t border-border">
                       <button
                         onClick={() => {
@@ -683,8 +685,8 @@ export default function LoansSection({ searchTerm, onSearchChange }: LoansSectio
                     </div>
                   )}
 
-                  {/* Action Buttons - Approved / Extended */}
-                  {(loan.status === 'approved' || loan.status === 'extended') && (
+                  {/* Action Buttons - Approved */}
+                  {(loan.status === 'approved' || loan.status === 'extended') && canEdit("loans") && (
                     <div className="flex flex-wrap items-center gap-3 pt-5 mt-5 border-t border-border">
                       <button
                         id={`btn-return-${loan.id}`}

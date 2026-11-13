@@ -4,9 +4,11 @@ import { useNavigate } from "react-router";
 import { CheckCircle, Clock, BookOpen, FileCheck2 } from "lucide-react";
 import loanService from "@/services/loanService";
 import { useToast } from "@/hooks/useToast";
+import { useRolePermissions } from "@/hooks/useRolePermissions";
 
 export default function ReturnApprovalsSection() {
   const navigate = useNavigate();
+  const { canEdit } = useRolePermissions();
   const [requests, setRequests] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
@@ -85,17 +87,23 @@ export default function ReturnApprovalsSection() {
                 </div>
               </div>
               <div className="flex gap-2">
-                <button
-                  onClick={() =>
-                    navigate(
-                      `/dashboard/return-confirmation/${req.loan?.id || req.loanId}?requestId=${req.id}`
-                    )
-                  }
-                  className="px-5 py-2.5 bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl text-xs font-bold shadow-xs transition-colors flex items-center gap-1.5"
-                >
-                  <FileCheck2 size={14} />
-                  Verifikasi & Tanda Terima
-                </button>
+                {canEdit("returnApprovals") ? (
+                  <button
+                    onClick={() =>
+                      navigate(
+                        `/dashboard/return-confirmation/${req.loan?.id || req.loanId}?requestId=${req.id}`
+                      )
+                    }
+                    className="px-5 py-2.5 bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl text-xs font-bold shadow-xs transition-colors flex items-center gap-1.5"
+                  >
+                    <FileCheck2 size={14} />
+                    Verifikasi & Tanda Terima
+                  </button>
+                ) : (
+                  <span className="text-xs text-muted-foreground italic self-center">
+                    Hanya Lihat
+                  </span>
+                )}
               </div>
             </div>
           ))}

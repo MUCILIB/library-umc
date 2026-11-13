@@ -13,6 +13,7 @@ import {
 import { API_BASE_URL } from "@/utils/api-config";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatRupiah, calcLateDays } from "@/utils/format";
+import { useRolePermissions } from "@/hooks/useRolePermissions";
 
 interface UnpaidFine {
   id: string;
@@ -67,6 +68,7 @@ function InlineToast({
 
 // ─── Main Component ───────────────────────────────────────────────────────
 export default function FinesSection() {
+  const { canEdit } = useRolePermissions();
   const [activeTab, setActiveTab] = useState<"unpaid" | "paid">("unpaid");
   const [searchTerm, setSearchTerm] = useState("");
   const [unpaidFines, setUnpaidFines] = useState<UnpaidFine[]>([]);
@@ -422,21 +424,27 @@ export default function FinesSection() {
                           </p>
                         </td>
                         <td className="px-8 py-5 text-right">
-                          <button
-                            id={`btn-pay-fine-${fine.id}`}
-                            onClick={() => handlePayFine(fine)}
-                            disabled={payingId === fine.id}
-                            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-[12px] font-bold bg-green-50 dark:bg-green-950 text-green-700 dark:text-green-400 border border-green-200 dark:border-green-800 hover:bg-green-600 hover:text-white transition-all disabled:opacity-50"
-                          >
-                            {payingId === fine.id ? (
-                              <Loader size={12} className="animate-spin" />
-                            ) : (
-                              <CheckCircle size={12} />
-                            )}
-                            {payingId === fine.id
-                              ? "Memproses..."
-                              : "Konfirmasi Bayar"}
-                          </button>
+                          {canEdit("fines") ? (
+                            <button
+                              id={`btn-pay-fine-${fine.id}`}
+                              onClick={() => handlePayFine(fine)}
+                              disabled={payingId === fine.id}
+                              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-[12px] font-bold bg-green-50 dark:bg-green-950 text-green-700 dark:text-green-400 border border-green-200 dark:border-green-800 hover:bg-green-600 hover:text-white transition-all disabled:opacity-50"
+                            >
+                              {payingId === fine.id ? (
+                                <Loader size={12} className="animate-spin" />
+                              ) : (
+                                <CheckCircle size={12} />
+                              )}
+                              {payingId === fine.id
+                                ? "Memproses..."
+                                : "Konfirmasi Bayar"}
+                            </button>
+                          ) : (
+                            <span className="text-xs text-muted-foreground italic">
+                              Hanya Lihat
+                            </span>
+                          )}
                         </td>
                       </tr>
                     );

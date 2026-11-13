@@ -27,6 +27,7 @@ import {
   AlertTriangle,
 } from "lucide-react";
 import { useToast } from "@/hooks/useToast";
+import { useRolePermissions } from "@/hooks/useRolePermissions";
 import {
   Select,
   SelectContent,
@@ -87,6 +88,7 @@ export default function BibliographySection({
   const [showForm, setShowForm] = useState(false);
   const [editingBib, setEditingBib] = useState<Bibliography | null>(null);
   const [quickAddBib, setQuickAddBib] = useState<Bibliography | null>(null);
+  const { canAdd, canEdit, canDelete } = useRolePermissions();
   const limit = 10;
 
   // Column visibility
@@ -543,13 +545,15 @@ export default function BibliographySection({
             )}
             <span className="hidden sm:inline">Export</span>
           </button>
-          <button
-            onClick={handleCreate}
-            className="flex items-center gap-2 rounded-lg bg-emerald-600 px-3 py-2 text-sm font-medium text-white hover:bg-emerald-700"
-          >
-            <Plus className="size-4" />
-            Tambah
-          </button>
+          {canAdd("bibliographies") && (
+            <button
+              onClick={handleCreate}
+              className="flex items-center gap-2 rounded-lg bg-emerald-600 px-3 py-2 text-sm font-medium text-white hover:bg-emerald-700"
+            >
+              <Plus className="size-4" />
+              Tambah
+            </button>
+          )}
         </div>
       </div>
 
@@ -749,31 +753,35 @@ export default function BibliographySection({
                           <Package className="size-3" />
                           {bib.availableItems}/{bib.totalItems}
                         </button>
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setQuickAddBib(bib);
-                          }}
-                          className="inline-flex items-center justify-center size-5 rounded-full border border-emerald-300 dark:border-emerald-800 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 dark:bg-emerald-950/60 dark:text-emerald-300 dark:hover:bg-emerald-900 transition-colors cursor-pointer"
-                          title="Tambah eksemplar fisik buku ini"
-                          aria-label={`Tambah eksemplar fisik untuk ${bib.title}`}
-                        >
-                          <Plus className="size-3" />
-                        </button>
+                        {canAdd("items") && (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setQuickAddBib(bib);
+                            }}
+                            className="inline-flex items-center justify-center size-5 rounded-full border border-emerald-300 dark:border-emerald-800 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 dark:bg-emerald-950/60 dark:text-emerald-300 dark:hover:bg-emerald-900 transition-colors cursor-pointer"
+                            title="Tambah eksemplar fisik buku ini"
+                            aria-label={`Tambah eksemplar fisik untuk ${bib.title}`}
+                          >
+                            <Plus className="size-3" />
+                          </button>
+                        )}
                       </div>
                     </TableCell>
                   )}
                   <TableCell className="px-4 py-3.5 text-center">
                     <div className="flex items-center justify-center gap-1">
-                      <button
-                        onClick={() => setQuickAddBib(bib)}
-                        className="rounded-lg p-1.5 text-emerald-600 hover:bg-emerald-50 dark:bg-emerald-950/60 hover:text-emerald-700 transition-colors cursor-pointer"
-                        title="Tambah eksemplar fisik"
-                        aria-label={`Tambah eksemplar untuk ${bib.title}`}
-                      >
-                        <Plus className="size-4" />
-                      </button>
+                      {canAdd("items") && (
+                        <button
+                          onClick={() => setQuickAddBib(bib)}
+                          className="rounded-lg p-1.5 text-emerald-600 hover:bg-emerald-50 dark:bg-emerald-950/60 hover:text-emerald-700 transition-colors cursor-pointer"
+                          title="Tambah eksemplar fisik"
+                          aria-label={`Tambah eksemplar untuk ${bib.title}`}
+                        >
+                          <Plus className="size-4" />
+                        </button>
+                      )}
                       {onViewItems && (
                         <button
                           onClick={() => onViewItems(bib)}
@@ -790,20 +798,24 @@ export default function BibliographySection({
                       >
                         <Eye className="size-4" />
                       </button>
-                      <button
-                        onClick={() => handleEdit(bib)}
-                        className="rounded-lg p-1.5 text-blue-500 hover:bg-blue-50 dark:bg-blue-950/60 hover:text-blue-600 dark:text-blue-400 transition-colors cursor-pointer"
-                        title="Edit"
-                      >
-                        <Pencil className="size-4" />
-                      </button>
-                      <button
-                        onClick={() => handleDelete(bib)}
-                        className="rounded-lg p-1.5 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/60 hover:text-rose-700 dark:text-rose-400 transition-colors cursor-pointer"
-                        title="Hapus Bibliografi"
-                      >
-                        <Trash2 className="size-4" />
-                      </button>
+                      {canEdit("bibliographies") && (
+                        <button
+                          onClick={() => handleEdit(bib)}
+                          className="rounded-lg p-1.5 text-blue-500 hover:bg-blue-50 dark:bg-blue-950/60 hover:text-blue-600 dark:text-blue-400 transition-colors cursor-pointer"
+                          title="Edit"
+                        >
+                          <Pencil className="size-4" />
+                        </button>
+                      )}
+                      {canDelete("bibliographies") && (
+                        <button
+                          onClick={() => handleDelete(bib)}
+                          className="rounded-lg p-1.5 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/60 hover:text-rose-700 dark:text-rose-400 transition-colors cursor-pointer"
+                          title="Hapus Bibliografi"
+                        >
+                          <Trash2 className="size-4" />
+                        </button>
+                      )}
                     </div>
                   </TableCell>
                 </TableRow>
