@@ -31,6 +31,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { API_BASE_URL } from "@/utils/api-config";
+import { useRolePermissions } from "@/hooks/useRolePermissions";
 
 interface ItemSectionProps {
   initialSearchTerm?: string;
@@ -41,6 +42,7 @@ export default function ItemSection({
   initialSearchTerm = "",
   initialBibliographyId = "",
 }: ItemSectionProps = {}) {
+  const { canAdd, canEdit, canDelete } = useRolePermissions();
   const [items, setItems] = useState<Item[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -239,22 +241,24 @@ export default function ItemSection({
               Kelola item fisik dari bibliografi
             </p>
           </div>
-          <div className="flex gap-2">
-            <button
-              onClick={handleCreate}
-              className="flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700 transition-colors"
-            >
-              <Plus className="size-4" />
-              Tambah
-            </button>
-            <button
-              onClick={() => setShowBulkForm(true)}
-              className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 transition-colors"
-            >
-              <Package className="size-4" />
-              Bulk
-            </button>
-          </div>
+          {canAdd("items") && (
+            <div className="flex gap-2">
+              <button
+                onClick={handleCreate}
+                className="flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700 transition-colors"
+              >
+                <Plus className="size-4" />
+                Tambah
+              </button>
+              <button
+                onClick={() => setShowBulkForm(true)}
+                className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 transition-colors"
+              >
+                <Package className="size-4" />
+                Bulk
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Filter Bar Antislop */}
@@ -465,20 +469,24 @@ export default function ItemSection({
                         >
                           <Eye className="size-4" />
                         </button>
-                        <button
-                          onClick={() => handleEdit(item)}
-                          className="rounded-lg p-1.5 text-blue-400 hover:bg-blue-50 dark:bg-blue-950 hover:text-blue-600 dark:text-blue-400"
-                          title="Edit"
-                        >
-                          <Pencil className="size-4" />
-                        </button>
-                        <button
-                          onClick={() => handleDelete(item)}
-                          className="rounded-lg p-1.5 text-red-400 hover:bg-warning-bg hover:text-destructive"
-                          title="Arsipkan"
-                        >
-                          <Trash2 className="size-4" />
-                        </button>
+                        {canEdit("items") && (
+                          <button
+                            onClick={() => handleEdit(item)}
+                            className="rounded-lg p-1.5 text-blue-400 hover:bg-blue-50 dark:bg-blue-950 hover:text-blue-600 dark:text-blue-400"
+                            title="Edit"
+                          >
+                            <Pencil className="size-4" />
+                          </button>
+                        )}
+                        {canDelete("items") && (
+                          <button
+                            onClick={() => handleDelete(item)}
+                            className="rounded-lg p-1.5 text-red-400 hover:bg-warning-bg hover:text-destructive"
+                            title="Arsipkan"
+                          >
+                            <Trash2 className="size-4" />
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -620,6 +628,7 @@ function ItemDetail({
 }) {
   const [qrLoading, setQrLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { canEdit, canDelete } = useRolePermissions();
 
   const handleRegenerateQr = async () => {
     if (!confirm("Regenerate QR? QR lama akan invalid.")) return;
@@ -675,20 +684,24 @@ function ItemDetail({
           Kembali ke daftar
         </button>
         <div className="flex gap-2">
-          <button
-            onClick={() => onEdit(item)}
-            className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
-          >
-            <Pencil className="size-4" />
-            Edit
-          </button>
-          <button
-            onClick={() => onDelete(item)}
-            className="flex items-center gap-2 rounded-lg bg-destructive px-4 py-2 text-sm font-medium text-white hover:bg-destructive/90"
-          >
-            <Trash2 className="size-4" />
-            Arsipkan
-          </button>
+          {canEdit("items") && (
+            <button
+              onClick={() => onEdit(item)}
+              className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+            >
+              <Pencil className="size-4" />
+              Edit
+            </button>
+          )}
+          {canDelete("items") && (
+            <button
+              onClick={() => onDelete(item)}
+              className="flex items-center gap-2 rounded-lg bg-destructive px-4 py-2 text-sm font-medium text-white hover:bg-destructive/90"
+            >
+              <Trash2 className="size-4" />
+              Arsipkan
+            </button>
+          )}
         </div>
       </div>
 

@@ -1,7 +1,6 @@
 import { Router } from "express";
 import { itemController } from "../controller/item.controller";
-import { isAuthenticated } from "../../../middlewares/auth.middleware";
-import { requireRole } from "../../../middlewares/auth.middleware";
+import { isAuthenticated, requireRole, requirePermission } from "../../../middlewares/auth.middleware";
 import { publicApiLimiter } from "../../../middlewares/rateLimiter";
 
 const router = Router();
@@ -11,15 +10,15 @@ router.get("/items", publicApiLimiter, (req, res, next) => itemController.getAll
 router.get("/items/bulk-labels", publicApiLimiter, isAuthenticated, requireRole(["super_admin", "staff"]), (req, res, next) => itemController.bulkLabels(req, res, next));
 router.get("/items/generate-code/:bibliographyId", publicApiLimiter, isAuthenticated, requireRole(["super_admin", "staff"]), (req, res, next) => itemController.generateCode(req, res, next));
 router.get("/items/:id", publicApiLimiter, (req, res, next) => itemController.getById(req, res, next));
-router.post("/items", publicApiLimiter, isAuthenticated, requireRole(["super_admin", "staff"]), (req, res, next) => itemController.create(req, res, next));
-router.patch("/items/:id", publicApiLimiter, isAuthenticated, requireRole(["super_admin", "staff"]), (req, res, next) => itemController.update(req, res, next));
-router.patch("/items/:id/status", publicApiLimiter, isAuthenticated, requireRole(["super_admin", "staff"]), (req, res, next) => itemController.updateStatus(req, res, next));
-router.patch("/items/:id/location", publicApiLimiter, isAuthenticated, requireRole(["super_admin", "staff"]), (req, res, next) => itemController.updateLocation(req, res, next));
-router.delete("/items/:id", publicApiLimiter, isAuthenticated, requireRole(["super_admin", "staff"]), (req, res, next) => itemController.softDelete(req, res, next));
+router.post("/items", publicApiLimiter, isAuthenticated, requirePermission("items", "add"), (req, res, next) => itemController.create(req, res, next));
+router.patch("/items/:id", publicApiLimiter, isAuthenticated, requirePermission("items", "edit"), (req, res, next) => itemController.update(req, res, next));
+router.patch("/items/:id/status", publicApiLimiter, isAuthenticated, requirePermission("items", "edit"), (req, res, next) => itemController.updateStatus(req, res, next));
+router.patch("/items/:id/location", publicApiLimiter, isAuthenticated, requirePermission("items", "edit"), (req, res, next) => itemController.updateLocation(req, res, next));
+router.delete("/items/:id", publicApiLimiter, isAuthenticated, requirePermission("items", "delete"), (req, res, next) => itemController.softDelete(req, res, next));
 
 // Bulk create under bibliography
-router.post("/bibliographies/:bibliographyId/items", publicApiLimiter, isAuthenticated, requireRole(["super_admin", "staff"]), (req, res, next) => itemController.create(req, res, next));
-router.post("/bibliographies/:bibliographyId/items/bulk", publicApiLimiter, isAuthenticated, requireRole(["super_admin", "staff"]), (req, res, next) => itemController.bulkCreate(req, res, next));
+router.post("/bibliographies/:bibliographyId/items", publicApiLimiter, isAuthenticated, requirePermission("items", "add"), (req, res, next) => itemController.create(req, res, next));
+router.post("/bibliographies/:bibliographyId/items/bulk", publicApiLimiter, isAuthenticated, requirePermission("items", "add"), (req, res, next) => itemController.bulkCreate(req, res, next));
 
 // QR endpoints & Circulation Lookup (Restricted to Staff/Admin to protect loaner privacy)
 router.get("/items/:id/qr", publicApiLimiter, isAuthenticated, requireRole(["super_admin", "staff"]), (req, res, next) => itemController.getQr(req, res, next));
