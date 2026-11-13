@@ -1,11 +1,9 @@
 import { test, expect } from "@playwright/test";
 
 test.describe("E2E: Member External Bookmark Flow", () => {
-  const baseURL = "http://localhost:5173";
-
-  test("Login Member External -> Simpan Buku di Katalog -> Cek Buku di Profil", async ({ page }) => {
+  test("Login Member External -> Simpan Buku di Katalog -> Cek Buku di Profil", async ({ page, baseURL }) => {
     // 1. Masuk ke halaman login
-    await page.goto(`${baseURL}/login`);
+    await page.goto(`${baseURL || ""}/login`);
     await page.waitForLoadState("networkidle");
 
     // 2. Klik tombol demo "Member External" atau isi manual
@@ -26,7 +24,7 @@ test.describe("E2E: Member External Bookmark Flow", () => {
     console.log("Berhasil login:", page.url());
 
     // 3. Masuk ke halaman katalog
-    await page.goto(`${baseURL}/katalog`);
+    await page.goto(`${baseURL || ""}/katalog`);
     await page.waitForLoadState("networkidle");
 
     // Tunggu kartu buku muncul
@@ -57,7 +55,7 @@ test.describe("E2E: Member External Bookmark Flow", () => {
     console.log("Buku berhasil dipastikan tersimpan!");
 
     // 5. Masuk ke halaman Profil
-    await page.goto(`${baseURL}/profile`);
+    await page.goto(`${baseURL || ""}/profile`);
     await page.waitForLoadState("networkidle");
 
     // 6. Klik tab "Buku Disimpan"

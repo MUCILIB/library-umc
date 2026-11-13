@@ -33,11 +33,11 @@ export default defineConfig({
         launchOptions: { ...(CHROMIUM ? { executablePath: CHROMIUM } : {}) },
       },
       dependencies: ["setup"],
-      testIgnore: /unauthenticated\.spec\.ts/,
+      testIgnore: /(unauthenticated|bookmark-external)\.spec\.ts/,
     },
     {
       name: "unauth",
-      testMatch: /unauthenticated\.spec\.ts/,
+      testMatch: /(unauthenticated|bookmark-external)\.spec\.ts/,
       use: { launchOptions: { ...(CHROMIUM ? { executablePath: CHROMIUM } : {}) } },
     },
   ],
