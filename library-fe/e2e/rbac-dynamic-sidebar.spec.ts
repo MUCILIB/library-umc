@@ -1,11 +1,9 @@
 import { test, expect } from "@playwright/test";
 
 test.describe("E2E: Dynamic Sidebar & Dynamic Role Permissions", () => {
-  const baseURL = "http://localhost:5173";
-
-  test("Super Admin memiliki akses penuh ke seluruh menu dan dapat melihat tab RBAC", async ({ page }) => {
+  test("Super Admin memiliki akses penuh ke seluruh menu dan dapat melihat tab RBAC", async ({ page, baseURL }) => {
     // 1. Login sebagai Super Admin
-    await page.goto(`${baseURL}/login`);
+    await page.goto(`${baseURL || ""}/login`);
     await page.waitForLoadState("networkidle");
 
     const emailInput = page.locator('input[type="email"]');
@@ -45,9 +43,9 @@ test.describe("E2E: Dynamic Sidebar & Dynamic Role Permissions", () => {
     await expect(addRoleBtn).toBeVisible();
   });
 
-  test("User External (Non-Admin) tidak memiliki akses ke Manajemen User & RBAC di sidebar", async ({ page }) => {
+  test("User External (Non-Admin) tidak memiliki akses ke Manajemen User & RBAC di sidebar", async ({ page, baseURL }) => {
     // 1. Login sebagai Member External
-    await page.goto(`${baseURL}/login`);
+    await page.goto(`${baseURL || ""}/login`);
     await page.waitForLoadState("networkidle");
 
     const emailInput = page.locator('input[type="email"]');
@@ -60,7 +58,7 @@ test.describe("E2E: Dynamic Sidebar & Dynamic Role Permissions", () => {
     await page.waitForURL((url) => !url.pathname.includes("/login"), { timeout: 15000 });
 
     // 2. Jika diarahkan ke homepage/katalog, coba navigasi manual ke /dashboard
-    await page.goto(`${baseURL}/dashboard`);
+    await page.goto(`${baseURL || ""}/dashboard`);
     await page.waitForLoadState("networkidle");
 
     // 3. Verifikasi proteksi Dynamic Sidebar
