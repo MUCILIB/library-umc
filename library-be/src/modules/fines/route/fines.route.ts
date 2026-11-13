@@ -1,7 +1,8 @@
 import { Router } from "express";
 import {
   isAuthenticated,
-  requireRole
+  requireRole,
+  requirePermission,
 } from "../../../middlewares/auth.middleware";
 import { publicApiLimiter } from "../../../middlewares/rateLimiter";
 import FinesController from "../controller/fines.controller";
@@ -38,7 +39,7 @@ const router = Router();
 router.get(
   "/fines/audit/paid-active-loans",
   isAuthenticated,
-  requireRole(["super_admin", "staff"]),
+  requirePermission("fines", "view"),
   publicApiLimiter,
   FinesController.getPaidFinesWithNonReturnedLoans
 );
@@ -89,7 +90,7 @@ router.get(
 router.get(
   "/fines",
   isAuthenticated,
-  requireRole(["super_admin", "staff"]),
+  requirePermission("fines", "view"),
   publicApiLimiter,
   FinesController.getAllFines
 );
@@ -164,7 +165,7 @@ router.get(
 router.post(
   "/fines",
   isAuthenticated,
-  requireRole(["super_admin", "staff"]),
+  requirePermission("fines", "add"),
   publicApiLimiter,
   FinesController.createFineManual
 );
@@ -209,7 +210,7 @@ router.post(
 router.post(
   "/fines/:id/pay",
   isAuthenticated,
-  requireRole(["super_admin", "staff"]),
+  requirePermission("fines", "edit"),
   publicApiLimiter,
   FinesController.payFine
 );
@@ -240,7 +241,7 @@ router.post(
 router.delete(
   "/fines/:id",
   isAuthenticated,
-  requireRole(["super_admin"]),
+  requirePermission("fines", "delete"),
   publicApiLimiter,
   FinesController.deleteFine
 );

@@ -3,6 +3,7 @@ import { LoanController } from "../controller/loan.controller";
 import {
   isAuthenticated,
   requireRole,
+  requirePermission,
 } from "../../../middlewares/auth.middleware";
 import { publicApiLimiter } from "../../../middlewares/rateLimiter";
 
@@ -108,7 +109,7 @@ router.post(
   "/loans/:requestId/approve",
   publicApiLimiter,
   isAuthenticated,
-  requireRole(["super_admin", "staff"]),
+  requirePermission("loans", "edit"),
   loanController.approveLoan,
 );
 
@@ -142,7 +143,7 @@ router.post(
   "/loans/:requestId/reject",
   publicApiLimiter,
   isAuthenticated,
-  requireRole(["super_admin", "staff"]),
+  requirePermission("loans", "edit"),
   loanController.rejectLoan,
 );
 
@@ -208,7 +209,7 @@ router.post(
   "/loans/:loanId/return",
   publicApiLimiter,
   isAuthenticated,
-  requireRole(["super_admin", "staff"]),
+  requirePermission("loans", "edit"),
   loanController.returnLoan,
 );
 
@@ -224,7 +225,7 @@ router.post(
   "/loans/return-requests/:requestId/approve",
   publicApiLimiter,
   isAuthenticated,
-  requireRole(["super_admin", "staff"]),
+  requirePermission("returnApprovals", "edit"),
   loanController.approveReturnRequest
 );
 
@@ -232,7 +233,7 @@ router.get(
   "/loans/return-requests/pending",
   publicApiLimiter,
   isAuthenticated,
-  requireRole(["super_admin", "staff"]),
+  requirePermission("returnApprovals", "view"),
   loanController.getPendingReturnRequests
 );
 
@@ -305,7 +306,7 @@ router.get(
   "/loans",
   publicApiLimiter,
   isAuthenticated,
-  requireRole(["super_admin", "staff"]),
+  requirePermission("loans", "view"),
   loanController.getAllLoans,
 );
 
@@ -344,7 +345,7 @@ router.post(
   "/loans/:loanId/approve-extension",
   publicApiLimiter,
   isAuthenticated,
-  requireRole(["super_admin", "staff"]),
+  requirePermission("loans", "edit"),
   loanController.approveExtension,
 );
 
@@ -352,7 +353,7 @@ router.post(
   "/loans/:loanId/reject-extension",
   publicApiLimiter,
   isAuthenticated,
-  requireRole(["super_admin", "staff"]),
+  requirePermission("loans", "edit"),
   loanController.rejectExtension,
 );
 

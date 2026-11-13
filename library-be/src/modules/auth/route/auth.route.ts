@@ -2,7 +2,8 @@ import { Router } from "express";
 import { AuthController } from "../controller/auth.controller";
 import {
   isAuthenticated,
-  requireRole
+  requireRole,
+  requirePermission,
 } from "../../../middlewares/auth.middleware";
 import { authLimiter } from "../../../middlewares/rateLimiter";
 
@@ -182,35 +183,35 @@ router.post("/campus/verify", authLimiter, authController.login);
 router.get(
   "/users/all",
   isAuthenticated,
-  requireRole(["super_admin"]),
+  requirePermission("users", "view"),
   authController.getAllUsers
 );
 
 router.post(
   "/users",
   isAuthenticated,
-  requireRole(["super_admin"]),
+  requirePermission("users", "add"),
   authController.createUser
 );
 
 router.patch(
   "/users/:id/role",
   isAuthenticated,
-  requireRole(["super_admin"]),
+  requirePermission("users", "edit"),
   authController.updateUserRole
 );
 
 router.patch(
   "/users/:id/ban",
   isAuthenticated,
-  requireRole(["super_admin"]),
+  requirePermission("users", "edit"),
   authController.updateUserBanStatus
 );
 
 router.post(
   "/users/:id/sync-member",
   isAuthenticated,
-  requireRole(["super_admin"]),
+  requirePermission("users", "edit"),
   authController.syncUserMember
 );
 
@@ -243,7 +244,7 @@ router.post(
 router.delete(
   "/users/:id",
   isAuthenticated,
-  requireRole(["super_admin"]),
+  requirePermission("users", "delete"),
   authController.deleteUser
 );
 

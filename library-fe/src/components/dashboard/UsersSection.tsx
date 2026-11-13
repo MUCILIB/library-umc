@@ -42,6 +42,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import Modal from "@/components/ui/modal";
 import { authClient } from "@/utils/auth-client";
+import { useRolePermissions } from "@/hooks/useRolePermissions";
 import { useToast } from "@/hooks/useToast";
 import { useUsersManagement } from "@/hooks/dashboard/useUsersManagement";
 import { usersManagementService } from "@/services/dashboard/usersManagementService";
@@ -60,6 +61,7 @@ const BAN_PRESET_REASONS = [
 export default function UsersSection() {
   const { data: session } = authClient.useSession();
   const { success, error: showErrorToast, warning } = useToast();
+  const { canAdd, canEdit, canDelete } = useRolePermissions();
 
   const [mainTab, setMainTab] = useState<"users" | "roles">("users");
 
@@ -529,23 +531,27 @@ export default function UsersSection() {
             </div>
 
             <div className="flex flex-wrap items-center gap-2">
-              <button
-                onClick={() => setIsCreateModalOpen(true)}
-                className="bg-primary hover:bg-primary/90 text-white px-5 py-2.5 rounded-full text-sm font-bold flex items-center justify-center gap-2 shadow-lg shadow-red-500/20 transition-all cursor-pointer"
-                title="Tambah akun pengguna baru secara manual"
-              >
-                <UserPlus size={16} strokeWidth={2.5} />
-                Tambah Pengguna
-              </button>
+              {canAdd("users") && (
+                <>
+                  <button
+                    onClick={() => setIsCreateModalOpen(true)}
+                    className="bg-primary hover:bg-primary/90 text-white px-5 py-2.5 rounded-full text-sm font-bold flex items-center justify-center gap-2 shadow-lg shadow-red-500/20 transition-all cursor-pointer"
+                    title="Tambah akun pengguna baru secara manual"
+                  >
+                    <UserPlus size={16} strokeWidth={2.5} />
+                    Tambah Pengguna
+                  </button>
 
-              <button
-                onClick={() => setIsImportModalOpen(true)}
-                className="bg-card hover:bg-muted text-foreground border border-border px-5 py-2.5 rounded-full text-sm font-bold flex items-center justify-center gap-2 shadow-xs transition-all cursor-pointer"
-                title="Import user dari file CSV"
-              >
-                <Upload size={16} strokeWidth={2.5} />
-                Import User CSV
-              </button>
+                  <button
+                    onClick={() => setIsImportModalOpen(true)}
+                    className="bg-card hover:bg-muted text-foreground border border-border px-5 py-2.5 rounded-full text-sm font-bold flex items-center justify-center gap-2 shadow-xs transition-all cursor-pointer"
+                    title="Import user dari file CSV"
+                  >
+                    <Upload size={16} strokeWidth={2.5} />
+                    Import User CSV
+                  </button>
+                </>
+              )}
 
               <button
                 onClick={handleExportUsers}
@@ -869,7 +875,7 @@ export default function UsersSection() {
                             <Select
                               value={user.role}
                               onValueChange={(value) => void handleRoleChange(user, value)}
-                              disabled={user.id === currentUserId || savingId === user.id}
+                              disabled={user.id === currentUserId || savingId === user.id || !canEdit("users")}
                             >
                               <SelectTrigger className="w-[115px] h-8 text-xs font-semibold bg-background hover:bg-muted/50 transition-colors cursor-pointer">
                                 {savingId === user.id ? (
@@ -949,41 +955,49 @@ export default function UsersSection() {
                                   </DropdownMenuItem>
                                 ) : null}
 
-                                <DropdownMenuSeparator />
+                                {canEdit("users") && (
+                                  <>
+                                    <DropdownMenuSeparator />
 
-                                <DropdownMenuLabel className="text-[11px] font-semibold text-muted-foreground tracking-wider uppercase">
-                                  Akses & Keamanan
-                                </DropdownMenuLabel>
-                                <DropdownMenuItem
-                                  onClick={() => void handleToggleBan(user)}
-                                  disabled={user.id === currentUserId || banSavingId === user.id}
-                                  className={`cursor-pointer text-xs flex items-center gap-2 ${
-                                    user.banned ? "text-emerald-600 dark:text-emerald-400" : "text-amber-600 dark:text-amber-400"
-                                  }`}
-                                >
-                                  {user.banned ? (
-                                    <>
-                                      <UserCheck size={14} />
-                                      <span>{banSavingId === user.id ? "Memproses..." : "Buka Blokir (Unban)"}</span>
-                                    </>
-                                  ) : (
-                                    <>
-                                      <UserX size={14} />
-                                      <span>{banSavingId === user.id ? "Memproses..." : "Blokir User (Ban)"}</span>
-                                    </>
-                                  )}
-                                </DropdownMenuItem>
+                                    <DropdownMenuLabel className="text-[11px] font-semibold text-muted-foreground tracking-wider uppercase">
+                                      Akses & Keamanan
+                                    </DropdownMenuLabel>
+                                    <DropdownMenuItem
+                                      onClick={() => void handleToggleBan(user)}
+                                      disabled={user.id === currentUserId || banSavingId === user.id}
+                                      className={`cursor-pointer text-xs flex items-center gap-2 ${
+                                        user.banned ? "text-emerald-600 dark:text-emerald-400" : "text-amber-600 dark:text-amber-400"
+                                      }`}
+                                    >
+                                      {user.banned ? (
+                                        <>
+                                          <UserCheck size={14} />
+                                          <span>{banSavingId === user.id ? "Memproses..." : "Buka Blokir (Unban)"}</span>
+                                        </>
+                                      ) : (
+                                        <>
+                                          <UserX size={14} />
+                                          <span>{banSavingId === user.id ? "Memproses..." : "Blokir User (Ban)"}</span>
+                                        </>
+                                      )}
+                                    </DropdownMenuItem>
+                                  </>
+                                )}
 
-                                <DropdownMenuSeparator />
+                                {canDelete("users") && (
+                                  <>
+                                    <DropdownMenuSeparator />
 
-                                <DropdownMenuItem
-                                  onClick={() => setDeleteConfirmUser(user)}
-                                  disabled={user.id === currentUserId || deletingId === user.id}
-                                  className="cursor-pointer text-xs flex items-center gap-2 text-rose-600 dark:text-rose-400 focus:text-rose-600 focus:bg-rose-50 dark:focus:bg-rose-950/50"
-                                >
-                                  <Trash2 size={14} />
-                                  <span>Hapus Akun</span>
-                                </DropdownMenuItem>
+                                    <DropdownMenuItem
+                                      onClick={() => setDeleteConfirmUser(user)}
+                                      disabled={user.id === currentUserId || deletingId === user.id}
+                                      className="cursor-pointer text-xs flex items-center gap-2 text-rose-600 dark:text-rose-400 focus:text-rose-600 focus:bg-rose-50 dark:focus:bg-rose-950/50"
+                                    >
+                                      <Trash2 size={14} />
+                                      <span>Hapus Akun</span>
+                                    </DropdownMenuItem>
+                                  </>
+                                )}
                               </DropdownMenuContent>
                             </DropdownMenu>
                           </div>
