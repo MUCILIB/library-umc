@@ -1,247 +1,319 @@
 import * as React from "react";
-import { ShieldCheck } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
-import { Checkbox } from "@/components/ui/checkbox";
-import { SectionCard } from "@/components/ui/section-card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Check,
+  CheckCheck,
+  Eye,
+  Layers,
+  Minus,
+  Plus,
+  Pencil,
+  Trash2,
+} from "lucide-react";
+import { type SidebarMenuMeta, type PermissionItem } from "@/api/client";
+import { Switch } from "@/components/ui/switch";
+import { cn } from "@/lib/utils";
 
-export interface Role {
-  id: string;
+export type PermissionAction = "canView" | "canAdd" | "canEdit" | "canDelete";
+
+export const PERMISSION_ACTIONS: readonly {
+  action: PermissionAction;
   label: string;
+  sublabel: string;
+  icon: React.ComponentType<{ className?: string }>;
+  color: string;
+}[] = [
+  {
+    action: "canView",
+    label: "Lihat (View)",
+    sublabel: "Akses Halaman",
+    icon: Eye,
+    color: "text-blue-500",
+  },
+  {
+    action: "canAdd",
+    label: "Tambah (Add)",
+    sublabel: "Buat Data Baru",
+    icon: Plus,
+    color: "text-emerald-500",
+  },
+  {
+    action: "canEdit",
+    label: "Ubah (Edit)",
+    sublabel: "Koreksi / Update",
+    icon: Pencil,
+    color: "text-amber-500",
+  },
+  {
+    action: "canDelete",
+    label: "Hapus (Delete)",
+    sublabel: "Arsip / Hapus",
+    icon: Trash2,
+    color: "text-rose-500",
+  },
+] as const;
+
+export function applySmartPermissionToggle(
+  current: PermissionItem,
+  action: PermissionAction,
+  nextValue?: boolean
+): PermissionItem {
+  const value = nextValue !== undefined ? nextValue : !current[action];
+  const updated: PermissionItem = { ...current, [action]: value };
+
+  // Smart Dependency 1: Mutation requires View
+  if (action !== "canView" && value === true) {
+    updated.canView = true;
+  }
+
+  // Smart Dependency 2: Turning off View disables all mutations
+  if (action === "canView" && value === false) {
+    updated.canAdd = false;
+    updated.canEdit = false;
+    updated.canDelete = false;
+  }
+
+  return updated;
 }
 
-export interface Permission {
-  id: string;
-  label: string;
+export function toggleAllMenuPermissions(current: PermissionItem): PermissionItem {
+  const isAllActive =
+    current.canView && current.canAdd && current.canEdit && current.canDelete;
+  const target = !isAllActive;
+  return {
+    menuKey: current.menuKey,
+    canView: target,
+    canAdd: target,
+    canEdit: target,
+    canDelete: target,
+  };
 }
 
-export interface PermissionGroup {
-  resource: string;
-  permissions: Permission[];
+export type AccessStatus = "FULL" | "VIEW_ONLY" | "CUSTOM" | "NONE";
+
+export function getAccessStatus(item?: PermissionItem): AccessStatus {
+  if (!item) return "NONE";
+  if (item.canView && item.canAdd && item.canEdit && item.canDelete) return "FULL";
+  if (item.canView && !item.canAdd && !item.canEdit && !item.canDelete) return "VIEW_ONLY";
+  if (!item.canView && !item.canAdd && !item.canEdit && !item.canDelete) return "NONE";
+  return "CUSTOM";
 }
 
-export interface RoleMatrixProps {
-  roles?: Role[];
-  groups?: PermissionGroup[];
-  /** permissionId -> array of granted roleIds. */
-  value?: Record<string, string[]>;
-  onValueChange?: (value: Record<string, string[]>) => void;
+export interface HorizontalRoleMatrixProps {
+  menus: SidebarMenuMeta[];
+  matrix: Record<string, PermissionItem>;
+  onPermissionChange: (menuKey: string, action: PermissionAction) => void;
+  onRowToggleAll: (menuKey: string) => void;
+  onGroupToggleAll?: (groupName: string, enable: boolean) => void;
   readOnly?: boolean;
-  className?: string;
-  title?: string;
-  description?: string;
-  headerAction?: React.ReactNode;
-  footer?: React.ReactNode;
 }
-
-const defaultRoles: Role[] = [
-  { id: "admin", label: "Admin" },
-  { id: "editor", label: "Editor" },
-  { id: "viewer", label: "Viewer" },
-];
-
-const defaultGroups: PermissionGroup[] = [
-  {
-    resource: "Users",
-    permissions: [
-      { id: "users.create", label: "Invite members" },
-      { id: "users.read", label: "View members" },
-      { id: "users.update", label: "Edit profiles & roles" },
-      { id: "users.delete", label: "Remove members" },
-    ],
-  },
-  {
-    resource: "Billing",
-    permissions: [
-      { id: "billing.read", label: "View invoices" },
-      { id: "billing.manage", label: "Change plan & seats" },
-    ],
-  },
-  {
-    resource: "Content",
-    permissions: [
-      { id: "content.create", label: "Create documents" },
-      { id: "content.read", label: "Read documents" },
-      { id: "content.delete", label: "Delete documents" },
-    ],
-  },
-];
-
-const defaultGrants: Record<string, string[]> = {
-  "users.create": ["admin"],
-  "users.read": ["admin", "editor", "viewer"],
-  "users.update": ["admin"],
-  "users.delete": ["admin"],
-  "billing.read": ["admin", "editor"],
-  "billing.manage": ["admin"],
-  "content.create": ["admin", "editor"],
-  "content.read": ["admin", "editor", "viewer"],
-  "content.delete": ["admin", "editor"],
-};
 
 export function RoleMatrix({
-  roles = defaultRoles,
-  groups = defaultGroups,
-  value,
-  onValueChange,
+  menus,
+  matrix,
+  onPermissionChange,
+  onRowToggleAll,
+  onGroupToggleAll,
   readOnly = false,
-  className,
-  title = "Roles & permissions",
-  description = "What each role can do, grouped by resource.",
-  headerAction,
-  footer,
-}: RoleMatrixProps) {
-  const [internalGrants, setInternalGrants] = React.useState<Record<string, string[]>>(
-    value ? { ...value } : { ...defaultGrants }
-  );
-
-  React.useEffect(() => {
-    if (value) {
-      setInternalGrants(value);
+}: HorizontalRoleMatrixProps) {
+  // Group menus by category
+  const grouped = React.useMemo(() => {
+    const map = new Map<string, SidebarMenuMeta[]>();
+    for (const menu of menus) {
+      const g = menu.group || "Lainnya";
+      const existing = map.get(g) || [];
+      existing.push(menu);
+      map.set(g, existing);
     }
-  }, [value]);
-
-  const grants = internalGrants;
-  const allRoleIds = roles.map((r) => r.id);
-
-  function setGrant(permissionId: string, roleIds: string[]) {
-    const next = { ...grants, [permissionId]: roleIds };
-    setInternalGrants(next);
-    onValueChange?.(next);
-  }
-
-  function isGranted(permissionId: string, roleId: string) {
-    if (roleId === "super_admin") return true;
-    return (grants[permissionId] ?? []).includes(roleId);
-  }
-
-  function toggleCell(permissionId: string, roleId: string) {
-    if (readOnly || roleId === "super_admin") return;
-    const current = grants[permissionId] ?? [];
-    setGrant(
-      permissionId,
-      current.includes(roleId) ? current.filter((id) => id !== roleId) : [...current, roleId]
-    );
-  }
-
-  function roleState(roleId: string): boolean | "indeterminate" {
-    if (roleId === "super_admin") return true;
-    const total = groups.reduce((n, g) => n + g.permissions.length, 0);
-    const count = groups.reduce(
-      (n, g) => n + g.permissions.filter((p) => isGranted(p.id, roleId)).length,
-      0
-    );
-    if (count === 0) return false;
-    if (count === total) return true;
-    return "indeterminate";
-  }
-
-  function toggleRoleColumn(roleId: string) {
-    if (readOnly || roleId === "super_admin") return;
-    const turnOn = roleState(roleId) !== true;
-    const next = { ...grants };
-    for (const group of groups) {
-      for (const permission of group.permissions) {
-        const current = next[permission.id] ?? [];
-        const has = current.includes(roleId);
-        next[permission.id] = turnOn
-          ? has
-            ? current
-            : [...current, roleId]
-          : has
-          ? current.filter((id) => id !== roleId)
-          : current;
-      }
-    }
-    setInternalGrants(next);
-    onValueChange?.(next);
-  }
-
-  function groupSummary(group: PermissionGroup) {
-    const total = group.permissions.length * allRoleIds.length;
-    const granted = group.permissions.reduce(
-      (n, p) => n + allRoleIds.filter((roleId) => isGranted(p.id, roleId)).length,
-      0
-    );
-    return `${granted} of ${total} grants`;
-  }
+    return Array.from(map.entries());
+  }, [menus]);
 
   return (
-    <SectionCard
-      data-slot="role-matrix"
-      title={title}
-      description={description}
-      className={className}
-      headerAction={
-        headerAction ||
-        (readOnly ? (
-          <Badge variant="secondary">
-            <ShieldCheck aria-hidden="true" />
-            Read-only
-          </Badge>
-        ) : undefined)
-      }
-      footer={footer}
-    >
-      <div className="-mx-6 overflow-x-auto px-6">
-        <Table className="min-w-full">
-          <TableHeader>
-            <TableRow>
-              <TableHead className="w-[42%]">Permission</TableHead>
-              {roles.map((role) => (
-                <TableHead key={role.id} className="text-center min-w-[100px]">
-                  <span className="block text-xs font-semibold">{role.label}</span>
-                  <Checkbox
-                    checked={roleState(role.id)}
-                    disabled={readOnly || role.id === "super_admin"}
-                    aria-label={`Toggle all ${role.label} permissions`}
-                    className="mx-auto mt-1 block"
-                    onCheckedChange={() => toggleRoleColumn(role.id)}
-                  />
-                </TableHead>
+    <div className="rounded-2xl border border-border bg-card shadow-xs overflow-hidden">
+      <div className="overflow-x-auto">
+        <table className="w-full text-left border-collapse min-w-[720px]">
+          <thead>
+            <tr className="border-b border-border bg-muted/40 text-xs font-semibold text-muted-foreground">
+              <th className="py-3 px-4 w-[34%]">Modul / Sub-Menu</th>
+              {PERMISSION_ACTIONS.map((col) => (
+                <th key={col.action} className="py-3 px-3 text-center w-[13%]">
+                  <div className="flex flex-col items-center justify-center">
+                    <span className="font-bold text-foreground">{col.label}</span>
+                    <span className="text-[10px] text-muted-foreground hidden sm:inline">
+                      {col.sublabel}
+                    </span>
+                  </div>
+                </th>
               ))}
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {groups.map((group) => (
-              <React.Fragment key={group.resource}>
-                <TableRow className="hover:bg-transparent">
-                  <TableCell colSpan={roles.length + 1} className="bg-muted/40 h-10 py-2">
-                    <div className="flex items-center justify-between gap-x-2">
-                      <span className="text-xs font-semibold tracking-wider uppercase">
-                        {group.resource}
-                      </span>
-                      <span className="text-muted-foreground text-xs">{groupSummary(group)}</span>
-                    </div>
-                  </TableCell>
-                </TableRow>
-                {group.permissions.map((permission) => (
-                  <TableRow key={permission.id}>
-                    <TableCell className="py-2.5 pl-4 font-normal text-xs">{permission.label}</TableCell>
-                    {roles.map((role) => (
-                      <TableCell key={role.id} className="text-center">
-                        <Checkbox
-                          checked={isGranted(permission.id, role.id)}
-                          disabled={readOnly || role.id === "super_admin"}
-                          aria-label={`${permission.label}: ${role.label}`}
-                          className="mx-auto"
-                          onCheckedChange={() => toggleCell(permission.id, role.id)}
-                        />
-                      </TableCell>
-                    ))}
-                  </TableRow>
-                ))}
-              </React.Fragment>
-            ))}
-          </TableBody>
-        </Table>
-      </div>
+              <th className="py-3 px-4 text-center w-[14%]">Aksi Cepat</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-border/60 text-xs">
+            {grouped.map(([groupName, groupMenus]) => {
+              // Group level status
+              const isGroupAllActive = groupMenus.every((m) => {
+                const item = matrix[m.key];
+                return (
+                  item &&
+                  item.canView &&
+                  item.canAdd &&
+                  item.canEdit &&
+                  item.canDelete
+                );
+              });
 
-      <p className="text-muted-foreground mt-4 text-xs">
-        Header kolom berfungsi untuk mengaktifkan/menonaktifkan seluruh hak akses role tersebut.
-      </p>
-    </SectionCard>
+              return (
+                <React.Fragment key={groupName}>
+                  {/* Category Header Row */}
+                  <tr className="bg-muted/30 border-y border-border/80">
+                    <td colSpan={6} className="py-2.5 px-4">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <Layers className="size-3.5 text-primary" />
+                          <span className="text-xs font-bold text-foreground tracking-wide uppercase">
+                            {groupName}
+                          </span>
+                          <span className="text-[10px] px-2 py-0.5 rounded-full bg-muted text-muted-foreground font-medium">
+                            {groupMenus.length} modul
+                          </span>
+                        </div>
+
+                        {!readOnly && onGroupToggleAll && (
+                          <div className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              data-testid={`btn-group-toggle-${groupName}`}
+                              onClick={() => onGroupToggleAll(groupName, !isGroupAllActive)}
+                              className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-semibold text-muted-foreground hover:text-foreground hover:bg-card transition-colors"
+                            >
+                              <CheckCheck size={12} className={isGroupAllActive ? "text-primary" : ""} />
+                              <span>{isGroupAllActive ? "Kosongkan Grup" : "Pilih Semua Grup"}</span>
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+
+                  {/* Menu Rows */}
+                  {groupMenus.map((menu) => {
+                    const item = matrix[menu.key] || {
+                      menuKey: menu.key,
+                      canView: false,
+                      canAdd: false,
+                      canEdit: false,
+                      canDelete: false,
+                    };
+
+                    const status = getAccessStatus(item);
+                    const isAllActive =
+                      item.canView &&
+                      item.canAdd &&
+                      item.canEdit &&
+                      item.canDelete;
+
+                    return (
+                      <tr
+                        key={menu.key}
+                        className="hover:bg-muted/20 transition-colors"
+                      >
+                        {/* Column 1: Modul name & status */}
+                        <td className="py-3 px-4">
+                          <div className="flex flex-col gap-0.5">
+                            <div className="flex items-center gap-2">
+                              <span className="font-semibold text-foreground text-xs">
+                                {menu.label}
+                              </span>
+                              {status === "FULL" && (
+                                <span className="text-[10px] px-1.5 py-0.2 rounded bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-semibold border border-emerald-500/20">
+                                  Penuh
+                                </span>
+                              )}
+                              {status === "VIEW_ONLY" && (
+                                <span className="text-[10px] px-1.5 py-0.2 rounded bg-blue-500/10 text-blue-600 dark:text-blue-400 font-semibold border border-blue-500/20">
+                                  Hanya Lihat
+                                </span>
+                              )}
+                              {status === "CUSTOM" && (
+                                <span className="text-[10px] px-1.5 py-0.2 rounded bg-amber-500/10 text-amber-600 dark:text-amber-400 font-semibold border border-amber-500/20">
+                                  Kustom
+                                </span>
+                              )}
+                              {status === "NONE" && (
+                                <span className="text-[10px] px-1.5 py-0.2 rounded bg-muted text-muted-foreground font-semibold">
+                                  Nonaktif
+                                </span>
+                              )}
+                            </div>
+                            {menu.description && (
+                              <p className="text-[11px] text-muted-foreground line-clamp-1">
+                                {menu.description}
+                              </p>
+                            )}
+                          </div>
+                        </td>
+
+                        {/* Column 2-5: Switches */}
+                        {PERMISSION_ACTIONS.map((col) => {
+                          const isChecked = Boolean(item[col.action]);
+                          return (
+                            <td
+                              key={col.action}
+                              className="py-3 px-3 text-center align-middle"
+                            >
+                              <div className="flex justify-center">
+                                <Switch
+                                  data-testid={`switch-${menu.key}-${col.action}`}
+                                  checked={isChecked}
+                                  disabled={readOnly}
+                                  onCheckedChange={() =>
+                                    onPermissionChange(menu.key, col.action)
+                                  }
+                                  aria-label={`${menu.label} ${col.label}`}
+                                />
+                              </div>
+                            </td>
+                          );
+                        })}
+
+                        {/* Column 6: Quick Action */}
+                        <td className="py-3 px-4 text-center align-middle">
+                          <button
+                            type="button"
+                            data-testid={`btn-quick-toggle-${menu.key}`}
+                            disabled={readOnly}
+                            onClick={() => onRowToggleAll(menu.key)}
+                            className={cn(
+                              "inline-flex items-center justify-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-semibold border transition-all disabled:opacity-40",
+                              isAllActive
+                                ? "border-rose-500/20 bg-rose-500/5 text-rose-600 dark:text-rose-400 hover:bg-rose-500/10"
+                                : "border-border bg-card text-foreground hover:bg-muted"
+                            )}
+                          >
+                            {isAllActive ? (
+                              <>
+                                <Minus className="size-3" />
+                                <span>Kosongkan</span>
+                              </>
+                            ) : (
+                              <>
+                                <Check className="size-3 text-emerald-500" />
+                                <span>Pilih Semua</span>
+                              </>
+                            )}
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </React.Fragment>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </div>
   );
 }
 
+export { RoleMatrix as HorizontalRoleMatrix };
 export default RoleMatrix;
