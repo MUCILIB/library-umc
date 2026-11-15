@@ -131,7 +131,7 @@ describe("Role & Dynamic Sidebar API Integration Tests", () => {
 
       const restrictedPermissions = [
         { menuKey: "dashboard", canView: true, canAdd: false, canEdit: false, canDelete: false },
-        { menuKey: "catalog", canView: true, canAdd: false, canEdit: false, canDelete: false },
+        { menuKey: "bibliographies", canView: true, canAdd: false, canEdit: false, canDelete: false },
         { menuKey: "roles", canView: false, canAdd: false, canEdit: false, canDelete: false },
         { menuKey: "users", canView: false, canAdd: false, canEdit: false, canDelete: false },
       ];
@@ -147,7 +147,7 @@ describe("Role & Dynamic Sidebar API Integration Tests", () => {
       const rolesPerm = res.body.data.permissions.find((p: any) => p.menuKey === "roles");
       expect(rolesPerm?.canView).toBe(false);
 
-      const catalogPerm = res.body.data.permissions.find((p: any) => p.menuKey === "catalog");
+      const catalogPerm = res.body.data.permissions.find((p: any) => p.menuKey === "bibliographies");
       expect(catalogPerm?.canView).toBe(true);
       expect(catalogPerm?.canAdd).toBe(false);
     });
@@ -213,7 +213,7 @@ describe("Role & Dynamic Sidebar API Integration Tests", () => {
 
       const newPermissions = [
         { menuKey: "circulation", canView: true, canAdd: true, canEdit: false, canDelete: false },
-        { menuKey: "catalog", canView: true, canAdd: false, canEdit: false, canDelete: false },
+        { menuKey: "bibliographies", canView: true, canAdd: false, canEdit: false, canDelete: false },
       ];
 
       vi.mocked(roleService.updateRolePermissions).mockResolvedValue(newPermissions as any);
@@ -225,7 +225,7 @@ describe("Role & Dynamic Sidebar API Integration Tests", () => {
       expect(res.status).toBe(200);
       expect(res.body.success).toBe(true);
       expect(res.body.message).toContain("berhasil diperbarui");
-      expect(roleService.updateRolePermissions).toHaveBeenCalledWith("staff", newPermissions);
+      expect(roleService.updateRolePermissions).toHaveBeenCalledWith("staff", newPermissions, expect.objectContaining({ actorId: "admin-1" }));
     });
   });
 });

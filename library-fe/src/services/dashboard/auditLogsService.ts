@@ -19,12 +19,20 @@ export interface AuditLog {
     | "category"
     | "bibliography"
     | "reservation"
-    | "auth";
+    | "auth"
+    | "role";
   entityId?: string | null;
   ipAddress?: string | null;
   userAgent?: string | null;
   detail?: string | null;
-  createdAt?: string;
+  createdAt?: string | null;
+  occurredAt?: string | null;
+  eventType?: "role.created" | "role.updated" | "role.deleted" | "role.permissions_updated" | null;
+  outcome?: "success" | "failure" | "denied" | null;
+  actorSnapshot?: { id: string; name: string; role: string } | null;
+  targetSnapshot?: { id: string; type: "role"; label: string } | null;
+  changes?: Record<string, { before: string | boolean | null; after: string | boolean | null }> | null;
+  metadata?: { schemaVersion: 1 } | null;
   user?: {
     id?: string | null;
     name?: string | null;

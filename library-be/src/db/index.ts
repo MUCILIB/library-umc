@@ -39,3 +39,4 @@ pool.on("error", (err: Error) => {
 });
 
 export const db = drizzle(pool, { schema });
+export const closeDatabase = (): Promise<void> => pool.end();

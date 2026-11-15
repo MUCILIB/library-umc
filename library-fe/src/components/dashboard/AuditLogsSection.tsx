@@ -10,7 +10,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useAuditLogs } from "@/hooks/dashboard/useAuditLogs";
-import { getUserAvatar } from "@/lib/avatar";
+import AuditLogDetail from "./AuditLogDetail";
 
 const ACTION_OPTIONS = [
   "all",
@@ -32,6 +32,7 @@ const ENTITY_OPTIONS = [
   "bibliography",
   "reservation",
   "auth",
+  "role",
 ];
 
 export default function AuditLogsSection() {
@@ -62,7 +63,7 @@ export default function AuditLogsSection() {
 
     return logs.filter((log) => {
       const userId = (log.userId || "").toLowerCase();
-      const userName = (log.user?.name || "").toLowerCase();
+      const userName = (log.actorSnapshot?.name ?? log.user?.name ?? "").toLowerCase();
       const userEmail = (log.user?.email || "").toLowerCase();
       const entityId = (log.entityId || "").toLowerCase();
       const ipAddress = (log.ipAddress || "").toLowerCase();
@@ -74,6 +75,8 @@ export default function AuditLogsSection() {
         entityId.includes(keyword) ||
         ipAddress.includes(keyword) ||
         detail.includes(keyword) ||
+        (log.targetSnapshot?.label ?? "").toLowerCase().includes(keyword) ||
+        (log.eventType ?? "").toLowerCase().includes(keyword) ||
         log.action.toLowerCase().includes(keyword) ||
         log.entity.toLowerCase().includes(keyword)
       );
@@ -107,6 +110,7 @@ export default function AuditLogsSection() {
           <div className="relative w-full xl:max-w-[340px]">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground w-4 h-4" />
             <input
+              aria-label="Cari audit log"
               value={search}
               onChange={(e) => handleSearchChange(e.target.value)}
               placeholder="Cari nama, email, userId, IP, detail..."
@@ -115,7 +119,7 @@ export default function AuditLogsSection() {
           </div>
 
           <Select value={action} onValueChange={(val) => setAction(val)}>
-            <SelectTrigger className="w-full xl:w-[180px] rounded-xl text-sm font-semibold">
+            <SelectTrigger aria-label="Filter aktivitas" className="w-full xl:w-[180px] rounded-xl text-sm font-semibold">
               <SelectValue placeholder="Action" />
             </SelectTrigger>
             <SelectContent>
@@ -128,7 +132,7 @@ export default function AuditLogsSection() {
           </Select>
 
           <Select value={entity} onValueChange={(val) => setEntity(val)}>
-            <SelectTrigger className="w-full xl:w-[180px] rounded-xl text-sm font-semibold">
+            <SelectTrigger aria-label="Filter objek" className="w-full xl:w-[180px] rounded-xl text-sm font-semibold">
               <SelectValue placeholder="Entity" />
             </SelectTrigger>
             <SelectContent>
@@ -175,27 +179,9 @@ export default function AuditLogsSection() {
               <table className="w-full text-left border-collapse">
                 <thead>
                   <tr className="bg-muted/50 border-b border-border">
-                    <th className="px-6 py-4 text-[11px] font-bold text-muted-foreground uppercase tracking-widest">
-                      Waktu
-                    </th>
-                    <th className="px-6 py-4 text-[11px] font-bold text-muted-foreground uppercase tracking-widest">
-                      Actor
-                    </th>
-                    <th className="px-6 py-4 text-[11px] font-bold text-muted-foreground uppercase tracking-widest">
-                      Action
-                    </th>
-                    <th className="px-6 py-4 text-[11px] font-bold text-muted-foreground uppercase tracking-widest">
-                      Entity
-                    </th>
-                    <th className="px-6 py-4 text-[11px] font-bold text-muted-foreground uppercase tracking-widest">
-                      Entity ID
-                    </th>
-                    <th className="px-6 py-4 text-[11px] font-bold text-muted-foreground uppercase tracking-widest">
-                      IP Address
-                    </th>
-                    <th className="px-6 py-4 text-[11px] font-bold text-muted-foreground uppercase tracking-widest">
-                      Detail
-                    </th>
+                    {["Waktu", "Pelaku", "Aktivitas", "Objek", "Ringkasan", "Detail"].map(label => (
+                      <th key={label} scope="col" className="px-6 py-4 text-[11px] font-bold text-muted-foreground uppercase tracking-widest">{label}</th>
+                    ))}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-50">
@@ -204,46 +190,27 @@ export default function AuditLogsSection() {
                       key={log.id}
                       className="hover:bg-surface-hover/40 transition-colors"
                     >
-                      <td className="px-6 py-4 text-sm font-medium text-muted-foreground">
-                        {log.createdAt
-                          ? new Date(log.createdAt).toLocaleString("id-ID")
-                          : "-"}
+                      <td className="px-6 py-4 text-sm text-muted-foreground whitespace-nowrap">
+                        {log.occurredAt
+                          ? new Date(log.occurredAt).toLocaleString("id-ID", { timeZoneName: "short" })
+                          : log.createdAt || "Waktu tidak tersedia"}
                       </td>
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-2.5">
-                          <img
-                            src={getUserAvatar(log.user || { id: log.userId || "user" })}
-                            alt={log.user?.name || "User"}
-                            className="size-8 rounded-full object-cover shrink-0 border border-border bg-muted/60 shadow-2xs"
-                            onError={(e) => {
-                              (e.target as HTMLImageElement).src = `https://api.dicebear.com/10.x/waves/svg?seed=${encodeURIComponent(log.user?.email || log.user?.name || log.userId || "user")}`;
-                            }}
-                          />
-                          <div className="min-w-0">
-                            <p className="text-sm font-semibold text-foreground truncate">
-                              {log.user?.name || "-"}
-                            </p>
-                            <p className="text-xs text-muted-foreground truncate">
-                              {log.user?.email || log.userId || "-"}
-                            </p>
+                          <span aria-hidden="true" className="size-8 rounded-full bg-muted text-muted-foreground shrink-0 flex items-center justify-center text-xs font-semibold">
+                            {(log.actorSnapshot?.name ?? log.user?.name ?? "?").trim().split(/\s+/).slice(0, 2).map(part => part[0]).join("").toUpperCase()}
+                          </span>
+                          <div>
+                            <p className="text-sm font-semibold text-foreground">{log.actorSnapshot?.name ?? log.user?.name ?? "Tidak diketahui"}</p>
+                            <p className="text-xs text-muted-foreground">{log.actorSnapshot ? log.actorSnapshot.role : "Profil saat ini"}</p>
+                            {!log.actorSnapshot && <p className="text-xs text-muted-foreground">Snapshot historis tidak tersedia.</p>}
                           </div>
                         </div>
                       </td>
-                      <td className="px-6 py-4 text-sm font-bold text-muted-foreground uppercase">
-                        {log.action}
-                      </td>
-                      <td className="px-6 py-4 text-sm font-semibold text-muted-foreground">
-                        {log.entity}
-                      </td>
-                      <td className="px-6 py-4 text-sm font-medium text-muted-foreground">
-                        {log.entityId || "-"}
-                      </td>
-                      <td className="px-6 py-4 text-sm font-medium text-muted-foreground">
-                        {log.ipAddress || "-"}
-                      </td>
-                      <td className="px-6 py-4 text-xs font-medium text-muted-foreground max-w-[360px] break-all">
-                        {log.detail || "-"}
-                      </td>
+                      <td className="px-6 py-4 text-sm text-muted-foreground">{log.eventType ?? log.action}</td>
+                      <td className="px-6 py-4 text-sm text-muted-foreground break-words">{log.targetSnapshot?.label ?? log.entity}</td>
+                      <td className="px-6 py-4 text-sm text-muted-foreground max-w-sm break-words">{log.detail || "-"}</td>
+                      <td className="px-6 py-4"><AuditLogDetail log={log} /></td>
                     </tr>
                   ))}
                 </tbody>

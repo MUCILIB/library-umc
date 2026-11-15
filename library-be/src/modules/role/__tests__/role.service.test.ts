@@ -10,6 +10,7 @@ vi.mock("../../../db", () => {
       insert: vi.fn(),
       update: vi.fn(),
       delete: vi.fn(),
+      transaction: vi.fn(),
     },
   };
 });
@@ -19,6 +20,7 @@ describe("RoleService - Dynamic RBAC & Matrix Hak Akses", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(db.transaction).mockImplementation(async (callback) => callback(db as never));
     roleService = new RoleService();
     // Default ensureSystemRoles mock: role already exists so it doesn't try to insert
     vi.spyOn(roleService, "ensureSystemRoles").mockResolvedValue();
@@ -82,7 +84,7 @@ describe("RoleService - Dynamic RBAC & Matrix Hak Akses", () => {
       (db.select as any).mockReturnValue({
         from: vi.fn().mockReturnValue({
           where: vi.fn().mockReturnValue({
-            limit: vi.fn().mockResolvedValue([]),
+            limit: vi.fn().mockResolvedValueOnce([]).mockResolvedValue([{ id: "test-admin", name: "Admin", role: "super_admin" }]),
           }),
         }),
       });
@@ -106,7 +108,7 @@ describe("RoleService - Dynamic RBAC & Matrix Hak Akses", () => {
       const res = await roleService.createRole({
         name: "Asisten Lab",
         description: "Pengelola lab komputer & repositori",
-      });
+      }, { actorId: "test-admin" });
 
       expect(res.id).toBe("asisten_lab");
       expect(res.name).toBe("Asisten Lab");
@@ -116,7 +118,7 @@ describe("RoleService - Dynamic RBAC & Matrix Hak Akses", () => {
 
     it("gagal membuat role dengan nama kosong", async () => {
       await expect(
-        roleService.createRole({ name: "   " })
+        roleService.createRole({ name: "   " }, { actorId: "test-admin" })
       ).rejects.toThrow("Nama role wajib diisi");
     });
 
@@ -130,7 +132,7 @@ describe("RoleService - Dynamic RBAC & Matrix Hak Akses", () => {
       });
 
       await expect(
-        roleService.createRole({ name: "Staff" })
+        roleService.createRole({ name: "Staff" }, { actorId: "test-admin" })
       ).rejects.toThrow("sudah terdaftar");
     });
   });
@@ -140,14 +142,13 @@ describe("RoleService - Dynamic RBAC & Matrix Hak Akses", () => {
       (db.select as any).mockReturnValue({
         from: vi.fn().mockReturnValue({
           where: vi.fn().mockReturnValue({
-            limit: vi.fn().mockResolvedValue([
-              { id: "super_admin", isSystem: true },
-            ]),
+            limit: vi.fn().mockReturnValue({ for: vi.fn().mockResolvedValue([{ id: "super_admin", isSystem: true }]) }),
+            for: vi.fn().mockResolvedValue([{ id: "super_admin", isSystem: true }]),
           }),
         }),
       });
 
-      await expect(roleService.deleteRole("super_admin")).rejects.toThrow(
+      await expect(roleService.deleteRole("super_admin", { actorId: "test-admin" })).rejects.toThrow(
         "Role sistem bawaan tidak dapat dihapus"
       );
     });
@@ -157,9 +158,7 @@ describe("RoleService - Dynamic RBAC & Matrix Hak Akses", () => {
       (db.select as any).mockReturnValueOnce({
         from: vi.fn().mockReturnValue({
           where: vi.fn().mockReturnValue({
-            limit: vi.fn().mockResolvedValue([
-              { id: "custom_role", isSystem: false },
-            ]),
+            limit: vi.fn().mockReturnValue({ for: vi.fn().mockResolvedValue([{ id: "custom_role", isSystem: false }]) }),
           }),
         }),
       });
@@ -173,7 +172,7 @@ describe("RoleService - Dynamic RBAC & Matrix Hak Akses", () => {
         }),
       });
 
-      await expect(roleService.deleteRole("custom_role")).rejects.toThrow(
+      await expect(roleService.deleteRole("custom_role", { actorId: "test-admin" })).rejects.toThrow(
         "masih digunakan oleh sejumlah pengguna"
       );
     });
@@ -184,15 +183,14 @@ describe("RoleService - Dynamic RBAC & Matrix Hak Akses", () => {
       (db.select as any).mockReturnValue({
         from: vi.fn().mockReturnValue({
           where: vi.fn().mockReturnValue({
-            limit: vi.fn().mockResolvedValue([
-              { id: "super_admin", isSystem: true },
-            ]),
+            limit: vi.fn().mockReturnValue({ for: vi.fn().mockResolvedValue([{ id: "super_admin", isSystem: true }]) }),
+            for: vi.fn().mockResolvedValue([{ id: "super_admin", isSystem: true }]),
           }),
         }),
       });
 
       await expect(
-        roleService.updateRolePermissions("super_admin", [])
+        roleService.updateRolePermissions("super_admin", [], { actorId: "test-admin" })
       ).rejects.toThrow("Hak akses role Super Admin terkunci secara permanen");
     });
   });

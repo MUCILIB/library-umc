@@ -1,6 +1,8 @@
 import { db } from "../../../db";
 import { logs, Users } from "../../../db/schema";
 import { eq, desc, type SQL, and } from "drizzle-orm";
+import { structuredAuditEventSchema } from "../audit.validation";
+import type { AuditTx, StructuredAuditEvent } from "../audit.types";
 
 interface CreateLogPayload {
   userId?: string;
@@ -30,6 +32,20 @@ interface CreateLogPayload {
 }
 
 class AuditService {
+  async recordEvent(tx: AuditTx, event: StructuredAuditEvent): Promise<void> {
+    const { ipAddress, userAgent, ...evidence } = event;
+    const validated = structuredAuditEventSchema.parse(evidence);
+    await tx.insert(logs).values({
+      ...validated,
+      userId: validated.actorSnapshot.id,
+      ipAddress: ipAddress?.slice(0, 255) || null,
+      userAgent: userAgent?.slice(0, 1024) || null,
+      detail: `${validated.eventType}: ${validated.targetSnapshot.label}`
+        // eslint-disable-next-line no-control-regex
+        .replace(/[\u0000-\u001f\u007f]/g, " ").slice(0, 1000),
+    });
+  }
+
   /**
    * Log an action to the database.
    * Does NOT throw errors to prevent main flows from failing just because logging failed.
@@ -108,6 +124,13 @@ class AuditService {
           ipAddress: logs.ipAddress,
           userAgent: logs.userAgent,
           detail: logs.detail,
+          eventType: logs.eventType,
+          outcome: logs.outcome,
+          actorSnapshot: logs.actorSnapshot,
+          targetSnapshot: logs.targetSnapshot,
+          changes: logs.changes,
+          metadata: logs.metadata,
+          occurredAt: logs.occurredAt,
           createdAt: logs.createdAt,
           user: {
             id: Users.id,

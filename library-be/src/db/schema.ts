@@ -37,7 +37,7 @@ export const logsStatusEnum = pgEnum("logs_status", [
   "create", "update", "delete", "approve", "blacklist", "failed_login", "rate_limited"
 ]);
 export const logsEntityEnum = pgEnum("logs_entity", [
-  "loan", "item", "fine", "Users", "category", "bibliography", "reservation", "auth", "faculty", "study_program"
+  "loan", "item", "fine", "Users", "category", "bibliography", "reservation", "auth", "faculty", "study_program", "role"
 ]);
 export const recommendationStatusEnum = pgEnum("recommendation_status", [
   "pending", "approved", "rejected"
@@ -533,6 +533,13 @@ export const logs = pgTable("logs", {
   ipAddress: varchar("ip_address", { length: 255 }),
   userAgent: text("user_agent"),
   detail: text("detail"),
+  eventType: text("event_type"),
+  outcome: text("outcome"),
+  actorSnapshot: jsonb("actor_snapshot"),
+  targetSnapshot: jsonb("target_snapshot"),
+  changes: jsonb("changes"),
+  metadata: jsonb("metadata"),
+  occurredAt: timestamp("occurred_at", { withTimezone: true }).defaultNow(),
   createdAt: timestamp("created_at").defaultNow()
 });
 
