@@ -1,6 +1,9 @@
 import { db } from "../../../db";
 import { roles, rolePermissions, Users } from "../../../db/schema";
-import { eq, and } from "drizzle-orm";
+import { eq } from "drizzle-orm";
+import auditService from "../../audit/service/audit.service";
+import { rolePermissionsSchema } from "../role.validation";
+import type { AuditContext } from "../../audit/audit.types";
 import {
   SIDEBAR_MENUS,
   DEFAULT_SYSTEM_ROLES,
@@ -147,7 +150,8 @@ export class RoleService {
   async createRole(data: {
     name: string;
     description?: string;
-  }): Promise<RoleWithPermissions> {
+  }, context: AuditContext): Promise<RoleWithPermissions> {
+    return db.transaction(async (tx) => {
     const trimmedName = data.name.trim();
     if (!trimmedName) {
       throw new Error("Nama role wajib diisi");
@@ -162,7 +166,7 @@ export class RoleService {
     const roleId = slug || `role_${Date.now()}`;
 
     // Cek duplikasi ID
-    const existing = await db
+    const existing = await tx
       .select()
       .from(roles)
       .where(eq(roles.id, roleId))
@@ -172,7 +176,7 @@ export class RoleService {
       throw new Error(`Role dengan id/nama '${trimmedName}' sudah terdaftar`);
     }
 
-    const [created] = await db
+    const [created] = await tx
       .insert(roles)
       .values({
         id: roleId,
@@ -185,7 +189,7 @@ export class RoleService {
     // Inisialisasi permission default kosong untuk tiap menu
     const permissions: PermissionInput[] = [];
     for (const menu of SIDEBAR_MENUS) {
-      await db.insert(rolePermissions).values({
+      await tx.insert(rolePermissions).values({
         roleId: created.id,
         menuKey: menu.key,
         canView: false,
@@ -203,10 +207,22 @@ export class RoleService {
       });
     }
 
+    if (context) {
+      const [actor] = await tx.select().from(Users).where(eq(Users.id, context.actorId)).limit(1);
+      if (!actor) throw new Error("Audit actor not found");
+      await auditService.recordEvent(tx, {
+        eventType: "role.created", action: "create", entity: "role", entityId: created.id,
+        outcome: "success", actorSnapshot: { id: actor.id, name: actor.name.slice(0, 255), role: actor.role || "unknown" },
+        targetSnapshot: { id: created.id, type: "role", label: created.name.slice(0, 255) },
+        changes: { name: { before: null, after: created.name } }, metadata: { schemaVersion: 1 },
+        ipAddress: context.ipAddress, userAgent: context.userAgent,
+      });
+    }
     return {
       ...created,
       permissions,
     };
+    });
   }
 
   /**
@@ -214,13 +230,15 @@ export class RoleService {
    */
   async updateRole(
     roleId: string,
-    data: { name?: string; description?: string }
+    data: { name?: string; description?: string | null },
+    context: AuditContext
   ): Promise<any> {
-    const existing = await db
+    return db.transaction(async (tx) => {
+    const existing = await tx
       .select()
       .from(roles)
       .where(eq(roles.id, roleId))
-      .limit(1);
+      .limit(1).for("update");
 
     if (existing.length === 0) {
       throw new Error("Role tidak ditemukan");
@@ -240,24 +258,44 @@ export class RoleService {
       updatePayload.name = data.name.trim();
     }
 
-    const [updated] = await db
+    const changes: Record<string, { before: string | null; after: string | null }> = {};
+    for (const key of ["name", "description"] as const) {
+      const after = updatePayload[key];
+      if (after !== undefined && after !== currentRole[key]) {
+        changes[key] = { before: currentRole[key], after };
+      }
+    }
+    if (!Object.keys(changes).length) return currentRole;
+    const [updated] = await tx
       .update(roles)
       .set(updatePayload)
       .where(eq(roles.id, roleId))
       .returning();
-
+    if (context) {
+      const [actor] = await tx.select().from(Users).where(eq(Users.id, context.actorId)).limit(1);
+      if (!actor) throw new Error("Audit actor not found");
+      await auditService.recordEvent(tx, {
+        eventType: "role.updated", action: "update", entity: "role", entityId: roleId,
+        outcome: "success", actorSnapshot: { id: actor.id, name: actor.name.slice(0, 255), role: actor.role || "unknown" },
+        targetSnapshot: { id: roleId, type: "role", label: updated.name.slice(0, 255) },
+        changes, metadata: { schemaVersion: 1 },
+        ipAddress: context.ipAddress, userAgent: context.userAgent,
+      });
+    }
     return updated;
+    });
   }
 
   /**
    * Menghapus custom role
    */
-  async deleteRole(roleId: string): Promise<void> {
-    const existing = await db
+  async deleteRole(roleId: string, context: AuditContext): Promise<void> {
+    return db.transaction(async (tx) => {
+    const existing = await tx
       .select()
       .from(roles)
       .where(eq(roles.id, roleId))
-      .limit(1);
+      .limit(1).for("update");
 
     if (existing.length === 0) {
       throw new Error("Role tidak ditemukan");
@@ -268,7 +306,7 @@ export class RoleService {
     }
 
     // Cek apakah ada user aktif dengan role ini
-    const assignedUsers = await db
+    const assignedUsers = await tx
       .select({ id: Users.id })
       .from(Users)
       .where(eq(Users.role, roleId))
@@ -280,7 +318,19 @@ export class RoleService {
       );
     }
 
-    await db.delete(roles).where(eq(roles.id, roleId));
+    await tx.delete(roles).where(eq(roles.id, roleId));
+    if (context) {
+      const [actor] = await tx.select().from(Users).where(eq(Users.id, context.actorId)).limit(1);
+      if (!actor) throw new Error("Audit actor not found");
+      await auditService.recordEvent(tx, {
+        eventType: "role.deleted", action: "delete", entity: "role", entityId: roleId,
+        outcome: "success", actorSnapshot: { id: actor.id, name: actor.name.slice(0, 255), role: actor.role || "unknown" },
+        targetSnapshot: { id: roleId, type: "role", label: existing[0].name.slice(0, 255) },
+        changes: { name: { before: existing[0].name, after: null }, description: { before: existing[0].description, after: null } },
+        metadata: { schemaVersion: 1 }, ipAddress: context.ipAddress, userAgent: context.userAgent,
+      });
+    }
+    });
   }
 
   /**
@@ -288,62 +338,53 @@ export class RoleService {
    */
   async updateRolePermissions(
     roleId: string,
-    permissions: PermissionInput[]
+    permissions: PermissionInput[],
+    context: AuditContext
   ): Promise<RoleWithPermissions> {
-    const existing = await db
-      .select()
-      .from(roles)
-      .where(eq(roles.id, roleId))
-      .limit(1);
-
-    if (existing.length === 0) {
-      throw new Error("Role tidak ditemukan");
-    }
-
-    const role = existing[0];
-
-    // Super Admin selalu memiliki akses penuh ke segala hal
-    if (role.id === "super_admin") {
-      throw new Error("Hak akses role Super Admin terkunci secara permanen dan tidak dapat diubah.");
-    }
-
-    for (const p of permissions) {
-      const permRow = await db
-        .select()
-        .from(rolePermissions)
-        .where(
-          and(
-            eq(rolePermissions.roleId, roleId),
-            eq(rolePermissions.menuKey, p.menuKey)
-          )
-        )
-        .limit(1);
-
-      if (permRow.length > 0) {
-        await db
-          .update(rolePermissions)
-          .set({
-            canView: Boolean(p.canView),
-            canAdd: Boolean(p.canAdd),
-            canEdit: Boolean(p.canEdit),
-            canDelete: Boolean(p.canDelete),
-            updatedAt: new Date(),
-          })
-          .where(eq(rolePermissions.id, permRow[0].id));
-      } else {
-        await db.insert(rolePermissions).values({
-          roleId,
-          menuKey: p.menuKey,
-          canView: Boolean(p.canView),
-          canAdd: Boolean(p.canAdd),
-          canEdit: Boolean(p.canEdit),
-          canDelete: Boolean(p.canDelete),
+    const validated = rolePermissionsSchema.parse(permissions);
+    return db.transaction(async (tx) => {
+      const [role] = await tx.select().from(roles).where(eq(roles.id, roleId)).for("update");
+      if (!role) throw new Error("Role tidak ditemukan");
+      if (role.id === "super_admin") {
+        throw new Error("Hak akses role Super Admin terkunci secara permanen dan tidak dapat diubah.");
+      }
+      const current = await tx.select().from(rolePermissions).where(eq(rolePermissions.roleId, roleId));
+      const changes: Record<string, { before: boolean; after: boolean }> = {};
+      const flags = ["canView", "canAdd", "canEdit", "canDelete"] as const;
+      for (const permission of validated) {
+        const before = current.find(row => row.menuKey === permission.menuKey);
+        let changed = false;
+        for (const flag of flags) {
+          const previous = before?.[flag] ?? false;
+          if (previous !== permission[flag]) {
+            changes[`permissions.${permission.menuKey}.${flag}`] = { before: previous, after: permission[flag] };
+            changed = true;
+          }
+        }
+        if (!changed) continue;
+        if (before) {
+          await tx.update(rolePermissions).set({ ...permission, updatedAt: new Date() }).where(eq(rolePermissions.id, before.id));
+        } else {
+          await tx.insert(rolePermissions).values({ ...permission, roleId });
+        }
+      }
+      if (Object.keys(changes).length && context) {
+        const [actor] = await tx.select().from(Users).where(eq(Users.id, context.actorId)).limit(1);
+        if (!actor) throw new Error("Audit actor not found");
+        await auditService.recordEvent(tx, {
+          eventType: "role.permissions_updated", action: "update", entity: "role", entityId: roleId,
+          outcome: "success", actorSnapshot: { id: actor.id, name: actor.name.slice(0, 255), role: actor.role || "unknown" },
+          targetSnapshot: { id: roleId, type: "role", label: role.name.slice(0, 255) },
+          changes, metadata: { schemaVersion: 1 }, ipAddress: context.ipAddress, userAgent: context.userAgent,
         });
       }
-    }
-
-    const updated = await this.getRoleById(roleId);
-    return updated!;
+      const rows = await tx.select().from(rolePermissions).where(eq(rolePermissions.roleId, roleId));
+      return { ...role, permissions: SIDEBAR_MENUS.map(menu => {
+        const found = rows.find(row => row.menuKey === menu.key);
+        return { menuKey: menu.key, canView: found?.canView ?? false, canAdd: found?.canAdd ?? false,
+          canEdit: found?.canEdit ?? false, canDelete: found?.canDelete ?? false };
+      }) };
+    });
   }
 
   /**

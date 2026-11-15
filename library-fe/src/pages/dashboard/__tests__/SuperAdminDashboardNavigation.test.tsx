@@ -1,5 +1,47 @@
+import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { vi, beforeAll, afterAll } from "vitest";
+beforeAll(() => vi.stubGlobal("ResizeObserver", class { observe() {} unobserve() {} disconnect() {} }));
+afterAll(() => vi.unstubAllGlobals());
+import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
+import { DashboardSidebar } from "../SuperAdminDashboard";
+import { IconDashboard } from "@tabler/icons-react";
 import { describe, it, expect } from "vitest";
 import { CMS_SUB_ITEMS } from "../SuperAdminDashboard";
+
+describe("Dashboard sidebar interactions", () => {
+  const menus = [{ key: "dashboard" as const, label: "Dashboard", icon: IconDashboard }, { key: "cms" as const, label: "Manajemen Konten (CMS)", icon: IconDashboard }];
+  it("supports keyboard CMS navigation and exposes active state", async () => {
+    const user = userEvent.setup();
+    const navigate = vi.fn();
+    render(<SidebarProvider><DashboardSidebar activeMenu="cms-banner" menus={menus} onMenuChange={navigate} onSignOut={async () => {}} /></SidebarProvider>);
+    const child = screen.getByRole("button", { name: "Banner Siaran" });
+    expect(child).toHaveAttribute("aria-current", "page");
+    child.focus();
+    await user.keyboard("{Enter}");
+    expect(navigate).toHaveBeenCalledWith("cms-banner");
+    const toggle = screen.getByRole("button", { name: "Manajemen Konten (CMS)" });
+    expect(toggle).toHaveAttribute("aria-expanded", "true");
+    toggle.focus();
+    await user.keyboard("{Enter}");
+    expect(toggle).toHaveAttribute("aria-expanded", "false");
+    expect(screen.queryByRole("button", { name: "Banner Siaran" })).not.toBeInTheDocument();
+  });
+  it("closes the mobile drawer after selecting a menu", async () => {
+    const original = window.innerWidth;
+    Object.defineProperty(window, "innerWidth", { configurable: true, value: 375 });
+    try {
+      const user = userEvent.setup();
+      const navigate = vi.fn();
+      render(<SidebarProvider><SidebarTrigger /><DashboardSidebar activeMenu="dashboard" menus={menus} onMenuChange={navigate} onSignOut={async () => {}} /></SidebarProvider>);
+      await user.click(screen.getByRole("button", { name: "Toggle Sidebar" }));
+      expect(screen.getByRole("dialog")).toBeInTheDocument();
+      await user.click(screen.getByRole("button", { name: "Dashboard" }));
+      expect(navigate).toHaveBeenCalledWith("dashboard");
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    } finally { Object.defineProperty(window, "innerWidth", { configurable: true, value: original }); }
+  });
+});
 
 describe("CMS Sub-Items Navigation & Architecture", () => {
   it("mendefinisikan 4 sub-menu CMS dengan label jelas dan ikon yang valid", () => {

@@ -1,7 +1,7 @@
 import { type Request, type Response, type NextFunction } from "express";
 import { roleService } from "../service/role.service";
 import { SIDEBAR_MENUS } from "../role.constants";
-import auditService from "../../audit/service/audit.service";
+import { roleCreateSchema, roleUpdateSchema, rolePermissionsSchema } from "../role.validation";
 
 export class RoleController {
   /**
@@ -67,19 +67,16 @@ export class RoleController {
    */
   async createRole(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const { name, description } = req.body;
-      const data = await roleService.createRole({ name, description });
-
-      const userId = (req as any).user?.id;
-      if (userId) {
-        await auditService.createLog({
-          userId,
-          action: "create",
-          entity: "Users",
-          entityId: data.id,
-          ipAddress: req.ip,
-        });
+      const parsed = roleCreateSchema.safeParse(req.body);
+      if (!parsed.success) {
+        res.status(400).json({ success: false, message: "Invalid role data", data: null });
+        return;
       }
+      const { name, description } = parsed.data;
+      const actorId = (req as Request & { user: { id: string } }).user.id;
+      const data = await roleService.createRole({ name, description: description ?? undefined }, {
+        actorId, ipAddress: req.ip, userAgent: req.get("user-agent"),
+      });
 
       res.status(201).json({
         success: true,
@@ -97,19 +94,13 @@ export class RoleController {
   async updateRole(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const id = String(req.params.id);
-      const { name, description } = req.body;
-      const data = await roleService.updateRole(id, { name, description });
-
-      const userId = (req as any).user?.id;
-      if (userId) {
-        await auditService.createLog({
-          userId,
-          action: "update",
-          entity: "Users",
-          entityId: id,
-          ipAddress: req.ip,
-        });
+      const parsed = roleUpdateSchema.safeParse(req.body);
+      if (!parsed.success) {
+        res.status(400).json({ success: false, message: "Invalid role data", data: null });
+        return;
       }
+      const { name, description } = parsed.data;
+      const data = await roleService.updateRole(id, { name, description }, { actorId: req.user!.id, ipAddress: req.ip, userAgent: req.get("user-agent") });
 
       res.status(200).json({
         success: true,
@@ -127,18 +118,7 @@ export class RoleController {
   async deleteRole(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const id = String(req.params.id);
-      await roleService.deleteRole(id);
-
-      const userId = (req as any).user?.id;
-      if (userId) {
-        await auditService.createLog({
-          userId,
-          action: "delete",
-          entity: "Users",
-          entityId: id,
-          ipAddress: req.ip,
-        });
-      }
+      await roleService.deleteRole(id, { actorId: req.user!.id, ipAddress: req.ip, userAgent: req.get("user-agent") });
 
       res.status(200).json({
         success: true,
@@ -167,18 +147,12 @@ export class RoleController {
         return;
       }
 
-      const data = await roleService.updateRolePermissions(id, permissions);
-
-      const userId = (req as any).user?.id;
-      if (userId) {
-        await auditService.createLog({
-          userId,
-          action: "update",
-          entity: "Users",
-          entityId: id,
-          ipAddress: req.ip,
-        });
+      const parsed = rolePermissionsSchema.safeParse(permissions);
+      if (!parsed.success) {
+        res.status(400).json({ success: false, message: "Invalid permission matrix", data: null });
+        return;
       }
+      const data = await roleService.updateRolePermissions(id, parsed.data, { actorId: req.user!.id, ipAddress: req.ip, userAgent: req.get("user-agent") });
 
       res.status(200).json({
         success: true,

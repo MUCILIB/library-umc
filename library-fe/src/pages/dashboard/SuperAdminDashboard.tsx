@@ -74,7 +74,8 @@ import {
   SidebarMenuSubButton,
   SidebarMenuSubItem,
   SidebarProvider,
-  SidebarTrigger
+  SidebarTrigger,
+  useSidebar
 } from "@/components/ui/sidebar";
 import { useDashboardStatsLazy } from "@/hooks/dashboard/useDashboardStatsLazy";
 import { useGuestsData } from "@/hooks/dashboard/useGuestsData";
@@ -183,7 +184,7 @@ type DashboardSidebarProps = {
   badgeCounts?: DashboardBadgeCounts;
 };
 
-function DashboardSidebar({
+export function DashboardSidebar({
   activeMenu,
   menus,
   onMenuChange,
@@ -191,6 +192,11 @@ function DashboardSidebar({
   user,
   badgeCounts
 }: DashboardSidebarProps) {
+  const { isMobile, setOpenMobile, state, setOpen } = useSidebar();
+  const selectMenu = (menu: ActiveMenu) => {
+    onMenuChange(menu);
+    if (isMobile) setOpenMobile(false);
+  };
   const avatarUrl = getUserAvatar(user);
   const isCmsGroupActive = activeMenu.startsWith("cms-") || activeMenu === "cms";
   const [isCmsOpen, setIsCmsOpen] = useState(true);
@@ -205,7 +211,7 @@ function DashboardSidebar({
     <Sidebar
       variant="sidebar"
       collapsible="icon"
-      className="border-r border-sidebar-border z-100"
+      className="border-r border-sidebar-border"
     >
       <SidebarHeader className="bg-sidebar p-5 pb-4 group-data-[collapsible=icon]:p-3">
         <div className="flex items-center gap-3 group-data-[collapsible=icon]:justify-center">
@@ -220,14 +226,14 @@ function DashboardSidebar({
             <h1 className="text-sm font-bold tracking-tight text-sidebar-foreground truncate">
               UMC Library
             </h1>
-            <p className="text-[11px] text-muted-foreground font-medium truncate">
+            <p className="text-[11px] text-sidebar-foreground/70 font-medium truncate">
               Sistem Informasi Terpadu
             </p>
           </div>
         </div>
       </SidebarHeader>
 
-      <SidebarContent className="bg-sidebar px-2.5 py-2">
+      <SidebarContent className="bg-sidebar px-2.5 py-2 overflow-x-hidden group-data-[collapsible=icon]:overflow-y-auto">
         <SidebarMenu className="space-y-0.5">
           {(() => {
             const items: React.ReactNode[] = [];
@@ -253,15 +259,11 @@ function DashboardSidebar({
                 items.push(
                   <SidebarMenuItem key="cms" className="space-y-1">
                     <SidebarMenuButton
+                      aria-expanded={isCmsOpen}
+                      aria-controls="dashboard-cms-submenu"
                       onClick={() => {
-                        if (!isCmsOpen) {
-                          setIsCmsOpen(true);
-                        }
-                        if (!activeMenu.startsWith("cms-")) {
-                          onMenuChange("cms-banner");
-                        } else {
-                          setIsCmsOpen((prev) => !prev);
-                        }
+                        if (!isMobile && state === "collapsed") { setOpen(true); setIsCmsOpen(true); }
+                        else setIsCmsOpen((prev) => !prev);
                       }}
                       isActive={isParentActive}
                       tooltip="Manajemen Konten (CMS)"
@@ -279,13 +281,7 @@ function DashboardSidebar({
                         {label}
                       </span>
                       <span
-                        role="button"
-                        tabIndex={0}
-                        aria-label={isCmsOpen ? "Tutup sub-menu CMS" : "Buka sub-menu CMS"}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setIsCmsOpen((prev) => !prev);
-                        }}
+                        aria-hidden="true"
                         className="group-data-[collapsible=icon]:hidden ml-auto p-0.5 rounded hover:bg-white/20 transition-transform cursor-pointer"
                       >
                         <ChevronDown
@@ -299,24 +295,27 @@ function DashboardSidebar({
                     </SidebarMenuButton>
 
                     {isCmsOpen && (
-                      <SidebarMenuSub className="space-y-0.5 my-0.5 border-sidebar-border/60">
+                      <SidebarMenuSub id="dashboard-cms-submenu" className="space-y-0.5 my-0.5 border-sidebar-border/60">
                         {CMS_SUB_ITEMS.map((subItem) => {
                           const isSubActive = activeMenu === subItem.key;
                           const SubIcon = subItem.icon;
                           return (
                             <SidebarMenuSubItem key={subItem.key}>
                               <SidebarMenuSubButton
-                                onClick={() => onMenuChange(subItem.key)}
+                                asChild
+                                aria-current={isSubActive ? "page" : undefined}
                                 isActive={isSubActive}
                                 className={cn(
                                   "h-8 px-2.5 text-[11px] font-medium transition-all rounded-lg flex items-center gap-2 cursor-pointer",
                                   isSubActive
-                                    ? "bg-primary/15 text-primary font-semibold dark:bg-primary/25 dark:text-white"
+                                    ? "bg-primary text-white font-semibold"
                                     : "text-sidebar-foreground/75 hover:bg-sidebar-accent/50 hover:text-white"
                                 )}
                               >
-                                <SubIcon className={cn("size-3.5 shrink-0", isSubActive ? "text-primary dark:text-white" : "text-sidebar-foreground/60")} />
-                                <span className="truncate">{subItem.label}</span>
+                                <button type="button" onClick={() => selectMenu(subItem.key)}>
+                                  <SubIcon className={cn("size-3.5 shrink-0", isSubActive ? "text-white" : "text-sidebar-foreground/60")} />
+                                  <span className="truncate">{subItem.label}</span>
+                                </button>
                               </SidebarMenuSubButton>
                             </SidebarMenuSubItem>
                           );
@@ -334,7 +333,8 @@ function DashboardSidebar({
               items.push(
                 <SidebarMenuItem key={key}>
                   <SidebarMenuButton
-                    onClick={() => onMenuChange(key)}
+                    onClick={() => selectMenu(key)}
+                    aria-current={isActive ? "page" : undefined}
                     isActive={isActive}
                     tooltip={badgeCount > 0 ? `${label} (${badgeCount} menunggu)` : label}
                     className={cn(
@@ -396,7 +396,7 @@ function DashboardSidebar({
               <p className="text-xs font-semibold text-sidebar-foreground truncate">
                 {user?.name || "Super Admin"}
               </p>
-              <p className="text-[10px] text-muted-foreground font-medium capitalize truncate">
+              <p className="text-[10px] text-sidebar-foreground/70 font-medium capitalize truncate">
                 {user?.role?.replace("_", " ") || "Super Admin"}
               </p>
             </div>
