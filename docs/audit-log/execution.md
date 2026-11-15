@@ -14,4 +14,7 @@ Branch: feat/audit-role-hardening, base 7a67218.
 - User authorized real env database synchronization: `db:check` passed; `db:migrate` applied 0014; repeated migration no-op. Read-only information_schema confirmed seven audit columns, role enum and migration ledger. No real data fixtures/failure injection.
 - Existing migration hashes for 0009/0013 differ from local files, but ledger timestamps and actual is_popular/bookmarks exist; historical migrations not replayed or modified.
 - Full backend suite passed: 61 files, 385 tests. After requiring AuditContext at mutation callsites: focused 7 files, 28 tests and backend build passed.
-- Frontend/sidebar implementation and independent backend review still in progress; no push/merge claim.
+- Independent backend review found long historical descriptions and nullable description diffs; both fixed with regression coverage.
+- Final local verification: backend 61 files / 386 tests passed; frontend 36 files / 188 tests passed; both production builds passed. Backend lint passed after explicitly allowing the intentional control-character sanitization regex; frontend lint has warnings but no errors.
+- Frontend audit detail and sidebar completed with legacy labeling, local initials, keyboard navigation, dialog focus/Escape and mobile drawer coverage.
+- Pushed feature branch to janfdev fork and opened upstream PR https://github.com/MUCILIB/library-umc/pull/160. Merge awaits CI; Vercel preview requires integration authorization.
