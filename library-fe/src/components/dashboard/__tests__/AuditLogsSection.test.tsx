@@ -81,6 +81,61 @@ describe("AuditLogsSection", () => {
     expect(trigger).toHaveFocus();
   });
 
+  it("renders_current_photo_but_preserves_historical_identity_and_row_labels", async () => {
+    const OriginalImage = window.Image;
+    const images: HTMLImageElement[] = [];
+    vi.stubGlobal("Image", class {
+      constructor() { const image = document.createElement("img"); images.push(image); return image; }
+    });
+    try {
+      mockLogs([{ ...structured, user: { ...structured.user, image: "https://example.test/current-photo.jpg" } }]);
+      render(<AuditLogsSection />);
+      await waitFor(() => expect(images.length).toBeGreaterThan(0));
+      const { act } = await import("@testing-library/react");
+      await act(async () => { images.forEach(image => image.dispatchEvent(new Event("load"))); });
+      const photo = screen.getByRole("img", { name: /Foto profil pelaku saat ini/ });
+      expect(photo).toHaveAttribute("src", "https://example.test/current-photo.jpg");
+      expect(screen.getByText("Nama Historis")).toBeInTheDocument();
+      expect(screen.getByText("super_admin · Saat kejadian")).toBeInTheDocument();
+      expect(screen.queryByText("Nama Sekarang")).not.toBeInTheDocument();
+      expect(screen.getByText("Mengubah izin role")).toBeInTheDocument();
+      expect(screen.getByText("Role", { exact: true, selector: "p" })).toBeInTheDocument();
+      expect(screen.getByText("Pustakawan Lama")).toBeInTheDocument();
+      expect(document.querySelector("time")).toHaveAttribute("datetime", structured.occurredAt.replace("Z", ".000Z"));
+    } finally { vi.stubGlobal("Image", OriginalImage); }
+  });
+
+  it("falls_back_to_historical_initials_when_profile_photo_fails", async () => {
+    const OriginalImage = window.Image;
+    const images: HTMLImageElement[] = [];
+    vi.stubGlobal("Image", class {
+      constructor() { const image = document.createElement("img"); images.push(image); return image; }
+    });
+    try {
+      mockLogs([{ ...structured, user: { ...structured.user, image: "/missing-photo.jpg" } }]);
+      render(<AuditLogsSection />);
+      await waitFor(() => expect(images.length).toBeGreaterThan(0));
+      const { act } = await import("@testing-library/react");
+      await act(async () => { images.forEach(image => image.dispatchEvent(new Event("error"))); });
+      expect(screen.queryByRole("img")).not.toBeInTheDocument();
+      expect(screen.getByLabelText("Inisial Nama Historis")).toHaveTextContent("NH");
+    } finally { vi.stubGlobal("Image", OriginalImage); }
+  });
+
+  it("labels_all_role_events_and_legacy_actions", () => {
+    const events = ["role.created", "role.updated", "role.deleted", "role.permissions_updated"] as const;
+    const actions = ["create", "update", "delete", "approve", "blacklist", "failed_login", "rate_limited"] as const;
+    mockLogs([
+      ...events.map((eventType, i) => ({ ...structured, id: `event-${i}`, eventType })),
+      ...actions.slice(0, 6).map(action => ({ ...legacy, id: action, action })),
+    ]);
+    render(<AuditLogsSection />);
+    for (const label of ["Membuat role", "Memperbarui role", "Menghapus role", "Mengubah izin role", "Membuat data", "Memperbarui data", "Menghapus data", "Menyetujui", "Memblokir pengguna", "Login gagal"]) {
+      expect(screen.getByText(label, { selector: "p" })).toBeInTheDocument();
+    }
+    expect(screen.getAllByLabelText("Inisial Profil Legacy")[0]).toHaveTextContent("PL");
+  });
+
   it("searches_historical_target_and_preserves_error_retry", async () => {
     const user = userEvent.setup();
     const view = render(<AuditLogsSection />);

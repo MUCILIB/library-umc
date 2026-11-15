@@ -10,7 +10,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useAuditLogs } from "@/hooks/dashboard/useAuditLogs";
-import AuditLogDetail from "./AuditLogDetail";
+import AuditLogRow, { ACTION_LABELS, ENTITY_LABELS, activityLabel } from "./AuditLogRow";
 
 const ACTION_OPTIONS = [
   "all",
@@ -77,6 +77,7 @@ export default function AuditLogsSection() {
         detail.includes(keyword) ||
         (log.targetSnapshot?.label ?? "").toLowerCase().includes(keyword) ||
         (log.eventType ?? "").toLowerCase().includes(keyword) ||
+        activityLabel(log).toLowerCase().includes(keyword) ||
         log.action.toLowerCase().includes(keyword) ||
         log.entity.toLowerCase().includes(keyword)
       );
@@ -95,7 +96,7 @@ export default function AuditLogsSection() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 [&_button]:cursor-pointer [&_button]:min-h-11 [&_button]:active:translate-y-px [&_button]:focus-visible:outline-2 [&_button]:focus-visible:outline-primary">
       <div>
         <h2 className="text-[28px] font-extrabold text-foreground tracking-tight">
           Audit Log Sistem
@@ -108,8 +109,10 @@ export default function AuditLogsSection() {
       <div className="bg-card rounded-[24px] border border-border shadow-sm overflow-hidden">
         <div className="p-6 border-b border-border flex flex-col xl:flex-row items-stretch xl:items-center gap-3">
           <div className="relative w-full xl:max-w-[340px]">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground w-4 h-4" />
+            <label htmlFor="audit-search" className="block mb-2 text-xs font-semibold text-muted-foreground">Cari audit log</label>
+            <Search aria-hidden="true" className="absolute left-4 bottom-3.5 text-muted-foreground w-4 h-4" />
             <input
+              id="audit-search"
               aria-label="Cari audit log"
               value={search}
               onChange={(e) => handleSearchChange(e.target.value)}
@@ -125,7 +128,7 @@ export default function AuditLogsSection() {
             <SelectContent>
               {ACTION_OPTIONS.map((value) => (
                 <SelectItem key={value} value={value}>
-                  Action: {value}
+                  {value === "all" ? "Semua aktivitas" : ACTION_LABELS[value] ?? value}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -138,7 +141,7 @@ export default function AuditLogsSection() {
             <SelectContent>
               {ENTITY_OPTIONS.map((value) => (
                 <SelectItem key={value} value={value}>
-                  Entity: {value}
+                  {value === "all" ? "Semua objek" : ENTITY_LABELS[value] ?? value}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -176,43 +179,16 @@ export default function AuditLogsSection() {
         ) : (
           <>
             <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse">
-                <thead>
+              <table className="w-full table-fixed text-left border-collapse">
+                <thead className="sr-only lg:not-sr-only">
                   <tr className="bg-muted/50 border-b border-border">
                     {["Waktu", "Pelaku", "Aktivitas", "Objek", "Ringkasan", "Detail"].map(label => (
                       <th key={label} scope="col" className="px-6 py-4 text-[11px] font-bold text-muted-foreground uppercase tracking-widest">{label}</th>
                     ))}
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-50">
-                  {paginatedLogs.map((log) => (
-                    <tr
-                      key={log.id}
-                      className="hover:bg-surface-hover/40 transition-colors"
-                    >
-                      <td className="px-6 py-4 text-sm text-muted-foreground whitespace-nowrap">
-                        {log.occurredAt
-                          ? new Date(log.occurredAt).toLocaleString("id-ID", { timeZoneName: "short" })
-                          : log.createdAt || "Waktu tidak tersedia"}
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-2.5">
-                          <span aria-hidden="true" className="size-8 rounded-full bg-muted text-muted-foreground shrink-0 flex items-center justify-center text-xs font-semibold">
-                            {(log.actorSnapshot?.name ?? log.user?.name ?? "?").trim().split(/\s+/).slice(0, 2).map(part => part[0]).join("").toUpperCase()}
-                          </span>
-                          <div>
-                            <p className="text-sm font-semibold text-foreground">{log.actorSnapshot?.name ?? log.user?.name ?? "Tidak diketahui"}</p>
-                            <p className="text-xs text-muted-foreground">{log.actorSnapshot ? log.actorSnapshot.role : "Profil saat ini"}</p>
-                            {!log.actorSnapshot && <p className="text-xs text-muted-foreground">Snapshot historis tidak tersedia.</p>}
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 text-sm text-muted-foreground">{log.eventType ?? log.action}</td>
-                      <td className="px-6 py-4 text-sm text-muted-foreground break-words">{log.targetSnapshot?.label ?? log.entity}</td>
-                      <td className="px-6 py-4 text-sm text-muted-foreground max-w-sm break-words">{log.detail || "-"}</td>
-                      <td className="px-6 py-4"><AuditLogDetail log={log} /></td>
-                    </tr>
-                  ))}
+                <tbody>
+                  {paginatedLogs.map((log) => <AuditLogRow key={log.id} log={log} />)}
                 </tbody>
               </table>
             </div>

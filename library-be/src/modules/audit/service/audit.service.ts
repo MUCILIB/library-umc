@@ -137,6 +137,7 @@ class AuditService {
             name: Users.name,
             email: Users.email,
             role: Users.role,
+            image: Users.image,
           },
         })
         .from(logs)
