@@ -152,7 +152,7 @@ describe("ImportSection", () => {
 
   it("opens a batch with the keyboard", async () => {
     vi.mocked(importApi.get).mockResolvedValue({ data: mockBatches[0] } as Awaited<ReturnType<typeof importApi.get>>);
-    vi.mocked(importApi.preview).mockResolvedValue({ data: { batch: mockBatches[0], rows: [], errors: [], pagination: { total: 0, limit: 20 } } } as Awaited<ReturnType<typeof importApi.preview>>);
+    vi.mocked(importApi.preview).mockResolvedValue({ data: { batch: mockBatches[0], rows: [], errors: [], pagination: { total: 0, limit: 20 } } } as unknown as Awaited<ReturnType<typeof importApi.preview>>);
     const user = userEvent.setup();
     render(<ImportSection />);
     const batchButton = await screen.findByRole("button", { name: /test-biblio.csv/ });
