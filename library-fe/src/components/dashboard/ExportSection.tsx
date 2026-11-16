@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   FileDown,
   Book,
@@ -26,6 +26,9 @@ import {
 } from "@/components/ui/select";
 
 export default function ExportSection() {
+  const modalRef = useRef<HTMLDivElement>(null);
+  const formatRef = useRef<HTMLSelectElement>(null);
+  const exportTriggerRef = useRef<HTMLElement | null>(null);
   const [faculties, setFaculties] = useState<Faculty[]>([]);
   const [studyPrograms, setStudyPrograms] = useState<StudyProgram[]>([]);
   const [selectedFacultyId, setSelectedFacultyId] = useState<string>("");
@@ -33,6 +36,7 @@ export default function ExportSection() {
 
   const [activeExportType, setActiveExportType] = useState<"bibliography" | "item" | null>(null);
   const [selectedDelimiter, setSelectedDelimiter] = useState<";" | ",">(";");
+  const [selectedFormat, setSelectedFormat] = useState<"library" | "slims">("library");
 
   const [exportingBiblio, setExportingBiblio] = useState(false);
   const [exportingItem, setExportingItem] = useState(false);
@@ -66,16 +70,32 @@ export default function ExportSection() {
   }, [selectedFacultyId]);
 
   useEffect(() => {
+    if (!activeExportType) return;
+    formatRef.current?.focus();
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && activeExportType) {
-        setActiveExportType(null);
+      if (e.key === "Escape") setActiveExportType(null);
+      if (e.key !== "Tab") return;
+      const controls = modalRef.current?.querySelectorAll<HTMLElement>("button, select, input:not([type='hidden'])");
+      if (!controls?.length) return;
+      const first = controls[0];
+      const last = controls[controls.length - 1];
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
       }
     };
     window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      exportTriggerRef.current?.focus();
+    };
   }, [activeExportType]);
 
-  const handleOpenDelimiterModal = (type: "bibliography" | "item") => {
+  const handleOpenDelimiterModal = (type: "bibliography" | "item", trigger: HTMLButtonElement) => {
+      exportTriggerRef.current = trigger;
     setActiveExportType(type);
   };
 
@@ -93,6 +113,7 @@ export default function ExportSection() {
           facultyId: selectedFacultyId ? Number(selectedFacultyId) : undefined,
           studyProgramId: selectedStudyProgramId ? Number(selectedStudyProgramId) : undefined,
           delimiter: selectedDelimiter,
+          format: selectedFormat,
         });
         setSuccessBiblio(true);
         setTimeout(() => setSuccessBiblio(false), 3000);
@@ -110,6 +131,7 @@ export default function ExportSection() {
           facultyId: selectedFacultyId ? Number(selectedFacultyId) : undefined,
           studyProgramId: selectedStudyProgramId ? Number(selectedStudyProgramId) : undefined,
           delimiter: selectedDelimiter,
+          format: selectedFormat,
         });
         setSuccessItem(true);
         setTimeout(() => setSuccessItem(false), 3000);
@@ -149,7 +171,7 @@ export default function ExportSection() {
       </div>
 
       {error && (
-        <div className="rounded-lg border border-warning-border bg-warning-bg p-4">
+        <div role="alert" className="rounded-lg border border-warning-border bg-warning-bg p-4">
           <div className="flex items-center gap-2">
             <AlertCircle className="size-4 text-destructive" />
             <p className="text-sm text-destructive">{error}</p>
@@ -178,7 +200,7 @@ export default function ExportSection() {
                 setSelectedStudyProgramId("");
               }}
             >
-              <SelectTrigger id="filter-faculty" aria-label="Filter Fakultas" className="w-full">
+              <SelectTrigger id="filter-faculty" aria-label="Filter Fakultas" className="min-h-11 w-full">
                 <SelectValue placeholder="Semua Fakultas" />
               </SelectTrigger>
               <SelectContent>
@@ -204,7 +226,7 @@ export default function ExportSection() {
               onValueChange={(val) => setSelectedStudyProgramId(val === "all" ? "" : val)}
               disabled={!selectedFacultyId}
             >
-              <SelectTrigger id="filter-prodi" aria-label="Filter Program Studi" className="w-full">
+              <SelectTrigger id="filter-prodi" aria-label="Filter Program Studi" className="min-h-11 w-full">
                 <SelectValue placeholder="Semua Program Studi" />
               </SelectTrigger>
               <SelectContent>
@@ -226,7 +248,7 @@ export default function ExportSection() {
                 setSelectedFacultyId("");
                 setSelectedStudyProgramId("");
               }}
-              className="font-medium text-primary hover:underline"
+              className="min-h-11 px-2 font-medium text-primary hover:underline"
             >
               Reset Filter
             </button>
@@ -255,9 +277,9 @@ export default function ExportSection() {
             </p>
           </div>
           <button
-            onClick={() => handleOpenDelimiterModal("bibliography")}
+            onClick={(event) => handleOpenDelimiterModal("bibliography", event.currentTarget)}
             disabled={exportingBiblio}
-            className="flex w-full items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-white hover:bg-primary/90 disabled:opacity-50"
+            className="min-h-11 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary flex w-full items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-white hover:bg-primary/90 disabled:opacity-50"
           >
             {exportingBiblio ? (
               <Loader2 className="size-4 animate-spin" />
@@ -290,9 +312,9 @@ export default function ExportSection() {
             </p>
           </div>
           <button
-            onClick={() => handleOpenDelimiterModal("item")}
+            onClick={(event) => handleOpenDelimiterModal("item", event.currentTarget)}
             disabled={exportingItem}
-            className="flex w-full items-center justify-center gap-2 rounded-lg bg-emerald-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-emerald-700 disabled:opacity-50"
+            className="min-h-11 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary flex w-full items-center justify-center gap-2 rounded-lg bg-emerald-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-emerald-700 disabled:opacity-50"
           >
             {exportingItem ? (
               <Loader2 className="size-4 animate-spin" />
@@ -327,7 +349,7 @@ export default function ExportSection() {
           <button
             onClick={handleExportPdf}
             disabled={exportingPdf}
-            className="flex w-full items-center justify-center gap-2 rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
+            className="min-h-11 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary flex w-full items-center justify-center gap-2 rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
           >
             {exportingPdf ? (
               <Loader2 className="size-4 animate-spin" />
@@ -345,27 +367,45 @@ export default function ExportSection() {
       {activeExportType && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-xs"
+          ref={modalRef}
           role="dialog"
           aria-modal="true"
           aria-labelledby="modal-delimiter-title"
+          aria-describedby="export-format-help"
         >
-          <div className="w-full max-w-md rounded-2xl border border-border bg-card p-6 shadow-xl">
+          <div className="max-h-[calc(100dvh-2rem)] w-full max-w-md overflow-y-auto rounded-2xl border border-border bg-card p-6 shadow-xl">
             <div className="mb-4 flex items-center justify-between">
               <h3 id="modal-delimiter-title" className="text-lg font-bold text-foreground">
-                Pilih Delimiter Format CSV
+                {activeExportType === "bibliography" ? "Export Bibliografi CSV" : "Export Item / Eksemplar CSV"}
               </h3>
               <button
                 onClick={() => setActiveExportType(null)}
-                className="rounded-lg p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
+                className="min-h-11 min-w-11 flex items-center justify-center rounded-lg p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
                 aria-label="Tutup dialog"
               >
                 <X className="size-5" />
               </button>
             </div>
 
-            <p className="mb-4 text-sm text-muted-foreground">
-              Pilih karakter pemisah kolom yang sesuai dengan aplikasi yang akan Anda gunakan untuk membuka berkas CSV ini:
+            <p id="export-format-help" className="mb-4 text-sm text-muted-foreground">
+              Library mempertahankan kolom aplikasi ini. SLiMS menyesuaikan susunan kolom untuk impor ke SLiMS. Pilih pemisah kolom sesuai aplikasi tujuan.
             </p>
+
+            <div className="mb-4">
+              <label htmlFor="export-format" className="mb-1.5 block text-sm font-medium text-foreground">
+                Format export
+              </label>
+              <select
+                ref={formatRef}
+                id="export-format"
+                value={selectedFormat}
+                onChange={(event) => setSelectedFormat(event.target.value === "slims" ? "slims" : "library")}
+                className="min-h-11 w-full cursor-pointer rounded-lg border border-border bg-card px-3 py-2 text-sm text-foreground hover:bg-muted/50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+              >
+                <option value="library">Library</option>
+                <option value="slims">SLiMS</option>
+              </select>
+            </div>
 
             <div className="space-y-3">
               <label
@@ -419,14 +459,14 @@ export default function ExportSection() {
               <button
                 type="button"
                 onClick={() => setActiveExportType(null)}
-                className="rounded-lg border border-border px-4 py-2 text-sm font-medium text-foreground hover:bg-muted"
+                className="min-h-11 rounded-lg border border-border px-4 py-2 text-sm font-medium text-foreground hover:bg-muted"
               >
                 Batal
               </button>
               <button
                 type="button"
                 onClick={handleExecuteExportCsv}
-                className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary/90"
+                className="min-h-11 flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary/90"
               >
                 <FileDown className="size-4" />
                 Unduh Berkas CSV

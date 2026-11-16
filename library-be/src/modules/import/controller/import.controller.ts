@@ -18,7 +18,7 @@ export class ImportController {
     try {
       if (!req.file) return sendError(res, "No file uploaded", 400);
       const content = req.file.buffer.toString("utf-8");
-      const batch = await importService.createBatch("item", req.file.originalname, (req as any).user.id, content);
+      const batch = await importService.createBatch("item", req.file.originalname, (req as any).user.id, content, req.body?.referenceBatchId || undefined);
       sendSuccess(res, "File uploaded", { batchId: batch.id, filename: batch.filename }, 201);
     } catch (error) { next(error); }
   }
@@ -111,6 +111,15 @@ export class ImportController {
       const batch = await importService.getBatch(batchId);
       if (!batch) return sendError(res, "Batch not found", 404);
       sendSuccess(res, "Batch retrieved", batch);
+    } catch (error) { next(error); }
+  }
+
+  async getPairCompleteness(req: Request, res: Response, next: NextFunction) {
+    try {
+      const batchId = req.params.batchId as string;
+      if (!isUuid(batchId)) return sendError(res, "Batch not found", 404);
+      const result = await importService.getPairCompleteness(batchId);
+      sendSuccess(res, "Pair completeness retrieved", result);
     } catch (error) { next(error); }
   }
 

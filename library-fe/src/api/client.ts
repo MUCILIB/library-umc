@@ -556,6 +556,7 @@ export interface ExportFilterParams {
   subject?: string;
   status?: string;
   delimiter?: ";" | ",";
+  format?: "library" | "slims";
 }
 
 export const exportApi = {
@@ -567,6 +568,7 @@ export const exportApi = {
     if (params?.subject) query.set("subject", params.subject);
     if (params?.status) query.set("status", params.status);
     if (params?.delimiter) query.set("delimiter", params.delimiter);
+    if (params?.format) query.set("format", params.format);
     const qs = query.toString();
     return apiFetchBlob(`/api/export/bibliographies${qs ? `?${qs}` : ""}`, "bibliographies_export.csv");
   },
@@ -590,6 +592,7 @@ export const exportApi = {
     if (params?.subject) query.set("subject", params.subject);
     if (params?.status) query.set("status", params.status);
     if (params?.delimiter) query.set("delimiter", params.delimiter);
+    if (params?.format) query.set("format", params.format);
     const qs = query.toString();
     return apiFetchBlob(`/api/export/items${qs ? `?${qs}` : ""}`, "items_export.csv");
   },

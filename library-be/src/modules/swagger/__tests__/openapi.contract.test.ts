@@ -32,6 +32,7 @@ describe("OpenAPI Contract", () => {
       { method: "GET", path: "/import/batches/:batchId/preview" },
       { method: "GET", path: "/import/batches/:batchId/errors" },
       { method: "GET", path: "/import/batches/:batchId/errors.csv" },
+      { method: "GET", path: "/import/batches/:batchId/completeness" },
       { method: "POST", path: "/import/batches/:batchId/approve" },
       { method: "POST", path: "/import/batches/:batchId/cancel" },
     ];
@@ -125,7 +126,7 @@ describe("OpenAPI Contract", () => {
       const operationIds = [
         "uploadBibliography", "uploadItem", "parseBatch", "validateBatch",
         "listBatches", "getBatch", "previewBatch", "approveBatch",
-        "cancelBatch", "getErrors", "downloadErrorsCsv",
+        "cancelBatch", "getErrors", "downloadErrorsCsv", "getPairCompleteness",
         "exportBibliographies", "exportItems",
       ];
       const unique = new Set(operationIds);
