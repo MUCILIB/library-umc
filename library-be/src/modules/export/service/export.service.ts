@@ -37,6 +37,7 @@ const USER_HEADERS = [
 ];
 
 export interface ExportFilter {
+  format?: "library" | "slims";
   facultyId?: number;
   studyProgramId?: number;
   categoryId?: number;
@@ -165,9 +166,13 @@ export class ExportService {
 
   async exportBibliographies(filter?: ExportFilter): Promise<string> {
     const delimiter = filter?.delimiter || ";";
+    const columnIndexes = BIBLIO_HEADERS.map((_, index) => index).filter(index =>
+      filter?.format !== "slims" || !["isbn", "issn", "faculty_name", "study_program_name"].includes(BIBLIO_HEADERS[index])
+    );
+    const headers = columnIndexes.map(index => BIBLIO_HEADERS[index]);
     const matchingIds = filter ? await getFilteredBibliographyIds(filter) : null;
     if (matchingIds !== null && matchingIds.length === 0) {
-      return "\uFEFF" + BIBLIO_HEADERS.join(delimiter) + "\n";
+      return "\uFEFF" + headers.join(delimiter) + "\n";
     }
 
     const where = matchingIds !== null
@@ -190,7 +195,7 @@ export class ExportService {
       orderBy: [asc(bibliographies.title)],
     });
 
-    const lines: string[] = [BIBLIO_HEADERS.join(delimiter)];
+    const lines: string[] = [headers.join(delimiter)];
 
     for (const bib of rows) {
       const authorNames = [...bib.bibliographyAuthors]
@@ -226,7 +231,7 @@ export class ExportService {
         escapeCsvField(facultyNames, delimiter),
         escapeCsvField(studyProgramNames, delimiter),
       ];
-      lines.push(row.join(delimiter));
+      lines.push(columnIndexes.map(index => row[index]).join(delimiter));
     }
 
     return "\uFEFF" + lines.join("\n");

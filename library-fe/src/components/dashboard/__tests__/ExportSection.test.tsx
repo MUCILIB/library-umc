@@ -121,7 +121,29 @@ describe("ExportSection", () => {
     });
   });
 
-  it("should pass selected facultyId, studyProgramId, and delimiter when exporting", async () => {
+  it.each([
+    ["Export Bibliografi", "downloadBibliographies"],
+    ["Export Item", "downloadItems"],
+  ] as const)("should default %s to Library with semicolon delimiter", async (button, method) => {
+    vi.mocked(exportApi[method]).mockResolvedValue(undefined);
+    render(<ExportSection />);
+    await screen.findByText("Fakultas Teknik");
+
+    fireEvent.click(screen.getByRole("button", { name: button }));
+    expect(screen.getByRole("combobox", { name: "Format export" })).toHaveValue("library");
+    fireEvent.click(screen.getByRole("button", { name: /Unduh Berkas CSV/i }));
+
+    await waitFor(() => {
+      expect(exportApi[method]).toHaveBeenCalledWith({
+        facultyId: undefined,
+        studyProgramId: undefined,
+        delimiter: ";",
+        format: "library",
+      });
+    });
+  });
+
+  it("should pass selected facultyId, studyProgramId, delimiter, and SLiMS format for both CSV exports", async () => {
     (exportApi.downloadBibliographies as ReturnType<typeof vi.fn>).mockResolvedValue(undefined);
     (exportApi.downloadItems as ReturnType<typeof vi.fn>).mockResolvedValue(undefined);
 
@@ -146,6 +168,9 @@ describe("ExportSection", () => {
     const biblioButton = screen.getByRole("button", { name: /Export Bibliografi/i });
     fireEvent.click(biblioButton);
 
+    fireEvent.change(screen.getByRole("combobox", { name: "Format export" }), {
+      target: { value: "slims" },
+    });
     const commaRadio = screen.getByDisplayValue(",");
     fireEvent.click(commaRadio);
 
@@ -157,6 +182,7 @@ describe("ExportSection", () => {
         facultyId: 1,
         studyProgramId: 10,
         delimiter: ",",
+        format: "slims",
       });
     });
 
@@ -172,6 +198,7 @@ describe("ExportSection", () => {
         facultyId: 1,
         studyProgramId: 10,
         delimiter: ",",
+        format: "slims",
       });
     });
   });

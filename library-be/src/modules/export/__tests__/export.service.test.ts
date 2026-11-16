@@ -1,4 +1,6 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 
 // Mock the database
 const queryMock = {
@@ -56,6 +58,45 @@ describe("Export Service", () => {
     queryMock.innerJoin.mockReturnThis();
     queryMock.where.mockResolvedValue([]);
     exportService = new ExportService();
+  });
+
+  describe("SLiMS format", () => {
+    const sourceHeaders = (file: string, delimiter: string) => readFileSync(resolve(process.cwd(), "..", file), "utf8")
+      .replace(/^\uFEFF/, "").split(/\r?\n/)[0].split(";").map(value => value.replace(/^"|"$/g, "")).join(delimiter);
+
+    it.each([";", ","] as const)("exports the actual 18-column Senayan header and aligned values with %s", async (delimiter) => {
+      vi.mocked(db.query.bibliographies.findMany).mockResolvedValueOnce([{
+        title: "Buku", isbn: "ISBN separate", issn: "ISSN separate", isbnIssn: "978123",
+        publisher: { name: "Penerbit" }, bibliographyAuthors: [], bibliographySubjects: [],
+        bibliographyFaculties: [], bibliographyStudyPrograms: [], items: [{ itemCode: "ITEM01" }],
+      }] as any);
+      const csv = await exportService.exportBibliographies({ format: "slims", delimiter });
+      const [header, row] = csv.replace(/^\uFEFF/, "").split("\n");
+      expect(header).toBe(sourceHeaders("senayan_biblio_export (2).csv", delimiter));
+      const values = row.split(delimiter);
+      expect(values).toHaveLength(18);
+      expect(values[3]).toBe("978123");
+      expect(values[4]).toBe("Penerbit");
+      expect(values[17]).toBe("<ITEM01>");
+    });
+
+    it("keeps Library format as the default", async () => {
+      vi.mocked(db.query.bibliographies.findMany).mockResolvedValueOnce([]);
+      const csv = await exportService.exportBibliographies();
+      expect(csv.replace(/^\uFEFF/, "").split("\n")[0].split(";")).toHaveLength(22);
+    });
+
+    it("uses the SLiMS header for an empty filtered result", async () => {
+      queryMock.where.mockResolvedValueOnce([]);
+      const csv = await exportService.exportBibliographies({ format: "slims", facultyId: 99 });
+      expect(csv.trim().replace(/^\uFEFF/, "")).toBe(sourceHeaders("senayan_biblio_export (2).csv", ";"));
+    });
+
+    it("exports the actual 19-column Senayan item header", async () => {
+      vi.mocked(db.query.items.findMany).mockResolvedValueOnce([]);
+      const csv = await exportService.exportItems({ format: "slims" });
+      expect(csv.trim().replace(/^\uFEFF/, "")).toBe(sourceHeaders("senayan_item_export_kloter 5.csv", ";"));
+    });
   });
 
   describe("Bibliography Export Headers", () => {

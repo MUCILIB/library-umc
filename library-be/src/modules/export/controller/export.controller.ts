@@ -1,7 +1,11 @@
 import { type Request, type Response, type NextFunction } from "express";
 import { exportService, type ExportFilter } from "../service/export.service";
+import { BadRequestError } from "../../../exceptions/AppError";
 
 function parseFilter(query: Request["query"]): ExportFilter {
+  if (query.format !== undefined && query.format !== "library" && query.format !== "slims") {
+    throw new BadRequestError("format must be library or slims");
+  }
   const parseNum = (val: unknown) => {
     if (val === undefined || val === null || val === "") return undefined;
     const n = Number(val);
@@ -14,6 +18,7 @@ function parseFilter(query: Request["query"]): ExportFilter {
   };
 
   return {
+    format: query.format === "slims" ? "slims" : "library",
     facultyId: parseNum(query.facultyId),
     studyProgramId: parseNum(query.studyProgramId),
     categoryId: parseNum(query.categoryId),

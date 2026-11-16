@@ -33,6 +33,7 @@ export default function ExportSection() {
 
   const [activeExportType, setActiveExportType] = useState<"bibliography" | "item" | null>(null);
   const [selectedDelimiter, setSelectedDelimiter] = useState<";" | ",">(";");
+  const [selectedFormat, setSelectedFormat] = useState<"library" | "slims">("library");
 
   const [exportingBiblio, setExportingBiblio] = useState(false);
   const [exportingItem, setExportingItem] = useState(false);
@@ -93,6 +94,7 @@ export default function ExportSection() {
           facultyId: selectedFacultyId ? Number(selectedFacultyId) : undefined,
           studyProgramId: selectedStudyProgramId ? Number(selectedStudyProgramId) : undefined,
           delimiter: selectedDelimiter,
+          format: selectedFormat,
         });
         setSuccessBiblio(true);
         setTimeout(() => setSuccessBiblio(false), 3000);
@@ -110,6 +112,7 @@ export default function ExportSection() {
           facultyId: selectedFacultyId ? Number(selectedFacultyId) : undefined,
           studyProgramId: selectedStudyProgramId ? Number(selectedStudyProgramId) : undefined,
           delimiter: selectedDelimiter,
+          format: selectedFormat,
         });
         setSuccessItem(true);
         setTimeout(() => setSuccessItem(false), 3000);
@@ -366,6 +369,21 @@ export default function ExportSection() {
             <p className="mb-4 text-sm text-muted-foreground">
               Pilih karakter pemisah kolom yang sesuai dengan aplikasi yang akan Anda gunakan untuk membuka berkas CSV ini:
             </p>
+
+            <div className="mb-4">
+              <label htmlFor="export-format" className="mb-1.5 block text-sm font-medium text-foreground">
+                Format export
+              </label>
+              <select
+                id="export-format"
+                value={selectedFormat}
+                onChange={(event) => setSelectedFormat(event.target.value === "slims" ? "slims" : "library")}
+                className="min-h-11 w-full cursor-pointer rounded-lg border border-border bg-card px-3 py-2 text-sm text-foreground hover:bg-muted/50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+              >
+                <option value="library">Library</option>
+                <option value="slims">SLiMS</option>
+              </select>
+            </div>
 
             <div className="space-y-3">
               <label
