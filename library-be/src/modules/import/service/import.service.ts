@@ -642,6 +642,49 @@ export class ImportService {
   }
 
   // ==========================================
+  // PAIR COMPLETENESS (read-only)
+  // ==========================================
+
+  async getPairCompleteness(batchId: string) {
+    const batch = await db.query.importBatches.findFirst({ where: eq(importBatches.id, batchId) });
+    if (!batch) throw new Error("Batch not found");
+    if (batch.type !== "item" || !batch.referenceBatchId) {
+      throw new Error("Pair completeness requires a paired item batch with a committed bibliography reference batch");
+    }
+    const mappings = await db.query.importBibliographyItemCodes.findMany({
+      where: eq(importBibliographyItemCodes.batchId, batch.referenceBatchId),
+    });
+    const rows = await db.query.importItemRows.findMany({
+      where: eq(importItemRows.batchId, batchId),
+    });
+    const expected = new Map<string, string>();
+    for (const m of mappings) {
+      if (m.committedBibliographyId && !expected.has(m.itemCode)) {
+        expected.set(m.itemCode, m.committedBibliographyId);
+      }
+    }
+    const supplied = new Map<string, number>();
+    for (const row of rows) {
+      const code = (row.rawData as Record<string, string>)?.item_code?.trim();
+      if (code && !supplied.has(code)) supplied.set(code, row.rowNumber);
+    }
+    const missing = [...expected.entries()]
+      .filter(([code]) => !supplied.has(code))
+      .map(([itemCode, committedBibliographyId]) => ({ itemCode, committedBibliographyId }));
+    const extra = [...supplied.entries()]
+      .filter(([code]) => !expected.has(code))
+      .map(([itemCode, rowNumber]) => ({ rowNumber, itemCode }));
+    return {
+      batchId,
+      referenceBatchId: batch.referenceBatchId,
+      totalExpected: expected.size,
+      covered: expected.size - missing.length,
+      missing,
+      extra,
+    };
+  }
+
+  // ==========================================
   // CHUNKED APPROVAL
   // ==========================================
 

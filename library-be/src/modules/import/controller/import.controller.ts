@@ -114,6 +114,15 @@ export class ImportController {
     } catch (error) { next(error); }
   }
 
+  async getPairCompleteness(req: Request, res: Response, next: NextFunction) {
+    try {
+      const batchId = req.params.batchId as string;
+      if (!isUuid(batchId)) return sendError(res, "Batch not found", 404);
+      const result = await importService.getPairCompleteness(batchId);
+      sendSuccess(res, "Pair completeness retrieved", result);
+    } catch (error) { next(error); }
+  }
+
   async downloadTemplate(req: Request, res: Response, next: NextFunction) {
     try {
       const rawModule = req.params.module;

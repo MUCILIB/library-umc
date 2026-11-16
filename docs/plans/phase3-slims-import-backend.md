@@ -12,7 +12,7 @@ Scope: safe conflict validation and idempotent item detail enrichment.
 Known limitations for this increment:
 - Enrichment is limited to empty `site`, `source`, and `invoice` fields previewed in `_detailPatch`; populated conflicts block the whole row. Status, QR, location, inventory code, price, dates, supplier, and collection type remain unchanged on existing items.
 - No schema migration or source-column expansion; unsupported fields stay in raw source evidence.
-- This is linked item-detail import after a committed bibliography batch, not complete paired import: bibliography auto-create, cross-file completeness reporting, and bibliography re-import identity/deduplication remain future work.
+- This is linked item-detail import after a committed bibliography batch, not complete paired import: bibliography auto-create and bibliography re-import identity/deduplication remain future work. Pair completeness is reported read-only via `GET /import/batches/:batchId/completeness` (`missing` = bib codes without item detail, `extra` = item rows without a bib code).
 - Existing item updates lock the item and recheck identity/values. Concurrent approval workers and new-item races need separate database integration coverage.
 - `TEST_DATABASE_URL` was unset; verification used mocked DB boundaries, never production or SLiMS writes. Full real-CSV pair import was not exercised.
 

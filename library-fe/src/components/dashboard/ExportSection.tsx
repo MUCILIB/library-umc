@@ -75,7 +75,7 @@ export default function ExportSection() {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") setActiveExportType(null);
       if (e.key !== "Tab") return;
-      const controls = modalRef.current?.querySelectorAll<HTMLElement>("button, select, input:checked");
+      const controls = modalRef.current?.querySelectorAll<HTMLElement>("button, select, input:not([type='hidden'])");
       if (!controls?.length) return;
       const first = controls[0];
       const last = controls[controls.length - 1];

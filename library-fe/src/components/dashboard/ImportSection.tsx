@@ -37,6 +37,20 @@ const STATUS_LABELS: Record<string, string> = {
 
 const getStatusLabel = (status: string) => STATUS_LABELS[status] || status;
 
+// Ringkas satu baris preview menjadi 2-3 kolom kunci agar konflik terbaca
+// tanpa menempel blob JSON mentah.
+const PREVIEW_SUMMARY_KEYS = ["title", "item_code", "call_number", "isbn", "author", "pengarang"];
+
+function summarizeRow(row: { rawData?: Record<string, string>; resolvedData?: Record<string, unknown> }) {
+  const src: Record<string, unknown> = { ...(row.rawData || {}), ...((row.resolvedData as Record<string, unknown>) || {}) };
+  const picked = PREVIEW_SUMMARY_KEYS.flatMap((key) => {
+    const value = src[key];
+    return value === undefined || value === null || value === "" ? [] : [`${key}: ${String(value)}`];
+  });
+  const parts = (picked.length > 0 ? picked : Object.entries(src).map(([key, value]) => `${key}: ${String(value)}`)).slice(0, 3);
+  return parts.length > 0 ? parts.join(" · ") : "—";
+}
+
 function ImportWorkflow() {
   return (
     <ol aria-label="Tahapan import" className="grid gap-3 rounded-xl border border-border bg-muted/40 p-4 text-sm sm:grid-cols-4">
@@ -139,7 +153,7 @@ export default function ImportSection() {
       </div>
 
       <ImportWorkflow />
-      <p className="text-sm text-muted-foreground">Setelah mengunggah, buka berkas pada daftar untuk memproses dan memvalidasi data. Tinjau hasilnya sebelum menyetujui penyimpanan.</p>
+      <p className="text-sm text-muted-foreground">Setelah mengunggah, buka berkas pada daftar untuk memproses dan memvalidasi data. Tinjau hasilnya sebelum menyetujui penyimpanan. Alur pasangan: selesaikan Bibliografi hingga Selesai dulu, lalu unggah Item agar terpasang ke bibliografi.</p>
 
       {/* Upload Form */}
       <form onSubmit={handleUpload} className="rounded-2xl border border-border bg-card p-6">
@@ -306,6 +320,14 @@ function BatchDetail({
     fetchBatch();
   }, [fetchBatch]);
 
+  useEffect(() => {
+    if (batch && ["validated", "preview", "approving"].includes(batch.status)) {
+      fetchPreview();
+    }
+    // ponytail: fetchPreview sengaja tidak di-deps penuh; cukup saat status berubah.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [batch?.status]);
+
   const handleParse = async () => {
     setActionLoading(true);
     setError(null);
@@ -326,6 +348,7 @@ function BatchDetail({
     try {
       await importApi.validate(batchId);
       await fetchBatch();
+      await fetchPreview();
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Gagal validasi");
     } finally {
@@ -571,13 +594,33 @@ function BatchDetail({
             <Eye className="size-4" />
             Preview Data
           </h3>
+          {preview.errors?.length > 0 && (
+            <div role="alert" className="mb-4 rounded-lg border border-warning-border bg-warning-bg p-4">
+              <p className="mb-2 text-sm font-semibold text-destructive">
+                {preview.errors.length} baris bermasalah — perbaiki sebelum Approve
+              </p>
+              <ul className="max-h-40 space-y-1 overflow-y-auto text-xs text-destructive">
+                {preview.errors.slice(0, 10).map((item) => (
+                  <li key={item.rowNumber} className="break-words">
+                    <span className="font-semibold">Baris {item.rowNumber}:</span>{" "}
+                    {item.errors.join("; ")}
+                  </li>
+                ))}
+              </ul>
+              {preview.errors.length > 10 && (
+                <p className="mt-1 text-xs text-destructive">
+                  +{preview.errors.length - 10} masalah lainnya (unduh Error CSV untuk detail)
+                </p>
+              )}
+            </div>
+          )}
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-border bg-muted">
-                  <th className="px-3 py-2 text-left font-semibold text-muted-foreground">#</th>
-                  <th className="px-3 py-2 text-left font-semibold text-muted-foreground">Status</th>
-                  <th className="px-3 py-2 text-left font-semibold text-muted-foreground">Data</th>
+                  <th scope="col" className="px-3 py-2 text-left font-semibold text-muted-foreground">#</th>
+                  <th scope="col" className="px-3 py-2 text-left font-semibold text-muted-foreground">Status</th>
+                  <th scope="col" className="px-3 py-2 text-left font-semibold text-muted-foreground">Ringkasan</th>
                 </tr>
               </thead>
               <tbody>
@@ -597,21 +640,19 @@ function BatchDetail({
                         {row.status}
                       </span>
                     </td>
-                    <td className="px-3 py-2 text-muted-foreground">
-                      <pre className="max-w-xs overflow-hidden text-ellipsis text-xs">
-                        {JSON.stringify(row.rawData, null, 2).slice(0, 100)}
-                      </pre>
+                    <td className="max-w-xs break-words px-3 py-2 text-xs text-muted-foreground">
+                      {summarizeRow(row)}
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
-          {preview.rows && preview.rows.length > 10 && (
-            <p className="mt-2 text-xs text-muted-foreground">
-              Menampilkan 10 dari {preview.rows.length} baris
-            </p>
-          )}
+          <p className="mt-2 text-xs text-muted-foreground">
+            {preview.rows && preview.rows.length > 10
+              ? `Menampilkan 10 dari ${preview.rows.length} baris`
+              : "Menampilkan pratinjau awal"}
+          </p>
         </div>
       )}
     </div>

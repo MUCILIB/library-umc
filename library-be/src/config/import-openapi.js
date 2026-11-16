@@ -173,6 +173,21 @@ const importOpenAPI = {
       }
     }
   },
+  "/api/import/batches/{batchId}/completeness": {
+    get: {
+      summary: "Get pair completeness report",
+      description: "Compares committed bibliography item codes against item rows: codes without detail (missing) and item rows without a bibliography code (extra). Read-only.",
+      operationId: "getPairCompleteness",
+      tags: ["Import"],
+      security: [{ cookieAuth: [] }],
+      parameters: [{ name: "batchId", in: "path", required: true, schema: { type: "string", format: "uuid" } }],
+      responses: {
+        "200": { description: "Completeness retrieved", content: { "application/json": { schema: { $ref: "#/components/schemas/ImportPairCompletenessResponse" } } } },
+        "400": { description: "Batch is not a paired item batch" },
+        "404": { description: "Batch not found" }
+      }
+    }
+  },
   "/api/import/batches/{batchId}/approve": {
     post: {
       summary: "Approve and commit staging rows",
@@ -279,6 +294,17 @@ const importSchemas = {
     type: "object",
     properties: {
       success: { type: "boolean" }
+    }
+  },
+  ImportPairCompletenessResponse: {
+    type: "object",
+    properties: {
+      batchId: { type: "string", format: "uuid" },
+      referenceBatchId: { type: "string", format: "uuid" },
+      totalExpected: { type: "integer" },
+      covered: { type: "integer" },
+      missing: { type: "array", items: { type: "object", properties: { itemCode: { type: "string" }, committedBibliographyId: { type: "string", format: "uuid" } } } },
+      extra: { type: "array", items: { type: "object", properties: { rowNumber: { type: "integer" }, itemCode: { type: "string" } } } }
     }
   },
   PaginationMeta: {

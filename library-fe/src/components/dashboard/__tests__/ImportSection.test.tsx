@@ -152,6 +152,7 @@ describe("ImportSection", () => {
 
   it("opens a batch with the keyboard", async () => {
     vi.mocked(importApi.get).mockResolvedValue({ data: mockBatches[0] } as Awaited<ReturnType<typeof importApi.get>>);
+    vi.mocked(importApi.preview).mockResolvedValue({ data: { batch: mockBatches[0], rows: [], errors: [], pagination: { total: 0, limit: 20 } } } as Awaited<ReturnType<typeof importApi.preview>>);
     const user = userEvent.setup();
     render(<ImportSection />);
     const batchButton = await screen.findByRole("button", { name: /test-biblio.csv/ });
@@ -225,6 +226,17 @@ describe("ImportSection Batch Detail", () => {
     (importApi.get as ReturnType<typeof vi.fn>).mockResolvedValue({
       data: previewBatch,
     });
+    (importApi.preview as ReturnType<typeof vi.fn>).mockResolvedValue({
+      data: {
+        batch: previewBatch,
+        rows: [
+          { id: "r1", rowNumber: 1, rawData: { title: "Judul A", item_code: "S001" }, status: "valid" },
+          { id: "r2", rowNumber: 2, rawData: { title: "Judul B", item_code: "S002" }, status: "invalid" },
+        ],
+        errors: [{ rowNumber: 2, errors: ["existing item detail conflicts: invoice"] }],
+        pagination: { total: 2, limit: 20 },
+      },
+    });
     render(<ImportSection />);
     await waitFor(() => {
       expect(screen.getByText("test-items.csv")).toBeInTheDocument();
@@ -232,6 +244,12 @@ describe("ImportSection Batch Detail", () => {
     await fireEvent.click(screen.getByText("test-items.csv"));
     await waitFor(() => {
       expect(screen.getByText("Approve")).toBeInTheDocument();
+    });
+    await waitFor(() => {
+      expect(screen.getByText("Preview Data")).toBeInTheDocument();
+      expect(screen.getByText(/1 baris bermasalah/)).toBeInTheDocument();
+      expect(screen.getByText(/Baris 2:/)).toBeInTheDocument();
+      expect(screen.getByText(/title: Judul A/)).toBeInTheDocument();
     });
   });
 

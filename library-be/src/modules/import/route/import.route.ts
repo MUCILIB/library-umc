@@ -25,6 +25,7 @@ router.post("/import/batches/:batchId/validate", publicApiLimiter, isAuthenticat
 router.get("/import/batches/:batchId/preview", publicApiLimiter, isAuthenticated, requireRole(["super_admin"]), (req, res, next) => importController.previewBatch(req, res, next));
 router.get("/import/batches/:batchId/errors", publicApiLimiter, isAuthenticated, requireRole(["super_admin"]), (req, res, next) => importController.getErrors(req, res, next));
 router.get("/import/batches/:batchId/errors.csv", publicApiLimiter, isAuthenticated, requireRole(["super_admin"]), (req, res, next) => importController.downloadErrorsCsv(req, res, next));
+router.get("/import/batches/:batchId/completeness", publicApiLimiter, isAuthenticated, requireRole(["super_admin"]), (req, res, next) => importController.getPairCompleteness(req, res, next));
 router.post("/import/batches/:batchId/approve", publicApiLimiter, isAuthenticated, requireRole(["super_admin"]), (req, res, next) => importController.approveBatch(req, res, next));
 router.post("/import/batches/:batchId/cancel", publicApiLimiter, isAuthenticated, requireRole(["super_admin"]), (req, res, next) => importController.cancelBatch(req, res, next));
 
