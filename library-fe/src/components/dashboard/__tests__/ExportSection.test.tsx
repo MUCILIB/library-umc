@@ -61,7 +61,7 @@ describe("ExportSection", () => {
     const biblioButton = screen.getByRole("button", { name: /Export Bibliografi/i });
     fireEvent.click(biblioButton);
 
-    expect(screen.getByText("Pilih Delimiter Format CSV")).toBeInTheDocument();
+    expect(screen.getByRole("dialog", { name: "Export Bibliografi CSV" })).toBeInTheDocument();
 
     const submitBtn = screen.getByRole("button", { name: /Unduh Berkas CSV/i });
     fireEvent.click(submitBtn);
@@ -103,6 +103,26 @@ describe("ExportSection", () => {
     await waitFor(() => {
       expect(screen.getByText("Network error")).toBeInTheDocument();
     });
+  });
+
+  it("should explain formats and return focus after Escape", async () => {
+    render(<ExportSection />);
+    await screen.findByText("Fakultas Teknik");
+    const trigger = screen.getByRole("button", { name: "Export Item" });
+    trigger.focus();
+    fireEvent.click(trigger);
+    expect(screen.getByRole("dialog", { name: "Export Item / Eksemplar CSV" })).toBeInTheDocument();
+    expect(screen.getByText(/Library mempertahankan/)).toBeInTheDocument();
+    expect(screen.getByRole("combobox", { name: "Format export" })).toHaveFocus();
+    const download = screen.getByRole("button", { name: "Unduh Berkas CSV" });
+    download.focus();
+    fireEvent.keyDown(download, { key: "Tab" });
+    expect(screen.getByRole("button", { name: "Tutup dialog" })).toHaveFocus();
+    fireEvent.keyDown(document.activeElement!, { key: "Tab", shiftKey: true });
+    expect(download).toHaveFocus();
+    fireEvent.keyDown(window, { key: "Escape" });
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(trigger).toHaveFocus();
   });
 
   it("should handle item export success", async () => {

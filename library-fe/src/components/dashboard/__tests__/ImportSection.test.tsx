@@ -1,5 +1,6 @@
 import { render, screen, waitFor, fireEvent } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import userEvent from "@testing-library/user-event";
 import ImportSection from "@/components/dashboard/ImportSection";
 
 vi.mock("@/api/client", () => ({
@@ -80,12 +81,14 @@ describe("ImportSection", () => {
     });
   });
 
-  it("should display batch status", async () => {
+  it("should display batch status in Indonesian", async () => {
     render(<ImportSection />);
     await waitFor(() => {
-      expect(screen.getByText("committed")).toBeInTheDocument();
-      expect(screen.getByText("uploading")).toBeInTheDocument();
+      expect(screen.getByText("Selesai")).toBeInTheDocument();
+      expect(screen.getByText("Mengunggah")).toBeInTheDocument();
     });
+    expect(screen.queryByText("committed")).not.toBeInTheDocument();
+    expect(screen.queryByText("uploading")).not.toBeInTheDocument();
   });
 
   it("should display row counts", async () => {
@@ -96,13 +99,38 @@ describe("ImportSection", () => {
     });
   });
 
-  it("should show empty state", async () => {
+  it("should show empty state and handle empty file selection", async () => {
     (importApi.list as ReturnType<typeof vi.fn>).mockResolvedValue({
       data: [],
     });
     render(<ImportSection />);
     await waitFor(() => {
       expect(screen.getByText("Belum ada import")).toBeInTheDocument();
+    });
+    expect(screen.getByText("Belum ada berkas dipilih")).toBeInTheDocument();
+    await fireEvent.click(screen.getByRole("button", { name: /^Upload$/ }));
+    await waitFor(() => {
+      expect(screen.getByText("Pilih berkas CSV terlebih dahulu.")).toBeInTheDocument();
+    });
+    expect(importApi.uploadBibliography).not.toHaveBeenCalled();
+  });
+
+  it("should show selected filename and upload it", async () => {
+    (importApi.uploadBibliography as ReturnType<typeof vi.fn>).mockResolvedValue({
+      data: { batchId: "batch-3", filename: "baru.csv" },
+    });
+    render(<ImportSection />);
+    await waitFor(() => {
+      expect(screen.getByText("Belum ada berkas dipilih")).toBeInTheDocument();
+    });
+    const file = new File(["a,b\n1,2"], "baru.csv", { type: "text/csv" });
+    const input = screen.getByLabelText("File CSV") as HTMLInputElement;
+    await fireEvent.change(input, { target: { files: [file] } });
+    expect(screen.getByText("baru.csv")).toBeInTheDocument();
+    expect(screen.queryByText("Belum ada berkas dipilih")).not.toBeInTheDocument();
+    await fireEvent.click(screen.getByRole("button", { name: /^Upload$/ }));
+    await waitFor(() => {
+      expect(importApi.uploadBibliography).toHaveBeenCalledWith(file);
     });
   });
 
@@ -122,7 +150,18 @@ describe("ImportSection", () => {
     });
   });
 
-  it("should open batch detail on click", async () => {
+  it("opens a batch with the keyboard", async () => {
+    vi.mocked(importApi.get).mockResolvedValue({ data: mockBatches[0] } as Awaited<ReturnType<typeof importApi.get>>);
+    const user = userEvent.setup();
+    render(<ImportSection />);
+    const batchButton = await screen.findByRole("button", { name: /test-biblio.csv/ });
+    batchButton.focus();
+    await user.keyboard("{Enter}");
+    expect(await screen.findByText("Kembali ke daftar")).toBeInTheDocument();
+    expect(importApi.get).toHaveBeenCalledWith("batch-1");
+  });
+
+  it("should open batch detail on click and show step guidance", async () => {
     (importApi.get as ReturnType<typeof vi.fn>).mockResolvedValue({
       data: mockBatches[0],
     });
@@ -133,6 +172,11 @@ describe("ImportSection", () => {
     await fireEvent.click(screen.getByText("test-biblio.csv"));
     await waitFor(() => {
       expect(screen.getByText("Kembali ke daftar")).toBeInTheDocument();
+      expect(screen.getByText("1")).toBeInTheDocument();
+      expect(screen.getByText("Unggah")).toBeInTheDocument();
+      expect(screen.getByText("Parse / Validasi")).toBeInTheDocument();
+      expect(screen.getByText("Tinjau")).toBeInTheDocument();
+      expect(screen.getByText("Setujui")).toBeInTheDocument();
     });
   });
 });

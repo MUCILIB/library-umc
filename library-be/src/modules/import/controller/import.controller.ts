@@ -18,7 +18,7 @@ export class ImportController {
     try {
       if (!req.file) return sendError(res, "No file uploaded", 400);
       const content = req.file.buffer.toString("utf-8");
-      const batch = await importService.createBatch("item", req.file.originalname, (req as any).user.id, content);
+      const batch = await importService.createBatch("item", req.file.originalname, (req as any).user.id, content, req.body?.referenceBatchId || undefined);
       sendSuccess(res, "File uploaded", { batchId: batch.id, filename: batch.filename }, 201);
     } catch (error) { next(error); }
   }

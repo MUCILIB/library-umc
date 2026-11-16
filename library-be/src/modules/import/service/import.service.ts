@@ -190,6 +190,11 @@ export class ImportService {
   // ==========================================
 
   async createBatch(type: "bibliography" | "item", filename: string, userId: string, fileContent: string, referenceBatchId?: string) {
+    if (referenceBatchId) {
+      if (typeof referenceBatchId !== "string" || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(referenceBatchId)) throw new Error("referenceBatchId must be a UUID");
+      const reference = await this.getBatch(referenceBatchId);
+      if (type !== "item" || !reference || reference.type !== "bibliography" || reference.status !== "committed") throw new Error("referenceBatchId must identify a committed bibliography batch");
+    }
     const [batch] = await db.insert(importBatches).values({
       type,
       filename,
@@ -305,6 +310,7 @@ export class ImportService {
     });
     if (!batch) throw new Error("Batch not found");
 
+    if (batch.status !== "validating" && batch.status !== "preview") throw new Error(`Batch is in '${batch.status}' state, cannot validate`);
     if (batch.type === "bibliography") {
       return this.validateBibliographyBatch(batchId);
     } else {
@@ -414,21 +420,40 @@ export class ImportService {
 
     // Build item-code → bibliography mapping
     const itemCodeMap = new Map<string, string>();
+    const conflictingReferenceCodes = new Set<string>();
     if (referenceBatchId) {
       const mappings = await db.query.importBibliographyItemCodes.findMany({
         where: eq(importBibliographyItemCodes.batchId, referenceBatchId),
       });
       for (const m of mappings) {
         if (m.committedBibliographyId) {
+          const previous = itemCodeMap.get(m.itemCode);
+          if (previous && previous !== m.committedBibliographyId) conflictingReferenceCodes.add(m.itemCode);
           itemCodeMap.set(m.itemCode, m.committedBibliographyId);
         }
       }
+    }
+
+    await db.delete(importErrors).where(eq(importErrors.batchId, batchId));
+    const codeClaims = new Map<string, Set<string>>();
+    for (const row of rows) {
+      const raw = row.rawData as Record<string, string>;
+      const code = raw.item_code?.trim();
+      if (!code) continue;
+      const claims = codeClaims.get(code) || new Set<string>();
+      claims.add(`${normalizeName(raw.title || "")}\u0000${normalizeName(raw.call_number || "")}`);
+      codeClaims.set(code, claims);
     }
 
     for (const row of rows) {
       const raw = row.rawData as Record<string, string>;
       const errors: string[] = [];
       const warnings: string[] = [];
+      if ((codeClaims.get(raw.item_code?.trim())?.size || 0) > 1) {
+        errors.push(`conflicting item_code claims: ${raw.item_code}`);
+      }
+
+      if (conflictingReferenceCodes.has(raw.item_code)) errors.push(`conflicting reference item_code mappings: ${raw.item_code}`);
 
       // Required: item_code
       if (!raw.item_code || raw.item_code.trim().length === 0) {
@@ -471,37 +496,53 @@ export class ImportService {
           resolvedBibliographyId = matchingBibs[0].id;
           resolutionMethod = "UNIQUE_TITLE_FALLBACK";
         } else if (matchingBibs.length > 1) {
-          if (raw.call_number && raw.call_number.trim()) {
-            const byCallNo = matchingBibs.find(b => b.callNumber?.trim() === raw.call_number.trim());
-            if (byCallNo) {
-              resolvedBibliographyId = byCallNo.id;
-              resolutionMethod = "TITLE_AND_CALL_NUMBER";
-            } else {
-              resolvedBibliographyId = matchingBibs[0].id;
-              resolutionMethod = "FIRST_MATCHING_TITLE";
-            }
+          const byCallNo = raw.call_number?.trim()
+            ? matchingBibs.filter(b => b.callNumber?.trim() === raw.call_number.trim()) : [];
+          if (byCallNo.length === 1) {
+            resolvedBibliographyId = byCallNo[0].id;
+            resolutionMethod = "TITLE_AND_CALL_NUMBER";
           } else {
-            resolvedBibliographyId = matchingBibs[0].id;
-            resolutionMethod = "FIRST_MATCHING_TITLE";
+            errors.push("ambiguous bibliography title/call_number");
           }
         }
       }
 
       // Method 3: Call number fallback
-      if (!resolvedBibliographyId && raw.call_number && raw.call_number.trim()) {
-        const byCallNo = await db.query.bibliographies.findFirst({
+      if (!resolvedBibliographyId && !raw.title?.trim() && errors.length === 0 && raw.call_number?.trim()) {
+        const byCallNos = await db.query.bibliographies.findMany({
           where: and(
             eq(bibliographies.callNumber, raw.call_number.trim()),
             isNull(bibliographies.deletedAt)
           ),
         });
-        if (byCallNo) {
-          resolvedBibliographyId = byCallNo.id;
+        if (byCallNos.length === 1) {
+          resolvedBibliographyId = byCallNos[0].id;
           resolutionMethod = "CALL_NUMBER_FALLBACK";
+        } else if (byCallNos.length > 1) {
+          errors.push("ambiguous bibliography call_number");
         }
       }
 
-      if (!resolvedBibliographyId) {
+      const detailPatch: Record<string, string> = {};
+      if (resolvedBibliographyId) {
+        const target = await db.query.bibliographies.findFirst({ where: and(eq(bibliographies.id, resolvedBibliographyId), isNull(bibliographies.deletedAt)) });
+        if (!target) errors.push("bibliography no longer exists");
+        else {
+          if (raw.title?.trim() && normalizeName(raw.title) !== normalizeName(target.title)) errors.push("source title conflicts with bibliography");
+          if (raw.call_number?.trim() && target.callNumber?.trim() && raw.call_number.trim() !== target.callNumber.trim()) errors.push("source call_number conflicts with bibliography");
+        }
+        const existing = await db.query.items.findFirst({ where: eq(items.itemCode, raw.item_code) });
+        if (existing && existing.bibliographyId !== resolvedBibliographyId) errors.push("existing item_code belongs to another bibliography");
+        if (existing?.deletedAt) errors.push("existing item_code is deleted");
+        if (existing && existing.bibliographyId === resolvedBibliographyId) {
+          for (const field of ["site", "source", "invoice"] as const) {
+            const value = raw[field]?.trim();
+            if (!value) continue;
+            if (!existing[field]?.trim()) detailPatch[field] = value;
+            else if (existing[field]?.trim() !== value) errors.push(`existing item detail conflicts: ${field}`);
+          }
+        }
+      } else {
         errors.push("bibliography not resolved");
       }
 
@@ -509,6 +550,8 @@ export class ImportService {
         ...raw,
         _resolvedBibliographyId: resolvedBibliographyId,
         _resolutionMethod: resolutionMethod,
+        _errors: errors,
+        _detailPatch: detailPatch,
         _warnings: warnings.length > 0 ? warnings : undefined,
       };
 
@@ -520,6 +563,9 @@ export class ImportService {
         validCount++;
       }
 
+      if (errors.length > 0) {
+        await db.insert(importErrors).values({ batchId, rowNumber: row.rowNumber, rawData: row.rawData, errors });
+      }
       await db.update(importItemRows).set({
         status,
         resolvedData: normalizedData,
@@ -914,9 +960,26 @@ export class ImportService {
           where: eq(items.itemCode, resolved.item_code),
         });
         if (existing) {
-          duplicate++;
-          await db.update(importItemRows).set({ status: "duplicate" as any })
-            .where(eq(importItemRows.id, row.id));
+          const changed = await db.transaction(async (tx) => {
+            await tx.execute(sql`SELECT id FROM items WHERE id = ${existing.id} FOR UPDATE`);
+            const current = await tx.query.items.findFirst({ where: eq(items.id, existing.id) });
+            if (!current || current.deletedAt || current.bibliographyId !== bibId) throw new Error("existing item_code bibliography changed or item deleted");
+            const patch: Partial<typeof items.$inferInsert> = {};
+            // ponytail: only previewed text details; expand mapping after source-field contract tests.
+            for (const field of ["site", "source", "invoice"] as const) {
+              const value = resolved[field]?.trim();
+              if (!value) continue;
+              if (current[field]?.trim() && current[field]?.trim() !== value) throw new Error(`existing item detail conflicts: ${field}`);
+              if (!current[field]?.trim() && resolved._detailPatch?.[field] === value) patch[field] = value;
+            }
+            const changed = Object.keys(patch).length > 0;
+            if (changed) await tx.update(items).set(patch).where(eq(items.id, current.id));
+            await tx.update(importItemRows).set({ status: changed ? "committed" : "duplicate", resolvedId: current.id })
+              .where(eq(importItemRows.id, row.id));
+            return changed;
+          });
+          if (changed) committed++;
+          else duplicate++;
           continue;
         }
 
@@ -1014,6 +1077,7 @@ export class ImportService {
           rawData: row.rawData,
           errors: [err.message?.substring(0, 500) || "Unknown error"],
         });
+        await db.update(importItemRows).set({ status: "invalid" }).where(eq(importItemRows.id, row.id));
       }
     }
 

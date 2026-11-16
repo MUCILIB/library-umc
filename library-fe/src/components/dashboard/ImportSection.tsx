@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import {
   FileUp,
   Loader2,
@@ -21,6 +21,35 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
+const STATUS_LABELS: Record<string, string> = {
+  uploading: "Mengunggah",
+  uploaded: "Terunggah",
+  parsing: "Memproses",
+  parsed: "Terproses",
+  validating: "Memvalidasi",
+  validated: "Tervalidasi",
+  preview: "Siap ditinjau",
+  approving: "Menyetujui",
+  committed: "Selesai",
+  failed: "Gagal",
+  cancelled: "Dibatalkan",
+};
+
+const getStatusLabel = (status: string) => STATUS_LABELS[status] || status;
+
+function ImportWorkflow() {
+  return (
+    <ol aria-label="Tahapan import" className="grid gap-3 rounded-xl border border-border bg-muted/40 p-4 text-sm sm:grid-cols-4">
+      {["Unggah", "Parse / Validasi", "Tinjau", "Setujui"].map((step, index) => (
+        <li key={step} className="flex items-center gap-2">
+          <span className="font-semibold text-primary">{index + 1}</span>
+          <span>{step}</span>
+        </li>
+      ))}
+    </ol>
+  );
+}
+
 export default function ImportSection() {
   const [batches, setBatches] = useState<ImportBatch[]>([]);
   const [loading, setLoading] = useState(true);
@@ -28,6 +57,8 @@ export default function ImportSection() {
   const [uploading, setUploading] = useState(false);
   const [uploadType, setUploadType] = useState<"bibliography" | "item">("bibliography");
   const [selectedBatchId, setSelectedBatchId] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [selectedFilename, setSelectedFilename] = useState("");
 
   const fetchBatches = useCallback(async () => {
     setLoading(true);
@@ -47,9 +78,14 @@ export default function ImportSection() {
 
   const handleUpload = async (e: React.FormEvent) => {
     e.preventDefault();
-    const input = document.querySelector('input[type="file"]') as HTMLInputElement;
+    const input = fileInputRef.current;
     const file = input?.files?.[0];
-    if (!file) return;
+    if (!file) {
+      setError("Pilih berkas CSV terlebih dahulu.");
+      input?.focus();
+      return;
+    }
+    setError(null);
 
     setUploading(true);
     try {
@@ -59,13 +95,15 @@ export default function ImportSection() {
         await importApi.uploadItem(file);
       }
       await fetchBatches();
-      input.value = "";
+      if (input) input.value = "";
+      setSelectedFilename("");
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Upload gagal");
     } finally {
       setUploading(false);
     }
   };
+
 
   const getStatusBadge = (status: string) => {
     const styles: Record<string, string> = {
@@ -100,17 +138,20 @@ export default function ImportSection() {
         </p>
       </div>
 
+      <ImportWorkflow />
+      <p className="text-sm text-muted-foreground">Setelah mengunggah, buka berkas pada daftar untuk memproses dan memvalidasi data. Tinjau hasilnya sebelum menyetujui penyimpanan.</p>
+
       {/* Upload Form */}
       <form onSubmit={handleUpload} className="rounded-2xl border border-border bg-card p-6">
         <h3 className="mb-4 text-sm font-semibold text-muted-foreground">Upload File CSV</h3>
         <div className="flex flex-col gap-4 sm:flex-row sm:items-end">
           <div>
-            <label className="mb-1 block text-xs font-medium text-muted-foreground">Tipe Import</label>
+            <label htmlFor="import-type" className="mb-1 block text-xs font-medium text-muted-foreground">Tipe Import</label>
             <Select
               value={uploadType}
               onValueChange={(val) => setUploadType(val as "bibliography" | "item")}
             >
-              <SelectTrigger className="w-[180px]">
+              <SelectTrigger id="import-type" className="min-h-11 w-full sm:w-[180px]">
                 <SelectValue placeholder="Tipe Import" />
               </SelectTrigger>
               <SelectContent>
@@ -120,17 +161,25 @@ export default function ImportSection() {
             </Select>
           </div>
           <div className="flex-1">
-            <label className="mb-1 block text-xs font-medium text-muted-foreground">File CSV</label>
+            <label htmlFor="import-file" className="mb-1 block text-xs font-medium text-muted-foreground">File CSV</label>
             <input
+              ref={fileInputRef}
+              id="import-file"
+              aria-describedby="import-file-status"
+              onChange={(event) => setSelectedFilename(event.target.files?.[0]?.name || "")}
               type="file"
               accept=".csv"
-              className="w-full rounded-lg border border-border px-3 py-2 text-sm"
+              disabled={uploading}
+              className="min-h-11 w-full rounded-lg border border-border px-3 py-2 text-sm"
             />
+            <p id="import-file-status" role="status" className="mt-2 break-all text-xs text-muted-foreground">
+              {selectedFilename || "Belum ada berkas dipilih"}
+            </p>
           </div>
           <button
             type="submit"
             disabled={uploading}
-            className="flex items-center gap-2 rounded-lg bg-primary px-6 py-2 text-sm font-medium text-white hover:bg-primary/90 disabled:opacity-50"
+            className="min-h-11 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary flex items-center gap-2 rounded-lg bg-primary px-6 py-2 text-sm font-medium text-white hover:bg-primary/90 disabled:opacity-50"
           >
             {uploading ? (
               <Loader2 className="size-4 animate-spin" />
@@ -143,7 +192,7 @@ export default function ImportSection() {
       </form>
 
       {error && (
-        <div className="rounded-lg border border-warning-border bg-warning-bg p-4">
+        <div role="alert" className="rounded-lg border border-warning-border bg-warning-bg p-4">
           <div className="flex items-center gap-2">
             <AlertCircle className="size-4 text-destructive" />
             <p className="text-sm text-destructive">{error}</p>
@@ -167,17 +216,18 @@ export default function ImportSection() {
       ) : (
         <div className="space-y-3">
           {batches.map((batch) => (
-            <div
+            <button
+              type="button"
               key={batch.id}
               onClick={() => setSelectedBatchId(batch.id)}
-              className="flex cursor-pointer items-center justify-between rounded-xl border border-border bg-card p-4 hover:border-slate-300"
+              className="flex min-h-11 w-full flex-col gap-4 rounded-xl border border-border bg-card p-4 text-left hover:border-slate-300 focus-visible:outline-2 focus-visible:outline-primary sm:flex-row sm:items-center sm:justify-between"
             >
               <div className="flex items-center gap-4">
                 <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-muted">
                   <FileUp className="size-5 text-muted-foreground" />
                 </div>
                 <div>
-                  <p className="font-medium text-foreground">{batch.filename}</p>
+                  <p className="break-all font-medium text-foreground">{batch.filename}</p>
                   <p className="text-xs text-muted-foreground">
                     {batch.type === "bibliography" ? "Bibliografi" : "Item"} ·{" "}
                     {batch.totalRows} baris ·{" "}
@@ -185,8 +235,8 @@ export default function ImportSection() {
                   </p>
                 </div>
               </div>
-              <div className="flex items-center gap-4">
-                <div className="flex gap-2 text-xs">
+              <div className="flex flex-wrap items-center gap-3">
+                <div className="flex flex-wrap gap-2 text-xs">
                   <span className="text-emerald-600">{batch.committedRows} berhasil</span>
                   <span className="text-amber-600">{batch.validRows} valid</span>
                   <span className="text-destructive">{batch.invalidRows} gagal</span>
@@ -194,11 +244,11 @@ export default function ImportSection() {
                 <span
                   className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${getStatusBadge(batch.status)}`}
                 >
-                  {batch.status}
+                  {getStatusLabel(batch.status)}
                 </span>
                 <ChevronRight className="size-4 text-muted-foreground" />
               </div>
-            </div>
+            </button>
           ))}
         </div>
       )}
@@ -334,7 +384,7 @@ function BatchDetail({
         <p className="text-sm text-destructive">Batch tidak ditemukan</p>
         <button
           onClick={onBack}
-          className="mt-4 rounded-lg bg-destructive px-4 py-2 text-sm font-medium text-white hover:bg-destructive/90"
+          className="min-h-11 mt-4 rounded-lg bg-destructive px-4 py-2 text-sm font-medium text-white hover:bg-destructive/90"
         >
           Kembali
         </button>
@@ -350,7 +400,7 @@ function BatchDetail({
   return (
     <div className="space-y-6">
       {error && (
-        <div className="rounded-lg border border-warning-border bg-warning-bg p-4">
+        <div role="alert" className="rounded-lg border border-warning-border bg-warning-bg p-4">
           <div className="flex items-center gap-2">
             <AlertCircle className="size-4 text-destructive" />
             <p className="text-sm text-destructive">{error}</p>
@@ -361,7 +411,7 @@ function BatchDetail({
       <div className="flex items-center justify-between">
         <button
           onClick={onBack}
-          className="flex items-center gap-2 text-sm text-muted-foreground hover:text-muted-foreground"
+          className="min-h-11 flex items-center gap-2 text-sm text-muted-foreground hover:text-muted-foreground"
         >
           <ArrowLeft className="size-4" />
           Kembali ke daftar
@@ -371,7 +421,7 @@ function BatchDetail({
             <button
               onClick={handleCancel}
               disabled={actionLoading}
-              className="flex items-center gap-2 rounded-lg bg-slate-600 px-4 py-2 text-sm font-medium text-white hover:bg-slate-700 disabled:opacity-50"
+              className="min-h-11 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary flex items-center gap-2 rounded-lg bg-slate-600 px-4 py-2 text-sm font-medium text-white hover:bg-slate-700 disabled:opacity-50"
             >
               <XCircle className="size-4" />
               Batalkan
@@ -394,7 +444,7 @@ function BatchDetail({
             <dt className="text-xs font-medium text-muted-foreground">Status</dt>
             <dd className="mt-0.5">
               <span className="rounded-full bg-blue-50 dark:bg-blue-950 px-2 py-0.5 text-xs font-medium text-blue-700 dark:text-blue-400">
-                {batch.status}
+                {getStatusLabel(batch.status)}
               </span>
             </dd>
           </div>
@@ -422,28 +472,31 @@ function BatchDetail({
           </div>
           <div className="rounded-lg bg-amber-50 dark:bg-amber-950 p-3 text-center">
             <p className="text-2xl font-bold text-amber-700 dark:text-amber-400">{batch.invalidRows}</p>
-            <p className="text-xs text-amber-600">Invalid</p>
+            <p className="text-xs text-amber-600">Tidak valid</p>
           </div>
           <div className="rounded-lg bg-blue-50 dark:bg-blue-950 p-3 text-center">
             <p className="text-2xl font-bold text-blue-700 dark:text-blue-400">{batch.committedRows}</p>
-            <p className="text-xs text-blue-600 dark:text-blue-400">Committed</p>
+            <p className="text-xs text-blue-600 dark:text-blue-400">Tersimpan</p>
           </div>
           <div className="rounded-lg bg-warning-bg p-3 text-center">
             <p className="text-2xl font-bold text-destructive">{batch.failedRows}</p>
-            <p className="text-xs text-destructive">Failed</p>
+            <p className="text-xs text-destructive">Gagal</p>
           </div>
         </div>
       </div>
 
+      <ImportWorkflow />
+
       {/* Actions */}
       <div className="rounded-2xl border border-border bg-card p-6">
-        <h3 className="mb-4 text-sm font-semibold text-muted-foreground">Workflow</h3>
+        <h3 className="mb-4 text-sm font-semibold text-muted-foreground">Langkah berikutnya</h3>
+        <p className="mb-4 text-sm text-muted-foreground">Proses berkas, lalu validasi. Tinjau jumlah baris valid dan kesalahan sebelum menyetujui penyimpanan data.</p>
         <div className="flex flex-wrap gap-3">
           {canParse && (
             <button
               onClick={handleParse}
               disabled={actionLoading}
-              className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+              className="min-h-11 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
             >
               {actionLoading ? <Loader2 className="size-4 animate-spin" /> : <Play className="size-4" />}
               Parse
@@ -453,7 +506,7 @@ function BatchDetail({
             <button
               onClick={handleValidate}
               disabled={actionLoading}
-              className="flex items-center gap-2 rounded-lg bg-amber-600 px-4 py-2 text-sm font-medium text-white hover:bg-amber-700 disabled:opacity-50"
+              className="min-h-11 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary flex items-center gap-2 rounded-lg bg-amber-600 px-4 py-2 text-sm font-medium text-white hover:bg-amber-700 disabled:opacity-50"
             >
               {actionLoading ? <Loader2 className="size-4 animate-spin" /> : <CheckCircle className="size-4" />}
               Validate
@@ -463,7 +516,7 @@ function BatchDetail({
             <button
               onClick={handleApprove}
               disabled={actionLoading}
-              className="flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700 disabled:opacity-50"
+              className="min-h-11 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700 disabled:opacity-50"
             >
               {actionLoading ? <Loader2 className="size-4 animate-spin" /> : <CheckCircle className="size-4" />}
               Approve
@@ -472,7 +525,7 @@ function BatchDetail({
           {batch.invalidRows > 0 && (
             <button
               onClick={handleDownloadErrors}
-              className="flex items-center gap-2 rounded-lg bg-slate-600 px-4 py-2 text-sm font-medium text-white hover:bg-slate-700"
+              className="min-h-11 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary flex items-center gap-2 rounded-lg bg-slate-600 px-4 py-2 text-sm font-medium text-white hover:bg-slate-700"
             >
               <Download className="size-4" />
               Download Error CSV
@@ -488,19 +541,19 @@ function BatchDetail({
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
             <div>
               <p className="text-2xl font-bold text-emerald-900">{approvalResult.processed}</p>
-              <p className="text-xs text-emerald-600">Processed</p>
+              <p className="text-xs text-emerald-600">Diproses</p>
             </div>
             <div>
               <p className="text-2xl font-bold text-emerald-900">{approvalResult.committed}</p>
-              <p className="text-xs text-emerald-600">Committed</p>
+              <p className="text-xs text-emerald-600">Tersimpan</p>
             </div>
             <div>
               <p className="text-2xl font-bold text-destructive">{approvalResult.failed}</p>
-              <p className="text-xs text-destructive">Failed</p>
+              <p className="text-xs text-destructive">Gagal</p>
             </div>
             <div>
               <p className="text-2xl font-bold text-amber-700 dark:text-amber-400">{approvalResult.remaining}</p>
-              <p className="text-xs text-amber-600">Remaining</p>
+              <p className="text-xs text-amber-600">Tersisa</p>
             </div>
           </div>
           {approvalResult.hasMore && (
