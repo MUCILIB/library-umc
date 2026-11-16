@@ -92,8 +92,8 @@ test.describe("Full Roundtrip: Register → Borrow → Approve → Return", () =
 
   test("Step 1: Register new member via API", async ({ page }) => {
     const status = await seedMember(page);
-    // 201 = created, 409 = already exists (idempotent)
-    expect([200, 201, 409]).toContain(status);
+    // 201 = created; 409/422 = sudah terdaftar (idempotent saat rerun)
+    expect([200, 201, 409, 422]).toContain(status);
     console.log(`Member seed status: ${status}`);
   });
 

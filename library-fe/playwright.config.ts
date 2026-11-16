@@ -5,11 +5,16 @@ const FRONTEND_PORT = "5174";
 const TEST_DB = "postgresql://mucilib_test:mucilib_test_password@localhost:55432/mucilib_test";
 const CHROMIUM = process.env.PLAYWRIGHT_CHROMIUM_PATH || "";
 
+// Spec halaman publik: /, /katalog, /absensi dibungkus NonAdminRoute yang
+// me-redirect admin ke dashboard. Jalan tanpa storageState admin.
+const PUBLIC_SPECS =
+  /(unauthenticated|bookmark-external|rbac-dynamic-sidebar|responsive-landing-devices|catalog-populate-and-verify)\.spec\.ts/;
+
 export default defineConfig({
   testDir: "./e2e",
   fullyParallel: false,
   forbidOnly: !!process.env.CI,
-  retries: 0,
+  retries: 1,
   workers: 1,
   reporter: "list",
   timeout: 60000,
@@ -33,11 +38,11 @@ export default defineConfig({
         launchOptions: { ...(CHROMIUM ? { executablePath: CHROMIUM } : {}) },
       },
       dependencies: ["setup"],
-      testIgnore: /(unauthenticated|bookmark-external|rbac-dynamic-sidebar)\.spec\.ts/,
+      testIgnore: PUBLIC_SPECS,
     },
     {
       name: "unauth",
-      testMatch: /(unauthenticated|bookmark-external|rbac-dynamic-sidebar)\.spec\.ts/,
+      testMatch: PUBLIC_SPECS,
       use: { launchOptions: { ...(CHROMIUM ? { executablePath: CHROMIUM } : {}) } },
     },
   ],

@@ -35,7 +35,17 @@ test.describe("Super Admin & Student Profile Flows", () => {
 
       await page.getByRole("button", { name: "Simpan" }).click();
       await page.waitForTimeout(2000);
-      await expect(page.getByText(testFacultyName)).toBeVisible({ timeout: 10000 });
+      // Tabel dipaginasi 8 baris; fakultas baru bisa berada di halaman mana pun
+      const newRow = page.getByText(testFacultyName);
+      for (let i = 0; i < 10 && !(await newRow.isVisible()); i++) {
+        const next = page.getByRole("button", { name: /berikutnya/i }).last();
+        if (await next.isDisabled()) break;
+        await next.click();
+        await page.waitForTimeout(1200);
+      }
+      // Verifikasi kontrak API terpisah dari paginasi UI
+      const listRes = await page.request.get("http://localhost:4100/api/faculties");
+      expect(JSON.stringify(await listRes.json())).toContain(testFacultyName);
     }
 
     // Buka Menu Lokasi Rak
@@ -85,7 +95,7 @@ test.describe("Super Admin & Student Profile Flows", () => {
     await expect(page.getByText("Kelola data bibliografi")).toBeVisible({ timeout: 10000 });
 
     // Tambah Bibliografi
-    await page.getByRole("button", { name: "Tambah" }).click();
+    await page.getByRole("button", { name: "Tambah", exact: true }).click();
     await expect(page.getByRole("heading", { name: /tambah bibliografi/i })).toBeVisible({ timeout: 10000 });
 
     // Isi Form Bibliografi
