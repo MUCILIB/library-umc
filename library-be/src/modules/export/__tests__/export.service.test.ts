@@ -148,6 +148,27 @@ describe("Export Service", () => {
   });
 
   describe("Author Serialization", () => {
+    it.each([
+      { authors: [{ position: 2, author: { name: "Bowo" } }, { position: 1, author: { name: "T. Sutojo" } }], label: "Dkk", expected: "<T. Sutojo><Bowo><Dkk>" },
+      { authors: [], label: "et al.", expected: "<et al.>" },
+      { authors: [{ position: 1, author: { name: "Budi" } }], label: null, expected: "<Budi>" },
+    ])("exports stored author order and label: $expected", async ({ authors, label, expected }) => {
+      const original = [...authors];
+      vi.mocked(db.query.bibliographies.findMany).mockResolvedValueOnce([{
+        title: "SLiMS author regression",
+        bibliographyAuthors: authors,
+        unlistedAuthorsLabel: label,
+        bibliographySubjects: [],
+        bibliographyFaculties: [],
+        bibliographyStudyPrograms: [],
+        items: [],
+      }] as any);
+      const csv = await exportService.exportBibliographies();
+      const [header, row] = csv.replace("\uFEFF", "").split("\n");
+      expect(row.split(";")[header.split(";").indexOf("authors")]).toBe(expected);
+      expect(authors).toEqual(original);
+    });
+
     it("should use angle-bracket format", () => {
       const authors = ["Author One", "Author Two"];
       const serialized = authors.map(a => `<${a}>`).join("");

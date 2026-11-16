@@ -193,7 +193,10 @@ export class ExportService {
     const lines: string[] = [BIBLIO_HEADERS.join(delimiter)];
 
     for (const bib of rows) {
-      const authorNames = bib.bibliographyAuthors.map(ca => `<${ca.author.name}>`).join("");
+      const authorNames = [...bib.bibliographyAuthors]
+        .sort((a, b) => a.position - b.position)
+        .map(ca => `<${ca.author.name}>`).join("")
+        + (bib.unlistedAuthorsLabel ? `<${bib.unlistedAuthorsLabel}>` : "");
       const topicNames = bib.bibliographySubjects.map(cs => `<${cs.subject.name}>`).join("");
       const itemCodes = bib.items.map(i => `<${i.itemCode}>`).join("");
       const facultyNames = [...new Set(bib.bibliographyFaculties.map(bf => bf.faculty.name))].join(", ");
