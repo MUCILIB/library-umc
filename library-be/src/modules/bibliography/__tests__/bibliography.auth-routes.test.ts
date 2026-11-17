@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import express from "express";
 import request from "supertest";
 import bibliographyRoutes from "../route/bibliography.route";
+import { bibliographyService } from "../service/bibliography.service";
 import * as authUtils from "../../../utils/auth-utils";
 import { roleService } from "../../role/service/role.service";
 
@@ -13,6 +14,9 @@ describe("Bibliography Auth & Validation Guards", () => {
     app = express();
     app.use(express.json());
     app.use("/api", bibliographyRoutes);
+    app.use((err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
+      res.status(err.status || 500).json({ success: false, message: err.message });
+    });
   });
 
   describe("1. BUG Check for duplicate bibliographies No Auth (Invalid)", () => {
@@ -35,6 +39,10 @@ describe("Bibliography Auth & Validation Guards", () => {
       vi.spyOn(authUtils, "getSession").mockResolvedValue(staffSession);
       vi.spyOn(roleService, "getUserPermissions").mockResolvedValue({
         bibliographies: { canView: true, canAdd: true, canEdit: false, canDelete: false },
+      } as any);
+      vi.spyOn(bibliographyService, "checkDuplicate").mockResolvedValue({
+        duplicates: [],
+        hasExactMatch: false,
       } as any);
 
       const res = await request(app)
@@ -144,6 +152,13 @@ describe("Bibliography Auth & Validation Guards", () => {
       vi.spyOn(authUtils, "getSession").mockResolvedValue(staffSession);
       vi.spyOn(roleService, "getUserPermissions").mockResolvedValue({
         bibliographies: { canView: true, canAdd: true, canEdit: true, canDelete: true },
+      } as any);
+      vi.spyOn(bibliographyService, "list").mockResolvedValue({
+        items: [],
+        total: 0,
+        page: 1,
+        limit: 10,
+        totalPages: 0,
       } as any);
 
       const res = await request(app)
