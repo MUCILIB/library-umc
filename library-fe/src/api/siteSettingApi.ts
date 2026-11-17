@@ -101,7 +101,7 @@ export const DEFAULT_SITE_SETTINGS: AllSiteSettings = {
     motto: "Unggul, Islami, Mandiri & Profesional",
     socialMedia: {
       facebook: "https://facebook.com/umcirebon",
-      instagram: "https://instagram.com/perpustakaan_umc",
+      instagram: "https://www.instagram.com/perpusumc",
       twitter: "https://twitter.com/umcirebon",
       youtube: "https://youtube.com/@umctv",
       whatsapp: "https://wa.me/6281234567890",

@@ -48,6 +48,7 @@ temp/
 uploads/ 
 _*.js
 _*.ts
+scripts/test-*.ts
 # (If you test local upload)
 
 # Database backups

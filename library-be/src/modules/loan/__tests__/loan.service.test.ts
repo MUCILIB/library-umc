@@ -468,4 +468,41 @@ describe("LoanService Unit Tests", () => {
       expect(decoded).not.toContain("[<3a> 50 <202d> 0]");
     });
   });
+
+  describe("getAllLoans", () => {
+    it("harus berhasil mengambil data dengan filter status overdue tanpa error", async () => {
+      const mockResult = [
+        {
+          id: "loan-1",
+          status: "approved",
+          dueDate: "2026-11-01",
+          verificationToken: "token-1",
+          item: {
+            itemCode: "ITM-001",
+            bibliography: {
+              title: "Buku Overdue",
+              bibliographyAuthors: [{ author: { name: "Penulis A" } }]
+            }
+          },
+          member: { user: { name: "Baji" } }
+        }
+      ];
+
+      (db.query.loans.findMany as any).mockResolvedValueOnce(mockResult);
+
+      const res = await loanService.getAllLoans({ status: "overdue" });
+      expect(res.success).toBe(true);
+      expect(res.data).toHaveLength(1);
+      expect(res.data[0].id).toBe("loan-1");
+      expect(res.data[0].qrCodeUrl).toBeDefined();
+    });
+
+    it("harus berhasil mengambil data dengan filter status approved", async () => {
+      (db.query.loans.findMany as any).mockResolvedValueOnce([]);
+
+      const res = await loanService.getAllLoans({ status: "approved" });
+      expect(res.success).toBe(true);
+      expect(res.data).toEqual([]);
+    });
+  });
 });
