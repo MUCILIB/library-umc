@@ -14,6 +14,13 @@ const Footer = () => {
   const footerData = settings.footer;
   const brandingData = settings.branding;
 
+  const instagramUrl =
+    footerData.socialMedia?.instagram &&
+    footerData.socialMedia.instagram !== "https://instagram.com/perpustakaan_umc" &&
+    footerData.socialMedia.instagram !== "https://www.instagram.com/perpustakaan_umc"
+      ? footerData.socialMedia.instagram
+      : "https://www.instagram.com/perpusumc";
+
   return (
     <footer className="bg-[#8E0C17] text-white pt-12 sm:pt-16 pb-6 px-4 sm:px-8 lg:px-14 w-full">
       <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 sm:gap-10 lg:gap-12">
@@ -53,9 +60,9 @@ const Footer = () => {
                 <IconBrandFacebookFilled size={20} />
               </a>
             )}
-            {footerData.socialMedia?.instagram && (
+            {instagramUrl && (
               <a
-                href={footerData.socialMedia.instagram}
+                href={instagramUrl}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-white hover:opacity-80 transition-opacity"

@@ -206,7 +206,7 @@ export const FooterLocationTab: React.FC<FooterLocationTabProps> = ({
                     },
                   })
                 }
-                placeholder="https://instagram.com/perpustakaan_umc"
+                placeholder="https://www.instagram.com/perpusumc"
               />
             </div>
 

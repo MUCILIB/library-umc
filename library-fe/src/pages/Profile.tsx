@@ -16,7 +16,7 @@ import SavedBooksTab from "@/components/SavedBooksTab";
 import LecturerRecommendationList from "@/components/LecturerRecommendationList";
 import { useToast } from "@/hooks/useToast";
 import { getSavedBookIds, syncBookmarksFromDb } from "@/utils/bookmarks";
-import { Settings, Mail, BookOpen, Clock, AlertCircle, Bookmark, CreditCard, Sparkles, ChevronRight, ChevronDown, Check, SlidersHorizontal, Camera, Loader2 } from "lucide-react";
+import { Settings, Mail, BookOpen, Clock, AlertCircle, Bookmark, CreditCard, Sparkles, ChevronRight, ChevronDown, Check, SlidersHorizontal, Camera, Loader2, RotateCcw, RefreshCw, KeyRound, ShieldCheck } from "lucide-react";
 import type { AuthUser } from "@/types/auth";
 import { getUserAvatar } from "@/lib/avatar";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -26,6 +26,58 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu";
+import { cn } from "@/utils/utils";
+
+const FORBIDDEN_CHARS_PATTERN = /[<>{};"\\`^*|=$~]/;
+
+const validateField = (name: string, value: string): string => {
+  if (!value) return "";
+
+  if (FORBIDDEN_CHARS_PATTERN.test(value)) {
+    return 'Karakter seperti <, >, ;, ", \\, {, } tidak diperbolehkan.';
+  }
+
+  if (name === "institution" || name === "originRegion" || name === "faculty") {
+    if (value.length > 100) {
+      return "Maksimal 100 karakter.";
+    }
+  }
+
+  if (name === "nimNidn") {
+    if (value.length < 4) {
+      return "NIM / NIDN minimal 4 karakter.";
+    }
+    if (value.length > 30) {
+      return "NIM / NIDN maksimal 30 karakter.";
+    }
+    if (!/^[a-zA-Z0-9.\-/]+$/.test(value)) {
+      return "Hanya boleh huruf, angka, titik (.), strip (-), atau garis miring (/).";
+    }
+  }
+
+  if (name === "phone") {
+    if (value.length > 20) {
+      return "Nomor telepon maksimal 20 digit.";
+    }
+    if (!/^[0-9+\-\s()]+$/.test(value)) {
+      return "Nomor telepon hanya boleh berisi angka dan simbol (+, -, ()).";
+    }
+    const digitsOnly = value.replace(/\D/g, "");
+    if (digitsOnly.length > 0 && digitsOnly.length < 9) {
+      return "Nomor telepon minimal 9 digit angka.";
+    }
+  }
+
+  return "";
+};
 
 const Profile = () => {
   const navigate = useNavigate();
@@ -48,6 +100,9 @@ const Profile = () => {
   const [avatarUploading, setAvatarUploading] = useState(false);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [savedCount, setSavedCount] = useState(0);
+  const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
+  const [isPasswordDialogOpen, setIsPasswordDialogOpen] = useState(false);
+  const [passwordResetLoading, setPasswordResetLoading] = useState(false);
   const { success, error } = useToast();
   const currentUserId = session?.user?.id;
 
@@ -85,6 +140,7 @@ const Profile = () => {
       institution: "",
       phone: ""
     });
+    setValidationErrors({});
 
     const fetchProfile = async () => {
       try {
@@ -94,13 +150,22 @@ const Profile = () => {
           return;
         }
         setProfile(data);
-        setFormData({
+        const initialForm = {
           nimNidn: data.nimNidn || "",
           faculty: data.faculty || "",
           originRegion: data.originRegion || "",
           institution: data.institution || "",
           phone: data.phone || ""
+        };
+        setFormData(initialForm);
+
+        // Pre-validate existing values in case data contains invalid chars
+        const initialErrors: Record<string, string> = {};
+        Object.entries(initialForm).forEach(([k, v]) => {
+          const err = validateField(k, v);
+          if (err) initialErrors[k] = err;
         });
+        setValidationErrors(initialErrors);
       } catch (err) {
         console.error("Profile fetch error:", err);
         setProfile(null);
@@ -166,8 +231,119 @@ const Profile = () => {
     void fetchProfileCounters();
   }, [currentUserId]);
 
+  const handleInputChange = (field: keyof UpdateProfilePayload, val: string) => {
+    setFormData((prev) => ({ ...prev, [field]: val }));
+    const err = validateField(field, val);
+    setValidationErrors((prev) => {
+      const next = { ...prev };
+      if (err) {
+        next[field] = err;
+      } else {
+        delete next[field];
+      }
+      return next;
+    });
+  };
+
+  const handleResetForm = () => {
+    if (profile) {
+      const initialForm = {
+        nimNidn: profile.nimNidn || "",
+        faculty: profile.faculty || "",
+        originRegion: profile.originRegion || "",
+        institution: profile.institution || "",
+        phone: profile.phone || ""
+      };
+      setFormData(initialForm);
+      const initialErrors: Record<string, string> = {};
+      Object.entries(initialForm).forEach(([k, v]) => {
+        const err = validateField(k, v);
+        if (err) initialErrors[k] = err;
+      });
+      setValidationErrors(initialErrors);
+      success("Formulir Direset", "Perubahan formulir dikembalikan ke data profil awal.");
+    }
+  };
+
+  const handleRefreshProfile = async () => {
+    try {
+      setLoading(true);
+      const data = await memberService.getMyProfile();
+      setProfile(data);
+      const newForm = {
+        nimNidn: data.nimNidn || "",
+        faculty: data.faculty || "",
+        originRegion: data.originRegion || "",
+        institution: data.institution || "",
+        phone: data.phone || ""
+      };
+      setFormData(newForm);
+      const initialErrors: Record<string, string> = {};
+      Object.entries(newForm).forEach(([k, v]) => {
+        const err = validateField(k, v);
+        if (err) initialErrors[k] = err;
+      });
+      setValidationErrors(initialErrors);
+      success("Berhasil", "Data profil berhasil dimuat ulang dari server.");
+    } catch (err: any) {
+      error("Gagal", err.message || "Gagal memuat ulang data profil.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSendPasswordReset = async () => {
+    const userEmail = profile?.user?.email || authUser?.email;
+    if (!userEmail) {
+      error("Gagal", "Email akun tidak ditemukan.");
+      return;
+    }
+
+    try {
+      setPasswordResetLoading(true);
+      const { error: authError } = await authClient.requestPasswordReset({
+        email: userEmail,
+        redirectTo: `${window.location.origin}/reset-password`
+      });
+
+      if (authError) {
+        throw new Error(authError.message || "Gagal mengirim tautan reset password");
+      }
+
+      success(
+        "Tautan Terkirim",
+        `Instruksi reset kata sandi telah dikirim ke email: ${userEmail}`
+      );
+      setIsPasswordDialogOpen(false);
+    } catch (err: any) {
+      error("Gagal", err.message || "Gagal mengirim tautan reset kata sandi");
+    } finally {
+      setPasswordResetLoading(false);
+    }
+  };
+
   const handleUpdateProfile = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    const fieldsToValidate: (keyof UpdateProfilePayload)[] = isExternal
+      ? ["institution", "originRegion", "phone"]
+      : ["nimNidn", "faculty", "phone"];
+
+    const errors: Record<string, string> = {};
+    for (const field of fieldsToValidate) {
+      const val = formData[field] || "";
+      const err = validateField(field, val);
+      if (err) {
+        errors[field] = err;
+      }
+    }
+
+    if (Object.keys(errors).length > 0) {
+      setValidationErrors(errors);
+      error("Validasi Gagal", "Mohon periksa kembali karakter yang tidak diperbolehkan.");
+      return;
+    }
+
     try {
       setUpdateLoading(true);
       const payload: UpdateProfilePayload = isExternal
@@ -183,10 +359,12 @@ const Profile = () => {
           };
       const updated = await memberService.updateMyProfile(payload);
       setProfile(updated);
+      setValidationErrors({});
       success("Berhasil", "Profil berhasil diperbarui", 3000);
-    } catch (err) {
+    } catch (err: any) {
       console.error("Update profile error:", err);
-      error("Gagal", "Gagal memperbarui profil", 5000);
+      const errMsg = err?.response?.data?.message || err?.message || "Gagal memperbarui profil";
+      error("Gagal", errMsg, 5000);
     } finally {
       setUpdateLoading(false);
     }
@@ -582,9 +760,46 @@ const Profile = () => {
                       Perbarui data identitas keanggotaan dan nomor kontak aktif Anda
                     </p>
                   </div>
-                  <div className="p-2 bg-muted rounded-md text-foreground">
-                    <Settings size={18} />
-                  </div>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <button
+                        type="button"
+                        className="p-2 bg-muted hover:bg-muted/80 rounded-md text-foreground transition-all cursor-pointer hover:ring-2 hover:ring-primary/20 active:scale-95 flex items-center justify-center shadow-2xs"
+                        title="Opsi Pengaturan Akun"
+                        aria-label="Opsi Pengaturan Akun"
+                      >
+                        <Settings size={18} />
+                      </button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-56 bg-card border border-border shadow-md">
+                      <DropdownMenuLabel className="text-xs font-semibold text-muted-foreground">
+                        Opsi Pengaturan
+                      </DropdownMenuLabel>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem
+                        onClick={handleResetForm}
+                        className="cursor-pointer gap-2.5 text-xs font-medium py-2"
+                      >
+                        <RotateCcw size={14} className="text-muted-foreground" />
+                        <span>Kembalikan Data Form</span>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={handleRefreshProfile}
+                        className="cursor-pointer gap-2.5 text-xs font-medium py-2"
+                      >
+                        <RefreshCw size={14} className="text-muted-foreground" />
+                        <span>Muat Ulang Profil</span>
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem
+                        onClick={() => setIsPasswordDialogOpen(true)}
+                        className="cursor-pointer gap-2.5 text-xs font-medium py-2 text-primary focus:text-primary"
+                      >
+                        <KeyRound size={14} className="text-primary" />
+                        <span>Ubah Kata Sandi</span>
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </div>
 
                 <form onSubmit={handleUpdateProfile} className="space-y-6">
@@ -592,82 +807,166 @@ const Profile = () => {
                     {isExternal ? (
                       <>
                         <div className="space-y-1.5">
-                          <label className="text-xs font-semibold text-foreground">
-                            Institusi / Asal
-                          </label>
+                          <div className="flex items-center justify-between">
+                            <label className="text-xs font-semibold text-foreground">
+                              Institusi / Asal
+                            </label>
+                            <span className="text-[10px] text-muted-foreground font-mono">
+                              {(formData.institution || "").length}/100
+                            </span>
+                          </div>
                           <input
                             type="text"
+                            maxLength={100}
                             value={formData.institution || ""}
                             onChange={(e) =>
-                              setFormData({ ...formData, institution: e.target.value })
+                              handleInputChange("institution", e.target.value)
                             }
-                            className="w-full bg-background border border-input rounded-md py-2.5 px-3.5 text-sm text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring transition-all placeholder:text-muted-foreground"
+                            className={cn(
+                              "w-full bg-background border rounded-md py-2.5 px-3.5 text-sm text-foreground focus-visible:outline-none transition-all placeholder:text-muted-foreground",
+                              validationErrors.institution
+                                ? "border-destructive focus-visible:ring-1 focus-visible:ring-destructive"
+                                : "border-input focus-visible:ring-1 focus-visible:ring-ring"
+                            )}
                             placeholder="Universitas / Instansi"
                           />
+                          {validationErrors.institution && (
+                            <p className="text-xs text-destructive flex items-center gap-1 mt-1 font-medium">
+                              <AlertCircle size={12} className="shrink-0" />
+                              <span>{validationErrors.institution}</span>
+                            </p>
+                          )}
                         </div>
                         <div className="space-y-1.5">
-                          <label className="text-xs font-semibold text-foreground">
-                            Asal Daerah
-                          </label>
+                          <div className="flex items-center justify-between">
+                            <label className="text-xs font-semibold text-foreground">
+                              Asal Daerah
+                            </label>
+                            <span className="text-[10px] text-muted-foreground font-mono">
+                              {(formData.originRegion || "").length}/100
+                            </span>
+                          </div>
                           <input
                             type="text"
+                            maxLength={100}
                             value={formData.originRegion || ""}
                             onChange={(e) =>
-                              setFormData({ ...formData, originRegion: e.target.value })
+                              handleInputChange("originRegion", e.target.value)
                             }
-                            className="w-full bg-background border border-input rounded-md py-2.5 px-3.5 text-sm text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring transition-all placeholder:text-muted-foreground"
+                            className={cn(
+                              "w-full bg-background border rounded-md py-2.5 px-3.5 text-sm text-foreground focus-visible:outline-none transition-all placeholder:text-muted-foreground",
+                              validationErrors.originRegion
+                                ? "border-destructive focus-visible:ring-1 focus-visible:ring-destructive"
+                                : "border-input focus-visible:ring-1 focus-visible:ring-ring"
+                            )}
                             placeholder="Kota / Kabupaten"
                           />
+                          {validationErrors.originRegion && (
+                            <p className="text-xs text-destructive flex items-center gap-1 mt-1 font-medium">
+                              <AlertCircle size={12} className="shrink-0" />
+                              <span>{validationErrors.originRegion}</span>
+                            </p>
+                          )}
                         </div>
                       </>
                     ) : (
                       <>
                         <div className="space-y-1.5">
-                          <label className="text-xs font-semibold text-foreground flex items-center justify-between">
-                            <span>NIM / NIDN</span>
-                            <span className="text-[10px] text-muted-foreground font-mono">Min 4 karakter</span>
-                          </label>
+                          <div className="flex items-center justify-between">
+                            <label className="text-xs font-semibold text-foreground">
+                              NIM / NIDN
+                            </label>
+                            <span className="text-[10px] text-muted-foreground font-mono">
+                              {(formData.nimNidn || "").length}/30 (Min 4)
+                            </span>
+                          </div>
                           <input
                             type="text"
+                            maxLength={30}
                             value={formData.nimNidn || ""}
                             onChange={(e) =>
-                              setFormData({ ...formData, nimNidn: e.target.value })
+                              handleInputChange("nimNidn", e.target.value)
                             }
-                            className="w-full bg-background border border-input rounded-md py-2.5 px-3.5 text-sm font-mono text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring transition-all placeholder:text-muted-foreground"
+                            className={cn(
+                              "w-full bg-background border rounded-md py-2.5 px-3.5 text-sm font-mono text-foreground focus-visible:outline-none transition-all placeholder:text-muted-foreground",
+                              validationErrors.nimNidn
+                                ? "border-destructive focus-visible:ring-1 focus-visible:ring-destructive"
+                                : "border-input focus-visible:ring-1 focus-visible:ring-ring"
+                            )}
                             placeholder="22010199"
                           />
+                          {validationErrors.nimNidn && (
+                            <p className="text-xs text-destructive flex items-center gap-1 mt-1 font-medium">
+                              <AlertCircle size={12} className="shrink-0" />
+                              <span>{validationErrors.nimNidn}</span>
+                            </p>
+                          )}
                         </div>
                         <div className="space-y-1.5">
-                          <label className="text-xs font-semibold text-foreground">
-                            Fakultas
-                          </label>
+                          <div className="flex items-center justify-between">
+                            <label className="text-xs font-semibold text-foreground">
+                              Fakultas
+                            </label>
+                            <span className="text-[10px] text-muted-foreground font-mono">
+                              {(formData.faculty || "").length}/100
+                            </span>
+                          </div>
                           <input
                             type="text"
+                            maxLength={100}
                             value={formData.faculty || ""}
                             onChange={(e) =>
-                              setFormData({ ...formData, faculty: e.target.value })
+                              handleInputChange("faculty", e.target.value)
                             }
-                            className="w-full bg-background border border-input rounded-md py-2.5 px-3.5 text-sm text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring transition-all placeholder:text-muted-foreground"
+                            className={cn(
+                              "w-full bg-background border rounded-md py-2.5 px-3.5 text-sm text-foreground focus-visible:outline-none transition-all placeholder:text-muted-foreground",
+                              validationErrors.faculty
+                                ? "border-destructive focus-visible:ring-1 focus-visible:ring-destructive"
+                                : "border-input focus-visible:ring-1 focus-visible:ring-ring"
+                            )}
                             placeholder="Fakultas Teknik"
                           />
+                          {validationErrors.faculty && (
+                            <p className="text-xs text-destructive flex items-center gap-1 mt-1 font-medium">
+                              <AlertCircle size={12} className="shrink-0" />
+                              <span>{validationErrors.faculty}</span>
+                            </p>
+                          )}
                         </div>
                       </>
                     )}
                   </div>
 
                   <div className="space-y-1.5">
-                    <label className="text-xs font-semibold text-foreground">
-                      Nomor WhatsApp / Telepon
-                    </label>
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs font-semibold text-foreground">
+                        Nomor WhatsApp / Telepon
+                      </label>
+                      <span className="text-[10px] text-muted-foreground font-mono">
+                        {(formData.phone || "").length}/20
+                      </span>
+                    </div>
                     <input
                       type="text"
+                      maxLength={20}
                       value={formData.phone || ""}
                       onChange={(e) =>
-                        setFormData({ ...formData, phone: e.target.value })
+                        handleInputChange("phone", e.target.value)
                       }
-                      className="w-full bg-background border border-input rounded-md py-2.5 px-3.5 text-sm font-mono text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring transition-all placeholder:text-muted-foreground"
+                      className={cn(
+                        "w-full bg-background border rounded-md py-2.5 px-3.5 text-sm font-mono text-foreground focus-visible:outline-none transition-all placeholder:text-muted-foreground",
+                        validationErrors.phone
+                          ? "border-destructive focus-visible:ring-1 focus-visible:ring-destructive"
+                          : "border-input focus-visible:ring-1 focus-visible:ring-ring"
+                      )}
                       placeholder="081234567890"
                     />
+                    {validationErrors.phone && (
+                      <p className="text-xs text-destructive flex items-center gap-1 mt-1 font-medium">
+                        <AlertCircle size={12} className="shrink-0" />
+                        <span>{validationErrors.phone}</span>
+                      </p>
+                    )}
                   </div>
 
                   <div className="pt-2 flex items-center justify-between border-t border-border">
@@ -676,7 +975,7 @@ const Profile = () => {
                     </p>
                     <button
                       type="submit"
-                      disabled={updateLoading}
+                      disabled={updateLoading || Object.values(validationErrors).some(Boolean)}
                       className="inline-flex items-center justify-center bg-primary text-primary-foreground px-5 py-2.5 rounded-md font-semibold text-xs tracking-wide hover:bg-primary/90 disabled:opacity-50 transition-all active:scale-[0.98] shadow-xs cursor-pointer"
                     >
                       {updateLoading ? "Menyimpan..." : "Simpan Perubahan"}
@@ -709,6 +1008,56 @@ const Profile = () => {
             <p className="mt-4 text-xs text-muted-foreground text-center font-medium">
               {profile?.user?.name || authUser?.name}
             </p>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog Ubah Kata Sandi */}
+      <Dialog open={isPasswordDialogOpen} onOpenChange={setIsPasswordDialogOpen}>
+        <DialogContent className="sm:max-w-md p-6 bg-card border-border">
+          <DialogHeader>
+            <DialogTitle className="text-base font-bold text-foreground flex items-center gap-2">
+              <KeyRound className="w-5 h-5 text-primary" />
+              Ubah Kata Sandi
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="py-3 space-y-3">
+            <p className="text-sm text-muted-foreground leading-relaxed">
+              Tautan aman untuk mengatur ulang kata sandi akan dikirimkan ke alamat email akun Anda:
+            </p>
+            <div className="p-3 bg-muted rounded-lg border border-border text-xs font-mono text-foreground font-semibold flex items-center gap-2">
+              <Mail className="w-4 h-4 text-primary shrink-0" />
+              <span>{profile?.user?.email || authUser?.email}</span>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Buka tautan yang dikirimkan ke email tersebut untuk memasukkan kata sandi baru Anda.
+            </p>
+          </div>
+
+          <div className="flex items-center justify-end gap-2 pt-2 border-t border-border">
+            <button
+              type="button"
+              onClick={() => setIsPasswordDialogOpen(false)}
+              className="px-4 py-2 rounded-md border border-input text-xs font-medium hover:bg-muted transition-colors cursor-pointer"
+            >
+              Batal
+            </button>
+            <button
+              type="button"
+              disabled={passwordResetLoading}
+              onClick={handleSendPasswordReset}
+              className="inline-flex items-center justify-center gap-2 bg-primary text-primary-foreground px-4 py-2 rounded-md font-semibold text-xs hover:bg-primary/90 disabled:opacity-50 transition-all cursor-pointer shadow-xs"
+            >
+              {passwordResetLoading ? (
+                <>
+                  <Loader2 size={14} className="animate-spin" />
+                  Mengirim...
+                </>
+              ) : (
+                "Kirim Tautan Reset"
+              )}
+            </button>
           </div>
         </DialogContent>
       </Dialog>

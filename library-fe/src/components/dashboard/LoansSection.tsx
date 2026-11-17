@@ -17,7 +17,8 @@ import {
   AlertTriangle,
   Download,
   Loader2,
-  FileDown
+  FileDown,
+  Bookmark
 } from "lucide-react";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { API_BASE_URL } from "@/utils/api-config";
@@ -78,8 +79,15 @@ export default function LoansSection({ searchTerm, onSearchChange }: LoansSectio
   const { canEdit } = useRolePermissions();
   const [loans, setLoans] = useState<Loan[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState<"all" | "pending" | "approved" | "returned" | "pending_extension" | "reservations">("all");
+  const [filter, setFilter] = useState<"all" | "pending" | "approved" | "returned" | "pending_extension" | "reservations" | "overdue">("all");
   const [reservations, setReservations] = useState<Reservation[]>([]);
+  const [summaryStats, setSummaryStats] = useState({
+    pending: 0,
+    reservations: 0,
+    approved: 0,
+    returned: 0,
+    overdue: 0,
+  });
   const [selectedLoan, setSelectedLoan] = useState<Loan | null>(null);
   const [actionNotes, setActionNotes] = useState("");
   const [processingId, setProcessingId] = useState<string | null>(null);
@@ -92,6 +100,39 @@ export default function LoansSection({ searchTerm, onSearchChange }: LoansSectio
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 5;
   const [exportingLoans, setExportingLoans] = useState(false);
+
+  const fetchSummaryStats = async () => {
+    try {
+      const [loansRes, reservationsList] = await Promise.all([
+        fetch(`${API_BASE_URL}/api/loans?limit=200`, { credentials: "include" }),
+        reservationService.getAllReservations({ status: "waiting" }).catch(() => [])
+      ]);
+
+      const loansData = await loansRes.json();
+      const allLoans: Loan[] = (loansData.success && Array.isArray(loansData.data)) ? loansData.data : [];
+      const todayMidnight = new Date().setHours(0, 0, 0, 0);
+
+      setSummaryStats({
+        pending: allLoans.filter((l) => l?.status === "pending").length,
+        reservations: Array.isArray(reservationsList) ? reservationsList.length : 0,
+        approved: allLoans.filter(
+          (l) =>
+            (l?.status === "approved" || l?.status === "extended") &&
+            Boolean(l?.dueDate) &&
+            new Date(l.dueDate).setHours(0, 0, 0, 0) >= todayMidnight
+        ).length,
+        overdue: allLoans.filter(
+          (l) =>
+            (l?.status === "approved" || l?.status === "extended") &&
+            Boolean(l?.dueDate) &&
+            new Date(l.dueDate).setHours(0, 0, 0, 0) < todayMidnight
+        ).length,
+        returned: allLoans.filter((l) => l?.status === "returned").length,
+      });
+    } catch (err) {
+      console.warn("Failed to fetch loan summary stats:", err);
+    }
+  };
 
   const handleExportLoans = async () => {
     setExportingLoans(true);
@@ -111,6 +152,7 @@ export default function LoansSection({ searchTerm, onSearchChange }: LoansSectio
 
   useEffect(() => {
     fetchLoans();
+    void fetchSummaryStats();
     setCurrentPage(1);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filter]);
@@ -126,7 +168,7 @@ export default function LoansSection({ searchTerm, onSearchChange }: LoansSectio
         return;
       }
       let statusParam = "";
-      if (filter === "pending_extension") {
+      if (filter === "pending_extension" || filter === "overdue") {
         statusParam = "?status=approved";
       } else if (filter !== "all") {
         statusParam = `?status=${filter}`;
@@ -322,7 +364,7 @@ export default function LoansSection({ searchTerm, onSearchChange }: LoansSectio
     }
 
     // Check if overdue
-    if (status === 'approved' && dueDate) {
+    if ((status === 'approved' || status === 'extended') && dueDate) {
       const today = new Date();
       today.setHours(0, 0, 0, 0);
       const due = new Date(dueDate);
@@ -368,6 +410,22 @@ export default function LoansSection({ searchTerm, onSearchChange }: LoansSectio
         if (filter === "pending_extension" && loan.extensionStatus !== "pending") {
           return false;
         }
+
+        if (filter === "overdue") {
+          const isOverdue =
+            (loan.status === "approved" || loan.status === "extended") &&
+            Boolean(loan.dueDate) &&
+            new Date(loan.dueDate).setHours(0, 0, 0, 0) < new Date().setHours(0, 0, 0, 0);
+          if (!isOverdue) return false;
+        }
+
+        if (filter === "approved") {
+          const isNotOverdue =
+            (loan.status === "approved" || loan.status === "extended") &&
+            Boolean(loan.dueDate) &&
+            new Date(loan.dueDate).setHours(0, 0, 0, 0) >= new Date().setHours(0, 0, 0, 0);
+          if (!isNotOverdue) return false;
+        }
         
         const bookTitle = loan.item?.bibliography?.title?.toLowerCase() || '';
         const borrowerName = loan.member?.user?.name?.toLowerCase() || '';
@@ -405,14 +463,6 @@ export default function LoansSection({ searchTerm, onSearchChange }: LoansSectio
     currentPage * itemsPerPage
   );
 
-  // Hitung statistik dengan pengecekan keamanan
-  const stats = {
-    pending: Array.isArray(loans) ? loans.filter(l => l?.status === 'pending').length : 0,
-    approved: Array.isArray(loans) ? loans.filter(l => (l?.status === 'approved' || l?.status === 'extended') && new Date(l.dueDate).setHours(0,0,0,0) >= new Date().setHours(0,0,0,0)).length : 0,
-    overdue: Array.isArray(loans) ? loans.filter(l => (l?.status === 'approved' || l?.status === 'extended') && new Date(l.dueDate).setHours(0,0,0,0) < new Date().setHours(0,0,0,0)).length : 0,
-    returned: Array.isArray(loans) ? loans.filter(l => l?.status === 'returned').length : 0,
-  };
-
   return (
     <div className="w-full">
       {/* Main Container */}
@@ -424,7 +474,21 @@ export default function LoansSection({ searchTerm, onSearchChange }: LoansSectio
           
           <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
             {/* Filter Status */}
-            <Select value={filter} onValueChange={(value) => setFilter(value as "all" | "pending" | "approved" | "returned" | "pending_extension" | "reservations")}>
+            <Select
+              value={filter}
+              onValueChange={(value) =>
+                setFilter(
+                  value as
+                    | "all"
+                    | "pending"
+                    | "pending_extension"
+                    | "reservations"
+                    | "approved"
+                    | "returned"
+                    | "overdue"
+                )
+              }
+            >
               <SelectTrigger className="w-[220px] text-[13px] font-bold">
                 <SelectValue />
               </SelectTrigger>
@@ -435,6 +499,7 @@ export default function LoansSection({ searchTerm, onSearchChange }: LoansSectio
                 <SelectItem value="reservations">Antrean Reservasi</SelectItem>
                 <SelectItem value="approved">Sedang Dipinjam</SelectItem>
                 <SelectItem value="returned">Dikembalikan</SelectItem>
+                <SelectItem value="overdue">Terlambat</SelectItem>
               </SelectContent>
             </Select>
             
@@ -452,8 +517,11 @@ export default function LoansSection({ searchTerm, onSearchChange }: LoansSectio
             
             {/* Refresh Button */}
             <button
-              onClick={fetchLoans}
-              className="w-10 h-10 bg-background rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted transition-all flex items-center justify-center shrink-0"
+              onClick={() => {
+                fetchLoans();
+                void fetchSummaryStats();
+              }}
+              className="w-10 h-10 bg-background rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted transition-all flex items-center justify-center shrink-0 cursor-pointer"
               title="Refresh data"
             >
               <RefreshCw size={16} strokeWidth={2.5} />
@@ -463,7 +531,7 @@ export default function LoansSection({ searchTerm, onSearchChange }: LoansSectio
             <button
               onClick={handleExportLoans}
               disabled={exportingLoans}
-              className="h-10 px-4 bg-background rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted transition-all flex items-center gap-2 shrink-0 text-[13px] font-bold border border-border/50 disabled:opacity-50"
+              className="h-10 px-4 bg-background rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted transition-all flex items-center gap-2 shrink-0 text-[13px] font-bold border border-border/50 disabled:opacity-50 cursor-pointer"
               title="Export riwayat peminjaman ke CSV"
             >
               {exportingLoans ? (
@@ -478,51 +546,107 @@ export default function LoansSection({ searchTerm, onSearchChange }: LoansSectio
 
         {/* Stats Cards Row */}
         <div className="p-6 md:px-8 border-b border-border">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3.5 sm:gap-4">
             
-            {/* Card: Menunggu Persetujuan */}
-            <div className="bg-yellow-50 dark:bg-yellow-950 rounded-2xl p-5 flex flex-col justify-between h-[100px]">
+            {/* Card 1: Menunggu Persetujuan */}
+            <button
+              type="button"
+              onClick={() => setFilter("pending")}
+              className={`bg-yellow-50 dark:bg-yellow-950/60 rounded-2xl p-4 sm:p-5 flex flex-col justify-between h-[100px] text-left transition-all cursor-pointer hover:shadow-xs active:scale-[0.98] ${
+                filter === "pending"
+                  ? "ring-2 ring-yellow-500 shadow-xs"
+                  : "hover:ring-1 hover:ring-yellow-300 dark:hover:ring-yellow-700"
+              }`}
+              title="Filter: Menunggu Persetujuan"
+            >
               <div className="flex items-start justify-between w-full">
-                <Clock className="text-yellow-700 dark:text-yellow-400" size={20} strokeWidth={2.5} />
-                <span className="text-[28px] font-black leading-none text-yellow-700 dark:text-yellow-400">
-                  {stats.pending}
+                <Clock className="text-yellow-700 dark:text-yellow-400 shrink-0" size={20} strokeWidth={2.5} />
+                <span className="text-[26px] sm:text-[28px] font-black leading-none text-yellow-700 dark:text-yellow-400">
+                  {summaryStats.pending}
                 </span>
               </div>
-              <p className="text-[11px] font-bold text-yellow-700 dark:text-yellow-400">Menunggu Persetujuan</p>
-            </div>
+              <p className="text-[11px] font-bold text-yellow-700 dark:text-yellow-400 truncate">Menunggu Persetujuan</p>
+            </button>
 
-            {/* Card: Sedang Dipinjam (Approved & Not Overdue) */}
-            <div className="bg-blue-50 dark:bg-blue-950 rounded-2xl p-5 flex flex-col justify-between h-[100px]">
+            {/* Card 2: Antrean Reservasi */}
+            <button
+              type="button"
+              onClick={() => setFilter("reservations")}
+              className={`bg-purple-50 dark:bg-purple-950/60 rounded-2xl p-4 sm:p-5 flex flex-col justify-between h-[100px] text-left transition-all cursor-pointer hover:shadow-xs active:scale-[0.98] ${
+                filter === "reservations"
+                  ? "ring-2 ring-purple-500 shadow-xs"
+                  : "hover:ring-1 hover:ring-purple-300 dark:hover:ring-purple-700"
+              }`}
+              title="Filter: Antrean Reservasi"
+            >
               <div className="flex items-start justify-between w-full">
-                <BookOpen className="text-blue-600 dark:text-blue-400" size={20} strokeWidth={2.5} />
-                <span className="text-[28px] font-black leading-none text-blue-600 dark:text-blue-400">
-                  {stats.approved}
+                <Bookmark className="text-purple-700 dark:text-purple-400 shrink-0" size={20} strokeWidth={2.5} />
+                <span className="text-[26px] sm:text-[28px] font-black leading-none text-purple-700 dark:text-purple-400">
+                  {summaryStats.reservations}
                 </span>
               </div>
-              <p className="text-[11px] font-bold text-blue-600 dark:text-blue-400">Sedang Dipinjam</p>
-            </div>
+              <p className="text-[11px] font-bold text-purple-700 dark:text-purple-400 truncate">Antrean Reservasi</p>
+            </button>
 
-            {/* Card: Dikembalikan */}
-            <div className="bg-muted rounded-2xl p-5 flex flex-col justify-between h-[100px]">
+            {/* Card 3: Sedang Dipinjam */}
+            <button
+              type="button"
+              onClick={() => setFilter("approved")}
+              className={`bg-blue-50 dark:bg-blue-950/60 rounded-2xl p-4 sm:p-5 flex flex-col justify-between h-[100px] text-left transition-all cursor-pointer hover:shadow-xs active:scale-[0.98] ${
+                filter === "approved"
+                  ? "ring-2 ring-blue-500 shadow-xs"
+                  : "hover:ring-1 hover:ring-blue-300 dark:hover:ring-blue-700"
+              }`}
+              title="Filter: Sedang Dipinjam"
+            >
               <div className="flex items-start justify-between w-full">
-                <CheckCircle className="text-foreground" size={20} strokeWidth={2.5} />
-                <span className="text-[28px] font-black leading-none text-foreground">
-                  {stats.returned}
+                <BookOpen className="text-blue-600 dark:text-blue-400 shrink-0" size={20} strokeWidth={2.5} />
+                <span className="text-[26px] sm:text-[28px] font-black leading-none text-blue-600 dark:text-blue-400">
+                  {summaryStats.approved}
                 </span>
               </div>
-              <p className="text-[11px] font-bold text-foreground">Dikembalikan</p>
-            </div>
+              <p className="text-[11px] font-bold text-blue-600 dark:text-blue-400 truncate">Sedang Dipinjam</p>
+            </button>
 
-            {/* Card: Terlambat */}
-            <div className="bg-red-50 dark:bg-red-950 rounded-2xl p-5 flex flex-col justify-between h-[100px]">
+            {/* Card 4: Dikembalikan */}
+            <button
+              type="button"
+              onClick={() => setFilter("returned")}
+              className={`bg-muted rounded-2xl p-4 sm:p-5 flex flex-col justify-between h-[100px] text-left transition-all cursor-pointer hover:shadow-xs active:scale-[0.98] ${
+                filter === "returned"
+                  ? "ring-2 ring-foreground/40 shadow-xs"
+                  : "hover:ring-1 hover:ring-foreground/20"
+              }`}
+              title="Filter: Dikembalikan"
+            >
               <div className="flex items-start justify-between w-full">
-                <XCircle className="text-primary" size={20} strokeWidth={2.5} />
-                <span className="text-[28px] font-black leading-none text-primary">
-                  {stats.overdue}
+                <CheckCircle className="text-foreground shrink-0" size={20} strokeWidth={2.5} />
+                <span className="text-[26px] sm:text-[28px] font-black leading-none text-foreground">
+                  {summaryStats.returned}
                 </span>
               </div>
-              <p className="text-[11px] font-bold text-primary">Terlambat</p>
-            </div>
+              <p className="text-[11px] font-bold text-foreground truncate">Dikembalikan</p>
+            </button>
+
+            {/* Card 5: Terlambat */}
+            <button
+              type="button"
+              onClick={() => setFilter("overdue")}
+              className={`bg-red-50 dark:bg-red-950/60 rounded-2xl p-4 sm:p-5 flex flex-col justify-between h-[100px] text-left transition-all cursor-pointer hover:shadow-xs active:scale-[0.98] ${
+                filter === "overdue"
+                  ? "ring-2 ring-primary shadow-xs"
+                  : "hover:ring-1 hover:ring-red-300 dark:hover:ring-red-700"
+              }`}
+              title="Filter: Terlambat"
+            >
+              <div className="flex items-start justify-between w-full">
+                <XCircle className="text-primary shrink-0" size={20} strokeWidth={2.5} />
+                <span className="text-[26px] sm:text-[28px] font-black leading-none text-primary">
+                  {summaryStats.overdue}
+                </span>
+              </div>
+              <p className="text-[11px] font-bold text-primary truncate">Terlambat</p>
+            </button>
 
           </div>
         </div>
@@ -606,6 +730,8 @@ export default function LoansSection({ searchTerm, onSearchChange }: LoansSectio
               <p className="text-[15px] font-bold text-muted-foreground">
                 {searchTerm 
                   ? "Tidak ada hasil pencarian" 
+                  : filter === "overdue"
+                  ? "Tidak ada peminjaman yang terlambat saat ini"
                   : "Tidak ada data peminjaman"}
               </p>
             </div>
