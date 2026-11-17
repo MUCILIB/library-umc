@@ -16,7 +16,7 @@ import SavedBooksTab from "@/components/SavedBooksTab";
 import LecturerRecommendationList from "@/components/LecturerRecommendationList";
 import { useToast } from "@/hooks/useToast";
 import { getSavedBookIds, syncBookmarksFromDb } from "@/utils/bookmarks";
-import { Settings, Mail, BookOpen, Clock, AlertCircle, Bookmark, CreditCard, Sparkles, ChevronRight, ChevronDown, Check, SlidersHorizontal, Camera, Loader2, RotateCcw, RefreshCw, KeyRound, ShieldCheck } from "lucide-react";
+import { Settings, Mail, BookOpen, Clock, AlertCircle, Bookmark, CreditCard, Sparkles, ChevronRight, ChevronDown, Check, SlidersHorizontal, Camera, Loader2, RotateCcw, RefreshCw, KeyRound } from "lucide-react";
 import type { AuthUser } from "@/types/auth";
 import { getUserAvatar } from "@/lib/avatar";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
