@@ -38,7 +38,16 @@ export function useBookList(
   const [error, setError] = useState<string | null>(null);
 
   const fetchBibliographies = async () => {
-    const response = await fetch(`${API_BASE_URL}/api/bibliographies?limit=100`);
+    let response = await fetch(`${API_BASE_URL}/api/bibliographies?limit=100`, {
+      credentials: "include",
+    });
+
+    // Fallback to public /api/collections if unauthenticated
+    if (response.status === 401) {
+      response = await fetch(`${API_BASE_URL}/api/collections?limit=100`, {
+        credentials: "include",
+      });
+    }
 
     if (!response.ok) {
       let apiMessage = "";

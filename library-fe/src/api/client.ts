@@ -226,7 +226,7 @@ async function apiFetchBlob(path: string, filename: string): Promise<void> {
 // ==========================================
 
 export const bibliographyApi = {
-  list: (params?: Record<string, string | number | undefined>, options?: RequestInit) => {
+  list: async (params?: Record<string, string | number | undefined>, options?: RequestInit) => {
     const searchParams = new URLSearchParams();
     if (params) {
       Object.entries(params).forEach(([key, value]) => {
@@ -234,11 +234,26 @@ export const bibliographyApi = {
       });
     }
     const query = searchParams.toString();
-    return apiFetch<BibliographyListResponse>(`/api/bibliographies${query ? `?${query}` : ""}`, options);
+    try {
+      return await apiFetch<BibliographyListResponse>(`/api/bibliographies${query ? `?${query}` : ""}`, options);
+    } catch (err: any) {
+      if (err?.status === 401 || err?.statusCode === 401 || err?.message?.includes("401") || err?.message?.includes("Unauthorized")) {
+        return await apiFetch<BibliographyListResponse>(`/api/collections${query ? `?${query}` : ""}`, options);
+      }
+      throw err;
+    }
   },
 
-  getById: (id: string) =>
-    apiFetch<Bibliography>(`/api/bibliographies/${id}`),
+  getById: async (id: string) => {
+    try {
+      return await apiFetch<Bibliography>(`/api/bibliographies/${id}`);
+    } catch (err: any) {
+      if (err?.status === 401 || err?.statusCode === 401 || err?.message?.includes("401") || err?.message?.includes("Unauthorized")) {
+        return await apiFetch<Bibliography>(`/api/collections/${id}`);
+      }
+      throw err;
+    }
+  },
 
   create: (data: Record<string, unknown>) =>
     apiFetch<Bibliography>("/api/bibliographies", {

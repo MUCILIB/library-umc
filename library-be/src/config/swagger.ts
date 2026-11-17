@@ -619,7 +619,7 @@ const swaggerDefinition = {
         summary: "Get All Bibliographies",
         description: "Retrieve a list of all bibliographies (books, etc).",
         tags: ["Bibliographies"],
-        security: [],
+        security: [{ bearerAuth: [] }],
         responses: {
           200: {
             description: "List of bibliographies",
@@ -2358,9 +2358,10 @@ const swaggerDefinition = {
         summary: "Check for duplicate bibliographies",
         description: "Check for existing bibliographies by ISBN exact match or title+author fuzzy match. Returns suggestions for redirecting to existing records.",
         tags: ["Bibliographies"],
-        security: [],
+        security: [{ bearerAuth: [] }],
         parameters: [
-          { in: "query", name: "isbn", schema: { type: "string" }, description: "ISBN/ISSN to match exactly" },
+          { in: "query", name: "isbn", schema: { type: "string" }, description: "ISBN to match exactly" },
+          { in: "query", name: "issn", schema: { type: "string" }, description: "ISSN to match exactly" },
           { in: "query", name: "title", schema: { type: "string" }, description: "Title for fuzzy matching" },
           { in: "query", name: "author", schema: { type: "string" }, description: "Author name for fuzzy matching" },
         ],
