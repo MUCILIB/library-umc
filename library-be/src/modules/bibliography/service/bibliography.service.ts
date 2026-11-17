@@ -598,9 +598,11 @@ if (updateData.isbn && isValidCode(updateData.isbn)) {
         const conditions: any[] = [
           or(
             eq(bibliographies.isbn, cleanTargetIsbn),
+            eq(bibliographies.issn, cleanTargetIsbn),
             eq(bibliographies.isbnIssn, cleanTargetIsbn),
             eq(bibliographies.isbnIssn, params.isbn),
             sql`regexp_replace(COALESCE(${bibliographies.isbn}, ''), '[^0-9Xx]', '', 'g') = ${normalizedTarget}`,
+            sql`regexp_replace(COALESCE(${bibliographies.issn}, ''), '[^0-9Xx]', '', 'g') = ${normalizedTarget}`,
             sql`regexp_replace(COALESCE(${bibliographies.isbnIssn}, ''), '[^0-9Xx]', '', 'g') = ${normalizedTarget}`
           ),
           isNull(bibliographies.deletedAt),
@@ -639,10 +641,12 @@ if (updateData.isbn && isValidCode(updateData.isbn)) {
         const conditions: any[] = [
           or(
             eq(bibliographies.issn, cleanTargetIssn),
+            eq(bibliographies.isbn, cleanTargetIssn),
             eq(bibliographies.isbnIssn, `ISSN ${cleanTargetIssn}`),
             eq(bibliographies.isbnIssn, cleanTargetIssn),
             eq(bibliographies.isbnIssn, params.issn),
             sql`regexp_replace(COALESCE(${bibliographies.issn}, ''), '[^0-9Xx]', '', 'g') = ${normalizedTarget}`,
+            sql`regexp_replace(COALESCE(${bibliographies.isbn}, ''), '[^0-9Xx]', '', 'g') = ${normalizedTarget}`,
             sql`regexp_replace(COALESCE(${bibliographies.isbnIssn}, ''), '[^0-9Xx]', '', 'g') = ${normalizedTarget}`
           ),
           isNull(bibliographies.deletedAt),
@@ -699,6 +703,8 @@ if (updateData.isbn && isValidCode(updateData.isbn)) {
           duplicates.push({
             id: bib.id,
             title: bib.title,
+            isbn: bib.isbn,
+            issn: bib.issn,
             isbnIssn: bib.isbnIssn,
             classification: bib.classification,
             callNumber: bib.callNumber,

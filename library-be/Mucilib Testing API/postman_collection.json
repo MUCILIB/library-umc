@@ -232,7 +232,17 @@
               "raw": "{{baseUrl}}/bibliographies",
               "query": []
             },
-            "description": "Get All Bibliographies"
+            "description": "Get All Bibliographies",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            }
           }
         },
         {
@@ -319,7 +329,7 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/bibliographies/{{{id}}}",
+              "raw": "{{baseUrl}}/bibliographies/{{id}}",
               "query": []
             },
             "description": "Get Bibliography By ID"
@@ -331,7 +341,7 @@
             "method": "PATCH",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/bibliographies/{{{id}}}",
+              "raw": "{{baseUrl}}/bibliographies/{{id}}",
               "query": []
             },
             "description": "Update Bibliography",
@@ -404,7 +414,7 @@
             "method": "DELETE",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/bibliographies/{{{id}}}",
+              "raw": "{{baseUrl}}/bibliographies/{{id}}",
               "query": []
             },
             "description": "Soft Delete Bibliography",
@@ -426,7 +436,7 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/bibliographies/{{{id}}}/items",
+              "raw": "{{baseUrl}}/bibliographies/{{id}}/items",
               "query": []
             },
             "description": "Get Items Under Bibliography"
@@ -446,6 +456,11 @@
                   "disabled": true
                 },
                 {
+                  "key": "issn",
+                  "value": "{{issn}}",
+                  "disabled": true
+                },
+                {
                   "key": "title",
                   "value": "{{title}}",
                   "disabled": true
@@ -457,7 +472,17 @@
                 }
               ]
             },
-            "description": "Check for duplicate bibliographies"
+            "description": "Check for duplicate bibliographies",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            }
           }
         }
       ]

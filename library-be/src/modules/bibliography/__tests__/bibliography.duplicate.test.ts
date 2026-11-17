@@ -119,6 +119,23 @@ describe('BibliographyService - checkDuplicate', () => {
     const result = await service.checkDuplicate({ title: 'TypeScript', author: 'John' });
     expect(result.duplicates).toHaveLength(1);
     expect(result.duplicates[0].similarity).toBe('title_author');
+    expect(result.duplicates[0]).toHaveProperty('isbn');
+    expect(result.duplicates[0]).toHaveProperty('issn');
+  });
+
+  it('harus deteksi duplikat saat ISBN dan ISSN dikirimkan bersamaan', async () => {
+    (db.query.bibliographies.findMany as any)
+      .mockResolvedValueOnce([
+        { id: '1', title: 'Buku A', isbn: '978-602-001', issn: null, isbnIssn: '978-602-001', classification: '005', callNumber: '005.1', bibliographyAuthors: [] },
+      ])
+      .mockResolvedValueOnce([
+        { id: '2', title: 'Jurnal B', isbn: null, issn: '1234-5678', isbnIssn: 'ISSN 1234-5678', classification: '005', callNumber: '005.2', bibliographyAuthors: [] },
+      ]);
+
+    const result = await service.checkDuplicate({ isbn: '978-602-001', issn: '1234-5678' });
+    expect(result.duplicates).toHaveLength(2);
+    expect(result.hasExactMatch).toBe(true);
+    expect(result.duplicates.map((d) => d.similarity)).toEqual(expect.arrayContaining(['isbn', 'issn']));
   });
 
   it('harus deduplikasi hasil ISBN dan title', async () => {

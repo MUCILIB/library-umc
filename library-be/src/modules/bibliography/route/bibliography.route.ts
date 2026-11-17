@@ -8,6 +8,7 @@ import {
   requirePermission,
 } from "../../../middlewares/auth.middleware";
 import { publicApiLimiter } from "../../../middlewares/rateLimiter";
+import { sendError } from "../../../utils/api-utils";
 
 const router = Router();
 
@@ -42,13 +43,15 @@ router.get(
   (req, res, next) => coverController.getCover(req, res, next)
 );
 
-router.get("/bibliographies/check-duplicate", publicApiLimiter, (req, res, next) => bibliographyController.checkDuplicate(req, res, next));
-router.get("/bibliographies", publicApiLimiter, (req, res, next) => bibliographyController.list(req, res, next));
+router.get("/bibliographies/check-duplicate", publicApiLimiter, isAuthenticated, requirePermission("bibliographies", "view"), (req, res, next) => bibliographyController.checkDuplicate(req, res, next));
+router.get("/bibliographies", publicApiLimiter, isAuthenticated, requirePermission("bibliographies", "view"), (req, res, next) => bibliographyController.list(req, res, next));
 router.post("/bibliographies/deduplicate", publicApiLimiter, isAuthenticated, requireRole(["super_admin"]), (req, res, next) => bibliographyController.deduplicate(req, res, next));
 router.get("/bibliographies/:id", publicApiLimiter, (req, res, next) => bibliographyController.getById(req, res, next));
 router.get("/bibliographies/:id/items", publicApiLimiter, (req, res, next) => bibliographyController.getItems(req, res, next));
 router.post("/bibliographies", publicApiLimiter, isAuthenticated, requirePermission("bibliographies", "add"), (req, res, next) => bibliographyController.create(req, res, next));
+router.patch("/bibliographies", publicApiLimiter, isAuthenticated, requirePermission("bibliographies", "edit"), (req, res) => sendError(res, "ID bibliografi diperlukan", 400));
 router.patch("/bibliographies/:id", publicApiLimiter, isAuthenticated, requirePermission("bibliographies", "edit"), (req, res, next) => bibliographyController.update(req, res, next));
+router.delete("/bibliographies", publicApiLimiter, isAuthenticated, requirePermission("bibliographies", "delete"), (req, res) => sendError(res, "ID bibliografi diperlukan", 400));
 router.delete("/bibliographies/:id", publicApiLimiter, isAuthenticated, requirePermission("bibliographies", "delete"), (req, res, next) => bibliographyController.softDelete(req, res, next));
 
 export default router;
