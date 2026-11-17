@@ -737,7 +737,7 @@ export class LoanService {
    */
   async getAllLoans(filters: {
     memberId?: string;
-    status?: "pending" | "approved" | "returned" | "extended" | "rejected";
+    status?: "pending" | "approved" | "returned" | "extended" | "rejected" | "overdue";
     limit?: number;
     offset?: number;
   }) {
@@ -750,6 +750,10 @@ export class LoanService {
     if (filters.status) {
       if (filters.status === "approved") {
         whereConditions.push(sql`${loans.status} IN ('approved', 'extended')`);
+      } else if (filters.status === "overdue") {
+        whereConditions.push(
+          sql`${loans.status} IN ('approved', 'extended') AND ${loans.dueDate} < CURRENT_DATE`
+        );
       } else {
         whereConditions.push(eq(loans.status, filters.status));
       }

@@ -139,14 +139,20 @@ export default function TentangPage() {
                 </h3>
                 <div className="space-y-2.5 text-xs sm:text-sm">
                   <a
-                    href="https://www.instagram.com/perpustakaan_umc"
+                    href={
+                      settings.footer.socialMedia?.instagram &&
+                      settings.footer.socialMedia.instagram !== "https://instagram.com/perpustakaan_umc" &&
+                      settings.footer.socialMedia.instagram !== "https://www.instagram.com/perpustakaan_umc"
+                        ? settings.footer.socialMedia.instagram
+                        : "https://www.instagram.com/perpusumc"
+                    }
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-muted-foreground hover:text-[#9D171D] flex items-center justify-between group transition-colors"
                   >
                     <div className="flex items-center gap-3">
                       <Instagram className="w-4 h-4 text-[#9D171D] shrink-0" />
-                      <span>@perpustakaan_umc</span>
+                      <span>@perpusumc</span>
                     </div>
                     <ExternalLink className="w-3.5 h-3.5 opacity-60 group-hover:opacity-100 transition-opacity" />
                   </a>

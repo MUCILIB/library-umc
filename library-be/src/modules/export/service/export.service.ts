@@ -372,7 +372,15 @@ export class ExportService {
     const conditions: any[] = [isNull(loans.deletedAt)];
 
     if (filter?.status && filter.status !== "all") {
-      conditions.push(eq(loans.status, filter.status as any));
+      if (filter.status === "approved") {
+        conditions.push(sql`${loans.status} IN ('approved', 'extended')`);
+      } else if (filter.status === "overdue") {
+        conditions.push(
+          sql`${loans.status} IN ('approved', 'extended') AND ${loans.dueDate} < CURRENT_DATE`
+        );
+      } else {
+        conditions.push(eq(loans.status, filter.status as any));
+      }
     }
     if (filter?.startDate) {
       conditions.push(gte(loans.loanDate, filter.startDate));
