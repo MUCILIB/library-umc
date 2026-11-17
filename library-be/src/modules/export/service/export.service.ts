@@ -6,7 +6,7 @@ import {
   languages, locations, vendors, collectionTypes, faculties, studyPrograms,
   guestLogs, loans, Users, members
 } from "../../../db/schema";
-import { eq, and, isNull, asc, desc, inArray, ilike, gte, lte, or } from "drizzle-orm";
+import { eq, and, isNull, asc, desc, inArray, ilike, gte, lte, or, sql } from "drizzle-orm";
 import PDFDocument from "pdfkit";
 import { Response } from "express";
 

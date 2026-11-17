@@ -3,10 +3,15 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import Profile from "../Profile";
 
 // Mocks
-vi.mock("react-router", () => ({
-  useNavigate: () => vi.fn(),
-  useSearchParams: () => [new URLSearchParams("tab=edit-profil")],
-}));
+const mockNavigate = vi.fn();
+vi.mock("react-router", async () => {
+  const actual = await vi.importActual<typeof import("react-router")>("react-router");
+  return {
+    ...actual,
+    useNavigate: () => mockNavigate,
+    useSearchParams: () => [new URLSearchParams("tab=edit-profil"), vi.fn()],
+  };
+});
 
 const mockToastSuccess = vi.fn();
 const mockToastError = vi.fn();
@@ -17,13 +22,15 @@ vi.mock("@/hooks/useToast", () => ({
   }),
 }));
 
+const mockSessionData = {
+  user: { id: "u1", name: "Baji", email: "baji@gmail.com", role: "member" },
+};
+
 const mockRequestPasswordReset = vi.fn();
 vi.mock("@/utils/auth-client", () => ({
   authClient: {
     useSession: () => ({
-      data: {
-        user: { id: "u1", name: "Baji", email: "baji@gmail.com", role: "member" },
-      },
+      data: mockSessionData,
       isPending: false,
     }),
     requestPasswordReset: (...args: any[]) => mockRequestPasswordReset(...args),
@@ -78,6 +85,26 @@ vi.mock("@/components/ui/navbar", () => ({
 
 vi.mock("@/components/Footer", () => ({
   default: () => <div data-testid="footer" />,
+}));
+
+vi.mock("@/components/RiwayatPeminjaman", () => ({
+  default: () => <div data-testid="riwayat-peminjaman" />,
+}));
+
+vi.mock("@/components/FinesList", () => ({
+  default: () => <div data-testid="fines-list" />,
+}));
+
+vi.mock("@/components/MemberCard", () => ({
+  default: () => <div data-testid="member-card" />,
+}));
+
+vi.mock("@/components/SavedBooksTab", () => ({
+  default: () => <div data-testid="saved-books-tab" />,
+}));
+
+vi.mock("@/components/LecturerRecommendationList", () => ({
+  default: () => <div data-testid="lecturer-recommendations" />,
 }));
 
 describe("Profile Page - Text Limitation, Disallowed Characters Warning, and Gear Menu", () => {
@@ -137,7 +164,7 @@ describe("Profile Page - Text Limitation, Disallowed Characters Warning, and Gea
     });
 
     const gearBtn = screen.getByLabelText("Opsi Pengaturan Akun");
-    fireEvent.click(gearBtn);
+    fireEvent.pointerDown(gearBtn);
 
     expect(screen.getByText("Kembalikan Data Form")).toBeInTheDocument();
     expect(screen.getByText("Muat Ulang Profil")).toBeInTheDocument();

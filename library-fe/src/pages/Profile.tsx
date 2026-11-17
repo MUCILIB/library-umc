@@ -179,7 +179,7 @@ const Profile = () => {
     } else if (!sessionLoading && !session) {
       navigate("/login");
     }
-  }, [session, sessionLoading, navigate]);
+  }, [session?.user?.id, sessionLoading, navigate]);
 
   useEffect(() => {
     const updateCount = () => {

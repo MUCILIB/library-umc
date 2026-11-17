@@ -5,10 +5,12 @@ on:
     branches: ["main", "dev"]
     paths:
       - "library-fe/**"
+      - ".github/workflows/frontend-ci.yml"
   pull_request:
     branches: ["main"]
     paths:
       - "library-fe/**"
+      - ".github/workflows/frontend-ci.yml"
 
 jobs:
   build-and-test:
@@ -36,6 +38,8 @@ jobs:
 
       - name: Test
         run: npm run test
+        env:
+          NODE_OPTIONS: "--max-old-space-size=4096"
 
       - name: Build
         run: npm run build
