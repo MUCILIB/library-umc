@@ -32,6 +32,7 @@ export interface MemberProfile {
 }
 
 export interface UpdateProfilePayload {
+  name?: string;
   nimNidn?: string;
   faculty?: string;
   originRegion?: string;

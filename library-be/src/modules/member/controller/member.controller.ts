@@ -6,6 +6,7 @@ import { avatarStorageService } from "../../repository/service/storage.service";
 import {
   approveCardSchema,
   rejectCardSchema,
+  updateCardExpirySchema,
   updateProfileSchema
 } from "../validation/member.validation";
 import {
@@ -245,7 +246,11 @@ export class MemberController {
 
       const result = await memberService.approveMemberCard(
         memberId,
-        validation.data.cardNumber
+        validation.data.cardNumber,
+        {
+          cardExpiresAt: validation.data.cardExpiresAt,
+          durationDays: validation.data.durationDays
+        }
       );
       if (!result.success) {
         return sendError(
@@ -289,7 +294,11 @@ export class MemberController {
 
       const result = await memberService.approveMemberCard(
         memberResult.data.id,
-        validation.data.cardNumber
+        validation.data.cardNumber,
+        {
+          cardExpiresAt: validation.data.cardExpiresAt,
+          durationDays: validation.data.durationDays
+        }
       );
       if (!result.success) {
         return sendError(
@@ -422,7 +431,8 @@ export class MemberController {
       }
 
       const durationDays = req.body?.durationDays ? Number(req.body.durationDays) : 365;
-      const result = await memberService.approveCardRenewal(memberId, durationDays);
+      const cardExpiresAt = req.body?.cardExpiresAt;
+      const result = await memberService.approveCardRenewal(memberId, durationDays, { cardExpiresAt });
 
       if (!result.success) {
         return sendError(res, result.message ?? "Gagal menyetujui perpanjangan", 400);
@@ -434,7 +444,7 @@ export class MemberController {
         entity: "Users",
         entityId: memberId,
         ipAddress: req.ip,
-        detail: `approve_card_renewal; durationDays=${durationDays}`
+        detail: `approve_card_renewal; durationDays=${durationDays}; cardExpiresAt=${cardExpiresAt || ""}`
       });
 
       sendSuccess(res, "Perpanjangan kartu member berhasil disetujui", result.data);
@@ -442,6 +452,42 @@ export class MemberController {
       next(error);
     }
   }
+
+  /**
+   * PATCH /members/:id/card/expiry — Ubah masa berlaku kartu anggota (Admin/Staff)
+   */
+  async updateCardExpiry(req: Request, res: Response, next: NextFunction) {
+    try {
+      const validation = updateCardExpirySchema.safeParse(req.body);
+      if (!validation.success) {
+        return sendValidationError(res, validation.error.flatten());
+      }
+
+      const memberId = String(req.params.id || "");
+      if (!memberId) {
+        return sendError(res, "Member ID tidak valid", 400);
+      }
+
+      const result = await memberService.updateCardExpiry(memberId, validation.data);
+      if (!result.success) {
+        return sendError(res, result.message ?? "Gagal mengubah masa aktif kartu", 400);
+      }
+
+      await auditService.createLog({
+        userId: req.user?.id,
+        action: "update",
+        entity: "Users",
+        entityId: memberId,
+        ipAddress: req.ip,
+        detail: `update_card_expiry; ${JSON.stringify(validation.data)}`
+      });
+
+      sendSuccess(res, result.message, result.data);
+    } catch (error) {
+      next(error);
+    }
+  }
+
 
   async rejectCardRenewal(req: Request, res: Response, next: NextFunction) {
     try {

@@ -35,13 +35,14 @@ export class ProposalService {
   }
 
   /**
-   * Mahasiswa submit proposal / skripsi baru
+   * Mahasiswa atau Admin/Staff submit proposal / skripsi baru
    */
   async createProposal(
     userId: string,
     input: CreateProposalInput,
     fileBuffer: Buffer,
-    originalFilename: string
+    originalFilename: string,
+    isStaffOrAdmin: boolean = false
   ) {
     if (!fileBuffer || fileBuffer.length === 0) {
       throw new BadRequestError("File PDF wajib diunggah");
@@ -60,8 +61,15 @@ export class ProposalService {
     }
 
     const [member] = await db.select().from(members).where(eq(members.userId, userId)).limit(1);
-    const nim = member?.nimNidn || "NIM_PENDING";
-    const name = user.name || "Mahasiswa";
+
+    // Jika diinput oleh Admin/Pustakawan, gunakan authorName & authorNim yang diinput admin
+    const nim = (isStaffOrAdmin && input.authorNim?.trim())
+      ? input.authorNim.trim()
+      : (member?.nimNidn || "NIM_PENDING");
+
+    const name = (isStaffOrAdmin && input.authorName?.trim())
+      ? input.authorName.trim()
+      : (user.name || "Mahasiswa");
 
     // Hitung SHA-256 hash untuk mencegah duplikasi file
     const fileHash = crypto.createHash("sha256").update(fileBuffer).digest("hex");
@@ -90,44 +98,68 @@ export class ProposalService {
     const randomSuffix = Math.floor(1000 + Math.random() * 9000);
     const proposalNumber = `PROP-${datePrefix}-${randomSuffix}`;
 
+    const targetStatus = isStaffOrAdmin
+      ? (input.status || "APPROVED")
+      : "SUBMITTED";
+
+    const parsedKeywords = Array.isArray(input.keywords)
+      ? input.keywords
+      : (typeof input.keywords === "string"
+          ? (input.keywords as string).split(",").map((s) => s.trim()).filter(Boolean)
+          : []);
+
     const [created] = await db
       .insert(repositoryProposals)
       .values({
         proposalNumber,
         title: input.title,
         abstract: input.abstract || null,
-        keywords: input.keywords || [],
+        keywords: parsedKeywords,
         authorUserId: userId,
         authorNim: nim,
         authorName: name,
         studyProgramId: input.studyProgramId,
         advisorName1: input.advisorName1,
         advisorName2: input.advisorName2 || null,
-        documentCategory: input.documentCategory,
-        status: "SUBMITTED",
+        documentCategory: input.documentCategory || "THESIS",
+        chapter: input.chapter || "FULL_TEXT",
+        chapterTitle: input.chapterTitle || null,
+        status: targetStatus,
         storagePath,
         fileSize: fileBuffer.length,
         pageCount,
-        fileHashSha256: fileHash
+        fileHashSha256: fileHash,
+        reviewerUserId: (isStaffOrAdmin && targetStatus === "APPROVED") ? userId : null,
+        reviewedAt: (isStaffOrAdmin && targetStatus === "APPROVED") ? new Date() : null,
+        reviewNotes: (isStaffOrAdmin && targetStatus === "APPROVED")
+          ? "Diunggah langsung dan diverifikasi oleh Admin / Pustakawan"
+          : null,
       })
       .returning();
 
-    // Buat rule default untuk PUBLIC (misal: Halaman 1 s/d Math.min(10, pageCount))
+    // Buat rule default untuk PUBLIC (misal: Halaman 1 s/d Math.min(10, pageCount) atau sesuai konfigurasi admin)
+    const startPage = input.allowedStartPage && input.allowedStartPage >= 1 ? input.allowedStartPage : 1;
+    const endPage = input.allowedEndPage && input.allowedEndPage >= 1
+      ? Math.min(input.allowedEndPage, pageCount)
+      : Math.min(10, pageCount);
+
     await db.insert(repositoryDocumentPageRules).values({
       proposalId: created.id,
       roleScope: "PUBLIC",
-      allowedStartPage: 1,
-      allowedEndPage: Math.min(10, pageCount),
+      allowedStartPage: startPage,
+      allowedEndPage: endPage,
       allowDownloadFull: false,
       configuredBy: userId
     });
 
-    // Catat review log awal SUBMIT
+    // Catat review log awal
     await db.insert(proposalReviewLogs).values({
       proposalId: created.id,
       reviewerUserId: userId,
-      action: "SUBMIT",
-      notes: "Proposal diajukan oleh mahasiswa"
+      action: isStaffOrAdmin && targetStatus === "APPROVED" ? "APPROVE" : "SUBMIT",
+      notes: isStaffOrAdmin
+        ? "Naskah skripsi / karya ilmiah diunggah langsung oleh Pustakawan"
+        : "Proposal diajukan oleh mahasiswa"
     });
 
     return created;
@@ -564,6 +596,13 @@ export class ProposalService {
     if (input.advisorName2 !== undefined) updates.advisorName2 = input.advisorName2;
     if (input.studyProgramId) updates.studyProgramId = input.studyProgramId;
     if (input.documentCategory) updates.documentCategory = input.documentCategory;
+    if (input.chapter) updates.chapter = input.chapter;
+    if (input.chapterTitle !== undefined) updates.chapterTitle = input.chapterTitle;
+    if (isStaffOrAdmin) {
+      if (input.authorName) updates.authorName = input.authorName;
+      if (input.authorNim) updates.authorNim = input.authorNim;
+      if (input.status) updates.status = input.status;
+    }
 
     if (fileBuffer && fileBuffer.length > 0) {
       const magic = fileBuffer.subarray(0, 5).toString("ascii");

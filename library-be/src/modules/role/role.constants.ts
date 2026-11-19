@@ -109,6 +109,12 @@ export const SIDEBAR_MENUS: SidebarMenuItem[] = [
     group: "Master Data",
     description: "Data master lokasi rak dan penempatan fisik buku",
   },
+  {
+    key: "klasifikasi",
+    label: "Klasifikasi Koleksi (S/R)",
+    group: "Master Data",
+    description: "Data master kategori tipe klasifikasi koleksi buku (Sirkulasi & Referensi)",
+  },
 
   // Pengaturan & Audit
   {

@@ -16,9 +16,11 @@ router.patch("/items/:id/status", publicApiLimiter, isAuthenticated, requirePerm
 router.patch("/items/:id/location", publicApiLimiter, isAuthenticated, requirePermission("items", "edit"), (req, res, next) => itemController.updateLocation(req, res, next));
 router.delete("/items/:id", publicApiLimiter, isAuthenticated, requirePermission("items", "delete"), (req, res, next) => itemController.softDelete(req, res, next));
 
-// Bulk create under bibliography
+// Bulk create & standardize under bibliography
 router.post("/bibliographies/:bibliographyId/items", publicApiLimiter, isAuthenticated, requirePermission("items", "add"), (req, res, next) => itemController.create(req, res, next));
 router.post("/bibliographies/:bibliographyId/items/bulk", publicApiLimiter, isAuthenticated, requirePermission("items", "add"), (req, res, next) => itemController.bulkCreate(req, res, next));
+router.post("/bibliographies/:bibliographyId/items/standardize", publicApiLimiter, isAuthenticated, requireRole(["super_admin", "staff"]), (req, res, next) => itemController.standardize(req, res, next));
+router.post("/items/standardize/:bibliographyId", publicApiLimiter, isAuthenticated, requireRole(["super_admin", "staff"]), (req, res, next) => itemController.standardize(req, res, next));
 
 // QR endpoints & Circulation Lookup (Restricted to Staff/Admin to protect loaner privacy)
 router.get("/items/:id/qr", publicApiLimiter, isAuthenticated, requireRole(["super_admin", "staff"]), (req, res, next) => itemController.getQr(req, res, next));

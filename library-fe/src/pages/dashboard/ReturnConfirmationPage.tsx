@@ -14,6 +14,7 @@ import {
   Layers,
   ShieldCheck,
   Check,
+  Printer,
 } from "lucide-react";
 import loanService, { type Loan } from "@/services/loanService";
 import { authClient } from "@/utils/auth-client";
@@ -21,6 +22,13 @@ import { SignaturePad } from "@/components/common/SignaturePad";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/useToast";
+import {
+  ReturnReceiptCard,
+  ReturnReceiptModal,
+  extractReceiptDataFromLoan,
+} from "@/components/common/ReturnReceiptModal";
+import Modal from "@/components/ui/modal";
+import { printThermalReceipt, formatReceiptDate } from "@/utils/printReceipt";
 
 export default function ReturnConfirmationPage() {
   const { loanId } = useParams<{ loanId: string }>();
@@ -44,6 +52,7 @@ export default function ReturnConfirmationPage() {
   const [submitting, setSubmitting] = useState(false);
   const [successReceiptNo, setSuccessReceiptNo] = useState<string | null>(null);
   const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false);
+  const [isReceiptModalOpen, setIsReceiptModalOpen] = useState(false);
   const staffNameInitialized = React.useRef(false);
 
   useEffect(() => {
@@ -121,6 +130,23 @@ export default function ReturnConfirmationPage() {
       success("Unduh Berhasil", "Tanda terima pengembalian PDF berhasil diunduh.");
     } catch (err: any) {
       toastError("Gagal Mengunduh PDF", err.message || "Terjadi kesalahan saat mengunduh dokumen.");
+    }
+  };
+
+  const currentReceiptData = loan
+    ? extractReceiptDataFromLoan(loan, {
+        receiptNo: successReceiptNo || loan.returnReceiptNo,
+        staffName: staffName.trim() || loan.returnStaffName,
+        condition: condition || loan.returnCondition,
+        notes: notes.trim() || loan.notes,
+        signature: signature || loan.returnStaffSignature,
+        returnDate: loan.returnDate || new Date().toISOString(),
+      })
+    : null;
+
+  const handlePrintReceipt = () => {
+    if (currentReceiptData) {
+      printThermalReceipt(currentReceiptData);
     }
   };
 
@@ -305,10 +331,96 @@ export default function ReturnConfirmationPage() {
             </div>
           </div>
 
-          {/* Right Column: Formulir Verifikasi Fisik & Tanda Tangan */}
+          {/* Right Column: Formulir Verifikasi Fisik & Tanda Tangan ATAU Resi Resmi jika sudah dikembalikan */}
           <div className="lg:col-span-7">
-            <div className="bg-card border border-border rounded-2xl p-6 shadow-2xs">
-              <form onSubmit={handleSubmit} className="space-y-6">
+            {loan.status === "returned" ? (
+              <div className="bg-card border border-border rounded-2xl p-6 shadow-2xs space-y-5">
+                <div className="flex items-center justify-between gap-3 p-3.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200 dark:border-emerald-800">
+                  <div className="flex items-center gap-2.5">
+                    <CheckCircle2 className="w-5 h-5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                    <div>
+                      <h3 className="text-xs font-bold text-emerald-900 dark:text-emerald-200">
+                        Buku Telah Selesai Dikembalikan
+                      </h3>
+                      <p className="text-[11px] text-emerald-700 dark:text-emerald-300">
+                        Berita acara resmi:{" "}
+                        <span className="font-mono font-bold">
+                          {loan.returnReceiptNo || successReceiptNo || "BA-RET-DONE"}
+                        </span>
+                      </p>
+                    </div>
+                  </div>
+                  <Badge className="bg-emerald-600 text-white text-[10px]">SAH</Badge>
+                </div>
+
+                {/* Ringkasan Pengesahan & Resi */}
+                <div className="p-4 rounded-xl bg-muted/40 border border-border space-y-2.5 text-xs">
+                  <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2">
+                    Bentuk Fisik Resi Pengembalian
+                  </p>
+                  <div className="flex justify-between items-center py-1 border-b border-border/50">
+                    <span className="text-muted-foreground">Peminjam:</span>
+                    <span className="font-bold text-foreground">{currentReceiptData?.borrowerName}</span>
+                  </div>
+                  <div className="flex justify-between items-center py-1 border-b border-border/50">
+                    <span className="text-muted-foreground">NIM/ID:</span>
+                    <span className="font-mono font-semibold">{currentReceiptData?.borrowerCode}</span>
+                  </div>
+                  <div className="flex justify-between items-center py-1 border-b border-border/50">
+                    <span className="text-muted-foreground font-semibold">Fakultas:</span>
+                    <span className="font-bold text-foreground">{currentReceiptData?.borrowerFaculty || "-"}</span>
+                  </div>
+                  <div className="flex justify-between items-center py-1 border-b border-border/50">
+                    <span className="text-muted-foreground">Bahan Pustaka:</span>
+                    <span className="font-medium text-foreground line-clamp-1">{currentReceiptData?.bookTitle}</span>
+                  </div>
+                  <div className="flex justify-between items-center py-1 border-b border-border/50">
+                    <span className="text-muted-foreground">Tanggal Pengembalian:</span>
+                    <span className="font-semibold text-emerald-600 dark:text-emerald-400">
+                      {formatReceiptDate(loan.returnDate)}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center py-1">
+                    <span className="text-muted-foreground">Status Verifikasi:</span>
+                    <span className="font-bold text-emerald-600 dark:text-emerald-400">TERVERIFIKASI SAH SISTEM</span>
+                  </div>
+                </div>
+
+                {/* Print & Download Actions */}
+                <div className="pt-4 flex flex-col sm:flex-row gap-3 border-t border-border">
+                  <Button
+                    type="button"
+                    onClick={() => {
+                      setIsReceiptModalOpen(true);
+                      handlePrintReceipt();
+                    }}
+                    className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground font-bold text-xs flex items-center justify-center gap-2 cursor-pointer py-2.5 shadow-xs"
+                  >
+                    <Printer size={15} />
+                    Cetak Resi Pengembalian
+                  </Button>
+                  <Button
+                    type="button"
+                    onClick={() => setIsReceiptModalOpen(true)}
+                    variant="secondary"
+                    className="flex items-center justify-center gap-1.5 text-xs font-semibold cursor-pointer"
+                  >
+                    Buka Dialog Resi
+                  </Button>
+                  <Button
+                    type="button"
+                    onClick={handleDownloadPdf}
+                    variant="outline"
+                    className="flex items-center justify-center gap-1.5 text-xs font-semibold cursor-pointer"
+                  >
+                    <FileDown size={14} />
+                    Unduh PDF
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <div className="bg-card border border-border rounded-2xl p-6 shadow-2xs">
+                <form onSubmit={handleSubmit} className="space-y-6">
                 <div>
                   <h3 className="text-base font-bold text-foreground">Formulir Pemeriksaan Fisik & Validasi</h3>
                   <p className="text-xs text-muted-foreground mt-0.5">
@@ -440,7 +552,7 @@ export default function ReturnConfirmationPage() {
                   </Button>
                   <Button
                     type="submit"
-                    disabled={submitting || loan.status === "returned"}
+                    disabled={submitting}
                     className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold px-6"
                   >
                     {submitting ? (
@@ -458,52 +570,90 @@ export default function ReturnConfirmationPage() {
                 </div>
               </form>
             </div>
+            )}
           </div>
         </div>
       </div>
 
-      {/* Success Modal */}
-      {isSuccessModalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in">
-          <div className="bg-card border border-border rounded-2xl max-w-md w-full p-6 shadow-xl space-y-5 text-center">
-            <div className="w-14 h-14 bg-emerald-100 dark:bg-emerald-950/60 rounded-full flex items-center justify-center mx-auto text-emerald-600 dark:text-emerald-400">
-              <CheckCircle2 size={32} />
+      {/* Success Modal using standard UI Modal */}
+      <Modal
+        isOpen={isSuccessModalOpen}
+        onClose={() =>
+          navigate(
+            requestId
+              ? "/dashboard/super-admin?tab=return-approvals"
+              : "/dashboard/super-admin?tab=loans"
+          )
+        }
+        title="Pengembalian Berhasil Dikonfirmasi!"
+        size="md"
+      >
+        <div className="space-y-4">
+          <div className="text-center">
+            <div className="w-12 h-12 bg-emerald-100 dark:bg-emerald-950/60 rounded-full flex items-center justify-center mx-auto text-emerald-600 dark:text-emerald-400 mb-2">
+              <CheckCircle2 size={28} />
             </div>
 
-            <div>
-              <h2 className="text-lg font-bold text-foreground">Pengembalian Berhasil Dikonfirmasi!</h2>
-              <p className="text-xs text-muted-foreground mt-1">
-                Berita acara sah telah diterbitkan dan stok eksemplar buku telah disinkronkan.
-              </p>
-              {successReceiptNo && (
-                <div className="mt-3 inline-block px-3 py-1.5 bg-muted rounded-lg border border-border">
-                  <span className="text-[11px] font-mono font-bold text-foreground">
-                    No. Berita Acara: {successReceiptNo}
-                  </span>
-                </div>
-              )}
-            </div>
+            <p className="text-xs text-muted-foreground mt-1">
+              Berita acara sah telah diterbitkan. Anda dapat langsung mencetak resi pengembalian tanpa harus mengunduh berkas.
+            </p>
+            {successReceiptNo && (
+              <div className="mt-2 inline-block px-3 py-1 bg-muted rounded-lg border border-border">
+                <span className="text-[11px] font-mono font-bold text-foreground">
+                  No. Berita Acara: {successReceiptNo}
+                </span>
+              </div>
+            )}
+          </div>
 
-            <div className="pt-2 flex flex-col sm:flex-row gap-2.5">
-              <Button
-                type="button"
-                onClick={handleDownloadPdf}
-                variant="outline"
-                className="flex-1 flex items-center justify-center gap-1.5 font-medium text-xs border-emerald-500/30 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-950/30"
-              >
-                <FileDown size={14} />
-                Unduh Tanda Terima (PDF)
-              </Button>
-              <Button
-                type="button"
-                onClick={() => navigate(requestId ? "/dashboard/super-admin?tab=return-approvals" : "/dashboard/super-admin?tab=loans")}
-                className="flex-1 text-xs"
-              >
-                Ke Dashboard
-              </Button>
-            </div>
+          {/* Receipt Preview */}
+          <div className="max-h-[46vh] overflow-y-auto p-1 rounded-xl bg-muted/40 border border-border/60">
+            {currentReceiptData && <ReturnReceiptCard data={currentReceiptData} />}
+          </div>
+
+          {/* Actions matching standard dashboard modal button styles */}
+          <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-border">
+            <button
+              type="button"
+              onClick={() =>
+                navigate(
+                  requestId
+                    ? "/dashboard/super-admin?tab=return-approvals"
+                    : "/dashboard/super-admin?tab=loans"
+                )
+              }
+              className="h-9 rounded-lg border border-border px-4 text-sm font-medium text-muted-foreground hover:bg-muted cursor-pointer transition-colors"
+            >
+              Ke Dashboard
+            </button>
+            <button
+              type="button"
+              onClick={handleDownloadPdf}
+              className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-border px-4 text-sm font-medium text-foreground hover:bg-muted cursor-pointer transition-colors"
+            >
+              <FileDown size={15} />
+              Unduh Tanda Terima (PDF)
+            </button>
+            <button
+              type="button"
+              onClick={handlePrintReceipt}
+              className="inline-flex h-9 items-center gap-2 rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90 cursor-pointer shadow-xs transition-colors"
+            >
+              <Printer size={15} />
+              Cetak Resi Langsung
+            </button>
           </div>
         </div>
+      </Modal>
+      {/* Floating Receipt Modal */}
+      {isReceiptModalOpen && loan && (
+        <ReturnReceiptModal
+          isOpen={isReceiptModalOpen}
+          onClose={() => setIsReceiptModalOpen(false)}
+          loan={loan}
+          receiptData={currentReceiptData || undefined}
+          onDownloadPdf={handleDownloadPdf}
+        />
       )}
     </div>
   );

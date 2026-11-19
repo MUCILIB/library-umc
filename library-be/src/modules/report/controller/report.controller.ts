@@ -1,6 +1,9 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { type Request, type Response, type NextFunction } from "express";
 import reportService from "../service/report.service";
+import { db } from "../../../db";
+import { studyPrograms, faculties } from "../../../db/schema";
+import { eq } from "drizzle-orm";
 import {
   getPopularBooksQuerySchema,
   exportLoansQuerySchema,
@@ -83,7 +86,7 @@ class ReportController {
     }
   }
 
-  // GET /reports/loans/export?format=csv|pdf&status=approved&from=2025-01-01&to=2025-12-31
+  // GET /reports/loans/export?format=csv|pdf&status=approved&from=2025-01-01&to=2025-12-31&studyProgramId=1
   async exportLoans(req: Request, res: Response, next: NextFunction) {
     try {
       const validation = exportLoansQuerySchema.safeParse(req.query);
@@ -91,17 +94,37 @@ class ReportController {
         return sendValidationError(res, validation.error.flatten());
       }
 
-      const { format, status, from, to } = validation.data;
+      const { format, status, from, to, studyProgramId, facultyId } = validation.data;
 
       const { data } = await reportService.getLoanReport({
         status,
         from,
-        to
+        to,
+        studyProgramId,
+        facultyId
       });
+
+      let subtitle = "";
+      if (studyProgramId) {
+        const sp = await db.query.studyPrograms.findFirst({
+          where: eq(studyPrograms.id, studyProgramId)
+        });
+        if (sp) {
+          subtitle = `Program Studi: ${sp.name}`;
+        }
+      } else if (facultyId) {
+        const fac = await db.query.faculties.findFirst({
+          where: eq(faculties.id, facultyId)
+        });
+        if (fac) {
+          subtitle = `Fakultas: ${fac.name}`;
+        }
+      }
 
       const rows = data.map((loan) => ({
         memberName: (loan as any).member?.user?.name ?? "-",
         memberEmail: (loan as any).member?.user?.email ?? "-",
+        faculty: (loan as any).member?.faculty ?? "-",
         bookTitle: (loan as any).item?.bibliography?.title ?? "-",
         ISBN: (loan as any).item?.bibliography?.isbn ?? (loan as any).item?.bibliography?.isbnIssn ?? "-",
         status: (loan as any).status,
@@ -124,21 +147,28 @@ class ReportController {
         return reportService.exportLoansToPDF(
           res,
           pdfRows,
-          "Laporan Peminjaman Buku"
+          "Laporan Peminjaman Buku",
+          subtitle || undefined
         );
       }
 
       // Default: CSV
-      return reportService.exportToCSV(res, "Laporan Peminjaman", rows, [
-        { key: "memberName", header: "Nama Peminjam" },
-        { key: "memberEmail", header: "Email" },
-        { key: "bookTitle", header: "Judul Buku" },
-        { key: "ISBN", header: "ISBN" },
-        { key: "status", header: "Status" },
-        { key: "borrowDate", header: "Tgl Pinjam" },
-        { key: "dueDate", header: "Tgl Jatuh Tempo" },
-        { key: "returnDate", header: "Tgl Kembali" }
-      ]);
+      return reportService.exportToCSV(
+        res,
+        subtitle ? `Laporan Peminjaman (${subtitle})` : "Laporan Peminjaman",
+        rows,
+        [
+          { key: "memberName", header: "Nama Peminjam" },
+          { key: "memberEmail", header: "Email" },
+          { key: "faculty", header: "Fakultas" },
+          { key: "bookTitle", header: "Judul Buku" },
+          { key: "ISBN", header: "ISBN" },
+          { key: "status", header: "Status" },
+          { key: "borrowDate", header: "Tgl Pinjam" },
+          { key: "dueDate", header: "Tgl Jatuh Tempo" },
+          { key: "returnDate", header: "Tgl Kembali" }
+        ]
+      );
     } catch (error) {
       next(error);
     }

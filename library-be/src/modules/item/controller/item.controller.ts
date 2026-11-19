@@ -60,6 +60,16 @@ export class ItemController {
     } catch (error) { next(error); }
   }
 
+  async standardize(req: Request, res: Response, next: NextFunction) {
+    try {
+      const bibId = req.params.bibliographyId as string;
+      const customPrefix = req.body?.customPrefix as string | undefined;
+      const result = await itemService.standardizeCodes(bibId, customPrefix);
+      if (!result.success) return sendError(res, result.message, 400);
+      sendSuccess(res, result.message, result.data);
+    } catch (error) { next(error); }
+  }
+
   async update(req: Request, res: Response, next: NextFunction) {
     try {
       const validation = updateItemSchema.safeParse(req.body);
@@ -152,8 +162,16 @@ export class ItemController {
     try {
       const bibId = req.params.bibliographyId as string;
       const pattern = (req.query?.pattern || req.body?.pattern) as string | undefined;
+      const colTypeCode = (req.query?.collectionTypeCode as string) || undefined;
+      const publishYear = req.query?.publishYear ? Number(req.query.publishYear) : undefined;
       if (!bibId) return sendError(res, "bibliographyId required", 400);
-      const code = await itemService.generateItemCodePreview(bibId, pattern);
+
+      let code: string;
+      if (bibId === "preview" || bibId === "new") {
+        code = await itemService.generateCodePreview(colTypeCode, publishYear);
+      } else {
+        code = await itemService.generateItemCodePreview(bibId, pattern);
+      }
       sendSuccess(res, "Generated item code", { itemCode: code });
     } catch (error) { next(error); }
   }

@@ -1,5 +1,5 @@
 import { db } from "../../../db";
-import { eq, and, sql, isNull } from "drizzle-orm";
+import { eq, and, sql, isNull, or, ilike, inArray } from "drizzle-orm";
 import {
   items,
   loans,
@@ -109,6 +109,27 @@ export class LoanService {
       throw new Error("Buku ini sedang tidak tersedia untuk dipinjam");
     }
 
+    // Validasi Klasifikasi Koleksi (Buku Referensi R hanya bisa dibaca di tempat)
+    const targetBib = await db.query.bibliographies.findFirst({
+      where: eq(bibliographies.id, targetBibId),
+      with: { collectionType: true }
+    });
+
+    const itemWithCt = await db.query.items.findFirst({
+      where: eq(items.id, item.id),
+      with: { collectionType: true }
+    });
+
+    const isReference =
+      (itemWithCt?.collectionType && (itemWithCt.collectionType.canBeBorrowed === false || itemWithCt.collectionType.code === "R")) ||
+      (targetBib?.collectionType && (targetBib.collectionType.canBeBorrowed === false || targetBib.collectionType.code === "R"));
+
+    if (isReference) {
+      throw new Error(
+        "Buku ini termasuk koleksi Referensi (R) dan HANYA DAPAT DIBACA DI TEMPAT perpustakaan (tidak dapat dipinjam keluar)."
+      );
+    }
+
     // Generate token & expire (20 menit) untuk verifikasi di tempat
     const token = crypto.randomBytes(16).toString("hex");
     const expiresAt = new Date(Date.now() + 20 * 60 * 1000); // 20 menit
@@ -141,6 +162,271 @@ export class LoanService {
 
     return { ...loan, qrCodeUrl };
   }
+
+  /**
+   * 1b. Peminjaman Langsung di Tempat oleh Petugas (Direct Staff Loan)
+   * Skenario: Mahasiswa sudah memiliki kartu anggota tetapi tidak membawa HP
+   */
+  async createDirectLoan(
+    staffUserId: string,
+    payload: {
+      memberIdentifier: string;
+      itemIdentifier: string;
+      loanDate?: string;
+      dueDate?: string;
+      durationDays?: number;
+      notes?: string;
+    }
+  ) {
+    const cleanMemberId = payload.memberIdentifier.trim();
+    const isMemberUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(cleanMemberId);
+
+    const memberConditions = [isNull(members.deletedAt)];
+    if (isMemberUUID) {
+      memberConditions.push(
+        or(
+          eq(members.id, cleanMemberId),
+          ilike(members.cardNumber, cleanMemberId),
+          ilike(members.nimNidn, cleanMemberId)
+        )!
+      );
+    } else {
+      memberConditions.push(
+        or(
+          ilike(members.cardNumber, cleanMemberId),
+          ilike(members.nimNidn, cleanMemberId)
+        )!
+      );
+    }
+
+    let member = await db.query.members.findFirst({
+      where: and(...memberConditions),
+      with: { user: true }
+    });
+
+    if (!member) {
+      const matchedUser = await db.query.Users.findFirst({
+        where: and(
+          isNull(Users.deletedAt),
+          or(ilike(Users.email, cleanMemberId), ilike(Users.name, cleanMemberId))
+        ),
+        with: { member: true }
+      });
+      if (matchedUser?.member) {
+        member = { ...matchedUser.member, user: matchedUser };
+      }
+    }
+
+    if (!member) {
+      throw new Error(
+        `Data pemustaka tidak ditemukan berdasarkan identifikasi '${cleanMemberId}'. Pastikan Nomor Kartu Anggota atau NIM/NIDN sudah benar.`
+      );
+    }
+
+    if (member.cardStatus !== "active" || !member.cardNumber) {
+      throw new Error(
+        `Kartu anggota ${member.user?.name || "pemustaka"} belum aktif atau belum diterbitkan (Status: ${member.cardStatus}). Peminjaman mandiri di tempat memerlukan kartu aktif.`
+      );
+    }
+
+    if (member.cardExpiresAt && new Date(member.cardExpiresAt) < new Date()) {
+      throw new Error(
+        `Masa berlaku kartu anggota ${member.user?.name || "pemustaka"} telah kedaluwarsa pada ${new Date(member.cardExpiresAt).toLocaleDateString("id-ID")}. Harap perpanjang masa aktif kartu terlebih dahulu.`
+      );
+    }
+
+    // Periksa denda tertunggak
+    const unpaidFines = await db
+      .select({ amount: fines.amount })
+      .from(fines)
+      .innerJoin(loans, eq(fines.loanId, loans.id))
+      .where(
+        and(
+          eq(loans.memberId, member.id),
+          eq(fines.status, "unpaid"),
+          isNull(fines.deletedAt)
+        )
+      );
+    if (unpaidFines.length > 0) {
+      const totalFine = unpaidFines.reduce((acc, curr) => acc + Number(curr.amount || 0), 0);
+      throw new Error(
+        `Pemustaka memiliki ${unpaidFines.length} denda tertunggak sebesar Rp ${totalFine.toLocaleString("id-ID")}. Harap selesaikan denda terlebih dahulu.`
+      );
+    }
+
+    // Periksa batas peminjaman aktif
+    const activeLoans = await db.query.loans.findMany({
+      where: and(
+        eq(loans.memberId, member.id),
+        inArray(loans.status, ["approved", "extended"]),
+        isNull(loans.deletedAt)
+      )
+    });
+    if (activeLoans.length >= 3) {
+      throw new Error(
+        `Pemustaka telah mencapai kuota maksimal peminjaman aktif (${activeLoans.length}/3 buku).`
+      );
+    }
+
+    // Periksa keterlambatan pengembalian
+    const todayStr = new Date().toISOString().split("T")[0];
+    const hasOverdue = activeLoans.some((l) => l.dueDate < todayStr);
+    if (hasOverdue) {
+      throw new Error(
+        "Pemustaka memiliki buku yang terlambat dikembalikan. Harap kembalikan buku tersebut terlebih dahulu."
+      );
+    }
+
+    // Identifikasi Item / Eksemplar
+    const cleanItemId = payload.itemIdentifier.trim();
+    const isItemUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(cleanItemId);
+
+    const itemConditions = [isNull(items.deletedAt)];
+    if (isItemUUID) {
+      itemConditions.push(
+        or(
+          eq(items.id, cleanItemId),
+          ilike(items.itemCode, cleanItemId),
+          ilike(items.inventoryCode, cleanItemId),
+          ilike(items.qrToken, cleanItemId)
+        )!
+      );
+    } else {
+      itemConditions.push(
+        or(
+          ilike(items.itemCode, cleanItemId),
+          ilike(items.inventoryCode, cleanItemId),
+          ilike(items.qrToken, cleanItemId)
+        )!
+      );
+    }
+
+    let item = await db.query.items.findFirst({
+      where: and(...itemConditions),
+      with: {
+        collectionType: true,
+        bibliography: {
+          with: {
+            bibliographyAuthors: { with: { author: true } },
+            collectionType: true
+          }
+        }
+      }
+    });
+
+    // Jika identifier berupa UUID bibliografi, cari eksemplar pertama yang tersedia
+    if (!item && isItemUUID) {
+      item = await db.query.items.findFirst({
+        where: and(
+          eq(items.bibliographyId, cleanItemId),
+          eq(items.status, "available"),
+          isNull(items.deletedAt)
+        ),
+        with: {
+          collectionType: true,
+          bibliography: {
+            with: {
+              bibliographyAuthors: { with: { author: true } },
+              collectionType: true
+            }
+          }
+        }
+      });
+    }
+
+    if (!item) {
+      throw new Error(
+        `Buku / Eksemplar tidak ditemukan berdasarkan identifikasi '${cleanItemId}'. Pastikan Barcode, Kode Item, atau No. Inventaris sudah tepat.`
+      );
+    }
+
+    // Validasi Klasifikasi Koleksi (Buku Referensi R hanya bisa dibaca di tempat)
+    const isReference =
+      ((item as any).collectionType && (!(item as any).collectionType.canBeBorrowed || (item as any).collectionType.code === "R")) ||
+      ((item as any).bibliography?.collectionType && (!(item as any).bibliography.collectionType.canBeBorrowed || (item as any).bibliography.collectionType.code === "R"));
+
+    if (isReference) {
+      throw new Error(
+        `Eksemplar [${item.itemCode}] termasuk koleksi Referensi (R) dan HANYA DAPAT DIBACA DI TEMPAT perpustakaan (tidak dapat dipinjam keluar).`
+      );
+    }
+
+    if (item.status !== "available") {
+      throw new Error(
+        `Eksemplar [${item.itemCode}] sedang berstatus '${item.status}' dan tidak tersedia untuk dipinjam.`
+      );
+    }
+
+    // Hitung tanggal peminjaman dan jatuh tempo
+    const durationDays = payload.durationDays && payload.durationDays > 0 ? payload.durationDays : 7;
+    const finalLoanDate = payload.loanDate || todayStr;
+    const calculatedDue = new Date(new Date(finalLoanDate).getTime() + durationDays * 24 * 60 * 60 * 1000)
+      .toISOString()
+      .split("T")[0];
+    const finalDueDate = payload.dueDate || calculatedDue;
+
+    // Eksekusi transaksi langsung status approved
+    const createdLoan = await db.transaction(async (tx) => {
+      const [newLoan] = await tx
+        .insert(loans)
+        .values({
+          memberId: member.id,
+          itemId: item.id,
+          status: "approved",
+          approvedBy: staffUserId,
+          loanDate: finalLoanDate,
+          dueDate: finalDueDate,
+          notes: payload.notes || "Peminjaman langsung di tempat oleh petugas perpustakaan",
+          verificationToken: null,
+          verificationExpiresAt: null
+        })
+        .returning();
+
+      await tx
+        .update(items)
+        .set({ status: "loaned", updatedAt: new Date() })
+        .where(eq(items.id, item.id));
+
+      await syncCollectionAvailableStock(tx, item.bibliographyId);
+
+      return newLoan;
+    });
+
+    const fullLoan = await db.query.loans.findFirst({
+      where: eq(loans.id, createdLoan.id),
+      with: {
+        member: {
+          with: { user: true }
+        },
+        item: {
+          with: {
+            bibliography: {
+              with: {
+                bibliographyAuthors: { with: { author: true } }
+              }
+            }
+          }
+        }
+      }
+    });
+
+    // Kirim notifikasi email ke pemustaka secara asynchronous (jika email tersedia)
+    if (fullLoan?.member?.user?.email) {
+      try {
+        await notificationService.sendLoansNotification(
+          fullLoan.member.user.email,
+          fullLoan.member.user.name,
+          fullLoan.item?.bibliography?.title ?? "Buku",
+          fullLoan.dueDate
+        );
+      } catch (err) {
+        console.warn("[LoanService] Gagal mengirim notifikasi email peminjaman langsung:", err);
+      }
+    }
+
+    return fullLoan;
+  }
+
 
   /**
    * 2. Admin Scan / Check Token
@@ -1088,7 +1374,7 @@ export class LoanService {
 
     // Box data
     const startY = doc.y;
-    doc.rect(40, startY, 515, 175).strokeColor("#CBD5E1").lineWidth(1).stroke();
+    doc.rect(40, startY, 515, 195).strokeColor("#CBD5E1").lineWidth(1).stroke();
 
     doc.fontSize(9).fillColor("#0F172A");
     const memberCodeVal =
@@ -1101,6 +1387,7 @@ export class LoanService {
     const fields = [
       ["Nama Peminjam / Anggota", ": " + ((loan.member as any)?.user?.name || (loan.member as any)?.name || "-")],
       ["Nomor Induk / Kode Member", ": " + memberCodeVal],
+      ["Fakultas / Unit", ": " + ((loan.member as any)?.faculty || "-")],
       ["Judul Buku / Bahan Pustaka", ": " + ((loan.item as any)?.bibliography?.title || "-")],
       ["No. Inventaris / Kode Eksemplar", ": " + ((loan.item as any)?.inventoryCode || (loan.item as any)?.itemCode || "-")],
       ["Tanggal Peminjaman", ": " + (loan.loanDate || "-")],

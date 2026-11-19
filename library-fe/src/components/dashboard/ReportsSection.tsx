@@ -22,6 +22,7 @@ import { API_BASE_URL } from "@/utils/api-config";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/useToast";
 import { analyzeReportCsv } from "@/utils/dashboardReportImport";
+import ExportReportModal, { type ReportType } from "@/components/dashboard/reports/ExportReportModal";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -65,6 +66,8 @@ export default function ReportsSection({
   const [customStartDate, setCustomStartDate] = useState("");
   const [customEndDate, setCustomEndDate] = useState("");
   const [visitorFilter, setVisitorFilter] = useState<"all" | "physical" | "web">("all");
+  const [isExportModalOpen, setIsExportModalOpen] = useState(false);
+  const [exportModalType, setExportModalType] = useState<ReportType>("loans");
 
   const [stats, setStats] = useState({
     totalVisitors: 0,
@@ -334,89 +337,56 @@ export default function ReportsSection({
           {/* Export Dropdown */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <button className="flex items-center gap-2 bg-primary text-white px-5 py-2.5 rounded-xl font-bold text-sm hover:bg-primary/90 transition-colors shadow-sm shadow-red-500/20">
+              <button
+                type="button"
+                className="flex items-center gap-2 bg-primary text-white px-5 py-2.5 rounded-xl font-bold text-sm hover:bg-primary/90 transition-colors shadow-sm shadow-red-500/20"
+              >
                 <DownloadCloud size={18} />
                 Export Laporan
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent
               align="end"
-              className="w-56 p-2 rounded-2xl shadow-xl border-border bg-card"
+              className="w-60 p-2 rounded-2xl shadow-xl border-border bg-card"
             >
               <div className="px-3 py-2 text-[11px] font-bold text-muted-foreground uppercase tracking-wider">
-                Format Laporan (PDF)
+                Pilih Jenis Laporan
               </div>
               <DropdownMenuItem
-                onClick={() =>
-                  window.open(
-                    `${API_BASE_URL}/api/reports/loans/export?format=pdf`,
-                    "_blank"
-                  )
-                }
-                className="px-3 py-2.5 rounded-xl text-sm font-semibold cursor-pointer text-muted-foreground focus:bg-muted focus:text-primary"
+                onClick={() => {
+                  setExportModalType("loans");
+                  setIsExportModalOpen(true);
+                }}
+                className="px-3 py-2.5 rounded-xl text-sm font-semibold cursor-pointer text-foreground focus:bg-muted focus:text-primary"
               >
                 Laporan Peminjaman
               </DropdownMenuItem>
               <DropdownMenuItem
-                onClick={() =>
-                  window.open(
-                    `${API_BASE_URL}/api/reports/fines/export?format=pdf`,
-                    "_blank"
-                  )
-                }
-                className="px-3 py-2.5 rounded-xl text-sm font-semibold cursor-pointer text-muted-foreground focus:bg-muted focus:text-primary"
+                onClick={() => {
+                  setExportModalType("bibliographies");
+                  setIsExportModalOpen(true);
+                }}
+                className="px-3 py-2.5 rounded-xl text-sm font-semibold cursor-pointer text-foreground focus:bg-muted focus:text-primary"
+              >
+                Katalog Koleksi Buku
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => {
+                  setExportModalType("items");
+                  setIsExportModalOpen(true);
+                }}
+                className="px-3 py-2.5 rounded-xl text-sm font-semibold cursor-pointer text-foreground focus:bg-muted focus:text-primary"
+              >
+                Eksemplar / Salinan Buku
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => {
+                  setExportModalType("fines");
+                  setIsExportModalOpen(true);
+                }}
+                className="px-3 py-2.5 rounded-xl text-sm font-semibold cursor-pointer text-foreground focus:bg-muted focus:text-primary"
               >
                 Laporan Denda
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={() =>
-                  window.open(
-                    `${API_BASE_URL}/api/reports/fines/export?format=pdf&status=paid&month=${selectedMonth}&year=${selectedYear}`,
-                    "_blank"
-                  )
-                }
-                className="px-3 py-2.5 rounded-xl text-sm font-semibold cursor-pointer text-muted-foreground focus:bg-muted focus:text-primary"
-              >
-                Denda Bulanan
-              </DropdownMenuItem>
-
-              <div className="h-px bg-muted my-1 mx-2" />
-
-              <div className="px-3 py-2 text-[11px] font-bold text-muted-foreground uppercase tracking-wider">
-                Format Excel (CSV)
-              </div>
-              <DropdownMenuItem
-                onClick={() =>
-                  window.open(
-                    `${API_BASE_URL}/api/reports/loans/export?format=csv`,
-                    "_blank"
-                  )
-                }
-                className="px-3 py-2.5 rounded-xl text-sm font-semibold cursor-pointer text-muted-foreground focus:bg-muted focus:text-blue-600 dark:text-blue-400"
-              >
-                Laporan Peminjaman
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={() =>
-                  window.open(
-                    `${API_BASE_URL}/api/reports/fines/export?format=csv`,
-                    "_blank"
-                  )
-                }
-                className="px-3 py-2.5 rounded-xl text-sm font-semibold cursor-pointer text-muted-foreground focus:bg-muted focus:text-blue-600 dark:text-blue-400"
-              >
-                Laporan Denda
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={() =>
-                  window.open(
-                    `${API_BASE_URL}/api/reports/fines/export?format=csv&status=paid&month=${selectedMonth}&year=${selectedYear}`,
-                    "_blank"
-                  )
-                }
-                className="px-3 py-2.5 rounded-xl text-sm font-semibold cursor-pointer text-muted-foreground focus:bg-muted focus:text-blue-600 dark:text-blue-400"
-              >
-                Denda Bulanan
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -757,6 +727,11 @@ export default function ReportsSection({
           </div>
         </div>
       </div>
+      <ExportReportModal
+        isOpen={isExportModalOpen}
+        onClose={() => setIsExportModalOpen(false)}
+        initialType={exportModalType}
+      />
     </div>
   );
 }

@@ -390,11 +390,18 @@ const BookList = ({
           {currentItems.map((bibliography) => {
             const status = getBookStatus(bibliography);
             const isEbook = bibliography.type === "ebook";
+            const isReference = Boolean(
+              bibliography.collectionType?.canBeBorrowed === false ||
+              bibliography.collectionType?.code === "R"
+            );
             const seedColor = generateColorFromSeed(bibliography.id || bibliography.title);
             const isSaved = !!savedMap[bibliography.id];
 
             // Category tags
             const tags: string[] = [];
+            if (bibliography.collectionType?.name) {
+              tags.push(bibliography.collectionType.name);
+            }
             if (Array.isArray(bibliography.subjects) && bibliography.subjects.length > 0) {
               bibliography.subjects.slice(0, 2).forEach((s) => {
                 if (s?.name) tags.push(s.name);
@@ -444,8 +451,13 @@ const BookList = ({
                     )}
 
                     {/* Status Badge Mengambang di Pojok Kanan Atas Cover */}
-                    <div className="absolute top-2 right-2 sm:top-2.5 sm:right-2.5 z-10">
-                      {status === "available" ? (
+                    <div className="absolute top-2 right-2 sm:top-2.5 sm:right-2.5 z-10 flex flex-col items-end gap-1">
+                      {isReference ? (
+                        <span className="inline-flex items-center gap-1 sm:gap-1.5 px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full text-[10px] sm:text-[11px] font-semibold bg-amber-50/95 backdrop-blur-xs text-amber-800 dark:text-amber-300 border border-amber-200/90 shadow-xs">
+                          <span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+                          Baca di Tempat (R)
+                        </span>
+                      ) : status === "available" ? (
                         <span className="inline-flex items-center gap-1 sm:gap-1.5 px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full text-[10px] sm:text-[11px] font-semibold bg-emerald-50/95 backdrop-blur-xs text-emerald-600 border border-emerald-100/90 shadow-xs">
                           <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
                           Tersedia

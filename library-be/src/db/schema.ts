@@ -123,7 +123,12 @@ export const gmds = pgTable("gmds", {
 export const collectionTypes = pgTable("collection_types", {
   id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
   name: varchar("name", { length: 100 }).notNull(),
-  code: varchar("code", { length: 50 }),
+  code: varchar("code", { length: 50 }).notNull().default("S"),
+  canBeBorrowed: boolean("can_be_borrowed").notNull().default(true),
+  description: text("description"),
+  colorTag: varchar("color_tag", { length: 50 }),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
   deletedAt: timestamp("deleted_at")
 });
 
@@ -796,6 +801,8 @@ export const repositoryProposals = pgTable("repository_proposals", {
   advisorName1: varchar("advisor_name_1", { length: 150 }).notNull(),
   advisorName2: varchar("advisor_name_2", { length: 150 }),
   documentCategory: varchar("document_category", { length: 50 }).default("PROPOSAL"),
+  chapter: varchar("chapter", { length: 50 }).default("FULL_TEXT"), // FULL_TEXT, FRONT_MATTER, BAB_1, BAB_2, BAB_3, BAB_4, BAB_5, BACK_MATTER, OTHER
+  chapterTitle: varchar("chapter_title", { length: 255 }), // Misal: "Pendahuluan", "Tinjauan Pustaka", "Metodologi Penelitian"
   status: varchar("status", { length: 30 }).notNull().default("SUBMITTED"), // SUBMITTED, UNDER_REVIEW, REVISION_REQUIRED, APPROVED, ARCHIVED
   storagePath: text("storage_path").notNull(),
   fileSize: integer("file_size").notNull(),

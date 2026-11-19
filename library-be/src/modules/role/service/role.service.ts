@@ -1,6 +1,6 @@
 import { db } from "../../../db";
 import { roles, rolePermissions, Users } from "../../../db/schema";
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import auditService from "../../audit/service/audit.service";
 import { rolePermissionsSchema } from "../role.validation";
 import type { AuditContext } from "../../audit/audit.types";
@@ -71,13 +71,54 @@ export class RoleService {
             "reports",
           ].includes(menu.key);
 
+          const isPublicViewMenu = ["bibliographies", "ebooks", "repository"].includes(menu.key);
+          const isMemberRole = ["student", "external", "lecturer", "dosen", "mahasiswa"].includes(sysRole.id);
+          const isLecturerRole = ["lecturer", "dosen"].includes(sysRole.id);
+          const isLecturerAllowedAdd = ["recommendations"].includes(menu.key);
+
+          const canView =
+            isSuperAdmin ||
+            (isStaff && isStaffAllowedMenu) ||
+            (isMemberRole && isPublicViewMenu) ||
+            (isLecturerRole && menu.key === "recommendations");
+
           await db.insert(rolePermissions).values({
             roleId: sysRole.id,
             menuKey: menu.key,
-            canView: isSuperAdmin || (isStaff && isStaffAllowedMenu),
-            canAdd: isSuperAdmin || (isStaff && isStaffAllowedMenu && !["reports"].includes(menu.key)),
+            canView,
+            canAdd: isSuperAdmin || (isStaff && isStaffAllowedMenu && !["reports"].includes(menu.key)) || (isLecturerRole && isLecturerAllowedAdd),
             canEdit: isSuperAdmin || (isStaff && isStaffAllowedMenu && !["reports", "importData", "exportData"].includes(menu.key)),
             canDelete: isSuperAdmin || (isStaff && ["items", "ebooks"].includes(menu.key)),
+          });
+        }
+      }
+    }
+
+    // Pastikan hak akses melihat katalog koleksi buku & repositori aktif untuk seluruh member/external/student
+    const memberRoles = ["student", "external", "lecturer", "dosen", "mahasiswa"];
+    for (const roleId of memberRoles) {
+      for (const menuKey of ["bibliographies", "ebooks", "repository"]) {
+        const perm = await db
+          .select()
+          .from(rolePermissions)
+          .where(and(eq(rolePermissions.roleId, roleId), eq(rolePermissions.menuKey, menuKey)))
+          .limit(1);
+
+        if (perm.length > 0) {
+          if (!perm[0].canView) {
+            await db
+              .update(rolePermissions)
+              .set({ canView: true, updatedAt: new Date() })
+              .where(eq(rolePermissions.id, perm[0].id));
+          }
+        } else {
+          await db.insert(rolePermissions).values({
+            roleId,
+            menuKey,
+            canView: true,
+            canAdd: false,
+            canEdit: false,
+            canDelete: false,
           });
         }
       }
@@ -419,8 +460,11 @@ export class RoleService {
 
     for (const menu of SIDEBAR_MENUS) {
       const found = map.get(menu.key);
+      const isPublicViewMenu = ["bibliographies", "ebooks", "repository"].includes(menu.key);
+      const isMemberRole = ["student", "external", "lecturer", "dosen", "mahasiswa"].includes(userRole);
+
       result[menu.key] = {
-        canView: found ? Boolean(found.canView) : false,
+        canView: (found ? Boolean(found.canView) : false) || (isMemberRole && isPublicViewMenu),
         canAdd: found ? Boolean(found.canAdd) : false,
         canEdit: found ? Boolean(found.canEdit) : false,
         canDelete: found ? Boolean(found.canDelete) : false,

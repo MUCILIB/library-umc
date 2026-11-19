@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import {
   Book,
   Loader2,
@@ -13,11 +13,18 @@ import {
   Image as ImageIcon,
   UploadCloud,
   Check,
+  Sparkles,
+  Bookmark,
+  Tag,
+  Package,
+  Lock,
 } from "lucide-react";
+import { analyzeItemCodeStructure } from "@/utils/itemCodeHelper";
 import { useToast } from "@/hooks/useToast";
 import { cleanIsbn } from "@/utils/format";
 import { resolveCoverUrl } from "@/utils/imageUrl";
 import { API_BASE_URL } from "@/utils/api-config";
+import { cn } from "@/lib/utils";
 import {
   Select,
   SelectContent,
@@ -42,6 +49,10 @@ import {
   itemApi,
   facultyApi,
   studyProgramApi,
+  collectionTypeApi,
+  type CollectionType,
+  gmdApi,
+  type Gmd,
 } from "@/api/client";
 
 export interface BibliographyFormProps {
@@ -71,11 +82,11 @@ function BibliographyForm({ bib, onClose, onSuccess }: BibliographyFormProps) {
     sor: bib?.sor || "",
     description: bib?.description || "",
     type: bib?.type || "physical_book",
+    collectionTypeId: bib?.collectionTypeId?.toString() || (bib as any)?.collectionType?.id?.toString() || "",
     image: bib?.image || "",
     isPopular: bib?.isPopular || false,
     publisherName: bib?.publisher?.name || "",
-    // Defaults to Text GMD
-    gmdId: bib?.gmd?.id?.toString() || "1",
+    gmdId: bib?.gmd?.id?.toString() || (bib as any)?.gmdId?.toString() || "",
     publishPlace: bib?.publicationPlace?.name || "",
   });
 
@@ -104,6 +115,10 @@ function BibliographyForm({ bib, onClose, onSuccess }: BibliographyFormProps) {
   const [selectedFacultyIds, setSelectedFacultyIds] = useState<number[]>(bib?.faculties?.map((f: any) => f.id) || []);
   const [selectedStudyProgramIds, setSelectedStudyProgramIds] = useState<number[]>(bib?.studyPrograms?.map((sp: any) => sp.id) || []);
 
+  // Collection Types & GMD Options
+  const [collectionTypes, setCollectionTypes] = useState<CollectionType[]>([]);
+  const [gmdOptions, setGmdOptions] = useState<Gmd[]>([]);
+
     // Duplicate detection
   useEffect(() => {
     const title = formData.title.trim();
@@ -129,13 +144,41 @@ function BibliographyForm({ bib, onClose, onSuccess }: BibliographyFormProps) {
   useEffect(() => {
     const loadOptions = async () => {
       try {
-        const [facRes, spRes] = await Promise.all([
+        const [facRes, spRes, colRes, gmdRes] = await Promise.all([
           facultyApi.list(),
           studyProgramApi.list(),
+          collectionTypeApi.list(),
+          gmdApi.list(),
         ]);
         if (facRes.data) setFacultyOptions(facRes.data);
         if (spRes.data) setStudyProgramOptions(spRes.data);
-      } catch {}
+        if (colRes.data) {
+          setCollectionTypes(colRes.data);
+          if (colRes.data.length > 0) {
+            setFormData((prev) => {
+              if (prev.collectionTypeId) return prev;
+              const matchingCol = bib?.collectionTypeId
+                ? colRes.data.find((c) => c.id === bib.collectionTypeId)
+                : (bib as any)?.collectionType?.id
+                ? colRes.data.find((c) => c.id === (bib as any).collectionType.id)
+                : colRes.data.find((c) => c.code === "S") || colRes.data[0];
+              return { ...prev, collectionTypeId: matchingCol ? matchingCol.id.toString() : "" };
+            });
+          }
+        }
+        if (gmdRes.data) {
+          setGmdOptions(gmdRes.data);
+          if (!bib && gmdRes.data.length > 0) {
+            setFormData((prev) => {
+              if (prev.gmdId) return prev;
+              const defaultGmd = gmdRes.data.find((g) => g.name.toLowerCase().includes("inti")) || gmdRes.data[0];
+              return { ...prev, gmdId: defaultGmd ? defaultGmd.id.toString() : "" };
+            });
+          }
+        }
+      } catch (err) {
+        console.error("Gagal memuat master options:", err);
+      }
     };
     loadOptions();
   }, []);
@@ -176,6 +219,82 @@ function BibliographyForm({ bib, onClose, onSuccess }: BibliographyFormProps) {
   const filteredStudyPrograms = selectedFacultyIds.length > 0
     ? studyProgramOptions.filter((sp) => selectedFacultyIds.includes(sp.facultyId))
     : studyProgramOptions;
+
+  // Helper untuk mendapatkan huruf pertama judul buku (lowercase)
+  const getTitleFirstLetter = (title: string): string => {
+    if (!title.trim()) return "-";
+    const match = title.trim().match(/[a-zA-Z0-9]/);
+    return match ? match[0].toLowerCase() : title.trim().charAt(0).toLowerCase();
+  };
+
+  // Helper untuk mendapatkan 3 huruf pengarang (uppercase)
+  const getAuthorThreeLetters = (authorName: string): string => {
+    if (!authorName.trim()) return "PEN";
+    const clean = authorName
+      .replace(/^(Dr\.|Prof\.|Ir\.|Drs\.|Dra\.|Hj\.|H\.|K\.H\.)\s+/i, "")
+      .replace(/,.*$/, "")
+      .trim();
+    const parts = clean.split(/\s+/).filter(Boolean);
+    const mainWord = parts.length > 1 ? parts[parts.length - 1] : parts[0] || "";
+    const letters = mainWord.replace(/[^a-zA-Z]/g, "").slice(0, 3).toUpperCase();
+    return letters ? letters.padEnd(3, "X") : "PEN";
+  };
+
+  // Generator Call Number Standar (DDC + 3 Huruf Penulis + 1 Huruf Pertama Judul)
+  const generateCallNumberFromBib = () => {
+    const ddc = formData.classification.trim() || "000";
+
+    // 3 huruf nama utama / keluarga pengarang
+    const primaryAuthor = authors.find((a) => a.name.trim()) || { name: "" };
+    const authorCode = getAuthorThreeLetters(primaryAuthor.name);
+
+    // 1 huruf kecil dari huruf pertama judul buku
+    const titleChar = getTitleFirstLetter(formData.title);
+    const titleLetter = titleChar === "-" ? "a" : titleChar;
+
+    // Prefix R jika tipe koleksi adalah Referensi
+    const selectedCol = collectionTypes.find((c) => c.id.toString() === formData.collectionTypeId);
+    const isRef = selectedCol?.code === "R" || selectedCol?.canBeBorrowed === false;
+    const prefix = isRef ? "R " : "";
+
+    const generated = `${prefix}${ddc} ${authorCode} ${titleLetter}`.trim();
+    setFormData((prev) => ({ ...prev, callNumber: generated }));
+  };
+
+  const parsedCallNumber = useMemo(() => {
+    const raw = formData.callNumber.trim();
+    const primaryAuthor = authors.find((a) => a.name.trim()) || { name: "" };
+    const dynamicAuthor = primaryAuthor.name.trim() ? getAuthorThreeLetters(primaryAuthor.name) : "SAM";
+    const dynamicTitleLetter = formData.title.trim() ? getTitleFirstLetter(formData.title) : "-";
+    const dynamicDdc = formData.classification.trim() || "658.8";
+
+    const selectedCol = collectionTypes.find((c) => c.id.toString() === formData.collectionTypeId);
+    const isRef = selectedCol?.code === "R" || selectedCol?.canBeBorrowed === false;
+
+    if (!raw) {
+      return {
+        prefix: isRef ? "R" : "",
+        ddc: dynamicDdc,
+        author: dynamicAuthor,
+        title: dynamicTitleLetter,
+      };
+    }
+    const parts = raw.split(/\s+/).filter(Boolean);
+    if (parts.length >= 3 && parts[0].toUpperCase() === "R") {
+      return {
+        prefix: "R",
+        ddc: parts[1] || dynamicDdc,
+        author: parts[2] || dynamicAuthor,
+        title: parts.slice(3).join(" ") || dynamicTitleLetter,
+      };
+    }
+    return {
+      prefix: isRef ? "R" : "",
+      ddc: parts[0] || dynamicDdc,
+      author: parts[1] || dynamicAuthor,
+      title: parts.slice(2).join(" ") || dynamicTitleLetter,
+    };
+  }, [formData.callNumber, formData.classification, formData.title, formData.collectionTypeId, authors, collectionTypes]);
 
   const handleIsbnChange = (val: string) => {
     // Strip everything except digits and x/X
@@ -223,12 +342,79 @@ function BibliographyForm({ bib, onClose, onSuccess }: BibliographyFormProps) {
   // New items added locally (for new bibliography)
   const [localNewItems, setLocalNewItems] = useState<Array<{ itemCode: string; inventoryCode?: string; locationId: number; locationName: string }>>([]);
 
-  // Form for adding single copy
-  const [polaKodeItem, setPolaKodeItem] = useState("");
-  const [inventoryCodeInput, setInventoryCodeInput] = useState("");
+  // Form for adding copies (Format standar selaras dengan modal dialog tambah eksemplar)
+  const [quantity, setQuantity] = useState<string>("1");
+  const [codePrefix, setCodePrefix] = useState<string>("");
+  const [customCodePrefix, setCustomCodePrefix] = useState<boolean>(false);
+  const [serverNewPrefix, setServerNewPrefix] = useState<string>("");
   const [selectedLocationId, setSelectedLocationId] = useState("");
   const [step3Error, setStep3Error] = useState<string | null>(null);
-  const [generatingCode, setGeneratingCode] = useState(false);
+  const [savingCopies, setSavingCopies] = useState<boolean>(false);
+  const [standardizing, setStandardizing] = useState<boolean>(false);
+
+  // Deteksi otomatis apakah buku bertipe Referensi (Prefix R) atau Sirkulasi (Prefix S)
+  const isReferenceBook = useMemo(() => {
+    // 1. Cek dari formData.collectionTypeId
+    if (formData.collectionTypeId && collectionTypes.length > 0) {
+      const ct = collectionTypes.find((c) => c.id.toString() === formData.collectionTypeId);
+      if (ct) {
+        const code = (ct.code || "").trim().toUpperCase();
+        const name = (ct.name || "").trim().toLowerCase();
+        if (code === "R" || code === "REF" || code.startsWith("R")) return true;
+        if (name.includes("referensi") || name.includes("reference")) return true;
+        if (ct.canBeBorrowed === false) return true;
+      }
+      if (formData.collectionTypeId === "2") return true;
+    }
+    // 2. Cek dari data bib jika sedang edit
+    if (bib) {
+      const ct = bib.collectionType;
+      if (ct) {
+        const code = (ct.code || "").trim().toUpperCase();
+        const name = (ct.name || "").trim().toLowerCase();
+        if (code === "R" || code === "REF" || code.startsWith("R")) return true;
+        if (name.includes("referensi") || name.includes("reference")) return true;
+        if (ct.canBeBorrowed === false) return true;
+      }
+      if (bib.collectionTypeId === 2) return true;
+    }
+    return false;
+  }, [formData.collectionTypeId, collectionTypes, bib]);
+
+  useEffect(() => {
+    if (bib) return;
+    const prefix = isReferenceBook ? "R" : "S";
+    const year = (formData.publishYear ? parseInt(formData.publishYear, 10) : null) || new Date().getFullYear();
+    itemApi.generateCode("new", `?collectionTypeCode=${prefix}&publishYear=${year}`)
+      .then((res) => {
+        const genCode = res.data?.itemCode || "";
+        const m = genCode.match(/^([A-Z0-9_.-]+-\d{4}-[A-Z0-9]+)/i);
+        if (m) setServerNewPrefix(m[1].toUpperCase());
+      })
+      .catch(() => {});
+  }, [bib, isReferenceBook, formData.publishYear]);
+
+  // Analisis struktur aturan kode eksemplar buku (pola tunggal konsisten)
+  const structureAnalysis = useMemo(() => {
+    const prefix = isReferenceBook ? "R" : "S";
+    const year =
+      (formData.publishYear ? parseInt(formData.publishYear, 10) : null) ||
+      bib?.publishYear ||
+      new Date().getFullYear();
+    const existing = bib ? itemsList : localNewItems;
+    const fallbackSeq = serverNewPrefix ? (serverNewPrefix.split("-")[2] || "10001") : "10001";
+    const analysis = analyzeItemCodeStructure(existing, prefix, year, fallbackSeq);
+    if (!bib && localNewItems.length === 0 && serverNewPrefix) {
+      analysis.basePrefix = serverNewPrefix;
+    }
+    return analysis;
+  }, [bib, itemsList, localNewItems, isReferenceBook, formData.publishYear, serverNewPrefix]);
+
+  // Auto-sinkronisasi awalan barcode (codePrefix) mengikuti aturan kode buku
+  useEffect(() => {
+    if (customCodePrefix && !structureAnalysis.isLocked) return;
+    setCodePrefix(structureAnalysis.basePrefix);
+  }, [structureAnalysis, customCodePrefix]);
 
   const loadLocationsList = async () => {
     try {
@@ -244,31 +430,6 @@ function BibliographyForm({ bib, onClose, onSuccess }: BibliographyFormProps) {
       }
     } catch (err) {
       console.error("Gagal memuat lokasi", err);
-    }
-  };
-
-  const handleGenerateCode = async () => {
-    if (!bib && localNewItems.length === 0) {
-      setStep3Error("Simpan bibliografi terlebih dahulu, atau tambahkan item manual");
-      return;
-    }
-    const bibId = bib?.id;
-    if (!bibId) {
-      setStep3Error("Bibliografi belum disimpan. Gunakan input manual untuk kode item.");
-      return;
-    }
-    setGeneratingCode(true);
-    setStep3Error(null);
-    try {
-      const res = await itemApi.generateCode(bibId, polaKodeItem.trim() || undefined);
-      setPolaKodeItem(res.data.itemCode);
-      if (!inventoryCodeInput) {
-        setInventoryCodeInput(res.data.itemCode);
-      }
-    } catch (err: unknown) {
-      setStep3Error(err instanceof Error ? err.message : "Gagal generate kode item");
-    } finally {
-      setGeneratingCode(false);
     }
   };
 
@@ -325,55 +486,144 @@ function BibliographyForm({ bib, onClose, onSuccess }: BibliographyFormProps) {
     setSubjects(subjects.filter((_, i) => i !== idx));
   };
 
-  // Step 3 Copy Handlers
-  const handleSaveCopy = async () => {
+  // Penyeragaman kode eksemplar jika terdapat format lama / tidak konsisten
+  const handleStandardizeCodes = async () => {
+    setStandardizing(true);
     setStep3Error(null);
-    const code = polaKodeItem.trim();
-    if (!code) {
-      setStep3Error("Kode item tidak boleh kosong");
-      return;
+    try {
+      const targetPrefix = structureAnalysis.basePrefix;
+      if (bib) {
+        const res = await itemApi.standardizeCodes(bib.id, targetPrefix);
+        toast.success(
+          "Kode Eksemplar Diseragamkan",
+          res.message || "Semua salinan fisik kini seragam mengikuti aturan buku."
+        );
+        await loadItems();
+      } else {
+        const standardized = localNewItems.map((item, idx) => {
+          const code = `${targetPrefix}-c${idx + 1}`;
+          return {
+            ...item,
+            itemCode: code,
+            inventoryCode: `INV-${code}`,
+          };
+        });
+        setLocalNewItems(standardized);
+        toast.success(
+          "Kode Eksemplar Diseragamkan",
+          `Berhasil menyeragamkan ${standardized.length} salinan fisik lokal.`
+        );
+      }
+      setCustomCodePrefix(false);
+      setCodePrefix(targetPrefix);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Gagal menyeragamkan kode eksemplar";
+      setStep3Error(msg);
+      toast.error("Gagal Menyeragamkan", msg);
+    } finally {
+      setStandardizing(false);
     }
+  };
+
+  // Step 3 Copy Handlers (Format standar UMC: S/R-tahun-no.urut-c1, c2, ...)
+  const handleSaveCopies = async () => {
+    setStep3Error(null);
+    const qtyNum = Math.max(1, Math.min(50, parseInt(quantity, 10) || 1));
+
     if (!selectedLocationId) {
-      setStep3Error("Silakan pilih tipe koleksi / lokasi");
+      setStep3Error("Silakan pilih lokasi rak penyimpanan");
       return;
     }
 
-    const locId = parseInt(selectedLocationId);
+    const locId = parseInt(selectedLocationId, 10);
     const locObj = locations.find((l) => l.id === locId);
-    const locName = locObj ? `${locObj.room} - ${locObj.rack} - ${locObj.shelf}` : "Sirkulasi";
-    const invCode = inventoryCodeInput.trim() || undefined;
+    const locName = locObj
+      ? `${locObj.room} - Rak ${locObj.rack}${locObj.shelf ? ` (${locObj.shelf})` : ""}`
+      : "Sirkulasi";
+
+    const defaultYear =
+      (formData.publishYear ? parseInt(formData.publishYear, 10) : null) ||
+      bib?.publishYear ||
+      new Date().getFullYear();
+    const fallbackPrefix = `${isReferenceBook ? "R" : "S"}-${defaultYear}-10001`;
+    const cleanPrefix =
+      (structureAnalysis.isLocked ? structureAnalysis.basePrefix : codePrefix.trim().replace(/\s+/g, "")) ||
+      fallbackPrefix;
+
+    const startSeq = structureAnalysis.nextSeq;
 
     if (bib) {
-      // Editing Mode: Save to DB immediately
+      // Editing Mode: Simpan ke DB secara langsung via bulkCreate
+      setSavingCopies(true);
       try {
-        setItemsLoading(true);
-        const res = await itemApi.create(bib.id, {
-          itemCode: code,
-          locationId: locId,
-          inventoryCode: invCode,
-          status: "available",
+        const colTypeId = formData.collectionTypeId
+          ? parseInt(formData.collectionTypeId, 10)
+          : bib.collectionTypeId || undefined;
+
+        const itemsToCreate = Array.from({ length: qtyNum }, (_, idx) => {
+          const seq = startSeq + idx;
+          const eksemplarTag = `c${seq}`;
+          const code = `${cleanPrefix}-${eksemplarTag}`;
+          return {
+            itemCode: code,
+            inventoryCode: `INV-${code}`,
+            callNumber: formData.callNumber || bib.callNumber || undefined,
+            locationId: locId,
+            collectionTypeId: colTypeId,
+          };
         });
-        if (res.success) {
-          setPolaKodeItem("");
-          setInventoryCodeInput("");
-          await loadItems();
-        } else {
-          setStep3Error(res.message || "Gagal menyimpan eksemplar");
+
+        const res = await itemApi.bulkCreate(bib.id, {
+          items: itemsToCreate,
+          defaults: {
+            locationId: locId,
+            collectionTypeId: colTypeId,
+          },
+        });
+
+        if (res.data?.errors && res.data.errors.length > 0) {
+          toast.error("Peringatan", "Sebagian kode item bentrok / dilewati.");
         }
+
+        toast.success(
+          "Eksemplar Ditambahkan",
+          `Berhasil menambahkan ${qtyNum} eksemplar fisik untuk "${formData.title || bib.title}".`
+        );
+        await loadItems();
+        setQuantity("1");
       } catch (err: unknown) {
-        setStep3Error(err instanceof Error ? err.message : "Kode item sudah digunakan atau error sistem");
+        setStep3Error(err instanceof Error ? err.message : "Gagal menambahkan eksemplar");
       } finally {
-        setItemsLoading(false);
+        setSavingCopies(false);
       }
     } else {
-      // Creating Mode: Save to local state array
-      if (localNewItems.some((item) => item.itemCode.toLowerCase() === code.toLowerCase())) {
-        setStep3Error("Kode item sudah ada di daftar");
+      // Creating Mode: Simpan ke local state array
+      const itemsToCreate = Array.from({ length: qtyNum }, (_, idx) => {
+        const seq = startSeq + idx;
+        const eksemplarTag = `c${seq}`;
+        const code = `${cleanPrefix}-${eksemplarTag}`;
+        return {
+          itemCode: code,
+          inventoryCode: `INV-${code}`,
+          locationId: locId,
+          locationName: locName,
+        };
+      });
+
+      const duplicate = itemsToCreate.find((c) =>
+        localNewItems.some((existing) => existing.itemCode.toLowerCase() === c.itemCode.toLowerCase())
+      );
+      if (duplicate) {
+        setStep3Error(`Kode item "${duplicate.itemCode}" sudah ada di daftar.`);
         return;
       }
-      setLocalNewItems([...localNewItems, { itemCode: code, inventoryCode: invCode, locationId: locId, locationName: locName }]);
-      setPolaKodeItem("");
-      setInventoryCodeInput("");
+
+      setLocalNewItems((prev) => [...prev, ...itemsToCreate]);
+      toast.success(
+        "Eksemplar Ditambahkan",
+        `Berhasil menambahkan ${qtyNum} salinan fisik buku ke daftar.`
+      );
+      setQuantity("1");
     }
   };
 
@@ -517,6 +767,7 @@ function BibliographyForm({ bib, onClose, onSuccess }: BibliographyFormProps) {
         subjects: subjects.filter((s) => s.name.trim()),
         unlistedAuthorsLabel: unlistedAuthorsLabel || undefined,
         gmdId: formData.gmdId ? parseInt(formData.gmdId) : undefined,
+        collectionTypeId: formData.collectionTypeId ? parseInt(formData.collectionTypeId) : undefined,
         facultyIds: selectedFacultyIds.length > 0 ? selectedFacultyIds : (bib ? [] : undefined),
         studyProgramIds: selectedStudyProgramIds.length > 0 ? selectedStudyProgramIds : (bib ? [] : undefined),
       };
@@ -762,43 +1013,95 @@ function BibliographyForm({ bib, onClose, onSuccess }: BibliographyFormProps) {
 
               <div>
                 <label className="mb-2 block text-xs font-bold text-foreground uppercase tracking-wider">
-                  General Material Designation (GMD)
+                  Klasifikasi Koleksi (S/R) <span className="text-destructive">*</span>
+                </label>
+                <Select
+                  value={formData.collectionTypeId}
+                  onValueChange={(val) => setFormData({ ...formData, collectionTypeId: val })}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Pilih Klasifikasi Koleksi (Sirkulasi / Referensi)" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {collectionTypes.map((ct) => (
+                      <SelectItem key={ct.id} value={ct.id.toString()}>
+                        <div className="flex items-center gap-2">
+                          <span
+                            className={cn(
+                              "px-1.5 py-0.5 rounded text-[10px] font-bold font-mono",
+                              !ct.canBeBorrowed
+                                ? "bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300"
+                                : "bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300"
+                            )}
+                          >
+                            Prefix: {ct.code}
+                          </span>
+                          <span>{ct.name}</span>
+                          {!ct.canBeBorrowed ? (
+                            <span className="text-xs text-amber-700 dark:text-amber-400 italic">(Hanya Baca di Tempat)</span>
+                          ) : (
+                            <span className="text-xs text-emerald-700 dark:text-emerald-400 italic">(Dapat Dipinjam)</span>
+                          )}
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="mt-1 text-[11px] text-muted-foreground">
+                  Format barcode: <strong>S/R-tahun-no.urut-eksemplar</strong> (S = Sirkulasi dapat dipinjam keluar, R = Referensi hanya baca di tempat).
+                </p>
+              </div>
+
+              <div>
+                <label className="mb-2 block text-xs font-bold text-foreground uppercase tracking-wider">
+                  GMD / Spesifikasi Isi
                 </label>
                 <Select
                   value={formData.gmdId}
                   onValueChange={(val) => setFormData({ ...formData, gmdId: val })}
                 >
                   <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Pilih GMD" />
+                    <SelectValue placeholder="Pilih GMD / Spesifikasi Isi" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="1">Text</SelectItem>
-                    <SelectItem value="2">Electronic</SelectItem>
-                    <SelectItem value="3">Audio</SelectItem>
-                    <SelectItem value="4">Video</SelectItem>
-                    <SelectItem value="5">Image</SelectItem>
-                    <SelectItem value="6">Map</SelectItem>
-                    <SelectItem value="7">Mixed</SelectItem>
+                    {gmdOptions.length > 0 ? (
+                      gmdOptions.map((g) => (
+                        <SelectItem key={g.id} value={g.id.toString()}>
+                          {g.name}
+                        </SelectItem>
+                      ))
+                    ) : (
+                      <>
+                        <SelectItem value="1">Buku Inti</SelectItem>
+                        <SelectItem value="2">Buku Pendukung</SelectItem>
+                        <SelectItem value="3">Buku Referensi</SelectItem>
+                        <SelectItem value="4">Koleksi Muatan Lokal</SelectItem>
+                        <SelectItem value="5">Koleksi Khusus</SelectItem>
+                      </>
+                    )}
                   </SelectContent>
                 </Select>
+                <p className="mt-1 text-[11px] text-muted-foreground">
+                  Spesifikasi konten isi (misal: Buku Inti, Buku Pendukung, Koleksi Referensi, dsb).
+                </p>
               </div>
 
-              <div>
+              <div className="md:col-span-2">
                 <label className="mb-2 block text-xs font-bold text-foreground uppercase tracking-wider">
-                  Tipe Koleksi
+                  Format Media Koleksi
                 </label>
                 <Select
                   value={formData.type}
                   onValueChange={(val) => setFormData({ ...formData, type: val })}
                 >
                   <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Pilih Tipe Koleksi" />
+                    <SelectValue placeholder="Pilih Format Media" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="physical_book">Buku Fisik</SelectItem>
-                    <SelectItem value="ebook">E-Book</SelectItem>
-                    <SelectItem value="journal">Jurnal</SelectItem>
-                    <SelectItem value="thesis">Skripsi</SelectItem>
+                    <SelectItem value="ebook">E-Book Digital</SelectItem>
+                    <SelectItem value="journal">Jurnal Ilmiah</SelectItem>
+                    <SelectItem value="thesis">Skripsi / Tugas Akhir</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -1013,28 +1316,85 @@ function BibliographyForm({ bib, onClose, onSuccess }: BibliographyFormProps) {
 
               <div>
                 <label className="mb-2 block text-xs font-bold text-foreground uppercase tracking-wider">
-                  Klasifikasi (Classification)
+                  Klasifikasi Subjek DDC (Classification)
                 </label>
                 <input
                   type="text"
-                  placeholder="Kode klasifikasi DDC"
+                  placeholder="Contoh: 658.8 (DDC)"
                   value={formData.classification}
                   onChange={(e) => setFormData({ ...formData, classification: e.target.value })}
-                  className="w-full rounded-lg border border-border px-3 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary bg-background"
+                  className="w-full rounded-lg border border-border px-3 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary bg-background font-mono"
                 />
+                <p className="mt-1 text-[11px] text-muted-foreground">
+                  Nomor DDC tema/subjek buku (misal: <strong>658.8</strong> Pemasaran, <strong>658.5</strong> Produksi, <strong>005.1</strong> Pemrograman).
+                </p>
               </div>
 
               <div>
-                <label className="mb-2 block text-xs font-bold text-foreground uppercase tracking-wider">
-                  Nomor Panggil (Call Number)
-                </label>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="block text-xs font-bold text-foreground uppercase tracking-wider">
+                    Nomor Panggil (Call Number)
+                  </label>
+                  <button
+                    type="button"
+                    onClick={generateCallNumberFromBib}
+                    className="inline-flex items-center gap-1 rounded-md bg-primary/10 text-primary px-2.5 py-1 text-xs font-semibold hover:bg-primary/20 transition-all cursor-pointer shadow-xs"
+                    title="Buat otomatis dari DDC + 3 huruf penulis + 1 huruf judul"
+                  >
+                    <Sparkles className="size-3.5" />
+                    Auto-Generate
+                  </button>
+                </div>
                 <input
                   type="text"
-                  placeholder="Contoh: 371.4 ANW b"
+                  placeholder="Contoh: 658.8 SAM p"
                   value={formData.callNumber}
                   onChange={(e) => setFormData({ ...formData, callNumber: e.target.value })}
-                  className="w-full rounded-lg border border-border px-3 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary bg-background"
+                  className="w-full rounded-lg border border-border px-3 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary bg-background font-mono"
                 />
+                <p className="mt-1 text-[11px] text-muted-foreground">
+                  Format label punggung: <strong>[DDC] [3 Huruf Pengarang] [1 Huruf Pertama Judul]</strong> (Contoh: {parsedCallNumber.ddc} {parsedCallNumber.author} {parsedCallNumber.title}).
+                </p>
+              </div>
+
+              {/* Pratinjau Label Punggung Buku (Spine Label Preview) Sesuai Standar UMC */}
+              <div className="md:col-span-2 rounded-xl border border-border bg-muted/40 p-4">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <Bookmark className="size-4 text-primary" />
+                      <span className="text-xs font-bold uppercase tracking-wider text-foreground">
+                        Pratinjau Label Punggung Buku (Spine Label)
+                      </span>
+                    </div>
+                    <p className="text-xs text-muted-foreground leading-relaxed max-w-md">
+                      Label fisik yang ditempel pada punggung buku untuk memudahkan penataan dan pencarian buku di rak perpustakaan.
+                    </p>
+                  </div>
+
+                  {/* Visual Label Sticker UMC */}
+                  <div className="shrink-0 w-48 rounded-lg border-2 border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-sm p-3 text-center font-mono">
+                    <div className="text-[9px] font-extrabold tracking-tight text-slate-800 dark:text-slate-200 border-b border-slate-200 dark:border-slate-700 pb-1 mb-1.5 uppercase leading-tight">
+                      Perpustakaan UMC
+                    </div>
+                    <div className="space-y-0.5 text-xs font-bold text-slate-900 dark:text-slate-100">
+                      {parsedCallNumber.prefix && (
+                        <div className="text-amber-600 dark:text-amber-400 text-[11px] font-extrabold">
+                          [{parsedCallNumber.prefix}]
+                        </div>
+                      )}
+                      <div className="text-sm font-black text-primary">
+                        {parsedCallNumber.ddc}
+                      </div>
+                      <div className="tracking-widest font-extrabold">
+                        {parsedCallNumber.author}
+                      </div>
+                      <div className="text-xs lowercase text-muted-foreground font-bold">
+                        {parsedCallNumber.title}
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -1249,121 +1609,252 @@ function BibliographyForm({ bib, onClose, onSuccess }: BibliographyFormProps) {
               Manajemen Inventaris & Salinan Buku
             </h3>
 
-            {/* OPSI POLA KODE ITEM INVENTARISASI */}
-            <div className="border border-border rounded-xl p-5 bg-muted/40 space-y-4">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            {/* RINGKASAN BUKU INDUK (KATALOG) */}
+            <div className="rounded-xl border border-border bg-muted/40 p-4 space-y-2">
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                Buku Induk (Katalog)
+              </p>
+              <p className="text-base font-bold text-foreground line-clamp-2">
+                {formData.title || (bib ? bib.title : "Judul Buku Belum Diisi")}
+              </p>
+              <div className="flex flex-wrap items-center gap-2 pt-0.5 text-xs text-muted-foreground">
+                {(formData.isbn || (bib && bib.isbnIssn)) && (
+                  <span className="rounded bg-background px-2 py-0.5 border border-border font-mono text-[11px]">
+                    {formData.isbn || bib?.isbnIssn}
+                  </span>
+                )}
+
+                {/* Badge Klasifikasi Otomatis */}
+                <span
+                  className={cn(
+                    "inline-flex items-center gap-1 rounded px-2.5 py-0.5 font-bold text-[11px]",
+                    isReferenceBook
+                      ? "bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300"
+                      : "bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300"
+                  )}
+                >
+                  <Tag className="size-3" />
+                  {isReferenceBook
+                    ? "Referensi (Prefix R) • Hanya Baca di Tempat"
+                    : "Sirkulasi (Prefix S) • Dapat Dipinjam Keluar"}
+                </span>
+
+                {(formData.classification || (bib && bib.classification)) && (
+                  <span className="inline-flex items-center gap-1 rounded bg-blue-50 dark:bg-blue-950/60 px-2 py-0.5 font-mono text-[11px] text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-900">
+                    <Bookmark className="size-3" />
+                    DDC: {formData.classification || bib?.classification}
+                  </span>
+                )}
+
+                <span className="inline-flex items-center gap-1 rounded bg-emerald-50 dark:bg-emerald-950/60 px-2 py-0.5 font-medium text-emerald-700 dark:text-emerald-300">
+                  <Package className="size-3" />
+                  Stok saat ini: {bib ? `${bib.availableItems ?? itemsList.length}/${bib.totalItems ?? itemsList.length}` : `${localNewItems.length} salinan baru`}
+                </span>
+              </div>
+            </div>
+
+            {/* FORM TAMBAH EKSEMPLAR FISIK BUKU (SELARAS DENGAN DIALOG MODAL) */}
+            <div className="border border-border rounded-xl p-5 bg-card space-y-4 shadow-2xs">
+              <div className="flex items-center justify-between border-b border-border pb-2.5">
                 <h4 className="text-xs font-bold text-foreground uppercase tracking-wider flex items-center gap-2">
-                  <Plus className="size-4 text-primary" />
-                  POLA KODE BUKU &amp; EKSEMPLAR
+                  <Plus className="size-4 text-emerald-600 dark:text-emerald-400" />
+                  Tambah Eksemplar Fisik Buku
                 </h4>
               </div>
 
-              {/* Guidance Card Antislop */}
-              <div className="rounded-xl border border-blue-200/60 bg-blue-50/50 p-3.5 text-xs text-blue-900 dark:border-blue-900/40 dark:bg-blue-950/30 dark:text-blue-300">
-                <p className="font-bold flex items-center gap-1.5 mb-1 text-[11px] uppercase tracking-wider text-blue-700 dark:text-blue-300">
-                  <Info className="size-3.5 shrink-0" />
-                  Panduan Pola Penomoran Eksemplar
-                </p>
-                <p className="leading-relaxed text-[11px] text-muted-foreground">
-                  Nomor eksemplar dibentuk otomatis berjenjang mengikuti kode buku induk. Masukkan pola dasar atau klik tombol <strong>Generate</strong>.
-                </p>
-                <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-2 text-[10px] font-mono">
-                  <span className="p-1.5 bg-white/80 dark:bg-background/80 rounded border border-blue-100 dark:border-blue-900/60 text-foreground">
-                    Pola: <strong className="text-primary">PND-01</strong> &rarr; Eksemplar: <strong>PND-01-01</strong>, <strong>PND-01-02</strong>
-                  </span>
-                  <span className="p-1.5 bg-white/80 dark:bg-background/80 rounded border border-blue-100 dark:border-blue-900/60 text-foreground">
-                    Pola: <strong className="text-primary">TI-2026-05</strong> &rarr; Eksemplar: <strong>TI-2026-05-01</strong>, <strong>TI-2026-05-02</strong>
-                  </span>
-                </div>
-              </div>
-
               {step3Error && (
-                <p className="text-xs text-destructive font-medium bg-red-50 p-2 rounded border border-red-200">
-                  {step3Error}
-                </p>
+                <div className="rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-xs text-destructive flex items-center gap-2">
+                  <AlertCircle className="size-4 shrink-0" />
+                  <span>{step3Error}</span>
+                </div>
               )}
 
-              <div className="grid gap-4 md:grid-cols-4 items-end">
-                <div>
-                  <label className="mb-2 block text-xs font-medium text-muted-foreground uppercase">
-                    Pola / Kode Item
-                  </label>
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      placeholder="Contoh: PND-01"
-                      value={polaKodeItem}
-                      onChange={(e) => setPolaKodeItem(e.target.value.replace(/\s/g, ""))}
-                      className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary bg-background"
-                    />
-                    <button
-                      type="button"
-                      onClick={handleGenerateCode}
-                      disabled={generatingCode}
-                      className="shrink-0 rounded-lg bg-primary/10 px-3 py-2 text-xs font-semibold text-primary hover:bg-primary/20 transition-all disabled:opacity-50"
-                    >
-                      {generatingCode ? <Loader2 className="size-4 animate-spin" /> : "Generate"}
-                    </button>
+              {/* 1. Jumlah Eksemplar */}
+              <div className="space-y-1.5">
+                <label htmlFor="step3-quantity" className="block text-xs font-semibold text-foreground">
+                  Jumlah Eksemplar Fisik Baru *
+                </label>
+                <div className="flex items-center gap-2">
+                  <input
+                    id="step3-quantity"
+                    type="text"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    value={quantity}
+                    onChange={(e) => {
+                      const onlyDigits = e.target.value.replace(/\D/g, "");
+                      setQuantity(onlyDigits);
+                    }}
+                    onBlur={() => {
+                      const parsed = parseInt(quantity, 10);
+                      if (!parsed || parsed < 1) {
+                        setQuantity("1");
+                      } else if (parsed > 50) {
+                        setQuantity("50");
+                      }
+                    }}
+                    placeholder="Contoh: 5"
+                    className="w-24 rounded-lg border border-border bg-background px-3 py-2 text-sm font-semibold text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                    required
+                  />
+                  <div className="flex gap-1.5">
+                    {[1, 2, 5, 10].map((num) => (
+                      <button
+                        key={num}
+                        type="button"
+                        onClick={() => setQuantity(String(num))}
+                        className={cn(
+                          "rounded-lg border px-2.5 py-1.5 text-xs font-medium transition-colors cursor-pointer",
+                          quantity === String(num)
+                            ? "border-primary bg-primary/10 text-primary font-bold"
+                            : "border-border bg-card text-muted-foreground hover:bg-muted"
+                        )}
+                      >
+                        +{num}
+                      </button>
+                    ))}
                   </div>
                 </div>
+                <p className="text-[11px] text-muted-foreground">
+                  Jumlah salinan fisik buku yang akan didaftarkan ke rak perpustakaan (1-50 buku).
+                </p>
+              </div>
 
-                <div>
-                  <label className="mb-2 block text-xs font-medium text-muted-foreground uppercase">
-                    No. Inventaris
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="Sama dengan kode item jika kosong"
-                    value={inventoryCodeInput}
-                    onChange={(e) => setInventoryCodeInput(e.target.value)}
-                    className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary bg-background"
-                  />
-                </div>
-
-                <div>
-                  <label className="mb-2 block text-xs font-medium text-muted-foreground uppercase">
-                    Tipe Koleksi / Lokasi
-                  </label>
-                  <Select
+              {/* 2. Lokasi Rak */}
+              <div className="space-y-1.5">
+                <label className="block text-xs font-semibold text-foreground">
+                  Lokasi Rak Penyimpanan *
+                </label>
+                {locations.length === 0 ? (
+                  <p className="text-xs text-amber-600">Belum ada data lokasi rak terdaftar.</p>
+                ) : (
+                  <select
                     value={selectedLocationId}
-                    onValueChange={(val) => setSelectedLocationId(val)}
+                    onChange={(e) => setSelectedLocationId(e.target.value)}
+                    className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                    required
                   >
-                    <SelectTrigger className="w-full">
-                      <SelectValue
-                        placeholder={
-                          locations.length === 0
-                            ? "Belum ada data lokasi"
-                            : "Pilih lokasi"
-                        }
-                      />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {locations.map((loc) => (
-                        <SelectItem key={loc.id} value={String(loc.id)}>
-                          {loc.room} - Rak {loc.rack} (Shelf {loc.shelf})
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+                    {locations.map((loc) => (
+                      <option key={loc.id} value={loc.id}>
+                        {loc.room} - Rak {loc.rack}
+                        {loc.shelf ? ` (${loc.shelf})` : ""}
+                      </option>
+                    ))}
+                  </select>
+                )}
+              </div>
 
-                <div>
-                  <button
-                    type="button"
-                    onClick={handleSaveCopy}
-                    className="w-full rounded-lg bg-primary px-6 py-2 text-sm font-semibold text-white hover:bg-primary/95 transition-all"
-                  >
-                    Simpan
-                  </button>
+              {/* 3. Awalan Barcode / Kode Item */}
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <label className="block text-xs font-semibold text-foreground">
+                    Awalan Barcode / Kode Item
+                  </label>
+                  {structureAnalysis.isLocked && (
+                    <span className="inline-flex items-center gap-1 rounded-md bg-secondary text-secondary-foreground border border-border px-2 py-0.5 text-[11px] font-medium">
+                      <Lock className="size-3 text-muted-foreground" />
+                      Aturan Kode Terkunci
+                    </span>
+                  )}
                 </div>
+                <input
+                  type="text"
+                  value={codePrefix}
+                  onChange={(e) => {
+                    if (!structureAnalysis.isLocked) {
+                      setCustomCodePrefix(true);
+                      setCodePrefix(e.target.value.replace(/\s+/g, ""));
+                    }
+                  }}
+                  readOnly={structureAnalysis.isLocked}
+                  placeholder={isReferenceBook ? "Contoh: R-2026-10001" : "Contoh: S-2026-10001"}
+                  className={cn(
+                    "w-full rounded-lg border px-3 py-2 text-sm font-mono font-semibold transition-colors",
+                    structureAnalysis.isLocked
+                      ? "bg-muted text-muted-foreground border-border cursor-not-allowed select-none"
+                      : "bg-background text-foreground border-border focus:outline-none focus:ring-1 focus:ring-primary"
+                  )}
+                />
+                <p className="text-[11px] text-muted-foreground">
+                  Pola salinan baru:{" "}
+                  <span className="font-mono font-semibold text-foreground">
+                    {codePrefix || (isReferenceBook ? "R-2026-10001" : "S-2026-10001")}-c{structureAnalysis.nextSeq}
+                  </span>
+                  <span className="text-muted-foreground/80">
+                    {structureAnalysis.totalItems > 0
+                      ? ` • Melanjutkan eksemplar ke-${structureAnalysis.nextSeq} (saat ini terdaftar ${structureAnalysis.totalItems} eksemplar).`
+                      : " • Melanjutkan nomor urut buku perpustakaan."}
+                  </span>
+                </p>
+              </div>
+
+              {/* Tombol Simpan Eksemplar */}
+              <div className="flex justify-end pt-2">
+                <button
+                  type="button"
+                  onClick={handleSaveCopies}
+                  disabled={savingCopies || locations.length === 0}
+                  className="flex items-center gap-2 rounded-lg bg-emerald-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-emerald-700 transition-colors disabled:opacity-50 cursor-pointer shadow-xs"
+                >
+                  {savingCopies ? (
+                    <>
+                      <Loader2 className="size-4 animate-spin" />
+                      Menyimpan...
+                    </>
+                  ) : (
+                    <>
+                      <Plus className="size-4" />
+                      Simpan Eksemplar
+                    </>
+                  )}
+                </button>
               </div>
             </div>
 
             {/* SALINAN FISIK & LOKASI BUKU */}
             <div className="space-y-3">
+              {/* Notifikasi Standarisasi Kode Eksemplar */}
+              {structureAnalysis.hasInconsistentCodes && (
+                <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-3.5 text-xs text-foreground flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs">
+                  <div className="flex items-start sm:items-center gap-2.5">
+                    <div className="p-1.5 rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400 shrink-0">
+                      <Sparkles className="size-4" />
+                    </div>
+                    <div>
+                      <p className="font-semibold text-foreground text-xs">
+                        Format Kode Belum Seragam
+                      </p>
+                      <p className="text-muted-foreground text-[11px] leading-relaxed">
+                        {structureAnalysis.inconsistentCount} dari {bib ? itemsList.length : localNewItems.length} eksemplar berformat lama. Standar buku ini:{" "}
+                        <span className="font-mono font-semibold text-foreground">{structureAnalysis.basePrefix}</span>
+                      </p>
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={handleStandardizeCodes}
+                    disabled={standardizing}
+                    className="shrink-0 inline-flex items-center justify-center gap-1.5 rounded-lg bg-primary hover:bg-primary/90 text-primary-foreground font-medium px-3.5 py-2 text-xs transition-colors cursor-pointer shadow-xs disabled:opacity-50"
+                  >
+                    {standardizing ? (
+                      <>
+                        <Loader2 className="size-3.5 animate-spin" />
+                        <span>Menyeragamkan...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="size-3.5" />
+                        <span>Seragamkan Kode</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              )}
+
               <div className="flex items-center justify-between">
                 <h4 className="text-xs font-bold text-foreground uppercase tracking-wider">
-                  SALINAN FISIK & LOKASI BUKU
+                  SALINAN FISIK &amp; LOKASI BUKU
                 </h4>
                 <div className="text-sm font-medium text-muted-foreground">
                   Jumlah Salinan:{" "}
@@ -1394,13 +1885,13 @@ function BibliographyForm({ bib, onClose, onSuccess }: BibliographyFormProps) {
                         (itemsList.length === 0 ? (
                           <TableRow>
                             <TableCell colSpan={4} className="px-4 py-8 text-center text-muted-foreground">
-                              Belum ada eksemplar fisik. Silakan input kode item di atas.
+                              Belum ada eksemplar fisik. Silakan tambah eksemplar fisik baru di atas.
                             </TableCell>
                           </TableRow>
                         ) : (
                           itemsList.map((item) => (
                             <TableRow key={item.id} className="border-b border-border hover:bg-muted/30 transition-colors">
-                              <TableCell className="px-4 py-3 font-semibold text-foreground">
+                              <TableCell className="px-4 py-3 font-semibold font-mono text-foreground">
                                 {item.itemCode}
                               </TableCell>
                               <TableCell className="px-4 py-3 text-muted-foreground">
@@ -1424,6 +1915,7 @@ function BibliographyForm({ bib, onClose, onSuccess }: BibliographyFormProps) {
                                   type="button"
                                   onClick={() => handleDeleteCopy(item.id, item.itemCode)}
                                   className="text-red-500 hover:text-red-700 p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-950/50 transition-colors cursor-pointer"
+                                  title="Hapus eksemplar"
                                 >
                                   <Trash2 className="size-4" />
                                 </button>
@@ -1437,13 +1929,13 @@ function BibliographyForm({ bib, onClose, onSuccess }: BibliographyFormProps) {
                         (localNewItems.length === 0 ? (
                           <TableRow>
                             <TableCell colSpan={4} className="px-4 py-8 text-center text-muted-foreground">
-                              Belum ada eksemplar fisik. Silakan input kode item di atas.
+                              Belum ada eksemplar fisik. Silakan tambah eksemplar fisik baru di atas.
                             </TableCell>
                           </TableRow>
                         ) : (
                           localNewItems.map((item, idx) => (
                             <TableRow key={idx} className="border-b border-border hover:bg-muted/30 transition-colors">
-                              <TableCell className="px-4 py-3 font-semibold text-foreground">
+                              <TableCell className="px-4 py-3 font-semibold font-mono text-foreground">
                                 {item.itemCode}
                               </TableCell>
                               <TableCell className="px-4 py-3 text-muted-foreground">
@@ -1459,6 +1951,7 @@ function BibliographyForm({ bib, onClose, onSuccess }: BibliographyFormProps) {
                                   type="button"
                                   onClick={() => handleDeleteCopy(idx, item.itemCode)}
                                   className="text-red-500 hover:text-red-700 p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-950/50 transition-colors cursor-pointer"
+                                  title="Hapus eksemplar"
                                 >
                                   <Trash2 className="size-4" />
                                 </button>
@@ -1726,9 +2219,20 @@ function BibliographyForm({ bib, onClose, onSuccess }: BibliographyFormProps) {
                     <p className="font-medium text-foreground mt-0.5">{formData.publishYear || "-"}</p>
                   </div>
                   <div>
-                    <span className="text-muted-foreground font-semibold">GMD:</span>
+                    <span className="text-muted-foreground font-semibold">Klasifikasi Koleksi:</span>
                     <p className="font-medium text-foreground mt-0.5">
-                      {formData.gmdId === "2" ? "Electronic" : formData.gmdId === "3" ? "Audio" : formData.gmdId === "4" ? "Video" : "Text"}
+                      {collectionTypes.find((c) => c.id.toString() === formData.collectionTypeId)?.name || "-"}
+                      {(() => {
+                        const ct = collectionTypes.find((c) => c.id.toString() === formData.collectionTypeId);
+                        if (!ct) return null;
+                        return ` (${ct.code})${!ct.canBeBorrowed ? " - Baca di Tempat" : ""}`;
+                      })()}
+                    </p>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground font-semibold">GMD / Spesifikasi:</span>
+                    <p className="font-medium text-foreground mt-0.5">
+                      {gmdOptions.find((g) => g.id.toString() === formData.gmdId)?.name || (formData.gmdId ? `GMD #${formData.gmdId}` : "-")}
                     </p>
                   </div>
                   <div>

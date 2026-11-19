@@ -5,6 +5,13 @@ const PHONE_REGEX = /^[0-9+\-\s()]*$/;
 const NIM_REGEX = /^[a-zA-Z0-9.\-/]*$/;
 
 export const updateProfileSchema = z.object({
+  name: z
+    .string()
+    .min(2, "Nama minimal 2 karakter")
+    .max(100, "Nama maksimal 100 karakter")
+    .regex(FORBIDDEN_CHARS_REGEX, "Karakter seperti <, >, ;, \", \\ tidak diperbolehkan")
+    .optional()
+    .or(z.literal("")),
   nimNidn: z
     .string()
     .min(4, "NIM/NIDN minimal 4 karakter")
@@ -40,7 +47,16 @@ export const updateProfileSchema = z.object({
 });
 
 export const approveCardSchema = z.object({
-  cardNumber: z.string().min(6).max(100).optional()
+  cardNumber: z.string().min(6).max(100).optional(),
+  cardExpiresAt: z.string().optional(),
+  durationDays: z.coerce.number().int().positive().optional(),
+});
+
+export const updateCardExpirySchema = z.object({
+  cardExpiresAt: z.string().optional(),
+  durationDays: z.coerce.number().int().positive().optional(),
+}).refine((data) => Boolean(data.cardExpiresAt || data.durationDays), {
+  message: "Tanggal kedaluwarsa (cardExpiresAt) atau durasi hari (durationDays) wajib diisi",
 });
 
 export const rejectCardSchema = z.object({

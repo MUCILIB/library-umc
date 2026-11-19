@@ -42,8 +42,8 @@ export function useBookList(
       credentials: "include",
     });
 
-    // Fallback to public /api/collections if unauthenticated
-    if (response.status === 401) {
+    // Fallback to public /api/collections if unauthenticated or forbidden
+    if (response.status === 401 || response.status === 403) {
       response = await fetch(`${API_BASE_URL}/api/collections?limit=100`, {
         credentials: "include",
       });

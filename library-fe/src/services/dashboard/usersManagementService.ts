@@ -23,6 +23,8 @@ export interface DashboardUser {
   cardNumber?: string | null;
   cardRequestedAt?: string | null;
   cardApprovedAt?: string | null;
+  cardExpiresAt?: string | null;
+  memberId?: string | null;
   cardRejectedAt?: string | null;
   cardRejectedReason?: string | null;
 }
@@ -144,7 +146,11 @@ export const usersManagementService = {
     return jsonOrThrow(res);
   },
 
-  async issueMemberCard(userId: string, cardNumber?: string) {
+  async issueMemberCard(
+    userId: string,
+    cardNumber?: string,
+    options?: { cardExpiresAt?: string; durationDays?: number }
+  ) {
     const res = await fetch(
       `${API_BASE_URL}/api/members/${userId}/card/issue`,
       {
@@ -154,7 +160,11 @@ export const usersManagementService = {
           ...getAuthHeaders(),
         },
         credentials: "include",
-        body: JSON.stringify({ cardNumber })
+        body: JSON.stringify({
+          cardNumber,
+          cardExpiresAt: options?.cardExpiresAt,
+          durationDays: options?.durationDays,
+        })
       }
     );
     return jsonOrThrow(res);
@@ -177,7 +187,11 @@ export const usersManagementService = {
     return data.success && Array.isArray(data.data) ? data.data : [];
   },
 
-  async approveMemberCard(memberId: string, cardNumber?: string) {
+  async approveMemberCard(
+    memberId: string,
+    cardNumber?: string,
+    options?: { cardExpiresAt?: string; durationDays?: number }
+  ) {
     const res = await fetch(
       `${API_BASE_URL}/api/members/${memberId}/card/approve`,
       {
@@ -187,11 +201,35 @@ export const usersManagementService = {
           ...getAuthHeaders(),
         },
         credentials: "include",
-        body: JSON.stringify({ cardNumber })
+        body: JSON.stringify({
+          cardNumber,
+          cardExpiresAt: options?.cardExpiresAt,
+          durationDays: options?.durationDays,
+        }),
       }
     );
     return jsonOrThrow(res);
   },
+
+  async updateCardExpiry(
+    memberId: string,
+    payload: { cardExpiresAt?: string; durationDays?: number }
+  ) {
+    const res = await fetch(
+      `${API_BASE_URL}/api/members/${memberId}/card/expiry`,
+      {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          ...getAuthHeaders(),
+        },
+        credentials: "include",
+        body: JSON.stringify(payload),
+      }
+    );
+    return jsonOrThrow(res);
+  },
+
 
   async rejectMemberCard(memberId: string, reason: string) {
     const res = await fetch(

@@ -76,13 +76,18 @@ export class ExportController {
 
   async exportLoans(req: Request, res: Response, next: NextFunction) {
     try {
-      const { status, startDate, endDate, loanDateFrom, loanDateTo, faculty, search } = req.query as Record<string, string>;
+      const { status, startDate, endDate, loanDateFrom, loanDateTo, faculty, search, delimiter } = req.query as Record<string, string>;
+      const studyProgramId = req.query.studyProgramId ? Number(req.query.studyProgramId) : undefined;
+      const facultyId = req.query.facultyId ? Number(req.query.facultyId) : undefined;
       const csv = await exportService.exportLoans({
         status,
         startDate: startDate || loanDateFrom,
         endDate: endDate || loanDateTo,
         faculty,
         search,
+        studyProgramId: isNaN(studyProgramId!) ? undefined : studyProgramId,
+        facultyId: isNaN(facultyId!) ? undefined : facultyId,
+        delimiter: delimiter === "," ? "," : ";",
       });
       res.setHeader("Content-Type", "text/csv; charset=utf-8");
       res.setHeader("Content-Disposition", 'attachment; filename="loans_export.csv"');

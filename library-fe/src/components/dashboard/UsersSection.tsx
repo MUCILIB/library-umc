@@ -17,6 +17,7 @@ import { CreateUserModal, type CreateUserFormData } from "./users/CreateUserModa
 import { BanUserModal } from "./users/BanUserModal";
 import { DeleteUserModal } from "./users/DeleteUserModal";
 import { ImportUserModal } from "./users/ImportUserModal";
+import { EditCardExpiryModal } from "./users/EditCardExpiryModal";
 
 const ALL_COLUMNS: ColumnDef[] = [
   { key: "user", label: "User" },
@@ -98,6 +99,7 @@ export default function UsersSection() {
   const [recordSavingId, setRecordSavingId] = useState<string | null>(null);
   const [banModalUser, setBanModalUser] = useState<DashboardUser | null>(null);
   const [banReasonInput, setBanReasonInput] = useState("Pelanggaran kebijakan sistem");
+  const [editCardExpiryUser, setEditCardExpiryUser] = useState<DashboardUser | null>(null);
 
   const [showOnlyUnsynced, setShowOnlyUnsynced] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
@@ -420,6 +422,16 @@ export default function UsersSection() {
             onIssueCard={(user) => void handleIssueCard(user)}
             onToggleBan={handleToggleBan}
             onDeleteUser={(user) => setDeleteConfirmUser(user)}
+            onEditCardExpiry={(user) => setEditCardExpiryUser(user)}
+          />
+
+          <EditCardExpiryModal
+            user={editCardExpiryUser}
+            isOpen={Boolean(editCardExpiryUser)}
+            onClose={() => setEditCardExpiryUser(null)}
+            onSuccess={() => {
+              void refetch();
+            }}
           />
 
           <BanUserModal

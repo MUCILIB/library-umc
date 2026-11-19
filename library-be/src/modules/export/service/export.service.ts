@@ -62,6 +62,8 @@ export interface LoanExportFilter {
   faculty?: string;
   search?: string;
   delimiter?: ";" | ",";
+  studyProgramId?: number;
+  facultyId?: number;
 }
 
 export interface UserExportFilter {
@@ -387,6 +389,24 @@ export class ExportService {
     }
     if (filter?.endDate) {
       conditions.push(lte(loans.loanDate, filter.endDate));
+    }
+    if (filter?.studyProgramId) {
+      conditions.push(
+        sql`${loans.itemId} IN (
+          SELECT ${items.id} FROM ${items}
+          INNER JOIN ${bibliographyStudyPrograms} ON ${items.bibliographyId} = ${bibliographyStudyPrograms.bibliographyId}
+          WHERE ${bibliographyStudyPrograms.studyProgramId} = ${filter.studyProgramId}
+        )`
+      );
+    } else if (filter?.facultyId) {
+      conditions.push(
+        sql`${loans.itemId} IN (
+          SELECT ${items.id} FROM ${items}
+          INNER JOIN ${bibliographyStudyPrograms} ON ${items.bibliographyId} = ${bibliographyStudyPrograms.bibliographyId}
+          INNER JOIN ${studyPrograms} ON ${bibliographyStudyPrograms.studyProgramId} = ${studyPrograms.id}
+          WHERE ${studyPrograms.facultyId} = ${filter.facultyId}
+        )`
+      );
     }
 
     const rows = await db.query.loans.findMany({

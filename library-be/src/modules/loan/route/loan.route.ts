@@ -49,6 +49,56 @@ router.post(
 
 /**
  * @swagger
+ * /loans/direct:
+ *   post:
+ *     summary: Input direct loan by staff
+ *     description: Staff inputs loan directly on behalf of a member who has an active card but no smartphone.
+ *     tags: [Loans]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - memberIdentifier
+ *               - itemIdentifier
+ *             properties:
+ *               memberIdentifier:
+ *                 type: string
+ *               itemIdentifier:
+ *                 type: string
+ *               durationDays:
+ *                 type: number
+ *               loanDate:
+ *                 type: string
+ *               dueDate:
+ *                 type: string
+ *               notes:
+ *                 type: string
+ *     responses:
+ *       201:
+ *         description: Direct loan processed successfully
+ *       400:
+ *         description: Validation error or eligibility failure
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden - Staff/Admin only
+ */
+router.post(
+  "/loans/direct",
+  publicApiLimiter,
+  isAuthenticated,
+  requireRole(["super_admin", "staff"]),
+  loanController.createDirectLoan,
+);
+
+
+/**
+ * @swagger
  * /loans/verify/{token}:
  *   get:
  *     summary: Verify loan token

@@ -55,6 +55,20 @@ export interface Bibliography {
     code?: string;
     faculty?: { id: number; name: string };
   }[];
+  collectionTypeId?: number;
+  collectionType?: {
+    id: number;
+    name: string;
+    code: string;
+    canBeBorrowed: boolean;
+    description?: string | null;
+    colorTag?: string | null;
+  };
+  gmdId?: number;
+  gmd?: {
+    id: number;
+    name: string;
+  };
   createdAt?: string;
   updatedAt?: string;
 }

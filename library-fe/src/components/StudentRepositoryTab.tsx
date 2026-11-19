@@ -37,8 +37,29 @@ import {
   Filter,
   Calendar,
   User,
-  ArrowRight
+  ArrowRight,
+  BookOpen
 } from "lucide-react";
+
+export const CHAPTER_OPTIONS = [
+  { value: "BAB_1", label: "BAB 1: Pendahuluan", defaultTitle: "Pendahuluan" },
+  { value: "BAB_2", label: "BAB 2: Tinjauan Pustaka / Landasan Teori", defaultTitle: "Tinjauan Pustaka & Landasan Teori" },
+  { value: "BAB_3", label: "BAB 3: Metodologi Penelitian", defaultTitle: "Metodologi Penelitian" },
+  { value: "BAB_4", label: "BAB 4: Hasil dan Pembahasan", defaultTitle: "Hasil Penelitian dan Pembahasan" },
+  { value: "BAB_5", label: "BAB 5: Penutup / Kesimpulan & Saran", defaultTitle: "Kesimpulan dan Saran" },
+  { value: "FRONT_MATTER", label: "Bagian Awal (Cover, Pengesahan, Abstrak)", defaultTitle: "Cover, Lembar Pengesahan & Abstrak" },
+  { value: "BACK_MATTER", label: "Bagian Akhir (Daftar Pustaka & Lampiran)", defaultTitle: "Daftar Pustaka & Lampiran" },
+  { value: "FULL_TEXT", label: "Naskah Lengkap (Full Text)", defaultTitle: "Naskah Lengkap Skripsi" },
+  { value: "OTHER", label: "Bab Khusus / Lainnya", defaultTitle: "Bagian Khusus Naskah" },
+];
+
+export function getChapterBadge(chapter?: string | null) {
+  if (!chapter || chapter === "FULL_TEXT") return "Full Text";
+  if (chapter === "FRONT_MATTER") return "Bagian Awal";
+  if (chapter === "BACK_MATTER") return "Bagian Akhir";
+  if (chapter.startsWith("BAB_")) return `BAB ${chapter.split("_")[1]}`;
+  return chapter;
+}
 
 export default function StudentRepositoryTab() {
   const { data: sessionData } = authClient.useSession();
@@ -73,7 +94,9 @@ export default function StudentRepositoryTab() {
     advisorName1: "",
     advisorName2: "",
     studyProgramId: 1,
-    documentCategory: "PROPOSAL" as "PROPOSAL" | "THESIS" | "REPORT"
+    documentCategory: "THESIS" as "PROPOSAL" | "THESIS" | "REPORT",
+    chapter: "BAB_1",
+    chapterTitle: "Pendahuluan"
   });
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
@@ -129,13 +152,16 @@ export default function StudentRepositoryTab() {
   const openAddModal = () => {
     setEditingProposal(null);
     setSelectedFile(null);
+    const latestProp = proposals[0];
     setFormData({
-      title: "",
-      abstract: "",
-      advisorName1: "",
-      advisorName2: "",
-      studyProgramId: studyPrograms.length > 0 ? studyPrograms[0].id : 1,
-      documentCategory: "PROPOSAL"
+      title: latestProp?.title || "",
+      abstract: latestProp?.abstract || "",
+      advisorName1: latestProp?.advisorName1 || "",
+      advisorName2: latestProp?.advisorName2 || "",
+      studyProgramId: latestProp?.studyProgramId || (studyPrograms.length > 0 ? studyPrograms[0].id : 1),
+      documentCategory: latestProp?.documentCategory || "THESIS",
+      chapter: "BAB_1",
+      chapterTitle: "Pendahuluan"
     });
     setIsModalOpen(true);
   };
@@ -143,6 +169,7 @@ export default function StudentRepositoryTab() {
   const openEditModal = (item: RepositoryProposal) => {
     setEditingProposal(item);
     setSelectedFile(null);
+    const chapterMatch = CHAPTER_OPTIONS.find((c) => c.value === item.chapter);
     setFormData({
       title: item.title,
       abstract: item.abstract || "",
@@ -150,7 +177,9 @@ export default function StudentRepositoryTab() {
       advisorName2: item.advisorName2 || "",
       studyProgramId:
         item.studyProgramId || (studyPrograms.length > 0 ? studyPrograms[0].id : 1),
-      documentCategory: item.documentCategory
+      documentCategory: item.documentCategory,
+      chapter: item.chapter || "BAB_1",
+      chapterTitle: item.chapterTitle || chapterMatch?.defaultTitle || "Pendahuluan",
     });
     setIsModalOpen(true);
   };
@@ -610,16 +639,30 @@ export default function StudentRepositoryTab() {
                     <span className="text-[10px] sm:text-xs font-bold px-2.5 py-0.5 rounded-full bg-red-100 text-red-800 dark:bg-red-950/60 dark:text-red-300">
                       {getCategoryLabel(item.documentCategory)}
                     </span>
+                    {/* Badge Bab / Bagian Naskah */}
+                    {item.chapter && (
+                      <span className="text-[10px] sm:text-xs font-bold px-2.5 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">
+                        {getChapterBadge(item.chapter)}
+                      </span>
+                    )}
                   </div>
                   <div className="shrink-0 self-start sm:self-auto">
                     {getStatusBadge(item.status)}
                   </div>
                 </div>
 
-                {/* Judul Naskah */}
-                <h4 className="text-sm sm:text-base font-bold text-foreground leading-snug">
-                  {item.title}
-                </h4>
+                {/* Judul Naskah & Keterangan Bab */}
+                <div>
+                  <h4 className="text-sm sm:text-base font-bold text-foreground leading-snug">
+                    {item.title}
+                  </h4>
+                  {item.chapterTitle && (
+                    <p className="text-xs font-semibold text-primary mt-1 flex items-center gap-1.5">
+                      <BookOpen className="size-3.5 shrink-0" />
+                      <span>{getChapterBadge(item.chapter)}: {item.chapterTitle}</span>
+                    </p>
+                  )}
+                </div>
 
                 {/* Structured Metadata Box (Mobile-friendly Grid) */}
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 bg-muted/25 border border-border/60 rounded-xl p-2.5 sm:p-3 text-xs">
@@ -897,6 +940,57 @@ export default function StudentRepositoryTab() {
                   )}
                 </SelectContent>
               </Select>
+            </div>
+          </div>
+
+          {/* Pilihan Bab yang Diunggah & Judul Bab */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 sm:gap-4 p-3.5 rounded-xl border border-primary/20 bg-primary/5">
+            <div>
+              <label className="block text-xs font-bold text-foreground mb-1.5 flex items-center gap-1.5">
+                <BookOpen className="w-3.5 h-3.5 text-primary" />
+                Upload Bab Berapa? *
+              </label>
+              <Select
+                value={formData.chapter}
+                onValueChange={(val) => {
+                  const opt = CHAPTER_OPTIONS.find((c) => c.value === val);
+                  setFormData((prev) => ({
+                    ...prev,
+                    chapter: val,
+                    chapterTitle: opt?.defaultTitle || prev.chapterTitle,
+                  }));
+                }}
+              >
+                <SelectTrigger className="w-full h-10 px-3 rounded-xl border border-border bg-background text-xs sm:text-sm font-semibold">
+                  <SelectValue placeholder="Pilih Bab Naskah" />
+                </SelectTrigger>
+                <SelectContent className="rounded-xl border border-border bg-card shadow-lg z-[10005]">
+                  {CHAPTER_OPTIONS.map((opt) => (
+                    <SelectItem
+                      key={opt.value}
+                      value={opt.value}
+                      className="text-xs sm:text-sm py-2 cursor-pointer font-medium"
+                    >
+                      {opt.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-foreground mb-1.5 flex items-center gap-1.5">
+                <FileText className="w-3.5 h-3.5 text-primary" />
+                Judul / Keterangan Bab *
+              </label>
+              <input
+                type="text"
+                required
+                placeholder="Contoh: Pendahuluan, Tinjauan Pustaka, Hasil & Pembahasan..."
+                value={formData.chapterTitle}
+                onChange={(e) => setFormData({ ...formData, chapterTitle: e.target.value })}
+                className="w-full px-3.5 py-2 rounded-xl border border-border bg-background text-xs sm:text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary font-medium"
+              />
             </div>
           </div>
 

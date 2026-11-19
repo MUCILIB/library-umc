@@ -113,8 +113,29 @@ export function BibliographyTable({
               className="border-b border-border hover:bg-muted/40 transition-colors"
             >
               <TableCell className="px-4 py-3.5">
-                <div className="max-w-xs truncate font-medium text-foreground">
-                  {bib.title}
+                <div className="max-w-xs space-y-1">
+                  <div className="truncate font-medium text-foreground" title={bib.title}>
+                    {bib.title}
+                  </div>
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    {bib.collectionType && (
+                      <span
+                        className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold ${
+                          bib.collectionType.code === "R"
+                            ? "bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300"
+                            : "bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300"
+                        }`}
+                        title={bib.collectionType.canBeBorrowed ? "Koleksi Sirkulasi (Bisa Dipinjam)" : "Koleksi Referensi (Hanya Baca di Tempat)"}
+                      >
+                        {bib.collectionType.code}: {bib.collectionType.name}
+                      </span>
+                    )}
+                    {bib.gmd && (
+                      <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-slate-100 text-slate-700 dark:bg-muted dark:text-slate-300">
+                        {bib.gmd.name}
+                      </span>
+                    )}
+                  </div>
                 </div>
               </TableCell>
               {visibleColumns.has("fakultasProdi") && (

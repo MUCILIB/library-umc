@@ -20,7 +20,9 @@ export const exportLoansQuerySchema = z.object({
       /^\d{4}-\d{2}-\d{2}$/,
       "Format tanggal harus YYYY-MM-DD (contoh: 2025-01-01)"
     )
-    .optional()
+    .optional(),
+  studyProgramId: z.coerce.number().optional(),
+  facultyId: z.coerce.number().optional()
 });
 
 export const exportFinesQuerySchema = z.object({

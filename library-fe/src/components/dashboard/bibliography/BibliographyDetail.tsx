@@ -91,6 +91,25 @@ export function BibliographyDetail({
             {bib.sor && (
               <p className="mt-1 text-sm text-muted-foreground">{bib.sor}</p>
             )}
+            {bib.collectionType && (
+              <div className="mt-2 flex items-center gap-2">
+                <span
+                  className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-bold ${
+                    !bib.collectionType.canBeBorrowed
+                      ? "bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300"
+                      : "bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300"
+                  }`}
+                >
+                  Kode {bib.collectionType.code}: {bib.collectionType.name}
+                  {!bib.collectionType.canBeBorrowed && " (Hanya Baca di Tempat)"}
+                </span>
+                {bib.gmd && (
+                  <span className="rounded-full bg-slate-100 dark:bg-muted px-2.5 py-0.5 text-xs font-medium text-slate-700 dark:text-slate-300">
+                    {bib.gmd.name}
+                  </span>
+                )}
+              </div>
+            )}
           </div>
           <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 dark:bg-emerald-950 px-3 py-1 text-sm font-medium text-emerald-700 dark:text-emerald-400">
             <Package className="size-4" />
@@ -109,7 +128,15 @@ export function BibliographyDetail({
           <MetaField label="Penerbit" value={bib.publisher?.name} />
           <MetaField label="Tahun Terbit" value={bib.publishYear?.toString()} />
           <MetaField label="Bahasa" value={bib.language?.name} />
-          <MetaField label="GMD" value={bib.gmd?.name} />
+          {bib.collectionType && (
+            <MetaField
+              label="Klasifikasi Koleksi"
+              value={`${bib.collectionType.name} (${bib.collectionType.code}) - ${
+                bib.collectionType.canBeBorrowed ? "Bisa Dipinjam" : "Hanya Baca di Tempat"
+              }`}
+            />
+          )}
+          <MetaField label="GMD / Spesifikasi" value={bib.gmd?.name} />
           <MetaField label="Call Number" value={bib.callNumber} />
           <MetaField label="Klasifikasi" value={bib.classification} />
           <MetaField label="Deskripsi Fisik/Kolasi" value={bib.collation} />

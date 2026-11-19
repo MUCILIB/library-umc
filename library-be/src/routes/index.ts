@@ -15,6 +15,7 @@ import { reportRoutes } from "../modules/report/route/report.route";
 import { locationRoutes } from "../modules/location/route/location.route";
 import { facultyRoutes } from "../modules/faculty/route/faculty.route";
 import { studyProgramRoutes } from "../modules/study-program/route/study-program.route";
+import { collectionTypeRoutes } from "../modules/collection-type/route/collection-type.route";
 import bibliographyRoutes from "../modules/bibliography/route/bibliography.route";
 import { collectionRoutes } from "../modules/collection/route/collection.route";
 import importRoutes from "../modules/import/route/import.route";
@@ -98,5 +99,8 @@ router.use(facultyRoutes);
 
 // Study Programs
 router.use(studyProgramRoutes);
+
+// Collection Types / Klasifikasi Buku & GMD
+router.use(collectionTypeRoutes);
 
 export const routes = router;

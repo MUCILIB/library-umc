@@ -66,6 +66,11 @@ describe("CmsSection Component (Focused Sub-Page Views)", () => {
     expect(screen.getByLabelText("Nama Gedung & Lantai")).toBeInTheDocument();
     expect(screen.getByLabelText("URL Iframe Sematan Google Maps")).toBeInTheDocument();
     expect(screen.getByLabelText("Motto Universitas / Perpustakaan")).toBeInTheDocument();
+    expect(screen.getByLabelText("Instagram URL")).toBeInTheDocument();
+    expect(screen.getByLabelText("YouTube URL")).toBeInTheDocument();
+    expect(screen.getByLabelText("WhatsApp Layanan")).toBeInTheDocument();
+    expect(screen.getByLabelText("Facebook URL")).toBeInTheDocument();
+    expect(screen.getByLabelText("Twitter / X URL")).toBeInTheDocument();
   });
 
   it("memanggil updateSetting saat tombol simpan diklik pada sub-halaman banner", async () => {

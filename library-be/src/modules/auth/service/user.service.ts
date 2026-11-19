@@ -182,6 +182,7 @@ export const UserService = {
           memberCardNumber: members.cardNumber,
           memberCardRequestedAt: members.cardRequestedAt,
           memberCardApprovedAt: members.cardApprovedAt,
+          memberCardExpiresAt: members.cardExpiresAt,
           memberCardRejectedAt: members.cardRejectedAt,
           memberCardRejectedReason: members.cardRejectedReason,
           memberNimNidn: members.nimNidn,
@@ -220,6 +221,12 @@ export const UserService = {
           row.memberId && !row.memberDeletedAt
             ? row.memberCardApprovedAt
             : null,
+        cardExpiresAt:
+          row.memberId && !row.memberDeletedAt
+            ? row.memberCardExpiresAt
+            : null,
+        memberId:
+          row.memberId && !row.memberDeletedAt ? row.memberId : null,
         cardRejectedAt:
           row.memberId && !row.memberDeletedAt
             ? row.memberCardRejectedAt

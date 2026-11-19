@@ -8,6 +8,7 @@ import {
   CreditCard,
   RefreshCw,
   Users2,
+  Calendar,
 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -65,6 +66,7 @@ export interface UserTableProps {
   onIssueCard: (user: DashboardUser) => void;
   onToggleBan: (user: DashboardUser) => void;
   onDeleteUser: (user: DashboardUser) => void;
+  onEditCardExpiry?: (user: DashboardUser) => void;
 }
 
 export function getFallbackInitials(name?: string | null): string {
@@ -152,6 +154,7 @@ export function UserTable({
   onIssueCard,
   onToggleBan,
   onDeleteUser,
+  onEditCardExpiry,
 }: UserTableProps) {
   if (loading) {
     return (
@@ -303,6 +306,11 @@ export function UserTable({
                         </span>
                       ) : null}
                     </div>
+                    {user.cardExpiresAt && (
+                      <span className="text-[10px] text-muted-foreground block mt-1 font-medium">
+                        Masa Aktif: {new Date(user.cardExpiresAt).toLocaleDateString("id-ID", { day: "2-digit", month: "short", year: "numeric" })}
+                      </span>
+                    )}
                     {user.cardRejectedReason ? (
                       <p className="max-w-[220px] text-[11px] text-rose-600 truncate mt-1">
                         {user.cardRejectedReason}
@@ -401,16 +409,30 @@ export function UserTable({
                               <RefreshCw size={14} className={`text-sky-600 dark:text-sky-400 ${syncSavingId === user.id ? "animate-spin" : ""}`} />
                               <span>{syncSavingId === user.id ? "Menyinkronkan..." : "Sinkronisasi Member"}</span>
                             </DropdownMenuItem>
-                          ) : user.cardStatus !== "active" ? (
-                            <DropdownMenuItem
-                              onClick={() => onIssueCard(user)}
-                              disabled={issueSavingId === user.id}
-                              className="cursor-pointer text-xs flex items-center gap-2"
-                            >
-                              <CreditCard size={14} className="text-blue-600 dark:text-blue-400" />
-                              <span>{issueSavingId === user.id ? "Menerbitkan..." : "Terbitkan Kartu"}</span>
-                            </DropdownMenuItem>
-                          ) : null}
+                          ) : (
+                            <>
+                              {user.cardStatus !== "active" ? (
+                                <DropdownMenuItem
+                                  onClick={() => onIssueCard(user)}
+                                  disabled={issueSavingId === user.id}
+                                  className="cursor-pointer text-xs flex items-center gap-2"
+                                >
+                                  <CreditCard size={14} className="text-blue-600 dark:text-blue-400" />
+                                  <span>{issueSavingId === user.id ? "Menerbitkan..." : "Terbitkan Kartu"}</span>
+                                </DropdownMenuItem>
+                              ) : null}
+
+                              {onEditCardExpiry && (
+                                <DropdownMenuItem
+                                  onClick={() => onEditCardExpiry(user)}
+                                  className="cursor-pointer text-xs flex items-center gap-2"
+                                >
+                                  <Calendar size={14} className="text-primary" />
+                                  <span>Ubah Masa Aktif Kartu</span>
+                                </DropdownMenuItem>
+                              )}
+                            </>
+                          )}
 
                           {canEditUsers && (
                             <>

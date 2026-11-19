@@ -139,6 +139,35 @@ async function runPendingMigrations() {
     console.warn("[Database] Migration check failed or skipped:", error);
   }
 
+  // Ensure collection_types columns & seed default classification (Sirkulasi & Referensi)
+  try {
+    const { sql } = await import("drizzle-orm");
+    await db.execute(sql`
+      ALTER TABLE "collection_types" ADD COLUMN IF NOT EXISTS "code" varchar(50) DEFAULT 'S';
+      ALTER TABLE "collection_types" ADD COLUMN IF NOT EXISTS "can_be_borrowed" boolean DEFAULT true NOT NULL;
+      ALTER TABLE "collection_types" ADD COLUMN IF NOT EXISTS "description" text;
+      ALTER TABLE "collection_types" ADD COLUMN IF NOT EXISTS "color_tag" varchar(50);
+      ALTER TABLE "collection_types" ADD COLUMN IF NOT EXISTS "created_at" timestamp DEFAULT now();
+      ALTER TABLE "collection_types" ADD COLUMN IF NOT EXISTS "updated_at" timestamp DEFAULT now();
+    `);
+
+    const { collectionTypeService } = await import("./modules/collection-type/service/collection-type.service");
+    await collectionTypeService.seedDefaultsIfEmpty();
+  } catch (ctErr) {
+    console.warn("[Database] Collection types initialization error:", ctErr);
+  }
+
+  // Ensure repository_proposals chapter & chapter_title columns
+  try {
+    const { sql } = await import("drizzle-orm");
+    await db.execute(sql`
+      ALTER TABLE "repository_proposals" ADD COLUMN IF NOT EXISTS "chapter" varchar(50) DEFAULT 'FULL_TEXT';
+      ALTER TABLE "repository_proposals" ADD COLUMN IF NOT EXISTS "chapter_title" varchar(255);
+    `);
+  } catch (repoErr) {
+    console.warn("[Database] repository_proposals chapter initialization error:", repoErr);
+  }
+
   // Auto-seed default external demo user if missing
   try {
     const { Users, account: accountTable, members } = await import("./db/schema");

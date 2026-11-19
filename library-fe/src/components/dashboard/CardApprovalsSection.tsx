@@ -8,7 +8,10 @@ import {
   IdCard,
   Clock,
   Sparkles,
+  Calendar,
+  Loader2,
 } from "lucide-react";
+import Modal from "@/components/ui/modal";
 import { Skeleton } from "@/components/ui/skeleton";
 import { getUserAvatar } from "@/lib/avatar";
 import { useToast } from "@/hooks/useToast";
@@ -31,6 +34,14 @@ export default function CardApprovalsSection() {
   const [search, setSearch] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
+  const [approvalModalItem, setApprovalModalItem] = useState<{
+    item: PendingMemberCardRequest;
+    type: "new" | "renewal";
+  } | null>(null);
+  const [approvalDuration, setApprovalDuration] = useState<number>(365);
+  const [customApprovalDate, setCustomApprovalDate] = useState<string>("");
+  const [isCustomApprovalDate, setIsCustomApprovalDate] = useState(false);
+  const [approvingLoading, setApprovingLoading] = useState(false);
 
   const loadAll = async () => {
     try {
@@ -83,21 +94,55 @@ export default function CardApprovalsSection() {
     setCurrentPage(1);
   };
 
-  // Actions for New Card Requests
-  const handleApprove = async (item: PendingMemberCardRequest) => {
+  const openApprovalModal = (item: PendingMemberCardRequest, type: "new" | "renewal") => {
+    const defaultDate = new Date();
+    defaultDate.setFullYear(defaultDate.getFullYear() + 1);
+    setCustomApprovalDate(defaultDate.toISOString().split("T")[0]);
+    setApprovalDuration(365);
+    setIsCustomApprovalDate(false);
+    setApprovalModalItem({ item, type });
+  };
+
+  const handleExecuteApproval = async () => {
+    if (!approvalModalItem) return;
+    const { item, type } = approvalModalItem;
+    setApprovingLoading(true);
     setActionId(item.id);
     try {
-      await usersManagementService.approveMemberCard(item.id);
-      success("Berhasil", `Kartu member ${item.user.name} disetujui`, 3000);
+      const payloadDate = customApprovalDate || undefined;
+      const durationDays = approvalDuration;
+
+      if (type === "new") {
+        await usersManagementService.approveMemberCard(item.id, undefined, {
+          cardExpiresAt: payloadDate,
+          durationDays,
+        });
+        success("Berhasil", `Kartu member ${item.user.name} berhasil disetujui`);
+      } else {
+        await usersManagementService.approveCardRenewal(item.id, durationDays || 365);
+        if (payloadDate) {
+          await usersManagementService.updateCardExpiry(item.id, {
+            cardExpiresAt: payloadDate,
+            durationDays,
+          });
+        }
+        success("Berhasil", `Perpanjangan kartu member ${item.user.name} berhasil disetujui`);
+      }
+      setApprovalModalItem(null);
       await loadAll();
       triggerBadgeRefresh();
     } catch (err) {
-      const message =
-        err instanceof Error ? err.message : "Gagal approve kartu";
+      const message = err instanceof Error ? err.message : "Gagal menyetujui kartu";
       error("Gagal", message, 4000);
     } finally {
+      setApprovingLoading(false);
       setActionId(null);
     }
+  };
+
+  // Actions for New Card Requests
+  const handleApprove = (item: PendingMemberCardRequest) => {
+    openApprovalModal(item, "new");
   };
 
   const handleReject = async (item: PendingMemberCardRequest) => {
@@ -140,20 +185,8 @@ export default function CardApprovalsSection() {
   };
 
   // Actions for Renewal Requests
-  const handleApproveRenewal = async (item: PendingMemberCardRequest) => {
-    setActionId(item.id);
-    try {
-      await usersManagementService.approveCardRenewal(item.id, 365);
-      success("Berhasil", `Perpanjangan kartu member ${item.user.name} disetujui selama 1 tahun`, 3000);
-      await loadAll();
-      triggerBadgeRefresh();
-    } catch (err) {
-      const message =
-        err instanceof Error ? err.message : "Gagal menyetujui perpanjangan kartu";
-      error("Gagal", message, 4000);
-    } finally {
-      setActionId(null);
-    }
+  const handleApproveRenewal = (item: PendingMemberCardRequest) => {
+    openApprovalModal(item, "renewal");
   };
 
   const handleRejectRenewal = async (item: PendingMemberCardRequest) => {
@@ -374,6 +407,137 @@ export default function CardApprovalsSection() {
           </>
         )}
       </div>
+
+      {/* ── Modal: Setujui & Atur Masa Berlaku Kartu ── */}
+      <Modal
+        isOpen={Boolean(approvalModalItem)}
+        onClose={() => setApprovalModalItem(null)}
+        title={
+          approvalModalItem?.type === "renewal"
+            ? "Persetujuan Perpanjangan Kartu"
+            : "Persetujuan Penerbitan Kartu Member"
+        }
+        size="md"
+      >
+        {approvalModalItem && (
+          <div className="space-y-4 p-1">
+            <div className="rounded-2xl border border-border bg-muted/40 p-4 space-y-2">
+              <div className="flex items-center justify-between text-xs font-bold text-foreground">
+                <span className="flex items-center gap-2">
+                  <IdCard className="size-4 text-primary" />
+                  {approvalModalItem.item.user.name}
+                </span>
+                <span className="bg-primary/10 text-primary px-2.5 py-0.5 rounded-full text-[11px] font-mono">
+                  {approvalModalItem.item.cardNumber || "Kartu Baru"}
+                </span>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                NIM/NIDN: {approvalModalItem.item.nimNidn || "-"} · Fakultas: {approvalModalItem.item.faculty || "-"}
+              </p>
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-foreground mb-2">
+                Pilih Masa Berlaku Kartu
+              </label>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                {[
+                  { days: 180, label: "6 Bulan" },
+                  { days: 365, label: "1 Tahun" },
+                  { days: 730, label: "2 Tahun" },
+                  { days: 1460, label: "4 Tahun" },
+                ].map((preset) => {
+                  const isSelected = !isCustomApprovalDate && approvalDuration === preset.days;
+                  return (
+                    <button
+                      key={preset.days}
+                      type="button"
+                      onClick={() => {
+                        setIsCustomApprovalDate(false);
+                        setApprovalDuration(preset.days);
+                        const d = new Date();
+                        d.setDate(d.getDate() + preset.days);
+                        setCustomApprovalDate(d.toISOString().split("T")[0]);
+                      }}
+                      className={`py-2 px-3 rounded-xl text-xs font-bold transition-all border cursor-pointer text-center ${
+                        isSelected
+                          ? "bg-primary text-primary-foreground border-primary shadow-xs"
+                          : "bg-background border-border text-foreground hover:bg-muted"
+                      }`}
+                    >
+                      {preset.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="text-xs font-bold text-foreground">
+                  Tanggal Berakhir Masa Aktif
+                </label>
+                <button
+                  type="button"
+                  onClick={() => setIsCustomApprovalDate(true)}
+                  className={`text-[11px] font-medium transition-colors cursor-pointer ${
+                    isCustomApprovalDate
+                      ? "text-primary font-bold underline"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  Pilih Tanggal Kustom
+                </button>
+              </div>
+
+              <div className="relative">
+                <Calendar className="absolute left-3.5 top-1/2 -translate-y-1/2 size-4 text-muted-foreground pointer-events-none" />
+                <input
+                  type="date"
+                  required
+                  value={customApprovalDate}
+                  onChange={(e) => {
+                    setIsCustomApprovalDate(true);
+                    setCustomApprovalDate(e.target.value);
+                  }}
+                  min={new Date().toISOString().split("T")[0]}
+                  disabled={approvingLoading}
+                  className="w-full pl-10 pr-4 py-2.5 bg-background border border-border rounded-xl text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary text-foreground"
+                />
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-3 pt-3 border-t border-border mt-3">
+              <button
+                type="button"
+                onClick={() => setApprovalModalItem(null)}
+                disabled={approvingLoading}
+                className="h-10 px-4 rounded-xl border border-border text-xs font-bold text-muted-foreground hover:bg-muted transition-colors cursor-pointer"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                onClick={handleExecuteApproval}
+                disabled={approvingLoading}
+                className="h-10 px-5 bg-green-600 text-white text-xs font-bold rounded-xl hover:bg-green-700 transition-all flex items-center gap-2 shadow-sm disabled:opacity-50 cursor-pointer"
+              >
+                {approvingLoading ? (
+                  <>
+                    <Loader2 size={14} className="animate-spin" />
+                    <span>Memproses...</span>
+                  </>
+                ) : (
+                  <>
+                    <UserCheck size={14} />
+                    <span>Konfirmasi & Setujui</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        )}
+      </Modal>
     </div>
   );
 }
