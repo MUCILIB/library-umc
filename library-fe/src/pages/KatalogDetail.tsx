@@ -20,8 +20,10 @@ import {
   Clock,
   Heart,
   X,
-  BookOpen
+  BookOpen,
+  Info
 } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { generateColorFromSeed, cleanIsbn } from "@/utils/format";
 import { isBookSaved, saveBook, removeBook, syncBookmarksFromDb } from "@/utils/bookmarks";
 import { resolveCoverUrl } from "@/utils/imageUrl";
@@ -71,6 +73,10 @@ const KatalogDetail = () => {
   } = useKatalogDetail(id, currentUser, sessionLoading);
 
   const isEbook = bibliography?.type === "ebook";
+  const isReferenceBook = Boolean(
+    bibliography?.collectionType?.canBeBorrowed === false ||
+    bibliography?.collectionType?.code === "R"
+  );
 
   const {
     showReservationList,
@@ -555,6 +561,27 @@ const KatalogDetail = () => {
                 </span>
               )}
 
+              {bibliography?.collectionType && (
+                <span
+                  className={cn(
+                    "px-2.5 sm:px-3 py-0.5 sm:py-1 rounded-full text-[9px] sm:text-[10px] font-bold flex items-center gap-1.5",
+                    isReferenceBook
+                      ? "bg-amber-100 text-amber-900 dark:bg-amber-950/60 dark:text-amber-300 border border-amber-300 dark:border-amber-800"
+                      : "bg-emerald-100 text-emerald-900 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800"
+                  )}
+                >
+                  <span className="w-1.5 h-1.5 rounded-full bg-current"></span>
+                  {bibliography.collectionType.name} ({bibliography.collectionType.code})
+                  {isReferenceBook && " • Hanya Baca di Tempat"}
+                </span>
+              )}
+
+              {bibliography?.gmd && (
+                <span className="px-2.5 sm:px-3 py-0.5 sm:py-1 bg-slate-100 text-slate-700 dark:bg-muted dark:text-slate-300 rounded-full text-[9px] sm:text-[10px] font-bold">
+                  {bibliography.gmd.name}
+                </span>
+              )}
+
               <span className="px-2.5 sm:px-3 py-0.5 sm:py-1 bg-slate-50 text-slate-400 dark:bg-muted dark:text-slate-300 rounded-full text-[9px] sm:text-[10px] font-bold">
                 {bibliography?.type === "physical_book" ? "Buku Fisik" : "E-Book"}
               </span>
@@ -656,6 +683,34 @@ const KatalogDetail = () => {
                   <BookOpen size={16} className="sm:size-[18px]" />
                   Baca E-Book
                 </button>
+              </div>
+            ) : isReferenceBook ? (
+              <div className="mt-6 sm:mt-auto space-y-2.5">
+                <div className="flex flex-col sm:flex-row gap-2.5 sm:gap-3">
+                  <button
+                    type="button"
+                    disabled
+                    className="w-full sm:flex-1 bg-amber-500/15 text-amber-900 dark:text-amber-300 border border-amber-300 dark:border-amber-700/60 py-3 sm:py-3.5 rounded-xl font-bold flex items-center justify-center gap-2 text-xs sm:text-sm cursor-not-allowed"
+                  >
+                    <BookOpen size={16} className="sm:size-[18px]" />
+                    Hanya Baca di Tempat (Koleksi Referensi)
+                  </button>
+                  {currentUser && (
+                    <button
+                      onClick={onCheckStatusClick}
+                      className="w-full sm:w-auto sm:px-6 bg-card border border-border hover:bg-muted text-foreground py-3 sm:py-3.5 rounded-xl font-bold flex items-center justify-center gap-2 text-xs sm:text-sm transition-all active:scale-[0.98]"
+                    >
+                      <Bell size={16} className="sm:size-[18px]" />
+                      Cek Status
+                    </button>
+                  )}
+                </div>
+                <div className="rounded-xl border border-amber-200 dark:border-amber-900/60 bg-amber-50/80 dark:bg-amber-950/30 p-3 text-xs text-amber-900 dark:text-amber-300 flex items-start gap-2">
+                  <Info size={16} className="shrink-0 mt-0.5 text-amber-600 dark:text-amber-400" />
+                  <p className="leading-relaxed">
+                    <strong>Koleksi Referensi (Kode R):</strong> Buku dengan kategori ini (seperti ensiklopedia, kamus, buku panduan, buku edisi terbatas, atau buku langka) hanya dapat dibaca di tempat / di ruang baca perpustakaan dan tidak diperkenankan untuk dipinjam ke luar.
+                  </p>
+                </div>
               </div>
             ) : (
               <div className="flex flex-col sm:flex-row gap-2.5 sm:gap-3 mt-6 sm:mt-auto">

@@ -140,6 +140,16 @@ export function useKatalogActions({
       toast.warning("Auth", "Silakan login terlebih dahulu untuk meminjam");
       return;
     }
+    if (
+      bibliography?.collectionType?.canBeBorrowed === false ||
+      bibliography?.collectionType?.code === "R"
+    ) {
+      toast.warning(
+        "Koleksi Referensi",
+        "Buku dengan klasifikasi Referensi (R) hanya dapat dibaca di tempat dan tidak dapat dipinjam keluar."
+      );
+      return;
+    }
     if (isUserBorrowing()) {
       toast.warning("Info Pinjaman", "Anda sedang meminjam buku ini");
       return;

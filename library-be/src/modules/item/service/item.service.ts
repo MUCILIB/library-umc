@@ -295,24 +295,76 @@ export class ItemService {
   }
 
   private async generateItemCode(bibliographyId: string, customPattern?: string): Promise<string> {
-    const bib = await db.query.bibliographies.findFirst({ where: eq(bibliographies.id, bibliographyId) });
+    const bib = await db.query.bibliographies.findFirst({
+      where: eq(bibliographies.id, bibliographyId),
+      with: { collectionType: true }
+    });
     if (!bib) throw new Error("Bibliography not found");
 
     let basePrefix = "";
     if (customPattern && customPattern.trim()) {
       basePrefix = customPattern.trim().toUpperCase().replace(/[\s/\\_]+/g, "-");
-    } else if (bib.callNumber && bib.callNumber.trim()) {
-      basePrefix = bib.callNumber.trim().toUpperCase().replace(/[\s/\\_]+/g, "-");
     } else {
-      const words = bib.title
-        .trim()
-        .replace(/[^a-zA-Z0-9\s]/g, "")
-        .split(/\s+/)
-        .filter(Boolean);
-      const initials = words.length >= 2
-        ? words.slice(0, 3).map((w) => w[0]).join("").toUpperCase()
-        : words[0]?.slice(0, 3).toUpperCase() || "BKO";
-      basePrefix = `${initials}-01`;
+      const allBibItems = await db.query.items.findMany({
+        where: and(eq(items.bibliographyId, bibliographyId), isNull(items.deletedAt)),
+        columns: { itemCode: true },
+      });
+
+      // 1. Prioritas utama: jika buku sudah memiliki eksemplar berformat standar, pertahankan awalan yang sama!
+      let establishedPrefix = "";
+      for (const it of allBibItems) {
+        const m = it.itemCode.match(/^([SR]-\d{4}-[A-Z0-9]+)-c\d+$/i) ||
+                  it.itemCode.match(/^([SR]-\d{4}-[A-Z0-9]+)-\d+$/i);
+        if (m) {
+          establishedPrefix = m[1].toUpperCase();
+          break;
+        }
+      }
+
+      if (establishedPrefix) {
+        basePrefix = establishedPrefix;
+      } else if ((bib as any).collectionType?.code) {
+        // Format Standar: S (Sirkulasi) atau R (Referensi)
+        const isRef =
+          (bib as any).collectionType?.code?.toUpperCase() === "R" ||
+          (bib as any).collectionType?.canBeBorrowed === false ||
+          bib.collectionTypeId === 2;
+        const prefix = isRef ? "R" : String((bib as any).collectionType.code).trim().replace(/[\s/\\_]+/g, "-").toUpperCase();
+        const year = bib.publishYear || new Date().getFullYear();
+
+        const existingMatch = allBibItems.find(i => /^[A-Z0-9_.-]+-\d{4}-(\d{4,5})-/i.test(i.itemCode));
+        let seqNum = "10001";
+        if (existingMatch) {
+          const m = existingMatch.itemCode.match(/^[A-Z0-9_.-]+-\d{4}-(\d{4,5})-/i);
+          if (m) seqNum = m[1];
+        } else {
+          const [totalCount] = await db.select({ count: sql<number>`count(*)` }).from(items);
+          const nextNum = 10000 + Number(totalCount?.count || 0) + 1;
+          seqNum = String(nextNum);
+        }
+
+        basePrefix = `${prefix}-${year}-${seqNum}`;
+      } else if (bib.callNumber && bib.callNumber.trim()) {
+        basePrefix = bib.callNumber.trim().toUpperCase().replace(/[\s/\\_]+/g, "-");
+      } else {
+        // Format Standar Default: S (Sirkulasi) atau R (Referensi)
+        const isRef = bib.collectionTypeId === 2;
+        const prefix = isRef ? "R" : "S";
+        const year = bib.publishYear || new Date().getFullYear();
+
+        const existingMatch = allBibItems.find(i => /^[A-Z0-9_.-]+-\d{4}-(\d{4,5})-/i.test(i.itemCode));
+        let seqNum = "10001";
+        if (existingMatch) {
+          const m = existingMatch.itemCode.match(/^[A-Z0-9_.-]+-\d{4}-(\d{4,5})-/i);
+          if (m) seqNum = m[1];
+        } else {
+          const [totalCount] = await db.select({ count: sql<number>`count(*)` }).from(items);
+          const nextNum = 10000 + Number(totalCount?.count || 0) + 1;
+          seqNum = String(nextNum);
+        }
+
+        basePrefix = `${prefix}-${year}-${seqNum}`;
+      }
     }
 
     const existingCodes = await db.query.items.findMany({
@@ -321,8 +373,12 @@ export class ItemService {
     });
 
     const used = new Set(existingCodes.map((i) => i.itemCode.toUpperCase()));
+    const usesCFormat = Array.from(used).some((c) => /-c\d+$/i.test(c));
+
     for (let n = 1; n <= 999; n++) {
-      const code = `${basePrefix}-${String(n).padStart(2, "0")}`;
+      const code = usesCFormat
+        ? `${basePrefix}-c${n}`
+        : `${basePrefix}-${String(n).padStart(2, "0")}`;
       if (!used.has(code.toUpperCase())) {
         const globalExists = await db.query.items.findFirst({
           where: and(eq(items.itemCode, code), isNull(items.deletedAt)),
@@ -417,7 +473,7 @@ export class ItemService {
             locationId: locId,
             source: data.defaults?.source || null,
             priceCurrency: data.defaults?.priceCurrency || "IDR",
-            collectionTypeId: data.defaults?.collectionTypeId || null,
+            collectionTypeId: (itemData as any).collectionTypeId || data.defaults?.collectionTypeId || bib.collectionTypeId || null,
             status: "available",
             qrToken: this.generateQrToken(),
             qrVersion: 1,
@@ -432,6 +488,100 @@ export class ItemService {
     });
 
     return { success: true, message: `Created ${createdItems.length} items`, data: { created: createdItems.length, items: createdItems, errors } };
+  }
+
+  async standardizeCodes(bibliographyId: string, customPrefix?: string) {
+    const bib = await db.query.bibliographies.findFirst({
+      where: and(eq(bibliographies.id, bibliographyId), isNull(bibliographies.deletedAt)),
+      with: { collectionType: true }
+    });
+    if (!bib) return { success: false, message: "Bibliography not found" };
+
+    const activeItems = await db.query.items.findMany({
+      where: and(eq(items.bibliographyId, bibliographyId), isNull(items.deletedAt)),
+      orderBy: (items, { asc }) => [asc(items.createdAt), asc(items.id)],
+    });
+
+    if (activeItems.length === 0) {
+      return { success: true, message: "Belum ada eksemplar untuk diseragamkan", data: { updatedCount: 0, canonicalPrefix: "", items: [] } };
+    }
+
+    // 1. Tentukan canonical base prefix
+    let canonicalPrefix = (customPrefix || "").trim().toUpperCase().replace(/[\s/\\_]+/g, "-");
+
+    if (!canonicalPrefix) {
+      // Cari prefix standar yang paling banyak digunakan atau terbaru pada buku ini
+      const prefixCounts = new Map<string, number>();
+      for (const it of activeItems) {
+        const match = it.itemCode.match(/^([SR]-\d{4}-[A-Z0-9]+)-c\d+$/i) ||
+                      it.itemCode.match(/^([SR]-\d{4}-[A-Z0-9]+)/i);
+        if (match) {
+          const p = match[1].toUpperCase();
+          prefixCounts.set(p, (prefixCounts.get(p) || 0) + 1);
+        }
+      }
+
+      if (prefixCounts.size > 0) {
+        let maxCount = 0;
+        for (const [p, count] of prefixCounts.entries()) {
+          if (count > maxCount) {
+            maxCount = count;
+            canonicalPrefix = p;
+          }
+        }
+      }
+
+      // Jika belum ditemukan (misal semua item diawali ITEM-), bentuk prefix standar baru
+      if (!canonicalPrefix) {
+        const isRef =
+          (bib as any).collectionType?.code?.toUpperCase() === "R" ||
+          (bib as any).collectionType?.canBeBorrowed === false ||
+          bib.collectionTypeId === 2;
+        const prefix = isRef ? "R" : "S";
+        const year = bib.publishYear || new Date().getFullYear();
+        const [totalCount] = await db.select({ count: sql<number>`count(*)` }).from(items);
+        const nextNum = 10000 + Number(totalCount?.count || 0) + 1;
+        canonicalPrefix = `${prefix}-${year}-${nextNum}`;
+      }
+    }
+
+    // 2. Perbarui seluruh kode eksemplar dalam transaksi atomic
+    const updatedItems: any[] = [];
+    await db.transaction(async (tx) => {
+      // Tahap 1: Berikan temporary code untuk menghindari duplicate unique constraint
+      for (let i = 0; i < activeItems.length; i++) {
+        const it = activeItems[i];
+        await tx.update(items)
+          .set({ itemCode: `TEMP-STD-${it.id}` })
+          .where(eq(items.id, it.id));
+      }
+
+      // Tahap 2: Terapkan format standar UMC: [canonicalPrefix]-c1, c2, ...
+      for (let i = 0; i < activeItems.length; i++) {
+        const it = activeItems[i];
+        const newCode = `${canonicalPrefix}-c${i + 1}`;
+        const newInvCode = `INV-${newCode}`;
+        const [updated] = await tx.update(items)
+          .set({
+            itemCode: newCode,
+            inventoryCode: newInvCode,
+            updatedAt: new Date(),
+          })
+          .where(eq(items.id, it.id))
+          .returning();
+        updatedItems.push(updated);
+      }
+    });
+
+    return {
+      success: true,
+      message: `Berhasil menyeragamkan ${updatedItems.length} eksemplar ke format ${canonicalPrefix}-c1..c${updatedItems.length}`,
+      data: {
+        canonicalPrefix,
+        updatedCount: updatedItems.length,
+        items: updatedItems,
+      },
+    };
   }
 
   async updateItem(id: string, data: UpdateItemData) {

@@ -28,6 +28,9 @@ vi.mock("../../../db", () => {
   };
   return {
     db: {
+      select: vi.fn().mockReturnValue({
+        from: vi.fn().mockResolvedValue([{ count: 0 }]),
+      }),
       query: {
         items: { findFirst: vi.fn(), findMany: vi.fn() },
         bibliographies: { findFirst: vi.fn() },
@@ -114,6 +117,23 @@ describe("ItemService Unit Tests", () => {
 
       const code = await itemService.generateItemCodePreview("bib-1");
       expect(code).toBe("PND-01-02");
+    });
+
+    it("should generate S/R-year-sequence-copy format when callNumber is not set", async () => {
+      (db.query.bibliographies.findFirst as any).mockResolvedValue({
+        id: "bib-ref",
+        title: "Kamus Besar Bahasa Indonesia",
+        publishYear: 2026,
+        collectionType: { code: "R", name: "Referensi" },
+      });
+      (db.query.items.findMany as any).mockResolvedValue([]);
+      (db.select as any).mockReturnValueOnce({
+        from: vi.fn().mockResolvedValue([{ count: 0 }]),
+      });
+      (db.query.items.findFirst as any).mockResolvedValue(null);
+
+      const code = await itemService.generateItemCodePreview("bib-ref");
+      expect(code).toBe("R-2026-10001-01");
     });
 
     it("should create item and sync stock in transaction", async () => {
@@ -405,6 +425,43 @@ describe("ItemService Unit Tests", () => {
       expect(result.data.activeLoan).not.toBeNull();
       expect(result.data.activeLoan.memberName).toBe("Budi Santoso");
       expect(result.data.allowedActions).toContain("return");
+    });
+  });
+
+  describe("standardizeCodes", () => {
+    it("should standardize mixed item codes into uniform S/R-year-seq-c{n} format", async () => {
+      (db.query.bibliographies.findFirst as any).mockResolvedValue({
+        id: "bib-mix",
+        title: "Bahasa Inggris untuk Pemula",
+        collectionType: { code: "S", name: "Sirkulasi" },
+      });
+
+      const mockItems = [
+        { id: "1", itemCode: "ITEM-08-0-01", createdAt: new Date("2024-01-01") },
+        { id: "2", itemCode: "ITEM-08-0-02", createdAt: new Date("2024-01-02") },
+        { id: "3", itemCode: "S-2022-10001-c3", createdAt: new Date("2024-01-03") },
+        { id: "4", itemCode: "S-2024-2342-c5", createdAt: new Date("2024-01-04") },
+        { id: "5", itemCode: "S-2024-2342-c6", createdAt: new Date("2024-01-05") },
+      ];
+
+      (db.query.items.findMany as any).mockResolvedValue(mockItems);
+
+      const mockTx = {
+        update: vi.fn().mockReturnValue({
+          set: vi.fn().mockReturnValue({
+            where: vi.fn().mockReturnValue({
+              returning: vi.fn().mockResolvedValue([{ id: "mock" }]),
+            }),
+          }),
+        }),
+      };
+      (db.transaction as any).mockImplementation(async (fn: any) => fn(mockTx));
+
+      const result = await itemService.standardizeCodes("bib-mix");
+      expect(result.success).toBe(true);
+      // Canonical prefix should be the dominant standard prefix S-2024-2342
+      expect(result.data.canonicalPrefix).toBe("S-2024-2342");
+      expect(result.data.updatedCount).toBe(5);
     });
   });
 });

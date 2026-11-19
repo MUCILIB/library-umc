@@ -169,5 +169,28 @@ describe("Bibliography Auth & Validation Guards", () => {
       expect(res.body.success).toBe(true);
       expect(res.body.data).toHaveProperty("items");
     });
+
+    it("harus sukses 200 saat GET /api/bibliographies dipanggil oleh user dengan role external (bukan 403 Forbidden)", async () => {
+      const externalSession = {
+        session: { id: "s-ext", userId: "u-ext" },
+        user: { id: "u-ext", email: "external@gmail.com", role: "external" },
+      } as any;
+      vi.spyOn(authUtils, "getSession").mockResolvedValue(externalSession);
+      vi.spyOn(bibliographyService, "list").mockResolvedValue({
+        items: [],
+        total: 0,
+        page: 1,
+        limit: 10,
+        totalPages: 0,
+      } as any);
+
+      const res = await request(app)
+        .get("/api/bibliographies?page=1&limit=10")
+        .set("Authorization", "Bearer valid-token");
+
+      expect(res.status).toBe(200);
+      expect(res.body.success).toBe(true);
+      expect(res.body.data).toHaveProperty("items");
+    });
   });
 });

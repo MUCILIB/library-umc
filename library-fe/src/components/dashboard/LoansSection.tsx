@@ -18,8 +18,11 @@ import {
   Download,
   Loader2,
   FileDown,
-  Bookmark
+  Bookmark,
+  Printer,
+  PlusCircle,
 } from "lucide-react";
+import { ReturnReceiptModal } from "@/components/common/ReturnReceiptModal";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { API_BASE_URL } from "@/utils/api-config";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -63,6 +66,11 @@ interface Loan {
   };
   member?: {
     nimNidn?: string;
+    faculty?: string;
+    studyProgram?: string;
+    institution?: string;
+    type?: string;
+    cardNumber?: string;
     user?: {
       name?: string;
     };
@@ -89,6 +97,7 @@ export default function LoansSection({ searchTerm, onSearchChange }: LoansSectio
     overdue: 0,
   });
   const [selectedLoan, setSelectedLoan] = useState<Loan | null>(null);
+  const [selectedReceiptLoan, setSelectedReceiptLoan] = useState<Loan | null>(null);
   const [actionNotes, setActionNotes] = useState("");
   const [processingId, setProcessingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -100,6 +109,57 @@ export default function LoansSection({ searchTerm, onSearchChange }: LoansSectio
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 5;
   const [exportingLoans, setExportingLoans] = useState(false);
+  const [isDirectLoanOpen, setIsDirectLoanOpen] = useState(false);
+  const [directLoanSubmitting, setDirectLoanSubmitting] = useState(false);
+  const [directForm, setDirectForm] = useState({
+    memberIdentifier: "",
+    itemIdentifier: "",
+    durationDays: 7,
+    notes: "",
+  });
+
+  const handleDirectLoanSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!directForm.memberIdentifier.trim()) {
+      toast.error("Validasi Gagal", "Nomor Kartu Anggota atau NIM/NIDN pemustaka wajib diisi");
+      return;
+    }
+    if (!directForm.itemIdentifier.trim()) {
+      toast.error("Validasi Gagal", "Kode Eksemplar / Barcode buku wajib diisi");
+      return;
+    }
+
+    try {
+      setDirectLoanSubmitting(true);
+      const newLoan = await loanService.createDirectLoan({
+        memberIdentifier: directForm.memberIdentifier.trim(),
+        itemIdentifier: directForm.itemIdentifier.trim(),
+        durationDays: Number(directForm.durationDays) || 7,
+        notes: directForm.notes.trim() || undefined,
+      });
+
+      toast.success("Peminjaman Berhasil", "Peminjaman di tempat berhasil diproses dan buku siap diserahkan.");
+      setIsDirectLoanOpen(false);
+      setDirectForm({
+        memberIdentifier: "",
+        itemIdentifier: "",
+        durationDays: 7,
+        notes: "",
+      });
+
+      // Tampilkan struk/resi sirkulasi peminjaman langsung
+      setSelectedReceiptLoan(newLoan as any);
+
+      // Refresh data
+      fetchLoans();
+      void fetchSummaryStats();
+      triggerBadgeRefresh();
+    } catch (err: any) {
+      toast.error("Peminjaman Gagal", err.message || "Gagal memproses peminjaman langsung");
+    } finally {
+      setDirectLoanSubmitting(false);
+    }
+  };
 
   const fetchSummaryStats = async () => {
     try {
@@ -541,6 +601,19 @@ export default function LoansSection({ searchTerm, onSearchChange }: LoansSectio
               )}
               <span>Export CSV</span>
             </button>
+
+            {/* Direct Loan Button (Input di Tempat) */}
+            {canEdit("loans") && (
+              <button
+                type="button"
+                onClick={() => setIsDirectLoanOpen(true)}
+                className="h-10 px-4 bg-primary text-primary-foreground rounded-xl hover:bg-primary/90 transition-all flex items-center gap-2 shrink-0 text-[13px] font-bold shadow-xs cursor-pointer"
+                title="Input peminjaman mandiri di tempat oleh petugas jika pemustaka tidak membawa HP"
+              >
+                <PlusCircle size={16} strokeWidth={2.5} />
+                <span>Peminjaman di Tempat</span>
+              </button>
+            )}
           </div>
         </div>
 
@@ -848,6 +921,14 @@ export default function LoansSection({ searchTerm, onSearchChange }: LoansSectio
                   {loan.status === 'returned' && (
                     <div className="flex flex-wrap items-center gap-3 pt-5 mt-5 border-t border-border">
                       <button
+                        type="button"
+                        onClick={() => setSelectedReceiptLoan(loan)}
+                        className="flex items-center gap-2 bg-primary/10 text-primary border border-primary/20 px-4 py-2 rounded-xl text-xs font-bold hover:bg-primary hover:text-primary-foreground transition-all cursor-pointer"
+                      >
+                        <Printer size={14} />
+                        Cetak Resi ({loan.returnReceiptNo || 'BA-RET'})
+                      </button>
+                      <button
                         onClick={async () => {
                           try {
                             await loanService.downloadReturnReceiptPdf(loan.id);
@@ -856,10 +937,10 @@ export default function LoansSection({ searchTerm, onSearchChange }: LoansSectio
                             toast.error("Gagal", e.message || "Gagal mengunduh tanda terima");
                           }
                         }}
-                        className="flex items-center gap-2 bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800 px-4 py-2 rounded-xl text-xs font-bold hover:bg-emerald-600 hover:text-white transition-all"
+                        className="flex items-center gap-2 bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800 px-4 py-2 rounded-xl text-xs font-bold hover:bg-emerald-600 hover:text-white transition-all cursor-pointer"
                       >
                         <FileDown size={14} />
-                        Unduh Berita Acara ({loan.returnReceiptNo || 'BA-RET'})
+                        Unduh Berita Acara (PDF)
                       </button>
                     </div>
                   )}
@@ -1163,6 +1244,163 @@ export default function LoansSection({ searchTerm, onSearchChange }: LoansSectio
           </div>
         )}
       </Modal>
+
+      {/* ── Modal: Peminjaman Mandiri di Tempat oleh Petugas ── */}
+      <Modal
+        isOpen={isDirectLoanOpen}
+        onClose={() => setIsDirectLoanOpen(false)}
+        title="Input Peminjaman di Tempat"
+        size="md"
+      >
+        <form onSubmit={handleDirectLoanSubmit} className="space-y-4 p-1">
+          <div className="rounded-xl bg-blue-500/10 border border-blue-500/20 p-3.5 text-xs text-blue-900 dark:text-blue-200">
+            <p className="font-bold mb-1">Peminjaman Buku Langsung (Tanpa HP)</p>
+            <p className="text-muted-foreground leading-relaxed">
+              Gunakan fitur ini apabila pemustaka telah memiliki kartu anggota aktif dan fisik kartu/NIM tersedia, namun tidak membawa smartphone untuk scan/mengajukan peminjaman secara mandiri.
+            </p>
+          </div>
+
+          <div>
+            <label className="block text-xs font-bold text-foreground mb-1.5">
+              Identitas Pemustaka (No. Kartu / NIM / NIDN) <span className="text-destructive">*</span>
+            </label>
+            <div className="relative">
+              <User className="absolute left-3.5 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+              <input
+                type="text"
+                required
+                autoFocus
+                value={directForm.memberIdentifier}
+                onChange={(e) => setDirectForm({ ...directForm, memberIdentifier: e.target.value })}
+                placeholder="Contoh: UMCLIB-... atau 22010199"
+                disabled={directLoanSubmitting}
+                className="w-full pl-10 pr-4 py-2.5 bg-background border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary font-medium placeholder:text-muted-foreground"
+              />
+            </div>
+            <p className="mt-1 text-[11px] text-muted-foreground">
+              Masukkan Nomor Kartu Anggota yang tertera pada kartu fisik pemustaka atau NIM mahasiswa.
+            </p>
+          </div>
+
+          <div>
+            <label className="block text-xs font-bold text-foreground mb-1.5">
+              Identitas Buku (Kode Item / Barcode / No. Inventaris) <span className="text-destructive">*</span>
+            </label>
+            <div className="relative">
+              <BookOpen className="absolute left-3.5 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+              <input
+                type="text"
+                required
+                value={directForm.itemIdentifier}
+                onChange={(e) => setDirectForm({ ...directForm, itemIdentifier: e.target.value })}
+                placeholder="Contoh: ITEM-001 atau INV-2026-..."
+                disabled={directLoanSubmitting}
+                className="w-full pl-10 pr-4 py-2.5 bg-background border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary font-medium placeholder:text-muted-foreground font-mono"
+              />
+            </div>
+            <p className="mt-1 text-[11px] text-muted-foreground">
+              Scan barcode buku atau ketik kode item eksemplar fisik yang akan dipinjam.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-bold text-foreground mb-1.5">
+                Durasi Peminjaman
+              </label>
+              <Select
+                value={String(directForm.durationDays)}
+                onValueChange={(val) => setDirectForm({ ...directForm, durationDays: Number(val) })}
+                disabled={directLoanSubmitting}
+              >
+                <SelectTrigger className="w-full rounded-xl text-xs font-semibold">
+                  <SelectValue placeholder="Pilih Durasi" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="7">7 Hari (Standar)</SelectItem>
+                  <SelectItem value="14">14 Hari (2 Minggu)</SelectItem>
+                  <SelectItem value="21">21 Hari (3 Minggu)</SelectItem>
+                  <SelectItem value="30">30 Hari (1 Bulan)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-foreground mb-1.5">
+                Jatuh Tempo Otomatis
+              </label>
+              <div className="h-10 px-3 flex items-center bg-muted/50 rounded-xl border border-border text-xs font-medium text-muted-foreground">
+                <Calendar size={14} className="mr-2 text-primary" />
+                <span>
+                  {new Date(Date.now() + (directForm.durationDays || 7) * 24 * 60 * 60 * 1000).toLocaleDateString("id-ID", {
+                    day: "2-digit",
+                    month: "short",
+                    year: "numeric",
+                  })}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-xs font-bold text-foreground mb-1.5">
+              Catatan / Keperluan (Opsional)
+            </label>
+            <input
+              type="text"
+              value={directForm.notes}
+              onChange={(e) => setDirectForm({ ...directForm, notes: e.target.value })}
+              placeholder="Contoh: Referensi Tugas Akhir / Skripsi"
+              disabled={directLoanSubmitting}
+              className="w-full px-3.5 py-2.5 bg-background border border-border rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary placeholder:text-muted-foreground"
+            />
+          </div>
+
+          <div className="flex items-center justify-end gap-3 pt-3 border-t border-border mt-2">
+            <button
+              type="button"
+              onClick={() => setIsDirectLoanOpen(false)}
+              disabled={directLoanSubmitting}
+              className="h-10 px-4 rounded-xl border border-border text-xs font-bold text-muted-foreground hover:bg-muted transition-colors cursor-pointer"
+            >
+              Batal
+            </button>
+            <button
+              type="submit"
+              disabled={directLoanSubmitting || !directForm.memberIdentifier.trim() || !directForm.itemIdentifier.trim()}
+              className="h-10 px-5 bg-primary text-primary-foreground text-xs font-bold rounded-xl hover:bg-primary/90 transition-all flex items-center gap-2 shadow-sm disabled:opacity-50 cursor-pointer"
+            >
+              {directLoanSubmitting ? (
+                <>
+                  <Loader2 size={14} className="animate-spin" />
+                  <span>Memproses...</span>
+                </>
+              ) : (
+                <>
+                  <CheckCircle size={14} />
+                  <span>Proses Peminjaman</span>
+                </>
+              )}
+            </button>
+          </div>
+        </form>
+      </Modal>
+
+      {selectedReceiptLoan && (
+        <ReturnReceiptModal
+          isOpen={!!selectedReceiptLoan}
+          onClose={() => setSelectedReceiptLoan(null)}
+          loan={selectedReceiptLoan as any}
+          onDownloadPdf={async () => {
+            try {
+              await loanService.downloadReturnReceiptPdf(selectedReceiptLoan.id);
+              toast.success("Berhasil", "Tanda terima pengembalian PDF berhasil diunduh");
+            } catch (e: any) {
+              toast.error("Gagal", e.message || "Gagal mengunduh tanda terima");
+            }
+          }}
+        />
+      )}
     </div>
   );
 }

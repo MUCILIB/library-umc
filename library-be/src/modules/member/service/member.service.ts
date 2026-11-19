@@ -1,6 +1,6 @@
 import { db } from "../../../db";
 import { members, Users } from "../../../db/schema";
-import { eq, and, isNull } from "drizzle-orm";
+import { eq, and, or, isNull } from "drizzle-orm";
 
 type ServiceResponse<T> = {
   success: boolean;
@@ -9,6 +9,7 @@ type ServiceResponse<T> = {
 };
 
 type UpdateProfileData = {
+  name?: string;
   nimNidn?: string;
   faculty?: string;
   originRegion?: string;
@@ -288,11 +289,15 @@ export class MemberService {
 
   async approveMemberCard(
     memberId: string,
-    cardNumber?: string
+    cardNumber?: string,
+    options?: { cardExpiresAt?: string | Date; durationDays?: number }
   ): Promise<ServiceResponse<any>> {
     try {
       const member = await db.query.members.findFirst({
-        where: and(eq(members.id, memberId), isNull(members.deletedAt))
+        where: and(
+          or(eq(members.id, memberId), eq(members.userId, memberId)),
+          isNull(members.deletedAt)
+        )
       });
 
       if (!member) {
@@ -308,8 +313,15 @@ export class MemberService {
         member.cardNumber ||
         this.generateCardNumber(member.id);
 
-      const oneYearLater = new Date();
-      oneYearLater.setFullYear(oneYearLater.getFullYear() + 1);
+      let expiryDate: Date;
+      if (options?.cardExpiresAt) {
+        expiryDate = new Date(options.cardExpiresAt);
+      } else if (options?.durationDays && Number(options.durationDays) > 0) {
+        expiryDate = new Date(Date.now() + Number(options.durationDays) * 24 * 60 * 60 * 1000);
+      } else {
+        expiryDate = new Date();
+        expiryDate.setFullYear(expiryDate.getFullYear() + 1);
+      }
 
       const [updated] = await db
         .update(members)
@@ -317,7 +329,7 @@ export class MemberService {
           cardStatus: "active",
           cardNumber: nextCardNumber,
           cardApprovedAt: new Date(),
-          cardExpiresAt: oneYearLater,
+          cardExpiresAt: expiryDate,
           cardRenewalStatus: null,
           cardRejectedAt: null,
           cardRejectedReason: null,
@@ -347,7 +359,10 @@ export class MemberService {
   ): Promise<ServiceResponse<any>> {
     try {
       const member = await db.query.members.findFirst({
-        where: and(eq(members.id, memberId), isNull(members.deletedAt))
+        where: and(
+          or(eq(members.id, memberId), eq(members.userId, memberId)),
+          isNull(members.deletedAt)
+        )
       });
 
       if (!member) {
@@ -498,11 +513,15 @@ export class MemberService {
 
   async approveCardRenewal(
     memberId: string,
-    durationDays = 365
+    durationDays = 365,
+    options?: { cardExpiresAt?: string | Date }
   ): Promise<ServiceResponse<any>> {
     try {
       const member = await db.query.members.findFirst({
-        where: and(eq(members.id, memberId), isNull(members.deletedAt))
+        where: and(
+          or(eq(members.id, memberId), eq(members.userId, memberId)),
+          isNull(members.deletedAt)
+        )
       });
 
       if (!member) {
@@ -513,11 +532,16 @@ export class MemberService {
         };
       }
 
-      const baseDate =
-        member.cardExpiresAt && new Date(member.cardExpiresAt) > new Date()
-          ? new Date(member.cardExpiresAt)
-          : new Date();
-      const newExpiry = new Date(baseDate.getTime() + durationDays * 24 * 60 * 60 * 1000);
+      let newExpiry: Date;
+      if (options?.cardExpiresAt) {
+        newExpiry = new Date(options.cardExpiresAt);
+      } else {
+        const baseDate =
+          member.cardExpiresAt && new Date(member.cardExpiresAt) > new Date()
+            ? new Date(member.cardExpiresAt)
+            : new Date();
+        newExpiry = new Date(baseDate.getTime() + Number(durationDays) * 24 * 60 * 60 * 1000);
+      }
 
       const [updated] = await db
         .update(members)
@@ -547,13 +571,93 @@ export class MemberService {
     }
   }
 
+  /**
+   * Update masa aktif kartu anggota oleh admin
+   */
+  async updateCardExpiry(
+    memberId: string,
+    payload: { cardExpiresAt?: string | Date; durationDays?: number }
+  ): Promise<ServiceResponse<any>> {
+    try {
+      const member = await db.query.members.findFirst({
+        where: and(
+          or(eq(members.id, memberId), eq(members.userId, memberId)),
+          isNull(members.deletedAt)
+        ),
+        with: { user: true }
+      });
+
+      if (!member) {
+        return {
+          success: false,
+          message: "Data pemustaka tidak ditemukan",
+          data: null
+        };
+      }
+
+      let newExpiry: Date;
+      if (payload.cardExpiresAt) {
+        newExpiry = new Date(payload.cardExpiresAt);
+      } else if (payload.durationDays && Number(payload.durationDays) > 0) {
+        const baseDate =
+          member.cardExpiresAt && new Date(member.cardExpiresAt) > new Date()
+            ? new Date(member.cardExpiresAt)
+            : new Date();
+        newExpiry = new Date(baseDate.getTime() + Number(payload.durationDays) * 24 * 60 * 60 * 1000);
+      } else {
+        newExpiry = new Date();
+        newExpiry.setFullYear(newExpiry.getFullYear() + 1);
+      }
+
+      if (isNaN(newExpiry.getTime())) {
+        return {
+          success: false,
+          message: "Format tanggal masa berlaku tidak valid",
+          data: null
+        };
+      }
+
+      const nextCardNumber = member.cardNumber || this.generateCardNumber(member.id);
+
+      const [updated] = await db
+        .update(members)
+        .set({
+          cardExpiresAt: newExpiry,
+          cardStatus: "active",
+          cardNumber: nextCardNumber,
+          cardRenewalStatus: null,
+          cardRejectedReason: null,
+          updatedAt: new Date()
+        })
+        .where(eq(members.id, member.id))
+        .returning();
+
+      return {
+        success: true,
+        message: `Masa aktif kartu berhasil diperbarui hingga ${newExpiry.toLocaleDateString("id-ID")}.`,
+        data: updated
+      };
+    } catch (err) {
+      console.error("[MemberService] Error updating card expiry:", err);
+      return {
+        success: false,
+        message: "Gagal memperbarui masa aktif kartu",
+        data: null
+      };
+    }
+  }
+
+
   async rejectCardRenewal(
     memberId: string,
     reason: string
   ): Promise<ServiceResponse<any>> {
     try {
       const member = await db.query.members.findFirst({
-        where: and(eq(members.id, memberId), isNull(members.deletedAt))
+        where: and(
+          or(eq(members.id, memberId), eq(members.userId, memberId)),
+          isNull(members.deletedAt)
+        )
       });
 
       if (!member) {
@@ -667,14 +771,19 @@ export class MemberService {
         updatedAt: new Date()
       };
 
-      // Update user image if provided
+      // Update user image or name if provided
+      const userUpdateFields: Record<string, any> = {};
       if (data.image !== undefined) {
+        userUpdateFields.image = data.image.trim() || null;
+      }
+      if (data.name !== undefined && data.name.trim() !== "") {
+        userUpdateFields.name = data.name.trim();
+      }
+      if (Object.keys(userUpdateFields).length > 0) {
+        userUpdateFields.updatedAt = new Date();
         await db
           .update(Users)
-          .set({
-            image: data.image.trim() || null,
-            updatedAt: new Date()
-          })
+          .set(userUpdateFields)
           .where(eq(Users.id, userId));
       }
 

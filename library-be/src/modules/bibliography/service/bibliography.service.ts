@@ -539,7 +539,7 @@ if (updateData.isbn && isValidCode(updateData.isbn)) {
     const rows = await db.query.bibliographies.findMany({
       where,
       with: {
-        publisher: true, language: true, gmd: true,
+        publisher: true, language: true, gmd: true, collectionType: true,
         bibliographyAuthors: { with: { author: true } },
         bibliographySubjects: { with: { subject: true } },
         bibliographyFaculties: { with: { faculty: true } },

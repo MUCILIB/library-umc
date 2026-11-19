@@ -23,7 +23,8 @@ import {
   LayoutTemplate,
   ChevronDown,
   Megaphone,
-  Globe
+  Globe,
+  Tags
 } from "lucide-react";
 
 import Logo from "@/assets/logo_umc.png";
@@ -47,6 +48,7 @@ import EbookSection from "@/components/dashboard/EbookSection";
 import FakultasSection from "@/components/dashboard/FakultasSection";
 import ProdiSection from "@/components/dashboard/ProdiSection";
 import LocationSection from "@/components/dashboard/LocationSection";
+import KlasifikasiSection from "@/components/dashboard/KlasifikasiSection";
 import CmsSection from "@/components/dashboard/CmsSection";
 import { NotificationBellDropdown } from "@/components/dashboard/NotificationBellDropdown";
 import {
@@ -108,6 +110,7 @@ type ActiveMenu =
   | "fakultas"
   | "prodi"
   | "locations"
+  | "klasifikasi"
   | "cms"
   | "cms-banner"
   | "cms-branding"
@@ -159,6 +162,7 @@ const MENU_CONFIG: MenuConfig[] = [
   { key: "fakultas", label: "Fakultas", icon: Building2, group: "Master Data" },
   { key: "prodi", label: "Program Studi", icon: GraduationCap, group: "Master Data" },
   { key: "locations", label: "Lokasi Rak", icon: MapPin, group: "Master Data" },
+  { key: "klasifikasi", label: "Klasifikasi Koleksi (S/R)", icon: Tags, group: "Master Data" },
 
   // Pengaturan & Audit
   { key: "guests", label: "Data Pengunjung", icon: Users, group: "Pengaturan & Audit" },
@@ -668,6 +672,8 @@ export default function SuperAdminDashboard() {
         return <ProdiSection />;
       case "locations":
         return <LocationSection />;
+      case "klasifikasi":
+        return <KlasifikasiSection />;
       case "returnApprovals":
         return <ReturnApprovalsSection />;
       case "recommendations":

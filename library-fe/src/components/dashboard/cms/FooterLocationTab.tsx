@@ -211,20 +211,20 @@ export const FooterLocationTab: React.FC<FooterLocationTabProps> = ({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="soc-fb">Facebook URL</Label>
+              <Label htmlFor="soc-yt">YouTube URL</Label>
               <Input
-                id="soc-fb"
-                value={footerForm.socialMedia?.facebook || ""}
+                id="soc-yt"
+                value={footerForm.socialMedia?.youtube || ""}
                 onChange={(e) =>
                   onFooterChange({
                     ...footerForm,
                     socialMedia: {
                       ...footerForm.socialMedia,
-                      facebook: e.target.value,
+                      youtube: e.target.value,
                     },
                   })
                 }
-                placeholder="https://facebook.com/umcirebon"
+                placeholder="https://youtube.com/@umctv"
               />
             </div>
 
@@ -243,6 +243,42 @@ export const FooterLocationTab: React.FC<FooterLocationTabProps> = ({
                   })
                 }
                 placeholder="https://wa.me/6281234567890"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="soc-fb">Facebook URL</Label>
+              <Input
+                id="soc-fb"
+                value={footerForm.socialMedia?.facebook || ""}
+                onChange={(e) =>
+                  onFooterChange({
+                    ...footerForm,
+                    socialMedia: {
+                      ...footerForm.socialMedia,
+                      facebook: e.target.value,
+                    },
+                  })
+                }
+                placeholder="https://facebook.com/umcirebon"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="soc-tw">Twitter / X URL</Label>
+              <Input
+                id="soc-tw"
+                value={footerForm.socialMedia?.twitter || ""}
+                onChange={(e) =>
+                  onFooterChange({
+                    ...footerForm,
+                    socialMedia: {
+                      ...footerForm.socialMedia,
+                      twitter: e.target.value,
+                    },
+                  })
+                }
+                placeholder="https://twitter.com/umcirebon"
               />
             </div>
           </div>

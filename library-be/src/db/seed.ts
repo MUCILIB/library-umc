@@ -220,10 +220,20 @@ async function seed() {
       }
 
       for (let i = 0; i < Math.min(b.stock, 3); i++) {
+        const isRef = b.title.toLowerCase().includes("kamus") || b.title.toLowerCase().includes("ensiklopedia");
+        const prefix = isRef ? "R" : "S";
+        const year = b.year || 2024;
+        const bookSeq = String(10000 + bibCount + 1);
+        const itemCode = `${prefix}-${year}-${bookSeq}-c${i + 1}`;
         await db.insert(items).values({
-          bibliographyId: bid, itemCode: `ITEM-${b.isbn.slice(-4)}-${String(i + 1).padStart(2, "0")}`,
-          locationId: locId, status: "available", qrToken: crypto.randomBytes(20).toString("hex"),
-          qrVersion: 1, qrGeneratedAt: new Date(),
+          bibliographyId: bid,
+          itemCode,
+          inventoryCode: `INV-${itemCode}`,
+          locationId: locId,
+          status: "available",
+          qrToken: crypto.randomBytes(20).toString("hex"),
+          qrVersion: 1,
+          qrGeneratedAt: new Date(),
         });
         itemCount++;
       }

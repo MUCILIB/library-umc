@@ -252,6 +252,10 @@ export default function HomeBookList() {
             const author = getAuthorName(book);
             const tags = getCategoryTags(book);
             const isAvailable = getIsAvailable(book);
+            const isReference = Boolean(
+              book.collectionType?.canBeBorrowed === false ||
+              book.collectionType?.code === "R"
+            );
             const palette = getPalette(book.id || book.title);
 
             const coverUrl = resolveCoverUrl(book.image);
@@ -324,7 +328,12 @@ export default function HomeBookList() {
 
                   {/* Status Ketersediaan */}
                   <div className="pt-1">
-                    {isAvailable ? (
+                    {isReference ? (
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800/40 w-fit">
+                        <span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+                        Baca di Tempat (R)
+                      </span>
+                    ) : isAvailable ? (
                       <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border border-emerald-100 dark:border-emerald-800/40 w-fit">
                         <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
                         Tersedia

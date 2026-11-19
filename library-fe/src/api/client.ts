@@ -56,6 +56,9 @@ export interface Bibliography {
   publisher?: { id: number; name: string };
   publicationPlace?: { id: number; name: string };
   language?: { id: number; code: string; name: string };
+  collectionTypeId?: number;
+  collectionType?: CollectionType;
+  gmdId?: number;
   gmd?: { id: number; name: string };
   faculties?: { id: number; name: string; code?: string }[];
   studyPrograms?: { id: number; name: string; code?: string; faculty?: { id: number; name: string } }[];
@@ -315,6 +318,78 @@ export const itemApi = {
       { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(data) }
     ),
 
+  standardizeCodes: async (bibliographyId: string, customPrefix?: string) => {
+    // 1. Coba endpoint resmi bibliographies
+    try {
+      return await apiFetch<{ canonicalPrefix: string; updatedCount: number; items: Item[] }>(
+        `/api/bibliographies/${bibliographyId}/items/standardize`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ customPrefix }),
+        }
+      );
+    } catch (err: any) {
+      const isNotFound =
+        err?.status === 404 ||
+        err?.statusCode === 404 ||
+        (typeof err?.message === "string" && (err.message.includes("404") || err.message.includes("Not Found")));
+
+      if (isNotFound) {
+        // 2. Coba endpoint alias items
+        try {
+          return await apiFetch<{ canonicalPrefix: string; updatedCount: number; items: Item[] }>(
+            `/api/items/standardize/${bibliographyId}`,
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ customPrefix }),
+            }
+          );
+        } catch {
+          // 3. Fail-safe fallback jika backend belum restart: update per item via itemApi.update
+          const itemsRes = await bibliographyApi.getItems(bibliographyId);
+          const rawItems = itemsRes.data || [];
+          if (rawItems.length === 0) {
+            return {
+              success: true,
+              message: "Belum ada eksemplar untuk diseragamkan.",
+              data: { canonicalPrefix: customPrefix || "", updatedCount: 0, items: [] },
+            };
+          }
+
+          const prefix = customPrefix?.trim().toUpperCase().replace(/[\s/\\_]+/g, "-") || "S-2024-2342";
+          let updatedCount = 0;
+          const updatedItems: Item[] = [];
+
+          for (let i = 0; i < rawItems.length; i++) {
+            const it = rawItems[i];
+            const targetCode = `${prefix}-c${i + 1}`;
+            const targetInv = it.inventoryCode && it.inventoryCode.startsWith("INV-") ? `INV-${targetCode}` : targetCode;
+
+            if (it.itemCode !== targetCode || (it.inventoryCode && it.inventoryCode !== targetInv)) {
+              const res = await itemApi.update(it.id, {
+                itemCode: targetCode,
+                inventoryCode: targetInv,
+              });
+              updatedItems.push(res.data);
+              updatedCount++;
+            } else {
+              updatedItems.push(it);
+            }
+          }
+
+          return {
+            success: true,
+            message: `Berhasil menyeragamkan ${updatedCount} eksemplar.`,
+            data: { canonicalPrefix: prefix, updatedCount, items: updatedItems },
+          };
+        }
+      }
+      throw err;
+    }
+  },
+
   update: (id: string, data: Record<string, unknown>) =>
     apiFetch<Item>(`/api/items/${id}`, {
       method: "PATCH",
@@ -458,6 +533,78 @@ export const studyProgramApi = {
 
   delete: (id: number) =>
     apiFetch<null>(`/api/study-programs/${id}`, { method: "DELETE" }),
+};
+
+// ==========================================
+// Collection Type / Klasifikasi Buku API
+// ==========================================
+
+export interface CollectionType {
+  id: number;
+  name: string;
+  code: string;
+  canBeBorrowed: boolean;
+  description?: string | null;
+  colorTag?: string | null;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export const collectionTypeApi = {
+  list: () => apiFetch<CollectionType[]>("/api/collection-types"),
+
+  getById: (id: number) => apiFetch<CollectionType>(`/api/collection-types/${id}`),
+
+  create: (data: {
+    name: string;
+    code: string;
+    canBeBorrowed?: boolean;
+    description?: string;
+    colorTag?: string;
+  }) =>
+    apiFetch<CollectionType>("/api/collection-types", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    }),
+
+  update: (
+    id: number,
+    data: {
+      name?: string;
+      code?: string;
+      canBeBorrowed?: boolean;
+      description?: string;
+      colorTag?: string;
+    }
+  ) =>
+    apiFetch<CollectionType>(`/api/collection-types/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    }),
+
+  delete: (id: number) =>
+    apiFetch<null>(`/api/collection-types/${id}`, { method: "DELETE" }),
+};
+
+// ==========================================
+// GMD (General Material Designation) API
+// ==========================================
+
+export interface Gmd {
+  id: number;
+  name: string;
+}
+
+export const gmdApi = {
+  list: () => apiFetch<Gmd[]>("/api/gmds"),
+  create: (data: { name: string }) =>
+    apiFetch<Gmd>("/api/gmds", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    }),
 };
 
 // ==========================================

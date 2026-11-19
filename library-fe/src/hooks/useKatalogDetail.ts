@@ -32,6 +32,10 @@ function mapRawBibliography(item: any): Bibliography {
     stock: item.stock ?? item.totalItems ?? 0,
     items: Array.isArray(item.items) ? item.items : [],
     subjects: Array.isArray(item.subjects) ? item.subjects : [],
+    collectionTypeId: item.collectionTypeId || (item.collectionType?.id ? Number(item.collectionType.id) : undefined),
+    collectionType: item.collectionType || undefined,
+    gmdId: item.gmdId || (item.gmd?.id ? Number(item.gmd.id) : undefined),
+    gmd: item.gmd || undefined,
   };
 }
 

@@ -11,6 +11,8 @@ import {
   Users,
   webTraffic,
   studyPrograms,
+  faculties,
+  bibliographyStudyPrograms,
   returnRequests,
   recommendations,
   repositoryProposals
@@ -561,7 +563,13 @@ export class ReportService {
    * Get detailed loan report (for export)
    */
   async getLoanReport(
-    filters: { status?: string; from?: string; to?: string } = {}
+    filters: {
+      status?: string;
+      from?: string;
+      to?: string;
+      studyProgramId?: number;
+      facultyId?: number;
+    } = {}
   ) {
     try {
       const conditions = [];
@@ -574,6 +582,24 @@ export class ReportService {
       if (filters.to) {
         conditions.push(
           sql`${loans.createdAt} <= ${filters.to}::date + INTERVAL '1 day'`
+        );
+      }
+      if (filters.studyProgramId) {
+        conditions.push(
+          sql`${loans.itemId} IN (
+            SELECT ${items.id} FROM ${items}
+            INNER JOIN ${bibliographyStudyPrograms} ON ${items.bibliographyId} = ${bibliographyStudyPrograms.bibliographyId}
+            WHERE ${bibliographyStudyPrograms.studyProgramId} = ${filters.studyProgramId}
+          )`
+        );
+      } else if (filters.facultyId) {
+        conditions.push(
+          sql`${loans.itemId} IN (
+            SELECT ${items.id} FROM ${items}
+            INNER JOIN ${bibliographyStudyPrograms} ON ${items.bibliographyId} = ${bibliographyStudyPrograms.bibliographyId}
+            INNER JOIN ${studyPrograms} ON ${bibliographyStudyPrograms.studyProgramId} = ${studyPrograms.id}
+            WHERE ${studyPrograms.facultyId} = ${filters.facultyId}
+          )`
         );
       }
 
@@ -819,7 +845,8 @@ export class ReportService {
       dueDate?: string;
       returnDate?: string | null;
     }>,
-    title = "Laporan Peminjaman Buku"
+    title = "Laporan Peminjaman Buku",
+    subtitle?: string
   ): void {
     res.setHeader("Content-Type", "application/pdf");
     res.setHeader(
@@ -836,6 +863,10 @@ export class ReportService {
       .font("Helvetica-Bold")
       .text("MUCILIB — Perpustakaan UMC", { align: "center" });
     doc.fontSize(13).font("Helvetica").text(title, { align: "center" });
+    if (subtitle) {
+      doc.fontSize(10).font("Helvetica-Oblique").fillColor("#475569").text(subtitle, { align: "center" });
+      doc.fillColor("#000000");
+    }
     doc.fontSize(9).text(`Dicetak: ${new Date().toLocaleString("id-ID")}`, {
       align: "center"
     });

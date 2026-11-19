@@ -13,8 +13,13 @@ import {
   Loader2,
   Download,
   Maximize2,
-  Minimize2
+  Minimize2,
+  UploadCloud,
+  Edit2,
+  Trash2,
+  BookOpen
 } from "lucide-react";
+import AdminUploadProposalModal from "./repository/AdminUploadProposalModal";
 import { repositoryService, type RepositoryProposal } from "@/services/repositoryService";
 import { triggerBadgeRefresh } from "@/hooks/dashboard/useDashboardBadges";
 import { API_BASE_URL } from "@/utils/api-config";
@@ -49,6 +54,11 @@ export default function RepositorySection() {
   useEffect(() => {
     setCurrentPage(1);
   }, [filterStatus, filterCategory, searchTerm]);
+
+  // Upload / Edit modal state for Admin
+  const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
+  const [editingItem, setEditingItem] = useState<RepositoryProposal | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   // Review modal state
   const [reviewModalItem, setReviewModalItem] = useState<RepositoryProposal | null>(null);
@@ -202,6 +212,28 @@ export default function RepositorySection() {
     }
   };
 
+  const handleDeleteProposal = async (item: RepositoryProposal) => {
+    if (
+      !window.confirm(
+        `Apakah Anda yakin ingin menghapus naskah "${item.title}" dari repositori perpustakaan?`
+      )
+    ) {
+      return;
+    }
+
+    try {
+      setDeletingId(item.id);
+      await repositoryService.deleteProposal(item.id);
+      success("Naskah Dihapus", `Naskah "${item.title}" berhasil dihapus.`);
+      triggerBadgeRefresh();
+      await fetchProposals();
+    } catch (err: any) {
+      error("Gagal Menghapus", err.message || "Terjadi kesalahan saat menghapus naskah.");
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
   const filteredProposals = proposals.filter((p) => {
     const term = searchTerm.toLowerCase();
     const matchesSearch =
@@ -254,18 +286,30 @@ export default function RepositorySection() {
   return (
     <div className="space-y-6">
       {/* Header Info */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 p-6 rounded-2xl bg-card border border-border">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 p-6 rounded-2xl bg-card border border-border">
         <div>
           <div className="flex items-center gap-2">
-            <GraduationCap className="w-6 h-6 text-red-700 dark:text-red-500" />
+            <GraduationCap className="w-6 h-6 text-primary" />
             <h1 className="text-xl font-bold text-foreground">
-              Repositori Skripsi & Karya Ilmiah Mahasiswa
+              Repositori Skripsi &amp; Karya Ilmiah Mahasiswa
             </h1>
           </div>
           <p className="text-sm text-muted-foreground mt-1">
-            Verifikasi kelayakan berkas skripsi civitas akademika dan kelola aturan akses halaman (Page-Level ACL) untuk publik.
+            Verifikasi naskah skripsi civitas akademika, unggah naskah arsip/lampau, dan kelola aturan akses halaman publik.
           </p>
         </div>
+
+        <button
+          type="button"
+          onClick={() => {
+            setEditingItem(null);
+            setIsUploadModalOpen(true);
+          }}
+          className="inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-xs sm:text-sm font-semibold text-primary-foreground hover:bg-primary/90 transition-colors shadow-xs cursor-pointer shrink-0"
+        >
+          <UploadCloud className="size-4" />
+          <span>Unggah Naskah / Skripsi</span>
+        </button>
       </div>
 
       {/* Filter and Search Bar */}
@@ -357,13 +401,32 @@ export default function RepositorySection() {
                       <div className="font-mono text-xs font-bold text-foreground">
                         {item.proposalNumber}
                       </div>
-                      <span className="inline-block mt-1.5 text-[11px] px-2 py-0.5 rounded bg-muted text-muted-foreground font-medium border border-border/50">
-                        {item.documentCategory}
-                      </span>
+                      <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
+                        <span className="text-[11px] px-2 py-0.5 rounded bg-muted text-muted-foreground font-medium border border-border/50">
+                          {item.documentCategory}
+                        </span>
+                        {item.chapter && (
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-primary/10 text-primary border border-primary/20">
+                            {item.chapter.startsWith("BAB_")
+                              ? `BAB ${item.chapter.split("_")[1]}`
+                              : item.chapter === "FRONT_MATTER"
+                              ? "Awal"
+                              : item.chapter === "BACK_MATTER"
+                              ? "Akhir"
+                              : "Full Text"}
+                          </span>
+                        )}
+                      </div>
                     </TableCell>
 
                     <TableCell className="px-4 py-3.5 align-top max-w-md whitespace-normal">
                       <div className="font-bold text-foreground leading-snug">{item.title}</div>
+                      {item.chapterTitle && (
+                        <div className="text-xs font-semibold text-primary mt-1 flex items-center gap-1.5">
+                          <BookOpen className="w-3.5 h-3.5 shrink-0" />
+                          <span>{item.chapterTitle}</span>
+                        </div>
+                      )}
                       <div className="flex items-center gap-1.5 text-xs text-muted-foreground mt-1.5">
                         <User className="w-3.5 h-3.5 text-muted-foreground/70 shrink-0" />
                         <span>
@@ -450,6 +513,32 @@ export default function RepositorySection() {
                         </button>
 
                         <button
+                          type="button"
+                          onClick={() => {
+                            setEditingItem(item);
+                            setIsUploadModalOpen(true);
+                          }}
+                          title="Edit Data Naskah Repositori"
+                          className="p-1.5 rounded-lg border border-border hover:bg-muted text-foreground transition-colors inline-flex items-center cursor-pointer"
+                        >
+                          <Edit2 className="w-4 h-4 text-muted-foreground" />
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteProposal(item)}
+                          disabled={deletingId === item.id}
+                          title="Hapus Naskah dari Repositori"
+                          className="p-1.5 rounded-lg border border-border hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors inline-flex items-center cursor-pointer disabled:opacity-50"
+                        >
+                          {deletingId === item.id ? (
+                            <Loader2 className="w-4 h-4 animate-spin text-destructive" />
+                          ) : (
+                            <Trash2 className="w-4 h-4 text-muted-foreground hover:text-destructive" />
+                          )}
+                        </button>
+
+                        <button
                           onClick={() => {
                             setReviewModalItem(item);
                             setReviewAction(
@@ -457,7 +546,7 @@ export default function RepositorySection() {
                             );
                             setReviewNotes(item.reviewNotes || "");
                           }}
-                          className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-red-700 hover:bg-red-800 text-white transition-colors cursor-pointer shadow-sm"
+                          className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-primary hover:bg-primary/90 text-primary-foreground transition-colors cursor-pointer shadow-xs"
                         >
                           Review
                         </button>
@@ -738,6 +827,20 @@ export default function RepositorySection() {
           </div>
         )}
       </Modal>
+
+      {/* Modal Unggah / Edit Naskah untuk Admin */}
+      <AdminUploadProposalModal
+        isOpen={isUploadModalOpen}
+        onClose={() => {
+          setIsUploadModalOpen(false);
+          setEditingItem(null);
+        }}
+        onSuccess={() => {
+          fetchProposals();
+          triggerBadgeRefresh();
+        }}
+        editItem={editingItem}
+      />
     </div>
   );
 }

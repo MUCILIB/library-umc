@@ -2,6 +2,7 @@ import { type NextFunction, type Request, type Response } from "express";
 import { LoanService } from "../service/loan.service";
 import {
   createLoanSchema,
+  directLoanSchema,
   getLoansQuerySchema
 } from "../validation/loan.validation";
 import {
@@ -78,6 +79,41 @@ export class LoanController {
       next(error);
     }
   }
+
+  /**
+   * POST /loans/direct — Input Peminjaman Langsung di Tempat oleh Petugas (Staff/Admin)
+   */
+  async createDirectLoan(req: Request, res: Response, next: NextFunction) {
+    try {
+      const validation = directLoanSchema.safeParse(req.body);
+      if (!validation.success) {
+        return sendValidationError(res, validation.error.flatten());
+      }
+
+      if (!req.user?.id) {
+        return sendError(res, "Tidak terautentikasi", 401);
+      }
+
+      const result = await loanService.createDirectLoan(req.user.id, validation.data);
+      sendSuccess(res, "Peminjaman langsung berhasil diproses", result, 201);
+    } catch (error: any) {
+      if (
+        error.message &&
+        (error.message.includes("tidak ditemukan") ||
+          error.message.includes("belum aktif") ||
+          error.message.includes("kedaluwarsa") ||
+          error.message.includes("tertunggak") ||
+          error.message.includes("kuota maksimal") ||
+          error.message.includes("terlambat") ||
+          error.message.includes("tidak tersedia") ||
+          error.message.includes("sedang berstatus"))
+      ) {
+        return sendError(res, error.message, 400);
+      }
+      next(error);
+    }
+  }
+
 
   /**
    * GET /loans/verify/:token — Verifikasi token QR peminjaman

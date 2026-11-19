@@ -60,6 +60,16 @@ export class ItemController {
     } catch (error) { next(error); }
   }
 
+  async standardize(req: Request, res: Response, next: NextFunction) {
+    try {
+      const bibId = req.params.bibliographyId as string;
+      const customPrefix = req.body?.customPrefix as string | undefined;
+      const result = await itemService.standardizeCodes(bibId, customPrefix);
+      if (!result.success) return sendError(res, result.message, 400);
+      sendSuccess(res, result.message, result.data);
+    } catch (error) { next(error); }
+  }
+
   async update(req: Request, res: Response, next: NextFunction) {
     try {
       const validation = updateItemSchema.safeParse(req.body);

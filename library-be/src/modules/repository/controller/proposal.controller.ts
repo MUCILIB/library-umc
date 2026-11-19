@@ -2,6 +2,7 @@ import { type Request, type Response, type NextFunction } from "express";
 import { proposalService } from "../service/proposal.service";
 import {
   createProposalSchema,
+  updateProposalSchema,
   reviewProposalSchema,
   configurePageRuleSchema
 } from "../validation/proposal.validation";
@@ -14,7 +15,7 @@ import { getSession } from "../../../utils/auth-utils";
 
 export class ProposalController {
   /**
-   * Mahasiswa submit proposal baru
+   * Mahasiswa atau Admin/Staff submit proposal / skripsi baru
    */
   async create(req: Request, res: Response, next: NextFunction) {
     try {
@@ -32,14 +33,27 @@ export class ProposalController {
         return sendValidationError(res, validation.error.flatten());
       }
 
+      const isStaffOrAdmin =
+        user?.role === "super_admin" ||
+        user?.role === "staff" ||
+        user?.role === "admin";
+
       const proposal = await proposalService.createProposal(
         user.id,
         validation.data,
         req.file.buffer,
-        req.file.originalname
+        req.file.originalname,
+        isStaffOrAdmin
       );
 
-      sendSuccess(res, "Proposal skripsi berhasil diajukan", proposal, 201);
+      sendSuccess(
+        res,
+        isStaffOrAdmin
+          ? "Karya ilmiah / skripsi berhasil diunggah ke repositori"
+          : "Proposal skripsi berhasil diajukan",
+        proposal,
+        201
+      );
     } catch (error) {
       next(error);
     }
@@ -236,10 +250,15 @@ export class ProposalController {
         user.role === "staff" ||
         user.role === "admin";
 
+      const validation = updateProposalSchema.safeParse(req.body);
+      if (!validation.success) {
+        return sendValidationError(res, validation.error.flatten());
+      }
+
       const updated = await proposalService.updateProposal(
         id,
         user.id,
-        req.body,
+        validation.data,
         req.file ? req.file.buffer : undefined,
         req.file ? req.file.originalname : undefined,
         isStaffOrAdmin

@@ -10,6 +10,7 @@ import {
   FileText,
   X,
 } from "lucide-react";
+import ExportReportModal from "@/components/dashboard/reports/ExportReportModal";
 import {
   exportApi,
   facultyApi,
@@ -45,6 +46,7 @@ export default function ExportSection() {
   const [successBiblio, setSuccessBiblio] = useState(false);
   const [successItem, setSuccessItem] = useState(false);
   const [successPdf, setSuccessPdf] = useState(false);
+  const [isReportModalOpen, setIsReportModalOpen] = useState(false);
 
   useEffect(() => {
     facultyApi
@@ -64,8 +66,13 @@ export default function ExportSection() {
         })
         .catch(() => {});
     } else {
-      setStudyPrograms([]);
-      setSelectedStudyProgramId("");
+      // Muat seluruh daftar program studi universitas jika fakultas tidak dibatasi
+      studyProgramApi
+        .list()
+        .then((res) => {
+          setStudyPrograms(res.data || []);
+        })
+        .catch(() => {});
     }
   }, [selectedFacultyId]);
 
@@ -163,11 +170,21 @@ export default function ExportSection() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-xl font-bold text-foreground">Export Data</h2>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Export data bibliografi dan item ke format CSV
-        </p>
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h2 className="text-xl font-bold text-foreground">Export Data</h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Export data bibliografi, eksemplar, dan laporan perpustakaan
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={() => setIsReportModalOpen(true)}
+          className="inline-flex h-10 items-center gap-2 rounded-xl bg-primary px-4 text-sm font-bold text-primary-foreground shadow-sm hover:bg-primary/90 transition-colors"
+        >
+          <FileText className="size-4" />
+          <span>Export Laporan (Pilihan Prodi)</span>
+        </button>
       </div>
 
       {error && (
@@ -219,21 +236,30 @@ export default function ExportSection() {
               htmlFor="filter-prodi"
               className="mb-1.5 block text-xs font-medium text-muted-foreground"
             >
-              Program Studi
+              Program Studi (Bisa Dipilih Langsung)
             </label>
             <Select
               value={selectedStudyProgramId || "all"}
-              onValueChange={(val) => setSelectedStudyProgramId(val === "all" ? "" : val)}
-              disabled={!selectedFacultyId}
+              onValueChange={(val) => {
+                const nextVal = val === "all" ? "" : val;
+                setSelectedStudyProgramId(nextVal);
+                // Jika fakultas belum dipilih dan prodi dipilih, sinkronkan fakultas jika ada
+                if (nextVal && !selectedFacultyId) {
+                  const matchedSp = studyPrograms.find((sp) => String(sp.id) === nextVal);
+                  if (matchedSp?.facultyId) {
+                    setSelectedFacultyId(String(matchedSp.facultyId));
+                  }
+                }
+              }}
             >
               <SelectTrigger id="filter-prodi" aria-label="Filter Program Studi" className="min-h-11 w-full">
-                <SelectValue placeholder="Semua Program Studi" />
+                <SelectValue placeholder="Pilih Program Studi (Semua)" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Semua Program Studi</SelectItem>
                 {studyPrograms.map((sp) => (
                   <SelectItem key={sp.id} value={String(sp.id)}>
-                    {sp.name}
+                    {sp.name} {sp.faculty?.name && !selectedFacultyId ? `(${sp.faculty.name})` : ""}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -242,7 +268,11 @@ export default function ExportSection() {
         </div>
         {(selectedFacultyId || selectedStudyProgramId) && (
           <div className="mt-3 flex items-center justify-between text-xs text-muted-foreground">
-            <span>Filter diterapkan pada file hasil export.</span>
+            <span>
+              {selectedStudyProgramId
+                ? "Filter diterapkan: Menghasilkan laporan buku khusus untuk program studi yang dipilih."
+                : "Filter diterapkan pada file hasil export."}
+            </span>
             <button
               onClick={() => {
                 setSelectedFacultyId("");
@@ -475,6 +505,12 @@ export default function ExportSection() {
           </div>
         </div>
       )}
+      {/* Comprehensive Report Modal per Prodi */}
+      <ExportReportModal
+        isOpen={isReportModalOpen}
+        onClose={() => setIsReportModalOpen(false)}
+        initialType="loans"
+      />
     </div>
   );
 }

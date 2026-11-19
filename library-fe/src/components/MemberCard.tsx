@@ -233,7 +233,7 @@ const MemberCard = ({
                     Masa Berlaku
                   </p>
                   <p className={`mt-1 text-sm font-bold ${isExpired ? "text-rose-300 font-extrabold" : isExpiringSoon ? "text-amber-300" : "text-white"}`}>
-                    {profile.cardExpiresAt ? formatDate(profile.cardExpiresAt) : "1 Tahun Sejak Disetujui"}
+                    {profile.cardExpiresAt ? formatDate(profile.cardExpiresAt) : "-"}
                   </p>
                 </div>
                 <Clock3 size={18} className={isExpired ? "text-rose-300" : "text-white/60"} />

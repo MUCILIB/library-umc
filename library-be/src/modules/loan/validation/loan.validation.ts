@@ -29,3 +29,13 @@ export const returnLoanSchema = z.object({
   notes: z.string().optional(),
 });
 
+export const directLoanSchema = z.object({
+  memberIdentifier: z.string().min(1, "ID Member, Nomor Kartu, atau NIM/NIDN wajib diisi"),
+  itemIdentifier: z.string().min(1, "ID Item, Kode Eksemplar, atau Barcode wajib diisi"),
+  loanDate: z.string().optional(),
+  dueDate: z.string().optional(),
+  durationDays: z.number().int().positive().optional().default(7),
+  notes: z.string().optional(),
+});
+
+

@@ -147,6 +147,13 @@ router.patch(
   memberController.approveCardRenewal
 );
 
+router.patch(
+  "/members/:id/card/expiry",
+  isAuthenticated,
+  requireRole(["super_admin", "staff"]),
+  memberController.updateCardExpiry
+);
+
 router.post(
   "/members/:id/card/issue",
   isAuthenticated,

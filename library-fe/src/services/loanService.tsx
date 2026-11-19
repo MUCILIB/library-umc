@@ -82,6 +82,29 @@ class LoanService {
     return result.data;
   }
 
+  // POST /loans/direct - Direct loan on-site by Staff/Admin
+  async createDirectLoan(payload: {
+    memberIdentifier: string;
+    itemIdentifier: string;
+    durationDays?: number;
+    loanDate?: string;
+    dueDate?: string;
+    notes?: string;
+  }): Promise<Loan> {
+    const response = await fetch(`${this.baseUrl}/api/loans/direct`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify(payload),
+    });
+    const result = await response.json();
+    if (!response.ok || !result.success) {
+      throw new Error(result.message || "Gagal memproses peminjaman langsung");
+    }
+    return result.data;
+  }
+
+
   // GET /loans - Get all loans (Admin)
   async getAllLoans(params?: {
     status?: string;

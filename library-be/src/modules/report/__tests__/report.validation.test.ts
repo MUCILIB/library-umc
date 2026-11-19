@@ -25,6 +25,20 @@ describe("Report Validation Schema", () => {
     }
   });
 
+  it("menerima studyProgramId dan facultyId untuk export loans", () => {
+    const result = exportLoansQuerySchema.safeParse({
+      format: "pdf",
+      studyProgramId: "12",
+      facultyId: "3",
+      status: "returned"
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.studyProgramId).toBe(12);
+      expect(result.data.facultyId).toBe(3);
+    }
+  });
+
   it("menolak month di luar range 1-12 untuk export fines", () => {
     const result = exportFinesQuerySchema.safeParse({ month: "13" });
     expect(result.success).toBe(false);

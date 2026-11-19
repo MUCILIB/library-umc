@@ -113,6 +113,13 @@ export const requirePermission = (
         return;
       }
 
+      // Modul koleksi publik (katalog buku, repositori karya ilmiah, dan e-book)
+      // berhak dilihat oleh seluruh pengguna terotentikasi (student, external, lecturer, dsb)
+      if (action === "view" && ["bibliographies", "repository", "ebooks"].includes(menuKey)) {
+        next();
+        return;
+      }
+
       const permissions = await roleService.getUserPermissions(userRole);
       const menuPerm = permissions[menuKey];
 

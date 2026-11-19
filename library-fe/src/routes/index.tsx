@@ -23,11 +23,13 @@ import PublicRoute from "./PublicRoute"; // Komponen baru untuk memblokir akses 
 import TentangPage from "../pages/TentangPage";
 import WebTrafficTracker from "@/components/WebTrafficTracker";
 import AbsensiPage from "../pages/Absensi";
+import { MandatoryContactModal } from "@/components/common/MandatoryContactModal";
 
 const AppRoutes = () => {
   return (
     <>
       <WebTrafficTracker />
+      <MandatoryContactModal />
       <Routes>
         {/* Rute Publik (Akses terbatas untuk Admin) */}
         <Route path="/" element={<NonAdminRoute><Home /></NonAdminRoute>} />

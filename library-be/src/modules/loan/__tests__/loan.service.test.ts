@@ -7,8 +7,9 @@ vi.mock("../../../db", () => ({
   db: {
     query: {
       loans: { findFirst: vi.fn(), findMany: vi.fn() },
-      items: { findFirst: vi.fn() },
-      members: { findFirst: vi.fn() },
+      items: { findFirst: vi.fn(), findMany: vi.fn() },
+      members: { findFirst: vi.fn(), findMany: vi.fn() },
+      bibliographies: { findFirst: vi.fn() },
     },
     select: vi.fn(),
     insert: vi.fn(),
@@ -110,11 +111,40 @@ describe("LoanService Unit Tests", () => {
       ).rejects.toThrowError("Buku ini sedang tidak tersedia untuk dipinjam");
     });
 
+    it("throw jika buku termasuk klasifikasi referensi R (hanya dibaca di tempat)", async () => {
+      mockSelectCounts([0, 0, 1]);
+      (db.query.items.findFirst as any)
+        .mockResolvedValueOnce(null) // directItem
+        .mockResolvedValueOnce({
+          id: "item-1",
+          status: "available",
+          collectionType: { code: "R", canBeBorrowed: false }
+        })
+        .mockResolvedValueOnce({
+          id: "item-1",
+          collectionType: { code: "R", canBeBorrowed: false }
+        });
+      (db.query.bibliographies.findFirst as any)
+        .mockResolvedValueOnce({
+          id: "collection-1",
+          collectionType: { code: "R", canBeBorrowed: false }
+        });
+
+      await expect(
+        loanService.requestLoan("member-1", "collection-1"),
+      ).rejects.toThrowError("Buku ini termasuk koleksi Referensi (R)");
+    });
+
     it("sukses membuat loan pending dan qrCodeUrl", async () => {
       mockSelectCounts([0, 0, 1]);
       (db.query.items.findFirst as any).mockResolvedValue({
         id: "item-1",
         status: "available",
+        collectionType: { code: "S", canBeBorrowed: true }
+      });
+      (db.query.bibliographies.findFirst as any).mockResolvedValue({
+        id: "collection-1",
+        collectionType: { code: "S", canBeBorrowed: true }
       });
       (db.insert as any).mockReturnValueOnce({
         values: vi.fn().mockReturnValue({
@@ -413,6 +443,7 @@ describe("LoanService Unit Tests", () => {
           id: "member-1",
           cardNumber: "UMCLIB-2026-0008",
           nimNidn: "22010199",
+          faculty: "Fakultas Teknik",
           user: { name: "Ahmad Fauzi" }
         },
         item: {

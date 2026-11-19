@@ -1,3 +1,4 @@
+import { useState } from "react";
 import {
   AlertCircle,
   Barcode,
@@ -11,6 +12,7 @@ import {
   RotateCcw,
   Tag,
   XCircle,
+  Printer,
 } from "lucide-react";
 import loanService, { type Loan as LoanData } from "@/services/loanService";
 import {
@@ -24,6 +26,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { formatDate, getLoanTitle, getLoanAuthor } from "./helpers";
+import { ReturnReceiptModal } from "@/components/common/ReturnReceiptModal";
 
 export interface LoanDetailDialogProps {
   loan: LoanData;
@@ -47,6 +50,7 @@ export function LoanDetailDialog({
   const isRejected = loan.status === "rejected";
   const isExtended = loan.status === "extended";
   const isPending = loan.status === "pending";
+  const [isReceiptOpen, setIsReceiptOpen] = useState(false);
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -278,25 +282,51 @@ export function LoanDetailDialog({
                 </div>
               )}
 
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="w-full text-xs font-bold border-emerald-300 text-emerald-800 dark:border-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 mt-1 cursor-pointer"
-                onClick={async () => {
-                  try {
-                    await loanService.downloadReturnReceiptPdf(loan.id);
-                  } catch (e: unknown) {
-                    console.error("Gagal unduh PDF tanda terima:", e);
-                  }
-                }}
-              >
-                <FileDown size={13} className="mr-1.5" />
-                Unduh Tanda Terima Pengembalian (PDF)
-              </Button>
+              <div className="space-y-1.5 pt-1">
+                <Button
+                  type="button"
+                  size="sm"
+                  className="w-full text-xs font-bold bg-primary hover:bg-primary/90 text-primary-foreground cursor-pointer flex items-center justify-center gap-1.5"
+                  onClick={() => setIsReceiptOpen(true)}
+                >
+                  <Printer size={13} className="mr-1.5" />
+                  Cetak Resi Pengembalian
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="w-full text-xs font-bold border-emerald-300 text-emerald-800 dark:border-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 cursor-pointer"
+                  onClick={async () => {
+                    try {
+                      await loanService.downloadReturnReceiptPdf(loan.id);
+                    } catch (e: unknown) {
+                      console.error("Gagal unduh PDF tanda terima:", e);
+                    }
+                  }}
+                >
+                  <FileDown size={13} className="mr-1.5" />
+                  Unduh Tanda Terima Pengembalian (PDF)
+                </Button>
+              </div>
             </div>
           )}
         </div>
+
+        {isReceiptOpen && (
+          <ReturnReceiptModal
+            isOpen={isReceiptOpen}
+            onClose={() => setIsReceiptOpen(false)}
+            loan={loan}
+            onDownloadPdf={async () => {
+              try {
+                await loanService.downloadReturnReceiptPdf(loan.id);
+              } catch (e: unknown) {
+                console.error("Gagal unduh PDF tanda terima:", e);
+              }
+            }}
+          />
+        )}
 
         <DialogFooter className="flex flex-col sm:flex-row items-center gap-2">
           {type === "active" && !returnPending && (

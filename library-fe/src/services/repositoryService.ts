@@ -14,6 +14,8 @@ export interface RepositoryProposal {
   advisorName1: string;
   advisorName2: string | null;
   documentCategory: "PROPOSAL" | "THESIS" | "REPORT";
+  chapter?: string | null;
+  chapterTitle?: string | null;
   status: "SUBMITTED" | "UNDER_REVIEW" | "REVISION_REQUIRED" | "APPROVED" | "ARCHIVED";
   fileSize: number;
   pageCount: number;
@@ -44,10 +46,19 @@ export interface RepositoryProposal {
 export interface CreateProposalPayload {
   title: string;
   abstract?: string;
+  keywords?: string[];
   advisorName1: string;
   advisorName2?: string;
   studyProgramId: number;
   documentCategory: "PROPOSAL" | "THESIS" | "REPORT";
+  chapter?: string;
+  chapterTitle?: string;
+  // Bidang tambahan untuk input naskah oleh Admin / Pustakawan:
+  authorName?: string;
+  authorNim?: string;
+  status?: "SUBMITTED" | "APPROVED" | "ARCHIVED" | "UNDER_REVIEW";
+  allowedStartPage?: number;
+  allowedEndPage?: number;
 }
 
 class RepositoryService {
@@ -150,6 +161,16 @@ class RepositoryService {
     if (payload.advisorName2) formData.append("advisorName2", payload.advisorName2);
     formData.append("studyProgramId", payload.studyProgramId.toString());
     formData.append("documentCategory", payload.documentCategory);
+    if (payload.chapter) formData.append("chapter", payload.chapter);
+    if (payload.chapterTitle) formData.append("chapterTitle", payload.chapterTitle);
+    if (payload.authorName) formData.append("authorName", payload.authorName);
+    if (payload.authorNim) formData.append("authorNim", payload.authorNim);
+    if (payload.status) formData.append("status", payload.status);
+    if (payload.allowedStartPage) formData.append("allowedStartPage", payload.allowedStartPage.toString());
+    if (payload.allowedEndPage) formData.append("allowedEndPage", payload.allowedEndPage.toString());
+    if (payload.keywords && payload.keywords.length > 0) {
+      payload.keywords.forEach((k) => formData.append("keywords[]", k));
+    }
     formData.append("file", file);
 
     const response = await fetch(`${this.baseUrl}/api/repository/proposals`, {
@@ -214,6 +235,11 @@ class RepositoryService {
     if (payload.advisorName2 !== undefined) formData.append("advisorName2", payload.advisorName2 || "");
     if (payload.studyProgramId) formData.append("studyProgramId", payload.studyProgramId.toString());
     if (payload.documentCategory) formData.append("documentCategory", payload.documentCategory);
+    if (payload.chapter) formData.append("chapter", payload.chapter);
+    if (payload.chapterTitle !== undefined) formData.append("chapterTitle", payload.chapterTitle || "");
+    if (payload.authorName) formData.append("authorName", payload.authorName);
+    if (payload.authorNim) formData.append("authorNim", payload.authorNim);
+    if (payload.status) formData.append("status", payload.status);
     if (file) formData.append("file", file);
 
     const response = await fetch(`${this.baseUrl}/api/repository/proposals/${id}`, {

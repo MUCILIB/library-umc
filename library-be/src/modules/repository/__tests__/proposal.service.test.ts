@@ -37,4 +37,56 @@ describe("ProposalService Lifecycle Unit Tests", () => {
     const slicedDoc = await PDFDocument.load(sliced);
     expect(slicedDoc.getPageCount()).toBe(10);
   });
+
+  describe("Validation & Chapter Schema", () => {
+    it("parses proposal with chapter and chapterTitle correctly", async () => {
+      const { createProposalSchema } = await import("../validation/proposal.validation");
+      const parsed = createProposalSchema.parse({
+        title: "Analisis Algoritma Dijkstra pada Jaringan Komputer",
+        advisorName1: "Dr. Budi",
+        studyProgramId: 1,
+        documentCategory: "THESIS",
+        chapter: "BAB_1",
+        chapterTitle: "Pendahuluan",
+        authorName: "Ahmad Dahlan",
+        authorNim: "202001001",
+        status: "APPROVED",
+        allowedStartPage: 1,
+        allowedEndPage: 5
+      });
+
+      expect(parsed.chapter).toBe("BAB_1");
+      expect(parsed.chapterTitle).toBe("Pendahuluan");
+      expect(parsed.authorName).toBe("Ahmad Dahlan");
+      expect(parsed.authorNim).toBe("202001001");
+      expect(parsed.status).toBe("APPROVED");
+      expect(parsed.allowedStartPage).toBe(1);
+      expect(parsed.allowedEndPage).toBe(5);
+    });
+
+    it("defaults chapter to FULL_TEXT if omitted", async () => {
+      const { createProposalSchema } = await import("../validation/proposal.validation");
+      const parsed = createProposalSchema.parse({
+        title: "Pengembangan Sistem Informasi Perpustakaan",
+        advisorName1: "Dr. Siti",
+        studyProgramId: 2,
+        documentCategory: "PROPOSAL"
+      });
+
+      expect(parsed.chapter).toBe("FULL_TEXT");
+      expect(parsed.chapterTitle).toBeUndefined();
+    });
+
+    it("supports partial updates for chapterTitle and allowedEndPage", async () => {
+      const { updateProposalSchema } = await import("../validation/proposal.validation");
+      const updated = updateProposalSchema.parse({
+        chapterTitle: "Pendahuluan & Latar Belakang Masalah",
+        allowedEndPage: 10
+      });
+
+      expect(updated.chapterTitle).toBe("Pendahuluan & Latar Belakang Masalah");
+      expect(updated.allowedEndPage).toBe(10);
+      expect(updated.title).toBeUndefined();
+    });
+  });
 });
