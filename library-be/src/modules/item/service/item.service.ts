@@ -294,6 +294,34 @@ export class ItemService {
     return crypto.randomBytes(20).toString("hex");
   }
 
+  private async getNextBookSequenceNumber(): Promise<string> {
+    const allRecentItems = await db.query.items.findMany({
+      where: isNull(items.deletedAt),
+      columns: { itemCode: true },
+      orderBy: [desc(items.createdAt)],
+      limit: 1000,
+    });
+
+    let maxSeq = 10000;
+    for (const it of allRecentItems) {
+      const m = (it.itemCode || "").match(/^[A-Z0-9_.-]+-\d{4}-(\d{4,6})/i);
+      if (m) {
+        const val = parseInt(m[1], 10);
+        if (!isNaN(val) && val > maxSeq) {
+          maxSeq = val;
+        }
+      }
+    }
+
+    if (maxSeq > 10000) {
+      return String(maxSeq + 1);
+    }
+
+    const [totalCount] = await db.select({ count: sql<number>`count(*)` }).from(items);
+    const nextNum = 10000 + Number(totalCount?.count || 0) + 1;
+    return String(nextNum);
+  }
+
   private async generateItemCode(bibliographyId: string, customPattern?: string): Promise<string> {
     const bib = await db.query.bibliographies.findFirst({
       where: eq(bibliographies.id, bibliographyId),
@@ -332,15 +360,13 @@ export class ItemService {
         const prefix = isRef ? "R" : String((bib as any).collectionType.code).trim().replace(/[\s/\\_]+/g, "-").toUpperCase();
         const year = bib.publishYear || new Date().getFullYear();
 
-        const existingMatch = allBibItems.find(i => /^[A-Z0-9_.-]+-\d{4}-(\d{4,5})-/i.test(i.itemCode));
+        const existingMatch = allBibItems.find(i => /^[A-Z0-9_.-]+-\d{4}-(\d{4,6})-/i.test(i.itemCode));
         let seqNum = "10001";
         if (existingMatch) {
-          const m = existingMatch.itemCode.match(/^[A-Z0-9_.-]+-\d{4}-(\d{4,5})-/i);
+          const m = existingMatch.itemCode.match(/^[A-Z0-9_.-]+-\d{4}-(\d{4,6})-/i);
           if (m) seqNum = m[1];
         } else {
-          const [totalCount] = await db.select({ count: sql<number>`count(*)` }).from(items);
-          const nextNum = 10000 + Number(totalCount?.count || 0) + 1;
-          seqNum = String(nextNum);
+          seqNum = await this.getNextBookSequenceNumber();
         }
 
         basePrefix = `${prefix}-${year}-${seqNum}`;
@@ -352,15 +378,13 @@ export class ItemService {
         const prefix = isRef ? "R" : "S";
         const year = bib.publishYear || new Date().getFullYear();
 
-        const existingMatch = allBibItems.find(i => /^[A-Z0-9_.-]+-\d{4}-(\d{4,5})-/i.test(i.itemCode));
+        const existingMatch = allBibItems.find(i => /^[A-Z0-9_.-]+-\d{4}-(\d{4,6})-/i.test(i.itemCode));
         let seqNum = "10001";
         if (existingMatch) {
-          const m = existingMatch.itemCode.match(/^[A-Z0-9_.-]+-\d{4}-(\d{4,5})-/i);
+          const m = existingMatch.itemCode.match(/^[A-Z0-9_.-]+-\d{4}-(\d{4,6})-/i);
           if (m) seqNum = m[1];
         } else {
-          const [totalCount] = await db.select({ count: sql<number>`count(*)` }).from(items);
-          const nextNum = 10000 + Number(totalCount?.count || 0) + 1;
-          seqNum = String(nextNum);
+          seqNum = await this.getNextBookSequenceNumber();
         }
 
         basePrefix = `${prefix}-${year}-${seqNum}`;
@@ -375,7 +399,18 @@ export class ItemService {
     const used = new Set(existingCodes.map((i) => i.itemCode.toUpperCase()));
     const usesCFormat = Array.from(used).some((c) => /-c\d+$/i.test(c));
 
-    for (let n = 1; n <= 999; n++) {
+    // Cari nomor urut c{n} atau {nn} tertinggi yang sudah ada di buku ini agar salinan selalu melanjutkan
+    let maxCopyNum = 0;
+    for (const code of used) {
+      const m = code.match(/-c(\d+)$/i) || code.match(/-(\d+)$/i);
+      if (m) {
+        const val = parseInt(m[1], 10);
+        if (!isNaN(val) && val > maxCopyNum) maxCopyNum = val;
+      }
+    }
+
+    const startNum = Math.max(1, maxCopyNum + 1);
+    for (let n = startNum; n <= startNum + 1000; n++) {
       const code = usesCFormat
         ? `${basePrefix}-c${n}`
         : `${basePrefix}-${String(n).padStart(2, "0")}`;
@@ -392,6 +427,13 @@ export class ItemService {
 
   async generateItemCodePreview(bibliographyId: string, customPattern?: string): Promise<string> {
     return this.generateItemCode(bibliographyId, customPattern);
+  }
+
+  async generateCodePreview(collectionTypeCode?: string, publishYear?: number): Promise<string> {
+    const prefix = collectionTypeCode?.toUpperCase() === "R" ? "R" : "S";
+    const year = publishYear || new Date().getFullYear();
+    const seqNum = await this.getNextBookSequenceNumber();
+    return `${prefix}-${year}-${seqNum}-c1`;
   }
 
   async createItem(data: CreateItemData) {

@@ -346,6 +346,7 @@ function BibliographyForm({ bib, onClose, onSuccess }: BibliographyFormProps) {
   const [quantity, setQuantity] = useState<string>("1");
   const [codePrefix, setCodePrefix] = useState<string>("");
   const [customCodePrefix, setCustomCodePrefix] = useState<boolean>(false);
+  const [serverNewPrefix, setServerNewPrefix] = useState<string>("");
   const [selectedLocationId, setSelectedLocationId] = useState("");
   const [step3Error, setStep3Error] = useState<string | null>(null);
   const [savingCopies, setSavingCopies] = useState<boolean>(false);
@@ -380,6 +381,19 @@ function BibliographyForm({ bib, onClose, onSuccess }: BibliographyFormProps) {
     return false;
   }, [formData.collectionTypeId, collectionTypes, bib]);
 
+  useEffect(() => {
+    if (bib) return;
+    const prefix = isReferenceBook ? "R" : "S";
+    const year = (formData.publishYear ? parseInt(formData.publishYear, 10) : null) || new Date().getFullYear();
+    itemApi.generateCode("new", `?collectionTypeCode=${prefix}&publishYear=${year}`)
+      .then((res) => {
+        const genCode = res.data?.itemCode || "";
+        const m = genCode.match(/^([A-Z0-9_.-]+-\d{4}-[A-Z0-9]+)/i);
+        if (m) setServerNewPrefix(m[1].toUpperCase());
+      })
+      .catch(() => {});
+  }, [bib, isReferenceBook, formData.publishYear]);
+
   // Analisis struktur aturan kode eksemplar buku (pola tunggal konsisten)
   const structureAnalysis = useMemo(() => {
     const prefix = isReferenceBook ? "R" : "S";
@@ -388,8 +402,13 @@ function BibliographyForm({ bib, onClose, onSuccess }: BibliographyFormProps) {
       bib?.publishYear ||
       new Date().getFullYear();
     const existing = bib ? itemsList : localNewItems;
-    return analyzeItemCodeStructure(existing, prefix, year, "10001");
-  }, [bib, itemsList, localNewItems, isReferenceBook, formData.publishYear]);
+    const fallbackSeq = serverNewPrefix ? (serverNewPrefix.split("-")[2] || "10001") : "10001";
+    const analysis = analyzeItemCodeStructure(existing, prefix, year, fallbackSeq);
+    if (!bib && localNewItems.length === 0 && serverNewPrefix) {
+      analysis.basePrefix = serverNewPrefix;
+    }
+    return analysis;
+  }, [bib, itemsList, localNewItems, isReferenceBook, formData.publishYear, serverNewPrefix]);
 
   // Auto-sinkronisasi awalan barcode (codePrefix) mengikuti aturan kode buku
   useEffect(() => {
@@ -1761,7 +1780,11 @@ function BibliographyForm({ bib, onClose, onSuccess }: BibliographyFormProps) {
                   <span className="font-mono font-semibold text-foreground">
                     {codePrefix || (isReferenceBook ? "R-2026-10001" : "S-2026-10001")}-c{structureAnalysis.nextSeq}
                   </span>
-                  <span className="text-muted-foreground/80"> • Melanjutkan nomor urut eksemplar sebelumnya.</span>
+                  <span className="text-muted-foreground/80">
+                    {structureAnalysis.totalItems > 0
+                      ? ` • Melanjutkan eksemplar ke-${structureAnalysis.nextSeq} (saat ini terdaftar ${structureAnalysis.totalItems} eksemplar).`
+                      : " • Melanjutkan nomor urut buku perpustakaan."}
+                  </span>
                 </p>
               </div>
 

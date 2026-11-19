@@ -71,11 +71,19 @@ export function QuickAddItemModal({ bib, onClose, onSuccess }: QuickAddItemModal
     setError(null);
     setFullBib(bib);
 
-    // Initial prefix instan dari prop bib: otomatis R jika Referensi, S jika Sirkulasi
+    // Initial check dari data prop yang sudah ada
     const initialIsRef = checkIsReference(bib, collectionTypes);
     const initialPrefix = initialIsRef ? "R" : "S";
     const year = bib.publishYear || new Date().getFullYear();
-    setCodePrefix(`${initialPrefix}-${year}-10001`);
+    const initialItems = (bib as any).items || [];
+
+    if (initialItems.length > 0) {
+      const initAnalysis = analyzeItemCodeStructure(initialItems, initialPrefix, year, "10001");
+      setStructureAnalysis(initAnalysis);
+      setCodePrefix(initAnalysis.basePrefix);
+    } else {
+      setCodePrefix("");
+    }
 
     let active = true;
     setLoadingLocations(true);
@@ -83,10 +91,20 @@ export function QuickAddItemModal({ bib, onClose, onSuccess }: QuickAddItemModal
 
     Promise.all([
       locationApi.list().catch(() => ({ data: [] as Location[] })),
-      collectionTypeApi?.list ? collectionTypeApi.list().catch(() => ({ data: [] as CollectionType[] })) : Promise.resolve({ data: [] as CollectionType[] }),
-      bibliographyApi?.getById ? bibliographyApi.getById(bib.id).catch(() => ({ data: bib })) : Promise.resolve({ data: bib }),
+      collectionTypeApi?.list
+        ? collectionTypeApi.list().catch(() => ({ data: [] as CollectionType[] }))
+        : Promise.resolve({ data: [] as CollectionType[] }),
+      bibliographyApi?.getItems
+        ? bibliographyApi.getItems(bib.id).catch(() => ({ data: [] as any[] }))
+        : Promise.resolve({ data: [] as any[] }),
+      bibliographyApi?.getById
+        ? bibliographyApi.getById(bib.id).catch(() => ({ data: bib }))
+        : Promise.resolve({ data: bib }),
+      itemApi?.generateCode
+        ? itemApi.generateCode(bib.id).catch(() => ({ data: { itemCode: "" } }))
+        : Promise.resolve({ data: { itemCode: "" } }),
     ])
-      .then(([locRes, colRes, bibRes]) => {
+      .then(([locRes, colRes, itemsRes, bibRes, genCodeRes]) => {
         if (!active) return;
         const locs: Location[] = locRes.data || [];
         setLocations(locs);
@@ -98,26 +116,51 @@ export function QuickAddItemModal({ bib, onClose, onSuccess }: QuickAddItemModal
         setCollectionTypes(cols);
 
         const latestBib = bibRes.data || bib;
-        setFullBib(latestBib);
+        
+        // Gabungkan daftar item fisik riil dari endpoint items maupun bibliografi
+        const rawItems = (itemsRes.data && Array.isArray(itemsRes.data)) ? itemsRes.data : [];
+        const existingItems = rawItems.length > 0 ? rawItems : ((latestBib as any).items || (bib as any).items || []);
+        
+        const totalItems = existingItems.length;
+        const availableItems = existingItems.filter((i: any) => i.status === "available").length;
+        const updatedBib = { ...latestBib, items: existingItems, totalItems, availableItems };
+        setFullBib(updatedBib);
 
         // Tentukan apakah buku Referensi atau Sirkulasi sesuai data bibliografi
-        const isRef = checkIsReference(latestBib, cols);
+        const isRef = checkIsReference(updatedBib, cols);
         const resolvedPrefix = isRef ? "R" : "S";
 
         const matchedCol =
-          latestBib.collectionType ||
-          cols.find((c: CollectionType) => c.id === latestBib.collectionTypeId) ||
+          updatedBib.collectionType ||
+          cols.find((c: CollectionType) => c.id === updatedBib.collectionTypeId) ||
           cols.find((c: CollectionType) =>
             isRef ? (c.code === "R" || !c.canBeBorrowed) : (c.code === "S" || c.canBeBorrowed)
           ) ||
           null;
 
-        setSelectedColTypeId(matchedCol?.id || latestBib.collectionTypeId || null);
+        setSelectedColTypeId(matchedCol?.id || updatedBib.collectionTypeId || null);
+
+        // Ekstrak kode awalan dari server generator yang melanjutkan sequence perpustakaan
+        let serverBasePrefix = "";
+        const genCode = (genCodeRes as any)?.data?.itemCode || "";
+        if (genCode) {
+          const matchBase = genCode.match(/^([A-Z0-9_.-]+-\d{4}-[A-Z0-9]+)/i);
+          if (matchBase) {
+            serverBasePrefix = matchBase[1].toUpperCase();
+          }
+        }
+
+        const finalYear = updatedBib.publishYear || new Date().getFullYear();
+        const fallbackSeq = serverBasePrefix ? (serverBasePrefix.split("-")[2] || "10001") : "10001";
 
         // Analisis struktur kode eksemplar buku (pola tunggal konsisten)
-        const existingItems = (latestBib as any).items || [];
-        const finalYear = latestBib.publishYear || new Date().getFullYear();
-        const analysis = analyzeItemCodeStructure(existingItems, resolvedPrefix, finalYear, "10001");
+        const analysis = analyzeItemCodeStructure(existingItems, resolvedPrefix, finalYear, fallbackSeq);
+        
+        // Jika buku belum punya eksemplar, gunakan nomor urut lanjutan yang diberikan oleh server
+        if (existingItems.length === 0 && serverBasePrefix) {
+          analysis.basePrefix = serverBasePrefix;
+        }
+
         setStructureAnalysis(analysis);
         setCodePrefix(analysis.basePrefix);
       })
@@ -445,7 +488,11 @@ export function QuickAddItemModal({ bib, onClose, onSuccess }: QuickAddItemModal
             <span className="font-mono font-semibold text-foreground">
               {codePrefix || (isReferenceBook ? "R-2026-10001" : "S-2026-10001")}-c{structureAnalysis ? structureAnalysis.nextSeq : 1}
             </span>
-            <span className="text-muted-foreground/80"> • Melanjutkan nomor urut eksemplar sebelumnya.</span>
+            <span className="text-muted-foreground/80">
+              {structureAnalysis && structureAnalysis.totalItems > 0
+                ? ` • Melanjutkan eksemplar ke-${structureAnalysis.nextSeq} (saat ini terdaftar ${structureAnalysis.totalItems} eksemplar).`
+                : " • Melanjutkan nomor urut buku perpustakaan."}
+            </span>
           </p>
         </div>
 
