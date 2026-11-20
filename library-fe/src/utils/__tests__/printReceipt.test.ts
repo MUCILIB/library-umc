@@ -225,6 +225,15 @@ describe("printReceipt Utility", () => {
   });
 
   describe("generateLoanThermalReceiptHtml & printLoanThermalReceipt", () => {
+    beforeEach(() => {
+      vi.useFakeTimers();
+    });
+
+    afterEach(() => {
+      vi.useRealTimers();
+      vi.restoreAllMocks();
+    });
+
     const loanSample: LoanReceiptData = {
       receiptNo: "BA-PINJ-20261120-001",
       loanDate: "2026-11-20T08:00:00.000Z",
@@ -284,6 +293,10 @@ describe("printReceipt Utility", () => {
 
       expect(mockFocus).toHaveBeenCalled();
       expect(mockPrint).toHaveBeenCalled();
+
+      // Fast forward timeout to clean up iframe
+      vi.advanceTimersByTime(1600);
+      expect(mockIframe.remove).toHaveBeenCalled();
     });
   });
 });
