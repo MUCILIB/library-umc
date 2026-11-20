@@ -32,14 +32,14 @@ import { exportApi } from "@/api/client";
 import Modal from "@/components/ui/modal";
 import { triggerBadgeRefresh } from "@/hooks/dashboard/useDashboardBadges";
 import { useRolePermissions } from "@/hooks/useRolePermissions";
-
+import { cn } from "@/utils/utils";
 
 interface Loan {
   id: string;
-  itemId: string;
-  memberId: string;
-  loanDate: string;
-  dueDate: string;
+  itemId?: string;
+  memberId?: string;
+  loanDate?: string;
+  dueDate?: string;
   returnDate?: string | null;
   returnStaffName?: string;
   returnStaffSignature?: string;
@@ -56,27 +56,66 @@ interface Loan {
   bibliographyTitle?: string;
   memberName?: string;
   itemCode?: string;
+  fine?: number;
   item?: {
+    id?: string;
     itemCode?: string;
     barcode?: string;
+    inventoryCode?: string;
+    callNumber?: string;
+    location?: {
+      name?: string;
+      room?: string;
+      rack?: string;
+      shelf?: string;
+    };
     bibliography?: {
+      id?: string;
       title?: string;
       author?: string;
+      sor?: string;
+      publisher?: string;
+      publishYear?: number;
+      classification?: string;
+      callNumber?: string;
       image?: string;
+      isbnIssn?: string;
     };
   };
   member?: {
+    id?: string;
     nimNidn?: string;
     faculty?: string;
     studyProgram?: string;
     institution?: string;
     type?: string;
+    memberType?: string;
     cardNumber?: string;
+    phone?: string;
     user?: {
+      id?: string;
       name?: string;
+      email?: string;
+      role?: string;
     };
   };
 }
+
+const getBorrowerType = (loan: Loan) => {
+  const raw = loan.member?.type || loan.member?.memberType || loan.member?.user?.role || "student";
+  if (raw === "student") return "Mahasiswa";
+  if (raw === "lecturer" || raw === "dosen") return "Dosen";
+  if (raw === "staff") return "Tenaga Kependidikan";
+  if (raw === "external") return "Anggota Luar";
+  return raw;
+};
+
+const getConditionLabel = (cond?: "good" | "damaged" | "lost") => {
+  if (cond === "good") return "Baik & Lengkap";
+  if (cond === "damaged") return "Rusak";
+  if (cond === "lost") return "Hilang";
+  return cond || "Baik";
+};
 
 interface LoansSectionProps {
   searchTerm: string;
@@ -177,18 +216,14 @@ export default function LoansSection({ searchTerm, onSearchChange }: LoansSectio
       setSummaryStats({
         pending: allLoans.filter((l) => l?.status === "pending").length,
         reservations: Array.isArray(reservationsList) ? reservationsList.length : 0,
-        approved: allLoans.filter(
-          (l) =>
-            (l?.status === "approved" || l?.status === "extended") &&
-            Boolean(l?.dueDate) &&
-            new Date(l.dueDate).setHours(0, 0, 0, 0) >= todayMidnight
-        ).length,
-        overdue: allLoans.filter(
-          (l) =>
-            (l?.status === "approved" || l?.status === "extended") &&
-            Boolean(l?.dueDate) &&
-            new Date(l.dueDate).setHours(0, 0, 0, 0) < todayMidnight
-        ).length,
+        approved: allLoans.filter((l) => {
+          if (!l || (l.status !== "approved" && l.status !== "extended") || !l.dueDate) return false;
+          return new Date(l.dueDate).setHours(0, 0, 0, 0) >= todayMidnight;
+        }).length,
+        overdue: allLoans.filter((l) => {
+          if (!l || (l.status !== "approved" && l.status !== "extended") || !l.dueDate) return false;
+          return new Date(l.dueDate).setHours(0, 0, 0, 0) < todayMidnight;
+        }).length,
         returned: allLoans.filter((l) => l?.status === "returned").length,
       });
     } catch (err) {
@@ -419,8 +454,8 @@ export default function LoansSection({ searchTerm, onSearchChange }: LoansSectio
     // Check if pending extension
     if (extensionStatus === 'pending') {
       return (
-        <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold tracking-wide bg-purple-100 text-purple-700">
-          <Clock size={14} /> Menunggu Perpanjangan
+        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-purple-500/10 text-purple-700 dark:text-purple-400 border border-purple-500/20">
+          <Clock size={13} /> Menunggu Perpanjangan
         </span>
       );
     }
@@ -434,27 +469,27 @@ export default function LoansSection({ searchTerm, onSearchChange }: LoansSectio
       
       if (today > due) {
         return (
-          <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold tracking-wide bg-red-100 dark:bg-red-900 text-destructive`}>
-            <Clock size={14} /> Terlambat
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-red-500/10 text-red-700 dark:text-red-400 border border-red-500/20">
+            <AlertTriangle size={13} /> Terlambat
           </span>
         );
       }
     }
 
-    const statusConfig: Record<string, { color: string; icon: React.ElementType; text: string }> = {
-      pending: { color: "bg-yellow-100 text-yellow-700 dark:text-yellow-400", icon: Clock, text: "Menunggu" },
-      approved: { color: "bg-blue-100 text-blue-700 dark:text-blue-400", icon: BookOpen, text: "Dipinjam" },
-      rejected: { color: "bg-red-100 dark:bg-red-900 text-destructive", icon: XCircle, text: "Ditolak" },
-      returned: { color: "bg-muted text-muted-foreground", icon: CheckCircle, text: "Dikembalikan" },
-      extended: { color: "bg-purple-100 text-purple-700", icon: Clock, text: "Diperpanjang" },
+    const statusConfig: Record<string, { badgeClass: string; icon: React.ElementType; text: string }> = {
+      pending: { badgeClass: "bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/20", icon: Clock, text: "Menunggu Persetujuan" },
+      approved: { badgeClass: "bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-500/20", icon: BookOpen, text: "Sedang Dipinjam" },
+      rejected: { badgeClass: "bg-red-500/10 text-destructive border-red-500/20", icon: XCircle, text: "Ditolak" },
+      returned: { badgeClass: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/20", icon: CheckCircle, text: "Dikembalikan" },
+      extended: { badgeClass: "bg-purple-500/10 text-purple-700 dark:text-purple-400 border-purple-500/20", icon: Clock, text: "Diperpanjang" },
     };
     
     const config = statusConfig[status] || statusConfig.pending;
     const Icon = config.icon;
     
     return (
-      <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold tracking-wide ${config.color}`}>
-        <Icon size={14} /> {config.text}
+      <span className={cn("inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold border", config.badgeClass)}>
+        <Icon size={13} /> {config.text}
       </span>
     );
   };
@@ -476,7 +511,7 @@ export default function LoansSection({ searchTerm, onSearchChange }: LoansSectio
         if (filter === "overdue") {
           const isOverdue =
             (loan.status === "approved" || loan.status === "extended") &&
-            Boolean(loan.dueDate) &&
+            loan.dueDate &&
             new Date(loan.dueDate).setHours(0, 0, 0, 0) < new Date().setHours(0, 0, 0, 0);
           if (!isOverdue) return false;
         }
@@ -484,7 +519,7 @@ export default function LoansSection({ searchTerm, onSearchChange }: LoansSectio
         if (filter === "approved") {
           const isNotOverdue =
             (loan.status === "approved" || loan.status === "extended") &&
-            Boolean(loan.dueDate) &&
+            loan.dueDate &&
             new Date(loan.dueDate).setHours(0, 0, 0, 0) >= new Date().setHours(0, 0, 0, 0);
           if (!isNotOverdue) return false;
         }
@@ -531,204 +566,188 @@ export default function LoansSection({ searchTerm, onSearchChange }: LoansSectio
       <div className="bg-card rounded-[24px] border border-border shadow-sm overflow-hidden flex flex-col min-h-[600px]">
         
         {/* Header Controls */}
-        <div className="p-6 md:px-8 border-b border-border flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-          <h2 className="text-[20px] font-extrabold text-foreground tracking-tight">Peminjaman & Persetujuan</h2>
-          
-          <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
-            {/* Filter Status */}
-            <Select
-              value={filter}
-              onValueChange={(value) =>
-                setFilter(
-                  value as
-                    | "all"
-                    | "pending"
-                    | "pending_extension"
-                    | "reservations"
-                    | "approved"
-                    | "returned"
-                    | "overdue"
-                )
-              }
-            >
-              <SelectTrigger className="w-[220px] text-[13px] font-bold">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Semua</SelectItem>
-                <SelectItem value="pending">Menunggu Persetujuan</SelectItem>
-                <SelectItem value="pending_extension">Menunggu Perpanjangan</SelectItem>
-                <SelectItem value="reservations">Antrean Reservasi</SelectItem>
-                <SelectItem value="approved">Sedang Dipinjam</SelectItem>
-                <SelectItem value="returned">Dikembalikan</SelectItem>
-                <SelectItem value="overdue">Terlambat</SelectItem>
-              </SelectContent>
-            </Select>
-            
-            {/* Search */}
-            <div className="relative flex-1 md:flex-initial">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground w-4 h-4" />
-              <input
-                type="text"
-                placeholder="Cari peminjaman..."
-                className="w-full md:w-64 pl-11 pr-4 py-2.5 bg-background border-none rounded-xl text-[13px] font-medium text-muted-foreground focus:ring-2 focus:ring-primary/10 placeholder:text-muted-foreground"
-                value={searchTerm}
-                onChange={(e) => handleSearchChange(e.target.value)}
-              />
+        <div className="p-6 md:px-8 border-b border-border space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <h2 className="text-xl font-extrabold text-foreground tracking-tight">
+                Peminjaman &amp; Persetujuan
+              </h2>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Kelola sirkulasi buku, verifikasi pengajuan pinjaman, dan berita acara pengembalian
+              </p>
             </div>
-            
-            {/* Refresh Button */}
-            <button
-              onClick={() => {
-                fetchLoans();
-                void fetchSummaryStats();
-              }}
-              className="w-10 h-10 bg-background rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted transition-all flex items-center justify-center shrink-0 cursor-pointer"
-              title="Refresh data"
-            >
-              <RefreshCw size={16} strokeWidth={2.5} />
-            </button>
 
-            {/* Export CSV Button */}
-            <button
-              onClick={handleExportLoans}
-              disabled={exportingLoans}
-              className="h-10 px-4 bg-background rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted transition-all flex items-center gap-2 shrink-0 text-[13px] font-bold border border-border/50 disabled:opacity-50 cursor-pointer"
-              title="Export riwayat peminjaman ke CSV"
-            >
-              {exportingLoans ? (
-                <Loader2 size={16} className="animate-spin" />
-              ) : (
-                <Download size={16} strokeWidth={2.5} />
-              )}
-              <span>Export CSV</span>
-            </button>
-
-            {/* Direct Loan Button (Input di Tempat) */}
             {canEdit("loans") && (
               <button
                 type="button"
                 onClick={() => setIsDirectLoanOpen(true)}
-                className="h-10 px-4 bg-primary text-primary-foreground rounded-xl hover:bg-primary/90 transition-all flex items-center gap-2 shrink-0 text-[13px] font-bold shadow-xs cursor-pointer"
+                className="inline-flex items-center justify-center gap-2 h-9 px-4 rounded-lg bg-primary text-primary-foreground text-xs font-semibold hover:bg-primary/90 transition-colors shadow-xs cursor-pointer shrink-0"
                 title="Input peminjaman mandiri di tempat oleh petugas jika pemustaka tidak membawa HP"
               >
-                <PlusCircle size={16} strokeWidth={2.5} />
+                <PlusCircle size={15} />
                 <span>Peminjaman di Tempat</span>
               </button>
             )}
           </div>
+
+          {/* Search, Filter, & Action Toolbar */}
+          <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
+            <div className="flex flex-wrap items-center gap-2.5 flex-1 min-w-[280px]">
+              {/* Filter Status */}
+              <Select
+                value={filter}
+                onValueChange={(value) =>
+                  setFilter(
+                    value as
+                      | "all"
+                      | "pending"
+                      | "pending_extension"
+                      | "reservations"
+                      | "approved"
+                      | "returned"
+                      | "overdue"
+                  )
+                }
+              >
+                <SelectTrigger className="w-[190px] sm:w-[210px] h-9 text-xs font-semibold">
+                  <SelectValue placeholder="Pilih Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Semua Status</SelectItem>
+                  <SelectItem value="pending">Menunggu Persetujuan</SelectItem>
+                  <SelectItem value="pending_extension">Menunggu Perpanjangan</SelectItem>
+                  <SelectItem value="reservations">Antrean Reservasi</SelectItem>
+                  <SelectItem value="approved">Sedang Dipinjam</SelectItem>
+                  <SelectItem value="returned">Dikembalikan</SelectItem>
+                  <SelectItem value="overdue">Terlambat</SelectItem>
+                </SelectContent>
+              </Select>
+
+              {/* Search */}
+              <div className="relative flex-1 min-w-[200px] max-w-md">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground size-4" />
+                <input
+                  type="text"
+                  placeholder="Cari judul buku, nama pemustaka, NIM/NIDN..."
+                  className="w-full pl-9 pr-3 h-9 bg-background border border-border rounded-lg text-xs font-medium text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                  value={searchTerm}
+                  onChange={(e) => handleSearchChange(e.target.value)}
+                />
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex items-center gap-2 shrink-0">
+              <button
+                onClick={() => {
+                  fetchLoans();
+                  void fetchSummaryStats();
+                }}
+                className="h-9 w-9 rounded-lg border border-border bg-background text-muted-foreground hover:text-foreground hover:bg-muted transition-colors flex items-center justify-center cursor-pointer"
+                title="Segarkan data sirkulasi"
+              >
+                <RefreshCw size={14} />
+              </button>
+
+              <button
+                onClick={handleExportLoans}
+                disabled={exportingLoans}
+                className="h-9 px-3 rounded-lg border border-border bg-background text-muted-foreground hover:text-foreground hover:bg-muted transition-colors flex items-center gap-1.5 text-xs font-semibold disabled:opacity-50 cursor-pointer"
+                title="Export riwayat peminjaman ke CSV"
+              >
+                {exportingLoans ? (
+                  <Loader2 size={14} className="animate-spin" />
+                ) : (
+                  <Download size={14} />
+                )}
+                <span>Export CSV</span>
+              </button>
+            </div>
+          </div>
         </div>
 
-        {/* Stats Cards Row */}
-        <div className="p-6 md:px-8 border-b border-border">
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3.5 sm:gap-4">
-            
-            {/* Card 1: Menunggu Persetujuan */}
-            <button
-              type="button"
-              onClick={() => setFilter("pending")}
-              className={`bg-yellow-50 dark:bg-yellow-950/60 rounded-2xl p-4 sm:p-5 flex flex-col justify-between h-[100px] text-left transition-all cursor-pointer hover:shadow-xs active:scale-[0.98] ${
-                filter === "pending"
-                  ? "ring-2 ring-yellow-500 shadow-xs"
-                  : "hover:ring-1 hover:ring-yellow-300 dark:hover:ring-yellow-700"
-              }`}
-              title="Filter: Menunggu Persetujuan"
-            >
-              <div className="flex items-start justify-between w-full">
-                <Clock className="text-yellow-700 dark:text-yellow-400 shrink-0" size={20} strokeWidth={2.5} />
-                <span className="text-[26px] sm:text-[28px] font-black leading-none text-yellow-700 dark:text-yellow-400">
-                  {summaryStats.pending}
-                </span>
-              </div>
-              <p className="text-[11px] font-bold text-yellow-700 dark:text-yellow-400 truncate">Menunggu Persetujuan</p>
-            </button>
-
-            {/* Card 2: Antrean Reservasi */}
-            <button
-              type="button"
-              onClick={() => setFilter("reservations")}
-              className={`bg-purple-50 dark:bg-purple-950/60 rounded-2xl p-4 sm:p-5 flex flex-col justify-between h-[100px] text-left transition-all cursor-pointer hover:shadow-xs active:scale-[0.98] ${
-                filter === "reservations"
-                  ? "ring-2 ring-purple-500 shadow-xs"
-                  : "hover:ring-1 hover:ring-purple-300 dark:hover:ring-purple-700"
-              }`}
-              title="Filter: Antrean Reservasi"
-            >
-              <div className="flex items-start justify-between w-full">
-                <Bookmark className="text-purple-700 dark:text-purple-400 shrink-0" size={20} strokeWidth={2.5} />
-                <span className="text-[26px] sm:text-[28px] font-black leading-none text-purple-700 dark:text-purple-400">
-                  {summaryStats.reservations}
-                </span>
-              </div>
-              <p className="text-[11px] font-bold text-purple-700 dark:text-purple-400 truncate">Antrean Reservasi</p>
-            </button>
-
-            {/* Card 3: Sedang Dipinjam */}
-            <button
-              type="button"
-              onClick={() => setFilter("approved")}
-              className={`bg-blue-50 dark:bg-blue-950/60 rounded-2xl p-4 sm:p-5 flex flex-col justify-between h-[100px] text-left transition-all cursor-pointer hover:shadow-xs active:scale-[0.98] ${
-                filter === "approved"
-                  ? "ring-2 ring-blue-500 shadow-xs"
-                  : "hover:ring-1 hover:ring-blue-300 dark:hover:ring-blue-700"
-              }`}
-              title="Filter: Sedang Dipinjam"
-            >
-              <div className="flex items-start justify-between w-full">
-                <BookOpen className="text-blue-600 dark:text-blue-400 shrink-0" size={20} strokeWidth={2.5} />
-                <span className="text-[26px] sm:text-[28px] font-black leading-none text-blue-600 dark:text-blue-400">
-                  {summaryStats.approved}
-                </span>
-              </div>
-              <p className="text-[11px] font-bold text-blue-600 dark:text-blue-400 truncate">Sedang Dipinjam</p>
-            </button>
-
-            {/* Card 4: Dikembalikan */}
-            <button
-              type="button"
-              onClick={() => setFilter("returned")}
-              className={`bg-muted rounded-2xl p-4 sm:p-5 flex flex-col justify-between h-[100px] text-left transition-all cursor-pointer hover:shadow-xs active:scale-[0.98] ${
-                filter === "returned"
-                  ? "ring-2 ring-foreground/40 shadow-xs"
-                  : "hover:ring-1 hover:ring-foreground/20"
-              }`}
-              title="Filter: Dikembalikan"
-            >
-              <div className="flex items-start justify-between w-full">
-                <CheckCircle className="text-foreground shrink-0" size={20} strokeWidth={2.5} />
-                <span className="text-[26px] sm:text-[28px] font-black leading-none text-foreground">
-                  {summaryStats.returned}
-                </span>
-              </div>
-              <p className="text-[11px] font-bold text-foreground truncate">Dikembalikan</p>
-            </button>
-
-            {/* Card 5: Terlambat */}
-            <button
-              type="button"
-              onClick={() => setFilter("overdue")}
-              className={`bg-red-50 dark:bg-red-950/60 rounded-2xl p-4 sm:p-5 flex flex-col justify-between h-[100px] text-left transition-all cursor-pointer hover:shadow-xs active:scale-[0.98] ${
-                filter === "overdue"
-                  ? "ring-2 ring-primary shadow-xs"
-                  : "hover:ring-1 hover:ring-red-300 dark:hover:ring-red-700"
-              }`}
-              title="Filter: Terlambat"
-            >
-              <div className="flex items-start justify-between w-full">
-                <XCircle className="text-primary shrink-0" size={20} strokeWidth={2.5} />
-                <span className="text-[26px] sm:text-[28px] font-black leading-none text-primary">
-                  {summaryStats.overdue}
-                </span>
-              </div>
-              <p className="text-[11px] font-bold text-primary truncate">Terlambat</p>
-            </button>
-
+        {/* Stats Row */}
+        <div className="p-6 md:px-8 border-b border-border/80">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
+            {[
+              {
+                key: "pending" as const,
+                label: "Menunggu Persetujuan",
+                value: summaryStats.pending,
+                icon: Clock,
+                badgeStyle: "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20",
+              },
+              {
+                key: "reservations" as const,
+                label: "Antrean Reservasi",
+                value: summaryStats.reservations,
+                icon: Bookmark,
+                badgeStyle: "bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20",
+              },
+              {
+                key: "approved" as const,
+                label: "Sedang Dipinjam",
+                value: summaryStats.approved,
+                icon: BookOpen,
+                badgeStyle: "bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20",
+              },
+              {
+                key: "returned" as const,
+                label: "Dikembalikan",
+                value: summaryStats.returned,
+                icon: CheckCircle,
+                badgeStyle: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20",
+              },
+              {
+                key: "overdue" as const,
+                label: "Terlambat",
+                value: summaryStats.overdue,
+                icon: XCircle,
+                badgeStyle: "bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/20",
+              },
+            ].map((card) => {
+              const Icon = card.icon;
+              const isActive = filter === card.key;
+              return (
+                <button
+                  key={card.key}
+                  type="button"
+                  onClick={() => setFilter(isActive ? "all" : card.key)}
+                  className={cn(
+                    "rounded-xl p-4 flex flex-col justify-between text-left transition-all cursor-pointer border",
+                    isActive
+                      ? "bg-card border-primary ring-2 ring-primary/20 shadow-xs"
+                      : "bg-card/70 hover:bg-card border-border/80 hover:border-border shadow-2xs"
+                  )}
+                  title={`Filter: ${card.label}`}
+                >
+                  <div className="flex items-center justify-between w-full mb-3">
+                    <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider truncate">
+                      {card.label}
+                    </span>
+                    <div className={cn("p-1.5 rounded-lg border shrink-0", card.badgeStyle)}>
+                      <Icon size={14} />
+                    </div>
+                  </div>
+                  <div className="flex items-baseline justify-between">
+                    <span className="text-2xl sm:text-3xl font-extrabold text-foreground tracking-tight">
+                      {card.value}
+                    </span>
+                    {isActive && (
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">
+                        Aktif
+                      </span>
+                    )}
+                  </div>
+                </button>
+              );
+            })}
           </div>
         </div>
 
         {/* Error Message */}
         {error && (
-          <div className="mx-8 mt-6 p-4 bg-warning-bg border border-warning-border rounded-xl">
+          <div className="mx-8 mt-6 p-4 bg-destructive/10 border border-destructive/20 rounded-xl">
             <p className="text-sm font-medium text-destructive">{error}</p>
           </div>
         )}
@@ -738,14 +757,14 @@ export default function LoansSection({ searchTerm, onSearchChange }: LoansSectio
           {loading ? (
             <div className="space-y-4 animate-in fade-in duration-500">
               {[...Array(3)].map((_, i) => (
-                <Skeleton key={i} className="h-[140px] w-full rounded-[20px]" />
+                <Skeleton key={i} className="h-[180px] w-full rounded-xl" />
               ))}
             </div>
           ) : filter === "reservations" ? (
             paginatedReservations.length === 0 ? (
               <div className="h-full min-h-[300px] flex flex-col items-center justify-center text-center text-muted-foreground">
                 <Clock className="w-12 h-12 mb-4 opacity-20" />
-                <p className="text-[15px] font-bold text-muted-foreground">
+                <p className="text-sm font-bold text-muted-foreground">
                   {searchTerm ? "Tidak ada hasil reservasi" : "Tidak ada antrean reservasi saat ini"}
                 </p>
               </div>
@@ -754,45 +773,54 @@ export default function LoansSection({ searchTerm, onSearchChange }: LoansSectio
                 {paginatedReservations.map((res) => (
                   <div
                     key={res.id}
-                    className="bg-background rounded-[20px] p-6 border border-border hover:bg-card hover:shadow-lg transition-all group"
+                    className="rounded-xl border border-border bg-card p-5 sm:p-6 shadow-2xs hover:border-border/90 hover:shadow-sm transition-all space-y-4"
                   >
-                    <div className="flex flex-col sm:flex-row items-start justify-between gap-4 mb-5">
-                      <div className="flex items-start gap-4">
-                        <div className="w-12 h-12 bg-amber-50 dark:bg-amber-950 text-amber-600 rounded-xl flex items-center justify-center shrink-0 border border-amber-200 dark:border-amber-800">
-                          <Clock size={20} />
-                        </div>
-                        <div>
-                          <h4 className="font-extrabold text-foreground text-[15px] leading-snug">
-                            {res.bibliography?.title || "Judul tidak tersedia"}
-                          </h4>
-                          <div className="flex items-center gap-2 mt-1.5">
-                            <User size={13} className="text-muted-foreground" />
-                            <span className="text-[13px] font-bold text-muted-foreground">
-                              {res.member?.user?.name || "Nama tidak tersedia"}
-                            </span>
-                            {res.member?.nimNidn && (
-                              <span className="text-[11px] font-medium text-muted-foreground bg-card px-2 py-0.5 rounded-md border border-border">
-                                {res.member.nimNidn}
-                              </span>
-                            )}
-                          </div>
-                        </div>
+                    <div className="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-border/70">
+                      <div className="flex items-center gap-2 text-xs">
+                        <span className="font-mono font-bold px-2 py-0.5 rounded bg-muted text-foreground border border-border/80">
+                          #RES-{res.id.slice(0, 8).toUpperCase()}
+                        </span>
+                        <span className="text-muted-foreground text-[11px]">
+                          {res.createdAt ? `Diajukan: ${new Date(res.createdAt).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })}` : ""}
+                        </span>
                       </div>
-                      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-amber-100 dark:bg-amber-950 text-amber-700 dark:text-amber-400">
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/20">
                         <Clock size={12} />
-                        Antrean Reservasi (Menunggu)
+                        Antrean Reservasi
                       </span>
                     </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-card p-4 rounded-xl border border-border text-sm">
-                      <div>
-                        <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest block mb-1">Pengarang</span>
-                        <span className="font-medium text-foreground">{res.bibliography?.author || "-"}</span>
-                      </div>
-                      <div>
-                        <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest block mb-1">Tanggal Diajukan</span>
-                        <span className="font-medium text-foreground">
-                          {res.createdAt ? new Date(res.createdAt).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "-"}
+
+                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+                      {/* Detail Bahan Pustaka */}
+                      <div className="lg:col-span-7 rounded-xl border border-border/70 bg-muted/10 p-4 space-y-2.5">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1">
+                          Bahan Pustaka yang Dipesan
                         </span>
+                        <h4 className="font-bold text-foreground text-sm sm:text-base leading-snug">
+                          {res.bibliography?.title || "Judul tidak tersedia"}
+                        </h4>
+                        <p className="text-xs text-muted-foreground font-medium mt-0.5">
+                          {res.bibliography?.author || "-"}
+                        </p>
+                        {res.bibliography?.publisher && (
+                          <p className="text-xs text-muted-foreground pt-1.5 border-t border-border/50">
+                            Penerbit: {[res.bibliography.publisher, res.bibliography.publicationYear].filter(Boolean).join(" • ")}
+                          </p>
+                        )}
+                      </div>
+
+                      {/* Detail Pemustaka */}
+                      <div className="lg:col-span-5 rounded-xl border border-border/70 bg-muted/20 p-4 space-y-2.5">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1">
+                          Identitas Pemustaka
+                        </span>
+                        <h4 className="font-bold text-foreground text-sm leading-snug">
+                          {res.member?.user?.name || "Nama tidak tersedia"}
+                        </h4>
+                        <div className="text-xs pt-1.5 border-t border-border/50">
+                          <span className="text-[10px] font-medium text-muted-foreground block">NIM / NIDN</span>
+                          <span className="font-mono font-semibold text-foreground">{res.member?.nimNidn || "-"}</span>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -802,7 +830,7 @@ export default function LoansSection({ searchTerm, onSearchChange }: LoansSectio
           ) : paginatedLoans.length === 0 ? (
             <div className="h-full min-h-[300px] flex flex-col items-center justify-center text-center text-muted-foreground">
               <BookOpen className="w-12 h-12 mb-4 opacity-20" />
-              <p className="text-[15px] font-bold text-muted-foreground">
+              <p className="text-sm font-bold text-muted-foreground">
                 {searchTerm 
                   ? "Tidak ada hasil pencarian" 
                   : filter === "overdue"
@@ -815,97 +843,206 @@ export default function LoansSection({ searchTerm, onSearchChange }: LoansSectio
               {paginatedLoans.map((loan) => (
                 <div 
                   key={loan.id} 
-                  className="bg-background rounded-[20px] p-6 border border-border hover:bg-card hover:shadow-lg hover:shadow-lg transition-all group"
+                  className="rounded-xl border border-border bg-card p-5 sm:p-6 shadow-2xs hover:border-border/90 hover:shadow-sm transition-all space-y-4"
                 >
-                  <div className="flex flex-col sm:flex-row items-start justify-between gap-4 mb-5">
-                    <div className="flex items-start gap-4">
-                      <div className="w-12 h-12 bg-card rounded-xl flex items-center justify-center shrink-0 border border-border group-hover:border-red-100 dark:border-red-900 group-hover:bg-warning-bg transition-colors">
-                        <BookOpen className="text-muted-foreground group-hover:text-primary transition-colors" size={20} />
-                      </div>
-                      <div>
-                        <h4 className="font-extrabold text-foreground text-[15px] leading-snug hover:text-primary transition-colors">{loan.item?.bibliography?.title || 'Judul tidak tersedia'}</h4>
-                        <div className="flex items-center gap-2 mt-1.5">
-                          <User size={13} className="text-muted-foreground" />
-                          <span className="text-[13px] font-bold text-muted-foreground">{loan.member?.user?.name || 'Nama tidak tersedia'}</span>
-                          {loan.member?.nimNidn && (
-                            <span className="text-[11px] font-medium text-muted-foreground bg-card px-2 py-0.5 rounded-md border border-border">{loan.member.nimNidn}</span>
-                          )}
-                        </div>
-                      </div>
+                  {/* Header: ID, Badge, Timestamp */}
+                  <div className="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-border/70">
+                    <div className="flex flex-wrap items-center gap-2 text-xs">
+                      <span className="font-mono font-bold px-2 py-0.5 rounded bg-muted text-foreground border border-border/80">
+                        #{loan.id.slice(0, 8).toUpperCase()}
+                      </span>
+                      {loan.returnReceiptNo && (
+                        <span className="font-mono text-[11px] font-semibold px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20">
+                          {loan.returnReceiptNo}
+                        </span>
+                      )}
+                      <span className="text-muted-foreground text-[11px]">
+                        {loan.loanDate ? `Diajukan: ${new Date(loan.loanDate).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })}` : ""}
+                      </span>
                     </div>
-                    {getStatusBadge(loan.status, loan.dueDate, loan.extensionStatus)}
+                    <div>
+                      {getStatusBadge(loan.status, loan.dueDate, loan.extensionStatus)}
+                    </div>
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 bg-card p-4 rounded-xl border border-border">
-                    <div>
-                      <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-1.5">Mulai Pinjam</p>
-                      <div className="flex items-center gap-2 text-[13px]">
-                        <Calendar size={14} className="text-muted-foreground" />
-                        <span className="font-bold text-muted-foreground">
-                          {loan.loanDate ? new Date(loan.loanDate).toLocaleDateString('id-ID', {day:'numeric', month:'short', year:'numeric'}) : '-'}
+                  {/* 2-Column Grid: Detail Bahan Pustaka & Detail Pemustaka */}
+                  <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+                    {/* Kolom 1: Detail Buku (Bahan Pustaka) */}
+                    <div className="lg:col-span-7 rounded-xl border border-border/70 bg-muted/10 p-4 space-y-3">
+                      <div>
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1">
+                          Bahan Pustaka (Buku)
                         </span>
+                        <h4 className="font-bold text-foreground text-sm sm:text-base leading-snug">
+                          {loan.item?.bibliography?.title || loan.bibliographyTitle || "Judul tidak tersedia"}
+                        </h4>
+                        <p className="text-xs text-muted-foreground font-medium mt-0.5">
+                          {loan.item?.bibliography?.author || loan.item?.bibliography?.sor || "Pengarang tidak tertera"}
+                        </p>
+                      </div>
+
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 pt-2.5 border-t border-border/50 text-xs">
+                        <div>
+                          <span className="text-[10px] font-medium text-muted-foreground block">No. Eksemplar / Barcode</span>
+                          <span className="font-mono font-semibold text-foreground">
+                            {loan.item?.itemCode || loan.item?.barcode || loan.itemCode || "-"}
+                          </span>
+                        </div>
+                        <div>
+                          <span className="text-[10px] font-medium text-muted-foreground block">Nomor Panggil (Call No.)</span>
+                          <span className="font-mono font-semibold text-foreground">
+                            {loan.item?.callNumber || loan.item?.bibliography?.callNumber || loan.item?.bibliography?.classification || "-"}
+                          </span>
+                        </div>
+                        <div>
+                          <span className="text-[10px] font-medium text-muted-foreground block">Lokasi Rak</span>
+                          <span className="font-medium text-foreground">
+                            {loan.item?.location?.name || "-"}
+                          </span>
+                        </div>
+                        {loan.item?.bibliography?.publisher && (
+                          <div className="col-span-2 sm:col-span-3">
+                            <span className="text-[10px] font-medium text-muted-foreground block">Penerbit &amp; Tahun</span>
+                            <span className="font-medium text-foreground">
+                              {[loan.item?.bibliography?.publisher, loan.item?.bibliography?.publishYear].filter(Boolean).join(" • ")}
+                            </span>
+                          </div>
+                        )}
                       </div>
                     </div>
-                    <div>
-                      <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-1.5">Batas Kembali</p>
-                      <div className="flex items-center gap-2 text-[13px]">
-                        <Calendar size={14} className="text-muted-foreground" />
-                        <span className="font-bold text-primary">
-                          {loan.dueDate ? new Date(loan.dueDate).toLocaleDateString('id-ID', {day:'numeric', month:'short', year:'numeric'}) : '-'}
+
+                    {/* Kolom 2: Detail Pemustaka (Peminjam) */}
+                    <div className="lg:col-span-5 rounded-xl border border-border/70 bg-muted/20 p-4 space-y-3">
+                      <div className="flex items-start justify-between gap-2">
+                        <div>
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1">
+                            Identitas Pemustaka
+                          </span>
+                          <h4 className="font-bold text-foreground text-sm leading-snug">
+                            {loan.member?.user?.name || loan.memberName || "Nama tidak tersedia"}
+                          </h4>
+                        </div>
+                        <span className="text-[11px] font-semibold px-2 py-0.5 rounded bg-background text-foreground border border-border">
+                          {getBorrowerType(loan)}
                         </span>
                       </div>
-                    </div>
-                    {(loan.notes || loan.purpose) && (
-                      <div className="md:col-span-2 lg:col-span-1">
-                        <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-1.5">Catatan Member</p>
-                        <span className="text-[13px] font-medium text-foreground bg-muted/60 px-2 py-1 rounded block">{loan.notes || loan.purpose}</span>
+
+                      <div className="grid grid-cols-2 gap-2.5 pt-2.5 border-t border-border/50 text-xs">
+                        <div>
+                          <span className="text-[10px] font-medium text-muted-foreground block">NIM / NIDN</span>
+                          <span className="font-mono font-semibold text-foreground">
+                            {loan.member?.nimNidn || "-"}
+                          </span>
+                        </div>
+                        <div>
+                          <span className="text-[10px] font-medium text-muted-foreground block">No. Kartu Anggota</span>
+                          <span className="font-mono font-semibold text-foreground">
+                            {loan.member?.cardNumber || "-"}
+                          </span>
+                        </div>
+                        <div className="col-span-2">
+                          <span className="text-[10px] font-medium text-muted-foreground block">Fakultas &amp; Program Studi</span>
+                          <span className="font-medium text-foreground">
+                            {[loan.member?.faculty, loan.member?.studyProgram].filter(Boolean).join(" • ") || "-"}
+                          </span>
+                        </div>
+                        {(loan.member?.user?.email || loan.member?.phone) && (
+                          <div className="col-span-2">
+                            <span className="text-[10px] font-medium text-muted-foreground block">Kontak</span>
+                            <span className="font-medium text-muted-foreground truncate block">
+                              {[loan.member?.user?.email, loan.member?.phone].filter(Boolean).join(" / ")}
+                            </span>
+                          </div>
+                        )}
                       </div>
-                    )}
+                    </div>
                   </div>
+
+                  {/* Circulation Dates Bar */}
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 p-3 rounded-lg bg-background border border-border/60 text-xs">
+                    <div>
+                      <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">Mulai Pinjam</span>
+                      <span className="font-semibold text-foreground mt-0.5 block">
+                        {loan.loanDate ? new Date(loan.loanDate).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" }) : "-"}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">Batas Jatuh Tempo</span>
+                      <span className="font-semibold text-primary mt-0.5 block">
+                        {loan.dueDate ? new Date(loan.dueDate).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" }) : "-"}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">Status Pengembalian</span>
+                      <span className="font-semibold text-foreground mt-0.5 block">
+                        {loan.returnDate ? (
+                          `${new Date(loan.returnDate).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })} (${getConditionLabel(loan.returnCondition)})`
+                        ) : (
+                          "Belum Dikembalikan"
+                        )}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">Denda / Biaya</span>
+                      <span className="font-semibold text-foreground mt-0.5 block">
+                        {(loan.fine ?? 0) > 0 ? `Rp ${(loan.fine ?? 0).toLocaleString("id-ID")}` : "Bebas Denda"}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Catatan Member jika ada */}
+                  {(loan.notes || loan.purpose) && (
+                    <div className="p-2.5 rounded-lg bg-muted/30 border border-border/50 text-xs">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block">Catatan Pemustaka:</span>
+                      <p className="text-foreground mt-0.5 font-medium">{loan.notes || loan.purpose}</p>
+                    </div>
+                  )}
 
                   {/* Action Buttons - Pending: Setujui / Tolak */}
                   {loan.status === 'pending' && canEdit("loans") && (
-                    <div className="flex flex-col sm:flex-row gap-3 pt-5 mt-5 border-t border-border">
+                    <div className="flex flex-col sm:flex-row gap-2.5 pt-3 border-t border-border/70">
                       <button
                         onClick={() => {
                           setSelectedLoan(loan);
                           setActionNotes('');
                         }}
                         disabled={processingId === loan.id}
-                        className="flex-1 bg-green-50 dark:bg-green-950 text-green-700 dark:text-green-400 border border-green-200 dark:border-green-800 px-4 py-2.5 rounded-xl text-sm font-bold hover:bg-green-600 hover:text-white transition-all disabled:opacity-50"
+                        className="flex-1 inline-flex items-center justify-center gap-2 bg-emerald-600 text-white hover:bg-emerald-700 px-4 py-2 rounded-lg text-xs font-semibold transition-colors disabled:opacity-50 cursor-pointer"
                       >
-                         {processingId === loan.id ? 'Memproses...' : '✓ Setujui Peminjaman'}
+                        {processingId === loan.id ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle size={14} />}
+                        <span>{processingId === loan.id ? 'Memproses...' : 'Setujui Peminjaman'}</span>
                       </button>
                       <button
                         onClick={() => openRejectModal(loan.id)}
                         disabled={processingId === loan.id}
-                        className="flex-none bg-card text-muted-foreground border border-border px-6 py-2.5 rounded-xl text-sm font-bold hover:bg-warning-bg hover:text-destructive hover:border-warning-border transition-all disabled:opacity-50"
+                        className="inline-flex items-center justify-center gap-2 bg-background text-destructive border border-destructive/30 hover:bg-destructive/10 px-5 py-2 rounded-lg text-xs font-semibold transition-colors disabled:opacity-50 cursor-pointer"
                       >
-                         Tolak
+                        <XCircle size={14} />
+                        <span>Tolak</span>
                       </button>
                     </div>
                   )}
 
-                  {/* Action Buttons - Approved */}
+                  {/* Action Buttons - Approved / Extended */}
                   {(loan.status === 'approved' || loan.status === 'extended') && canEdit("loans") && (
-                    <div className="flex flex-wrap items-center gap-3 pt-5 mt-5 border-t border-border">
+                    <div className="flex flex-wrap items-center gap-2.5 pt-3 border-t border-border/70">
                       <button
                         type="button"
                         onClick={() => setSelectedLoanReceipt(loan)}
-                        className="flex items-center gap-2 bg-primary/10 text-primary border border-primary/20 px-4 py-2.5 rounded-xl text-xs font-bold hover:bg-primary hover:text-primary-foreground transition-all cursor-pointer shadow-2xs"
+                        className="inline-flex items-center gap-2 bg-primary/10 text-primary border border-primary/20 px-3.5 py-2 rounded-lg text-xs font-semibold hover:bg-primary hover:text-primary-foreground transition-colors cursor-pointer"
                         title="Cetak struk bukti sirkulasi peminjaman buku"
                       >
                         <Printer size={14} />
-                        Cetak Struk Pinjam
+                        <span>Cetak Struk Pinjam</span>
                       </button>
 
                       <button
                         id={`btn-return-${loan.id}`}
                         onClick={() => navigate(`/dashboard/return-confirmation/${loan.id}`)}
-                        className="flex items-center gap-2 bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-blue-400 border border-blue-200 dark:border-blue-800 px-5 py-2.5 rounded-xl text-sm font-bold hover:bg-blue-600 hover:text-white transition-all disabled:opacity-50"
+                        className="inline-flex items-center gap-2 bg-blue-500/10 text-blue-700 dark:text-blue-400 border border-blue-500/20 px-3.5 py-2 rounded-lg text-xs font-semibold hover:bg-blue-600 hover:text-white transition-colors cursor-pointer"
                       >
                         <RotateCcw size={14} />
-                        Proses Pengembalian & TTD
+                        <span>Proses Pengembalian &amp; TTD</span>
                       </button>
 
                       {loan.extensionStatus === 'pending' && (
@@ -913,16 +1050,18 @@ export default function LoansSection({ searchTerm, onSearchChange }: LoansSectio
                           <button
                             onClick={() => handleApproveExtension(loan.id)}
                             disabled={processingId === loan.id}
-                            className="flex items-center gap-2 bg-green-50 dark:bg-green-950 text-green-700 dark:text-green-400 border border-green-200 dark:border-green-800 px-5 py-2.5 rounded-xl text-sm font-bold hover:bg-green-600 hover:text-white transition-all disabled:opacity-50"
+                            className="inline-flex items-center gap-2 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20 px-3.5 py-2 rounded-lg text-xs font-semibold hover:bg-emerald-600 hover:text-white transition-colors disabled:opacity-50 cursor-pointer"
                           >
-                            ✓ Setujui Perpanjangan
+                            <CheckCircle size={14} />
+                            <span>Setujui Perpanjangan</span>
                           </button>
                           <button
                             onClick={() => handleRejectExtension(loan.id)}
                             disabled={processingId === loan.id}
-                            className="flex items-center gap-2 bg-red-50 dark:bg-red-950 text-primary border border-red-200 dark:border-red-900 px-5 py-2.5 rounded-xl text-sm font-bold hover:bg-destructive hover:text-white transition-all disabled:opacity-50"
+                            className="inline-flex items-center gap-2 bg-red-500/10 text-red-700 dark:text-red-400 border border-red-500/20 px-3.5 py-2 rounded-lg text-xs font-semibold hover:bg-destructive hover:text-white transition-colors disabled:opacity-50 cursor-pointer"
                           >
-                            ✗ Tolak Perpanjangan
+                            <XCircle size={14} />
+                            <span>Tolak Perpanjangan</span>
                           </button>
                         </>
                       )}
@@ -931,14 +1070,14 @@ export default function LoansSection({ searchTerm, onSearchChange }: LoansSectio
 
                   {/* Action Buttons - Returned */}
                   {loan.status === 'returned' && (
-                    <div className="flex flex-wrap items-center gap-3 pt-5 mt-5 border-t border-border">
+                    <div className="flex flex-wrap items-center gap-2.5 pt-3 border-t border-border/70">
                       <button
                         type="button"
                         onClick={() => setSelectedReceiptLoan(loan)}
-                        className="flex items-center gap-2 bg-primary/10 text-primary border border-primary/20 px-4 py-2 rounded-xl text-xs font-bold hover:bg-primary hover:text-primary-foreground transition-all cursor-pointer"
+                        className="inline-flex items-center gap-2 bg-primary text-primary-foreground px-3.5 py-2 rounded-lg text-xs font-semibold hover:bg-primary/90 transition-colors shadow-xs cursor-pointer"
                       >
                         <Printer size={14} />
-                        Cetak Resi ({loan.returnReceiptNo || 'BA-RET'})
+                        <span>Cetak Resi ({loan.returnReceiptNo || 'BA-RET'})</span>
                       </button>
                       <button
                         onClick={async () => {
@@ -949,19 +1088,19 @@ export default function LoansSection({ searchTerm, onSearchChange }: LoansSectio
                             toast.error("Gagal", e.message || "Gagal mengunduh tanda terima");
                           }
                         }}
-                        className="flex items-center gap-2 bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800 px-4 py-2 rounded-xl text-xs font-bold hover:bg-emerald-600 hover:text-white transition-all cursor-pointer"
+                        className="inline-flex items-center gap-2 border border-border bg-background hover:bg-muted text-foreground px-3.5 py-2 rounded-lg text-xs font-semibold transition-colors cursor-pointer"
                       >
                         <FileDown size={14} />
-                        Unduh Berita Acara (PDF)
+                        <span>Unduh Berita Acara (PDF)</span>
                       </button>
                     </div>
                   )}
 
-                  {/* Info untuk status lainnya */}
+                  {/* Info penolakan jika ada */}
                   {loan.status === 'rejected' && loan.rejectReason && (
-                    <div className="mt-4 p-3 bg-warning-bg/50 rounded-xl text-[13px] border border-red-100 dark:border-red-900">
-                      <span className="font-bold text-destructive">Alasan Penolakan: </span>
-                      <span className="text-destructive font-medium">{loan.rejectReason}</span>
+                    <div className="p-3 bg-destructive/10 rounded-lg text-xs border border-destructive/20 text-destructive">
+                      <span className="font-bold">Alasan Penolakan: </span>
+                      <span>{loan.rejectReason}</span>
                     </div>
                   )}
                 </div>
@@ -1143,17 +1282,20 @@ export default function LoansSection({ searchTerm, onSearchChange }: LoansSectio
                     <span className="font-semibold text-muted-foreground">Batas Kembali</span>
                     <span
                       className={`font-bold ${
+                        returnModalLoan.dueDate &&
                         new Date(returnModalLoan.dueDate).setHours(0, 0, 0, 0) <
                         new Date().setHours(0, 0, 0, 0)
                           ? "text-destructive"
                           : "text-foreground"
                       }`}
                     >
-                      {new Date(returnModalLoan.dueDate).toLocaleDateString("id-ID", {
-                        day: "numeric",
-                        month: "long",
-                        year: "numeric",
-                      })}
+                      {returnModalLoan.dueDate
+                        ? new Date(returnModalLoan.dueDate).toLocaleDateString("id-ID", {
+                            day: "numeric",
+                            month: "long",
+                            year: "numeric",
+                          })
+                        : "-"}
                     </span>
                   </div>
                 </div>

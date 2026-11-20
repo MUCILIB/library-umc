@@ -240,27 +240,6 @@ function BibliographyForm({ bib, onClose, onSuccess }: BibliographyFormProps) {
     return letters ? letters.padEnd(3, "X") : "PEN";
   };
 
-  // Generator Call Number Standar (DDC + 3 Huruf Penulis + 1 Huruf Pertama Judul)
-  const generateCallNumberFromBib = () => {
-    const ddc = formData.classification.trim() || "000";
-
-    // 3 huruf nama utama / keluarga pengarang
-    const primaryAuthor = authors.find((a) => a.name.trim()) || { name: "" };
-    const authorCode = getAuthorThreeLetters(primaryAuthor.name);
-
-    // 1 huruf kecil dari huruf pertama judul buku
-    const titleChar = getTitleFirstLetter(formData.title);
-    const titleLetter = titleChar === "-" ? "a" : titleChar;
-
-    // Prefix R jika tipe koleksi adalah Referensi
-    const selectedCol = collectionTypes.find((c) => c.id.toString() === formData.collectionTypeId);
-    const isRef = selectedCol?.code === "R" || selectedCol?.canBeBorrowed === false;
-    const prefix = isRef ? "R " : "";
-
-    const generated = `${prefix}${ddc} ${authorCode} ${titleLetter}`.trim();
-    setFormData((prev) => ({ ...prev, callNumber: generated }));
-  };
-
   const parsedCallNumber = useMemo(() => {
     const raw = formData.callNumber.trim();
     const primaryAuthor = authors.find((a) => a.name.trim()) || { name: "" };
@@ -1331,20 +1310,9 @@ function BibliographyForm({ bib, onClose, onSuccess }: BibliographyFormProps) {
               </div>
 
               <div>
-                <div className="flex items-center justify-between mb-2">
-                  <label className="block text-xs font-bold text-foreground uppercase tracking-wider">
-                    Nomor Panggil (Call Number)
-                  </label>
-                  <button
-                    type="button"
-                    onClick={generateCallNumberFromBib}
-                    className="inline-flex items-center gap-1 rounded-md bg-primary/10 text-primary px-2.5 py-1 text-xs font-semibold hover:bg-primary/20 transition-all cursor-pointer shadow-xs"
-                    title="Buat otomatis dari DDC + 3 huruf penulis + 1 huruf judul"
-                  >
-                    <Sparkles className="size-3.5" />
-                    Auto-Generate
-                  </button>
-                </div>
+                <label className="block text-xs font-bold text-foreground uppercase tracking-wider mb-2">
+                  Nomor Panggil (Call Number)
+                </label>
                 <input
                   type="text"
                   placeholder="Contoh: 658.8 SAM p"

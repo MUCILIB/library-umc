@@ -194,4 +194,22 @@ describe("RoleService - Dynamic RBAC & Matrix Hak Akses", () => {
       ).rejects.toThrow("Hak akses role Super Admin terkunci secara permanen");
     });
   });
+
+  describe("getAllRoles resilience", () => {
+    it("tidak melempar uncaught error jika ensureSystemRoles mengalami kendala", async () => {
+      const unmockedService = new RoleService();
+      vi.spyOn(unmockedService, "ensureSystemRoles").mockRejectedValue(new Error("Database transient error"));
+
+      (db.select as any).mockReturnValue({
+        from: vi.fn().mockResolvedValue([
+          { id: "super_admin", name: "Super Admin", isSystem: true },
+          { id: "staff", name: "Staff", isSystem: true },
+        ]),
+      });
+
+      const result = await unmockedService.getAllRoles();
+      expect(result).toHaveLength(2);
+      expect(result[0].id).toBe("super_admin");
+    });
+  });
 });

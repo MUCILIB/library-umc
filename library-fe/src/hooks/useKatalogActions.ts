@@ -224,8 +224,8 @@ export function useKatalogActions({
     const diffDays = Math.ceil(
       (end.getTime() - start.getTime()) / (1000 * 3600 * 24),
     );
-    if (diffDays > 14) {
-      toast.warning("Melewati Batas", "Maksimal peminjaman 14 hari");
+    if (diffDays > 7) {
+      toast.warning("Melewati Batas", "Maksimal peminjaman 7 hari");
       return;
     }
 

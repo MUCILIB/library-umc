@@ -65,8 +65,8 @@ const LoanRequestForm = ({
     }
 
     const diffDays = Math.ceil((end.getTime() - start.getTime()) / (1000 * 3600 * 24));
-    if (diffDays > 14) {
-      showNotification('Maksimal peminjaman 14 hari', 'error');
+    if (diffDays > 7) {
+      showNotification('Maksimal peminjaman 7 hari', 'error');
       return;
     }
 
@@ -196,8 +196,8 @@ const LoanRequestForm = ({
             <div className="bg-amber-50 border border-amber-100 p-4 rounded-2xl">
               <h4 className="text-xs font-bold text-amber-800 uppercase mb-2 tracking-wide">Ketentuan:</h4>
               <ul className="text-xs text-amber-900/80 space-y-1.5 font-medium">
-                <li className="flex items-center gap-2">• Maksimal durasi peminjaman 14 hari</li>
-                <li className="flex items-center gap-2">• Denda keterlambatan Rp 2.000 / hari</li>
+                <li className="flex items-center gap-2">• Maksimal durasi peminjaman 7 hari</li>
+                <li className="flex items-center gap-2">• Denda keterlambatan Rp 500 / hari</li>
                 <li className="flex items-center gap-2">• Pastikan data sudah benar sebelum mengirim</li>
               </ul>
             </div>
