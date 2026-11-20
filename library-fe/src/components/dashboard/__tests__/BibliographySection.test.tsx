@@ -17,6 +17,11 @@ vi.mock("@/api/client", () => ({
       data: [{ id: 13, room: "Ruang Server", rack: "Rak 01", shelf: "Lantai 1" }],
     }),
   },
+  collectionTypeApi: {
+    list: vi.fn().mockResolvedValue({
+      data: [{ id: 1, name: "Buku Umum", code: "BU", canBeBorrowed: true }],
+    }),
+  },
   itemApi: {
     bulkCreate: vi.fn().mockResolvedValue({
       success: true,

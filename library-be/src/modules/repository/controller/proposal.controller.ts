@@ -292,6 +292,32 @@ export class ProposalController {
       next(error);
     }
   }
+
+  /**
+   * Mengambil konfigurasi bab kustom per program studi
+   */
+  async getChapterSettings(req: Request, res: Response, next: NextFunction) {
+    try {
+      const data = await proposalService.getChapterSettings();
+      sendSuccess(res, "Konfigurasi bab skripsi program studi berhasil dimuat", data);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * Menyimpan konfigurasi bab kustom per program studi
+   */
+  async saveChapterSettings(req: Request, res: Response, next: NextFunction) {
+    try {
+      const user = (req as any).user;
+      const settings = req.body?.settings || req.body;
+      const data = await proposalService.saveChapterSettings(user?.id || "system", settings);
+      sendSuccess(res, "Konfigurasi bab skripsi berhasil disimpan", data);
+    } catch (error) {
+      next(error);
+    }
+  }
 }
 
 export const proposalController = new ProposalController();

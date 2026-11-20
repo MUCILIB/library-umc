@@ -28,17 +28,12 @@ interface AdminUploadProposalModalProps {
   editItem?: RepositoryProposal | null;
 }
 
-export const CHAPTER_OPTIONS = [
-  { value: "FULL_TEXT", label: "Naskah Lengkap (Full Text)", defaultTitle: "Naskah Lengkap Skripsi" },
-  { value: "FRONT_MATTER", label: "Bagian Awal (Cover, Pengesahan, Abstrak)", defaultTitle: "Cover, Lembar Pengesahan & Abstrak" },
-  { value: "BAB_1", label: "BAB 1: Pendahuluan", defaultTitle: "Pendahuluan" },
-  { value: "BAB_2", label: "BAB 2: Tinjauan Pustaka / Landasan Teori", defaultTitle: "Tinjauan Pustaka & Landasan Teori" },
-  { value: "BAB_3", label: "BAB 3: Metodologi Penelitian", defaultTitle: "Metodologi Penelitian" },
-  { value: "BAB_4", label: "BAB 4: Hasil dan Pembahasan", defaultTitle: "Hasil Penelitian dan Pembahasan" },
-  { value: "BAB_5", label: "BAB 5: Penutup / Kesimpulan & Saran", defaultTitle: "Kesimpulan dan Saran" },
-  { value: "BACK_MATTER", label: "Bagian Akhir (Daftar Pustaka & Lampiran)", defaultTitle: "Daftar Pustaka & Lampiran" },
-  { value: "OTHER", label: "Bab Khusus / Lainnya", defaultTitle: "Bagian Khusus Naskah" },
-];
+import {
+  CHAPTER_OPTIONS,
+  getProgramChapterConfig,
+} from "@/utils/thesisChapters";
+
+export { CHAPTER_OPTIONS };
 
 export default function AdminUploadProposalModal({
   isOpen,
@@ -53,6 +48,7 @@ export default function AdminUploadProposalModal({
   const [loadingPrograms, setLoadingPrograms] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [customChapterSettings, setCustomChapterSettings] = useState<Record<string, any>>({});
 
   // Form State
   const [formData, setFormData] = useState({
@@ -72,28 +68,39 @@ export default function AdminUploadProposalModal({
     allowedEndPage: 10,
   });
 
-  // Load Program Studi
+  // Konfigurasi Bab Berdasarkan Program Studi yang Dipilih
+  const activeProgram = studyPrograms.find((p) => p.id === formData.studyProgramId) || null;
+  const activeChapterConfig = getProgramChapterConfig(activeProgram, customChapterSettings);
+  const currentChapterOptions = activeChapterConfig.chapters;
+
+  // Load Program Studi & Konfigurasi Bab
   useEffect(() => {
     if (!isOpen) return;
 
     let active = true;
     setLoadingPrograms(true);
-    studyProgramApi
-      .list()
-      .then((res) => {
+
+    Promise.all([
+      studyProgramApi.list(),
+      repositoryService.getChapterSettings().catch(() => ({})),
+    ])
+      .then(([progRes, settingsRes]) => {
         if (!active) return;
-        if (res.data && res.data.length > 0) {
-          setStudyPrograms(res.data);
+        if (settingsRes) {
+          setCustomChapterSettings(settingsRes);
+        }
+        if (progRes.data && progRes.data.length > 0) {
+          setStudyPrograms(progRes.data);
           if (!editItem) {
             setFormData((prev) => ({
               ...prev,
-              studyProgramId: prev.studyProgramId || res.data[0].id,
+              studyProgramId: prev.studyProgramId || progRes.data[0].id,
             }));
           }
         }
       })
       .catch((err) => {
-        console.error("Gagal memuat daftar program studi:", err);
+        console.error("Gagal memuat data program studi dan bab:", err);
       })
       .finally(() => {
         if (active) setLoadingPrograms(false);
@@ -306,7 +313,34 @@ export default function AdminUploadProposalModal({
               <select
                 required
                 value={formData.studyProgramId}
-                onChange={(e) => setFormData({ ...formData, studyProgramId: Number(e.target.value) })}
+                onChange={(e) => {
+                  const newProgId = Number(e.target.value);
+                  const newProg = studyPrograms.find((p) => p.id === newProgId);
+                  const newConfig = getProgramChapterConfig(newProg, customChapterSettings);
+                  const chapterExists = newConfig.chapters.some((c) => c.value === formData.chapter);
+
+                  let nextChapter = formData.chapter;
+                  let nextChapterTitle = formData.chapterTitle;
+
+                  if (!chapterExists) {
+                    const defaultOpt = newConfig.chapters.find((c) => c.value === "FULL_TEXT") || newConfig.chapters[0];
+                    nextChapter = defaultOpt.value;
+                    nextChapterTitle = defaultOpt.defaultTitle;
+                  } else {
+                    const oldOpt = activeChapterConfig.chapters.find((c) => c.value === formData.chapter);
+                    const newOpt = newConfig.chapters.find((c) => c.value === formData.chapter);
+                    if (oldOpt && newOpt && formData.chapterTitle === oldOpt.defaultTitle) {
+                      nextChapterTitle = newOpt.defaultTitle;
+                    }
+                  }
+
+                  setFormData((prev) => ({
+                    ...prev,
+                    studyProgramId: newProgId,
+                    chapter: nextChapter,
+                    chapterTitle: nextChapterTitle,
+                  }));
+                }}
                 disabled={loadingPrograms}
                 className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
               >
@@ -343,47 +377,59 @@ export default function AdminUploadProposalModal({
             </div>
           </div>
 
-          {/* Pilihan Bab Naskah & Judul Bab */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-3.5 rounded-xl border border-primary/20 bg-primary/5">
-            <div className="space-y-1.5">
-              <label className="block text-xs font-semibold text-foreground flex items-center gap-1.5">
+          {/* Pilihan Bab Naskah & Judul Bab Sesuai Program Studi */}
+          <div className="rounded-xl border border-border bg-muted/20 p-4 space-y-3">
+            <div className="flex items-center justify-between gap-2 pb-2 border-b border-border/60">
+              <span className="text-xs font-bold text-foreground flex items-center gap-1.5">
                 <BookOpen className="size-3.5 text-primary" />
-                Upload Bab Berapa? *
-              </label>
-              <select
-                value={formData.chapter}
-                onChange={(e) => {
-                  const val = e.target.value;
-                  const opt = CHAPTER_OPTIONS.find((c) => c.value === val);
-                  setFormData((prev) => ({
-                    ...prev,
-                    chapter: val,
-                    chapterTitle: opt?.defaultTitle || prev.chapterTitle,
-                  }));
-                }}
-                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm font-semibold text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
-              >
-                {CHAPTER_OPTIONS.map((opt) => (
-                  <option key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </option>
-                ))}
-              </select>
+                Pembagian Bab Naskah
+              </span>
+              <span className="text-[10px] font-semibold px-2.5 py-0.5 rounded-md bg-background text-foreground border border-border">
+                {activeChapterConfig.badgeLabel}
+              </span>
             </div>
 
-            <div className="space-y-1.5">
-              <label className="block text-xs font-semibold text-foreground flex items-center gap-1.5">
-                <FileText className="size-3.5 text-primary" />
-                Judul / Keterangan Bab *
-              </label>
-              <input
-                type="text"
-                required
-                placeholder="Contoh: Pendahuluan, Tinjauan Pustaka, Hasil & Pembahasan..."
-                value={formData.chapterTitle}
-                onChange={(e) => setFormData({ ...formData, chapterTitle: e.target.value })}
-                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
-              />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-0.5">
+              <div className="space-y-1.5">
+                <label className="block text-xs font-semibold text-foreground flex items-center gap-1.5">
+                  <BookOpen className="size-3.5 text-primary" />
+                  Upload Bab Berapa? *
+                </label>
+                <select
+                  value={formData.chapter}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    const opt = currentChapterOptions.find((c) => c.value === val);
+                    setFormData((prev) => ({
+                      ...prev,
+                      chapter: val,
+                      chapterTitle: opt?.defaultTitle || prev.chapterTitle,
+                    }));
+                  }}
+                  className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm font-semibold text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                >
+                  {currentChapterOptions.map((opt) => (
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="block text-xs font-semibold text-foreground flex items-center gap-1.5">
+                  <FileText className="size-3.5 text-primary" />
+                  Judul / Keterangan Bab *
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="Contoh: Pendahuluan, Landasan Teori, Analisis Sistem..."
+                  value={formData.chapterTitle}
+                  onChange={(e) => setFormData({ ...formData, chapterTitle: e.target.value })}
+                  className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                />
+              </div>
             </div>
           </div>
         </div>

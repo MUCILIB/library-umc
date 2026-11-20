@@ -265,6 +265,31 @@ class RepositoryService {
     });
     return this.parseJsonResponse(response, "Gagal menghapus naskah proposal");
   }
+
+  async getChapterSettings(): Promise<Record<string, any>> {
+    const response = await fetch(`${this.baseUrl}/api/repository/chapter-settings`, {
+      method: "GET",
+      credentials: "include",
+      headers: {
+        "Content-Type": "application/json",
+        ...getAuthHeaders(),
+      },
+    });
+    return this.parseJsonResponse(response, "Gagal memuat konfigurasi bab skripsi");
+  }
+
+  async saveChapterSettings(settings: Record<string, any>): Promise<any> {
+    const response = await fetch(`${this.baseUrl}/api/repository/chapter-settings`, {
+      method: "PUT",
+      credentials: "include",
+      headers: {
+        "Content-Type": "application/json",
+        ...getAuthHeaders(),
+      },
+      body: JSON.stringify({ settings }),
+    });
+    return this.parseJsonResponse(response, "Gagal menyimpan konfigurasi bab skripsi");
+  }
 }
 
 export const repositoryService = new RepositoryService();

@@ -40,26 +40,13 @@ import {
   ArrowRight,
   BookOpen
 } from "lucide-react";
+import {
+  CHAPTER_OPTIONS,
+  getChapterBadge,
+  getProgramChapterConfig,
+} from "@/utils/thesisChapters";
 
-export const CHAPTER_OPTIONS = [
-  { value: "BAB_1", label: "BAB 1: Pendahuluan", defaultTitle: "Pendahuluan" },
-  { value: "BAB_2", label: "BAB 2: Tinjauan Pustaka / Landasan Teori", defaultTitle: "Tinjauan Pustaka & Landasan Teori" },
-  { value: "BAB_3", label: "BAB 3: Metodologi Penelitian", defaultTitle: "Metodologi Penelitian" },
-  { value: "BAB_4", label: "BAB 4: Hasil dan Pembahasan", defaultTitle: "Hasil Penelitian dan Pembahasan" },
-  { value: "BAB_5", label: "BAB 5: Penutup / Kesimpulan & Saran", defaultTitle: "Kesimpulan dan Saran" },
-  { value: "FRONT_MATTER", label: "Bagian Awal (Cover, Pengesahan, Abstrak)", defaultTitle: "Cover, Lembar Pengesahan & Abstrak" },
-  { value: "BACK_MATTER", label: "Bagian Akhir (Daftar Pustaka & Lampiran)", defaultTitle: "Daftar Pustaka & Lampiran" },
-  { value: "FULL_TEXT", label: "Naskah Lengkap (Full Text)", defaultTitle: "Naskah Lengkap Skripsi" },
-  { value: "OTHER", label: "Bab Khusus / Lainnya", defaultTitle: "Bagian Khusus Naskah" },
-];
-
-export function getChapterBadge(chapter?: string | null) {
-  if (!chapter || chapter === "FULL_TEXT") return "Full Text";
-  if (chapter === "FRONT_MATTER") return "Bagian Awal";
-  if (chapter === "BACK_MATTER") return "Bagian Akhir";
-  if (chapter.startsWith("BAB_")) return `BAB ${chapter.split("_")[1]}`;
-  return chapter;
-}
+export { CHAPTER_OPTIONS, getChapterBadge };
 
 export default function StudentRepositoryTab() {
   const { data: sessionData } = authClient.useSession();
@@ -99,6 +86,7 @@ export default function StudentRepositoryTab() {
     chapterTitle: "Pendahuluan"
   });
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [customChapterSettings, setCustomChapterSettings] = useState<Record<string, any>>({});
 
   const fetchProposals = async () => {
     try {
@@ -126,9 +114,19 @@ export default function StudentRepositoryTab() {
     }
   };
 
+  const fetchChapterSettings = async () => {
+    try {
+      const data = await repositoryService.getChapterSettings();
+      setCustomChapterSettings(data || {});
+    } catch (err) {
+      console.warn("Gagal memuat konfigurasi bab kustom:", err);
+    }
+  };
+
   useEffect(() => {
     fetchProposals();
     fetchStudyPrograms();
+    fetchChapterSettings();
   }, []);
 
   // Filtered Proposals
@@ -149,19 +147,35 @@ export default function StudentRepositoryTab() {
     });
   }, [proposals, searchQuery, statusFilter]);
 
+  // Konfigurasi Bab Berdasarkan Program Studi yang Sedang Dipilih
+  const activeProgram = useMemo(() => {
+    return studyPrograms.find((p) => p.id === formData.studyProgramId) || null;
+  }, [studyPrograms, formData.studyProgramId]);
+
+  const activeChapterConfig = useMemo(() => {
+    return getProgramChapterConfig(activeProgram, customChapterSettings);
+  }, [activeProgram, customChapterSettings]);
+
+  const currentChapterOptions = activeChapterConfig.chapters;
+
   const openAddModal = () => {
     setEditingProposal(null);
     setSelectedFile(null);
     const latestProp = proposals[0];
+    const targetProgId = latestProp?.studyProgramId || (studyPrograms.length > 0 ? studyPrograms[0].id : 1);
+    const targetProg = studyPrograms.find((p) => p.id === targetProgId);
+    const config = getProgramChapterConfig(targetProg, customChapterSettings);
+    const defaultOpt = config.chapters.find((c) => c.value === "BAB_1") || config.chapters[0];
+
     setFormData({
       title: latestProp?.title || "",
       abstract: latestProp?.abstract || "",
       advisorName1: latestProp?.advisorName1 || "",
       advisorName2: latestProp?.advisorName2 || "",
-      studyProgramId: latestProp?.studyProgramId || (studyPrograms.length > 0 ? studyPrograms[0].id : 1),
+      studyProgramId: targetProgId,
       documentCategory: latestProp?.documentCategory || "THESIS",
-      chapter: "BAB_1",
-      chapterTitle: "Pendahuluan"
+      chapter: defaultOpt.value,
+      chapterTitle: defaultOpt.defaultTitle,
     });
     setIsModalOpen(true);
   };
@@ -169,16 +183,19 @@ export default function StudentRepositoryTab() {
   const openEditModal = (item: RepositoryProposal) => {
     setEditingProposal(item);
     setSelectedFile(null);
-    const chapterMatch = CHAPTER_OPTIONS.find((c) => c.value === item.chapter);
+    const progId = item.studyProgramId || (studyPrograms.length > 0 ? studyPrograms[0].id : 1);
+    const prog = studyPrograms.find((p) => p.id === progId);
+    const config = getProgramChapterConfig(prog, customChapterSettings);
+    const chapterMatch = config.chapters.find((c) => c.value === item.chapter);
+
     setFormData({
       title: item.title,
       abstract: item.abstract || "",
       advisorName1: item.advisorName1,
       advisorName2: item.advisorName2 || "",
-      studyProgramId:
-        item.studyProgramId || (studyPrograms.length > 0 ? studyPrograms[0].id : 1),
+      studyProgramId: progId,
       documentCategory: item.documentCategory,
-      chapter: item.chapter || "BAB_1",
+      chapter: item.chapter || (config.chapters[0]?.value || "BAB_1"),
       chapterTitle: item.chapterTitle || chapterMatch?.defaultTitle || "Pendahuluan",
     });
     setIsModalOpen(true);
@@ -892,9 +909,34 @@ export default function StudentRepositoryTab() {
               </label>
               <Select
                 value={String(formData.studyProgramId)}
-                onValueChange={(val) =>
-                  setFormData({ ...formData, studyProgramId: Number(val) })
-                }
+                onValueChange={(val) => {
+                  const newProgId = Number(val);
+                  const newProg = studyPrograms.find((p) => p.id === newProgId);
+                  const newConfig = getProgramChapterConfig(newProg, customChapterSettings);
+                  const chapterExists = newConfig.chapters.some((c) => c.value === formData.chapter);
+
+                  let nextChapter = formData.chapter;
+                  let nextChapterTitle = formData.chapterTitle;
+
+                  if (!chapterExists) {
+                    const defaultOpt = newConfig.chapters.find((c) => c.value === "BAB_1") || newConfig.chapters[0];
+                    nextChapter = defaultOpt.value;
+                    nextChapterTitle = defaultOpt.defaultTitle;
+                  } else {
+                    const oldOpt = activeChapterConfig.chapters.find((c) => c.value === formData.chapter);
+                    const newOpt = newConfig.chapters.find((c) => c.value === formData.chapter);
+                    if (oldOpt && newOpt && formData.chapterTitle === oldOpt.defaultTitle) {
+                      nextChapterTitle = newOpt.defaultTitle;
+                    }
+                  }
+
+                  setFormData((prev) => ({
+                    ...prev,
+                    studyProgramId: newProgId,
+                    chapter: nextChapter,
+                    chapterTitle: nextChapterTitle,
+                  }));
+                }}
               >
                 <SelectTrigger className="w-full h-10 px-3 rounded-xl border border-border bg-background text-xs sm:text-sm font-semibold">
                   <SelectValue placeholder="Pilih Program Studi" />
@@ -943,54 +985,73 @@ export default function StudentRepositoryTab() {
             </div>
           </div>
 
-          {/* Pilihan Bab yang Diunggah & Judul Bab */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 sm:gap-4 p-3.5 rounded-xl border border-primary/20 bg-primary/5">
-            <div>
-              <label className="block text-xs font-bold text-foreground mb-1.5 flex items-center gap-1.5">
+          {/* Pilihan Bab yang Diunggah & Judul Bab Sesuai Program Studi */}
+          <div className="rounded-xl border border-border bg-muted/20 p-4 space-y-3">
+            <div className="flex items-center justify-between gap-2 pb-2 border-b border-border/60">
+              <span className="text-xs font-bold text-foreground flex items-center gap-1.5">
                 <BookOpen className="w-3.5 h-3.5 text-primary" />
-                Upload Bab Berapa? *
-              </label>
-              <Select
-                value={formData.chapter}
-                onValueChange={(val) => {
-                  const opt = CHAPTER_OPTIONS.find((c) => c.value === val);
-                  setFormData((prev) => ({
-                    ...prev,
-                    chapter: val,
-                    chapterTitle: opt?.defaultTitle || prev.chapterTitle,
-                  }));
-                }}
-              >
-                <SelectTrigger className="w-full h-10 px-3 rounded-xl border border-border bg-background text-xs sm:text-sm font-semibold">
-                  <SelectValue placeholder="Pilih Bab Naskah" />
-                </SelectTrigger>
-                <SelectContent className="rounded-xl border border-border bg-card shadow-lg z-[10005]">
-                  {CHAPTER_OPTIONS.map((opt) => (
-                    <SelectItem
-                      key={opt.value}
-                      value={opt.value}
-                      className="text-xs sm:text-sm py-2 cursor-pointer font-medium"
-                    >
-                      {opt.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                Pembagian Bab Naskah
+              </span>
+              <span className="text-[10px] font-semibold px-2.5 py-0.5 rounded-md bg-background text-foreground border border-border">
+                {activeChapterConfig.badgeLabel}
+              </span>
             </div>
 
-            <div>
-              <label className="block text-xs font-bold text-foreground mb-1.5 flex items-center gap-1.5">
-                <FileText className="w-3.5 h-3.5 text-primary" />
-                Judul / Keterangan Bab *
-              </label>
-              <input
-                type="text"
-                required
-                placeholder="Contoh: Pendahuluan, Tinjauan Pustaka, Hasil & Pembahasan..."
-                value={formData.chapterTitle}
-                onChange={(e) => setFormData({ ...formData, chapterTitle: e.target.value })}
-                className="w-full px-3.5 py-2 rounded-xl border border-border bg-background text-xs sm:text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary font-medium"
-              />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 sm:gap-4 pt-0.5">
+              <div>
+                <label className="block text-xs font-bold text-foreground mb-1.5 flex items-center gap-1.5">
+                  <BookOpen className="w-3.5 h-3.5 text-primary" />
+                  Upload Bab Berapa? *
+                </label>
+                <Select
+                  value={formData.chapter}
+                  onValueChange={(val) => {
+                    const opt = currentChapterOptions.find((c) => c.value === val);
+                    setFormData((prev) => ({
+                      ...prev,
+                      chapter: val,
+                      chapterTitle: opt?.defaultTitle || prev.chapterTitle,
+                    }));
+                  }}
+                >
+                  <SelectTrigger className="w-full h-10 px-3 rounded-xl border border-border bg-background text-xs sm:text-sm font-semibold">
+                    <SelectValue placeholder="Pilih Bab Naskah" />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-xl border border-border bg-card shadow-lg z-[10005]">
+                    {currentChapterOptions.map((opt) => (
+                      <SelectItem
+                        key={opt.value}
+                        value={opt.value}
+                        className="text-xs sm:text-sm py-2 cursor-pointer font-medium"
+                      >
+                        <div className="flex flex-col text-left">
+                          <span className="font-semibold text-foreground">{opt.label}</span>
+                          {opt.description && (
+                            <span className="text-[10px] text-muted-foreground line-clamp-1">
+                              {opt.description}
+                            </span>
+                          )}
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-foreground mb-1.5 flex items-center gap-1.5">
+                  <FileText className="w-3.5 h-3.5 text-primary" />
+                  Judul / Keterangan Bab *
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="Contoh: Pendahuluan, Landasan Teori, Analisis Sistem..."
+                  value={formData.chapterTitle}
+                  onChange={(e) => setFormData({ ...formData, chapterTitle: e.target.value })}
+                  className="w-full px-3.5 py-2 rounded-xl border border-border bg-background text-xs sm:text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary font-medium"
+                />
+              </div>
             </div>
           </div>
 

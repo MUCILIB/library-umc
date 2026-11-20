@@ -17,6 +17,20 @@ const upload = multer({
 
 // Helper agar endpoint terdaftar di kedua path (dengan dan tanpa alias /api)
 // Mengembalikan router agar routes modular
+router.get(
+  ["/repository/chapter-settings", "/api/repository/chapter-settings"],
+  publicApiLimiter,
+  (req, res, next) => proposalController.getChapterSettings(req, res, next)
+);
+
+router.put(
+  ["/repository/chapter-settings", "/api/repository/chapter-settings"],
+  publicApiLimiter,
+  isAuthenticated,
+  requireRole(["super_admin", "admin", "staff"]),
+  (req, res, next) => proposalController.saveChapterSettings(req, res, next)
+);
+
 router.post(
   ["/repository/proposals", "/api/repository/proposals"],
   publicApiLimiter,
