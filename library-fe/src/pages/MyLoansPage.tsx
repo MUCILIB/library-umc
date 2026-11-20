@@ -429,7 +429,7 @@ function DetailModal({ loan, status, isExtending, isReturning, isCanceling, onEx
                       <AlertCircle className="text-primary w-4 h-4 shrink-0" />
                       <div className="text-xs">
                         <span className="font-bold text-primary">Denda: Rp {(loan.fine ?? 0).toLocaleString("id-ID")}</span>
-                        {lateDays > 0 && <span className="text-muted-foreground ml-1">({lateDays} hari × Rp 2.000)</span>}
+                        {lateDays > 0 && <span className="text-muted-foreground ml-1">({lateDays} hari × Rp 500)</span>}
                       </div>
                     </div>
                   )}
@@ -515,7 +515,7 @@ function DetailModal({ loan, status, isExtending, isReturning, isCanceling, onEx
                     <AlertCircle className="text-primary w-4 h-4 shrink-0" />
                     <div className="text-xs">
                       <span className="font-bold text-primary">Denda: Rp {(loan.fine ?? 0).toLocaleString("id-ID")}</span>
-                      {lateDays > 0 && <span className="text-muted-foreground ml-1">({lateDays} hari × Rp 2.000)</span>}
+                      {lateDays > 0 && <span className="text-muted-foreground ml-1">({lateDays} hari × Rp 500)</span>}
                     </div>
                   </div>
                 )}

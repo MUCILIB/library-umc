@@ -95,31 +95,44 @@ export class RoleService {
     }
 
     // Pastikan hak akses melihat katalog koleksi buku & repositori aktif untuk seluruh member/external/student
-    const memberRoles = ["student", "external", "lecturer", "dosen", "mahasiswa"];
+    const memberRoles = ["student", "external", "lecturer"];
     for (const roleId of memberRoles) {
-      for (const menuKey of ["bibliographies", "ebooks", "repository"]) {
-        const perm = await db
-          .select()
-          .from(rolePermissions)
-          .where(and(eq(rolePermissions.roleId, roleId), eq(rolePermissions.menuKey, menuKey)))
-          .limit(1);
+      // Pastikan roleId benar-benar ada di tabel roles agar tidak melanggar foreign key constraint
+      const roleExists = await db
+        .select({ id: roles.id })
+        .from(roles)
+        .where(eq(roles.id, roleId))
+        .limit(1);
 
-        if (perm.length > 0) {
-          if (!perm[0].canView) {
-            await db
-              .update(rolePermissions)
-              .set({ canView: true, updatedAt: new Date() })
-              .where(eq(rolePermissions.id, perm[0].id));
+      if (roleExists.length === 0) continue;
+
+      for (const menuKey of ["bibliographies", "ebooks", "repository"]) {
+        try {
+          const perm = await db
+            .select()
+            .from(rolePermissions)
+            .where(and(eq(rolePermissions.roleId, roleId), eq(rolePermissions.menuKey, menuKey)))
+            .limit(1);
+
+          if (perm.length > 0) {
+            if (!perm[0].canView) {
+              await db
+                .update(rolePermissions)
+                .set({ canView: true, updatedAt: new Date() })
+                .where(eq(rolePermissions.id, perm[0].id));
+            }
+          } else {
+            await db.insert(rolePermissions).values({
+              roleId,
+              menuKey,
+              canView: true,
+              canAdd: false,
+              canEdit: false,
+              canDelete: false,
+            });
           }
-        } else {
-          await db.insert(rolePermissions).values({
-            roleId,
-            menuKey,
-            canView: true,
-            canAdd: false,
-            canEdit: false,
-            canDelete: false,
-          });
+        } catch (innerErr) {
+          console.warn(`[RoleService] ensureSystemRoles warning for ${roleId}:${menuKey}:`, innerErr);
         }
       }
     }
@@ -129,7 +142,11 @@ export class RoleService {
    * Mengambil semua role beserta rekapitulasi permission
    */
   async getAllRoles(): Promise<any[]> {
-    await this.ensureSystemRoles();
+    try {
+      await this.ensureSystemRoles();
+    } catch (err) {
+      console.warn("[RoleService] Warning during ensureSystemRoles in getAllRoles:", err);
+    }
 
     const allRoles = await db.select().from(roles);
     const allPermissions = await db.select().from(rolePermissions);
@@ -147,7 +164,11 @@ export class RoleService {
    * Mengambil detail satu role beserta matriks lengkap 20 sub-menu
    */
   async getRoleById(roleId: string): Promise<RoleWithPermissions | null> {
-    await this.ensureSystemRoles();
+    try {
+      await this.ensureSystemRoles();
+    } catch (err) {
+      console.warn("[RoleService] Warning during ensureSystemRoles in getRoleById:", err);
+    }
 
     const roleData = await db
       .select()

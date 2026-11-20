@@ -323,8 +323,8 @@ const KatalogDetail = () => {
               </div>
 
               <div className="text-xs text-slate-500 bg-slate-50 p-3 rounded-xl space-y-1">
-                <p>• Maksimal peminjaman 14 hari</p>
-                <p>• Denda keterlambatan Rp 2.000/hari</p>
+                <p>• Maksimal peminjaman 7 hari</p>
+                <p>• Denda keterlambatan Rp 500/hari</p>
                 <p>• Permintaan akan diproses oleh petugas</p>
               </div>
             </div>
