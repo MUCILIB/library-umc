@@ -77,6 +77,21 @@ describe("ProposalService Lifecycle Unit Tests", () => {
       expect(parsed.chapterTitle).toBeUndefined();
     });
 
+    it("parses proposal with BAB_6 for Teknik Informatika thesis", async () => {
+      const { createProposalSchema } = await import("../validation/proposal.validation");
+      const parsed = createProposalSchema.parse({
+        title: "Penerapan Deep Learning pada Klasifikasi Gambar",
+        advisorName1: "Dr. Budi",
+        studyProgramId: 1,
+        documentCategory: "THESIS",
+        chapter: "BAB_6",
+        chapterTitle: "Kesimpulan dan Saran",
+      });
+
+      expect(parsed.chapter).toBe("BAB_6");
+      expect(parsed.chapterTitle).toBe("Kesimpulan dan Saran");
+    });
+
     it("supports partial updates for chapterTitle and allowedEndPage", async () => {
       const { updateProposalSchema } = await import("../validation/proposal.validation");
       const updated = updateProposalSchema.parse({

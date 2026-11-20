@@ -333,43 +333,46 @@ export const ReturnReceiptModal: React.FC<ReturnReceiptModalProps> = ({
       isOpen={isOpen}
       onClose={onClose}
       title="Resi Bukti Pengembalian Buku"
-      size="md"
+      size="lg"
+      className="max-w-xl sm:max-w-2xl w-full"
     >
       <div className="space-y-4">
         {/* Receipt Content Preview */}
-        <div className="max-h-[60vh] overflow-y-auto py-1 px-0.5">
+        <div className="max-h-[60vh] overflow-y-auto py-2 px-1 flex justify-center">
           <ReturnReceiptCard data={fullData} />
         </div>
 
         {/* Modal Actions - Exact styling as in dashboard modals */}
-        <div className="flex items-center justify-end gap-3 pt-3 border-t border-border">
+        <div className="flex flex-col-reverse sm:flex-row sm:items-center sm:justify-between gap-3 pt-3 border-t border-border">
           <button
             type="button"
             onClick={onClose}
-            className="h-9 rounded-lg border border-border px-4 text-sm font-medium text-muted-foreground hover:bg-muted cursor-pointer transition-colors"
+            className="h-9.5 rounded-xl border border-border px-4 text-xs sm:text-sm font-medium text-muted-foreground hover:bg-muted cursor-pointer transition-colors whitespace-nowrap text-center"
           >
             Tutup
           </button>
 
-          {onDownloadPdf && (
+          <div className="flex items-center justify-end gap-2.5 flex-wrap sm:flex-nowrap">
+            {onDownloadPdf && (
+              <button
+                type="button"
+                onClick={onDownloadPdf}
+                className="inline-flex h-9.5 items-center justify-center gap-1.5 rounded-xl border border-border px-3.5 text-xs sm:text-sm font-medium text-foreground hover:bg-muted cursor-pointer transition-colors whitespace-nowrap"
+              >
+                <FileDown size={15} />
+                <span>Unduh PDF</span>
+              </button>
+            )}
+
             <button
               type="button"
-              onClick={onDownloadPdf}
-              className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-border px-4 text-sm font-medium text-foreground hover:bg-muted cursor-pointer transition-colors"
+              onClick={handlePrint}
+              className="inline-flex h-9.5 items-center justify-center gap-2 rounded-xl bg-primary px-4 text-xs sm:text-sm font-semibold text-primary-foreground hover:bg-primary/90 cursor-pointer shadow-xs transition-colors whitespace-nowrap"
             >
-              <FileDown size={15} />
-              Unduh PDF
+              <Printer size={15} />
+              <span>Cetak Resi</span>
             </button>
-          )}
-
-          <button
-            type="button"
-            onClick={handlePrint}
-            className="inline-flex h-9 items-center gap-2 rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90 cursor-pointer shadow-xs transition-colors"
-          >
-            <Printer size={15} />
-            Cetak Resi
-          </button>
+          </div>
         </div>
       </div>
     </Modal>

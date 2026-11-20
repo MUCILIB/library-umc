@@ -23,6 +23,7 @@ import {
   PlusCircle,
 } from "lucide-react";
 import { ReturnReceiptModal } from "@/components/common/ReturnReceiptModal";
+import { LoanReceiptModal } from "@/components/common/LoanReceiptModal";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { API_BASE_URL } from "@/utils/api-config";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -98,6 +99,7 @@ export default function LoansSection({ searchTerm, onSearchChange }: LoansSectio
   });
   const [selectedLoan, setSelectedLoan] = useState<Loan | null>(null);
   const [selectedReceiptLoan, setSelectedReceiptLoan] = useState<Loan | null>(null);
+  const [selectedLoanReceipt, setSelectedLoanReceipt] = useState<Loan | null>(null);
   const [actionNotes, setActionNotes] = useState("");
   const [processingId, setProcessingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -147,8 +149,8 @@ export default function LoansSection({ searchTerm, onSearchChange }: LoansSectio
         notes: "",
       });
 
-      // Tampilkan struk/resi sirkulasi peminjaman langsung
-      setSelectedReceiptLoan(newLoan as any);
+      // Tampilkan struk bukti sirkulasi peminjaman buku (Loan Receipt)
+      setSelectedLoanReceipt(newLoan as any);
 
       // Refresh data
       fetchLoans();
@@ -888,6 +890,16 @@ export default function LoansSection({ searchTerm, onSearchChange }: LoansSectio
                   {(loan.status === 'approved' || loan.status === 'extended') && canEdit("loans") && (
                     <div className="flex flex-wrap items-center gap-3 pt-5 mt-5 border-t border-border">
                       <button
+                        type="button"
+                        onClick={() => setSelectedLoanReceipt(loan)}
+                        className="flex items-center gap-2 bg-primary/10 text-primary border border-primary/20 px-4 py-2.5 rounded-xl text-xs font-bold hover:bg-primary hover:text-primary-foreground transition-all cursor-pointer shadow-2xs"
+                        title="Cetak struk bukti sirkulasi peminjaman buku"
+                      >
+                        <Printer size={14} />
+                        Cetak Struk Pinjam
+                      </button>
+
+                      <button
                         id={`btn-return-${loan.id}`}
                         onClick={() => navigate(`/dashboard/return-confirmation/${loan.id}`)}
                         className="flex items-center gap-2 bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-blue-400 border border-blue-200 dark:border-blue-800 px-5 py-2.5 rounded-xl text-sm font-bold hover:bg-blue-600 hover:text-white transition-all disabled:opacity-50"
@@ -1399,6 +1411,14 @@ export default function LoansSection({ searchTerm, onSearchChange }: LoansSectio
               toast.error("Gagal", e.message || "Gagal mengunduh tanda terima");
             }
           }}
+        />
+      )}
+
+      {selectedLoanReceipt && (
+        <LoanReceiptModal
+          isOpen={!!selectedLoanReceipt}
+          onClose={() => setSelectedLoanReceipt(null)}
+          loan={selectedLoanReceipt as any}
         />
       )}
     </div>

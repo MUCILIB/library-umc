@@ -586,7 +586,8 @@ export default function ReturnConfirmationPage() {
           )
         }
         title="Pengembalian Berhasil Dikonfirmasi!"
-        size="md"
+        size="lg"
+        className="max-w-xl sm:max-w-2xl w-full"
       >
         <div className="space-y-4">
           <div className="text-center">
@@ -594,7 +595,7 @@ export default function ReturnConfirmationPage() {
               <CheckCircle2 size={28} />
             </div>
 
-            <p className="text-xs text-muted-foreground mt-1">
+            <p className="text-xs text-muted-foreground mt-1 max-w-md mx-auto">
               Berita acara sah telah diterbitkan. Anda dapat langsung mencetak resi pengembalian tanpa harus mengunduh berkas.
             </p>
             {successReceiptNo && (
@@ -607,12 +608,12 @@ export default function ReturnConfirmationPage() {
           </div>
 
           {/* Receipt Preview */}
-          <div className="max-h-[46vh] overflow-y-auto p-1 rounded-xl bg-muted/40 border border-border/60">
-            {currentReceiptData && <ReturnReceiptCard data={currentReceiptData} />}
+          <div className="max-h-[48vh] overflow-y-auto p-2 sm:p-3 rounded-xl bg-muted/30 border border-border/70 flex justify-center">
+            {currentReceiptData && <ReturnReceiptCard data={currentReceiptData} className="shadow-none border-dashed" />}
           </div>
 
-          {/* Actions matching standard dashboard modal button styles */}
-          <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-border">
+          {/* Actions - Spacious, Uncramped, No Text Wrapping inside buttons */}
+          <div className="flex flex-col-reverse sm:flex-row sm:items-center sm:justify-between gap-3 pt-3 border-t border-border">
             <button
               type="button"
               onClick={() =>
@@ -622,26 +623,29 @@ export default function ReturnConfirmationPage() {
                     : "/dashboard/super-admin?tab=loans"
                 )
               }
-              className="h-9 rounded-lg border border-border px-4 text-sm font-medium text-muted-foreground hover:bg-muted cursor-pointer transition-colors"
+              className="h-9.5 rounded-xl border border-border px-4 text-xs sm:text-sm font-medium text-muted-foreground hover:bg-muted cursor-pointer transition-colors whitespace-nowrap text-center"
             >
               Ke Dashboard
             </button>
-            <button
-              type="button"
-              onClick={handleDownloadPdf}
-              className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-border px-4 text-sm font-medium text-foreground hover:bg-muted cursor-pointer transition-colors"
-            >
-              <FileDown size={15} />
-              Unduh Tanda Terima (PDF)
-            </button>
-            <button
-              type="button"
-              onClick={handlePrintReceipt}
-              className="inline-flex h-9 items-center gap-2 rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90 cursor-pointer shadow-xs transition-colors"
-            >
-              <Printer size={15} />
-              Cetak Resi Langsung
-            </button>
+
+            <div className="flex items-center justify-end gap-2.5 flex-wrap sm:flex-nowrap">
+              <button
+                type="button"
+                onClick={handleDownloadPdf}
+                className="inline-flex h-9.5 items-center justify-center gap-1.5 rounded-xl border border-border px-3.5 text-xs sm:text-sm font-medium text-foreground hover:bg-muted cursor-pointer transition-colors whitespace-nowrap"
+              >
+                <FileDown size={15} />
+                <span>Unduh Tanda Terima (PDF)</span>
+              </button>
+              <button
+                type="button"
+                onClick={handlePrintReceipt}
+                className="inline-flex h-9.5 items-center justify-center gap-2 rounded-xl bg-primary px-4 text-xs sm:text-sm font-semibold text-primary-foreground hover:bg-primary/90 cursor-pointer shadow-xs transition-colors whitespace-nowrap"
+              >
+                <Printer size={15} />
+                <span>Cetak Resi Langsung</span>
+              </button>
+            </div>
           </div>
         </div>
       </Modal>

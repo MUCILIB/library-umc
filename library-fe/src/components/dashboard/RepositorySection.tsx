@@ -20,6 +20,7 @@ import {
   BookOpen
 } from "lucide-react";
 import AdminUploadProposalModal from "./repository/AdminUploadProposalModal";
+import ProgramChapterSettingsModal from "./repository/ProgramChapterSettingsModal";
 import { repositoryService, type RepositoryProposal } from "@/services/repositoryService";
 import { triggerBadgeRefresh } from "@/hooks/dashboard/useDashboardBadges";
 import { API_BASE_URL } from "@/utils/api-config";
@@ -40,6 +41,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { getChapterBadge } from "@/utils/thesisChapters";
 
 export default function RepositorySection() {
   const { success, error } = useToast();
@@ -57,6 +59,7 @@ export default function RepositorySection() {
 
   // Upload / Edit modal state for Admin
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
+  const [isChapterModalOpen, setIsChapterModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<RepositoryProposal | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
@@ -299,17 +302,28 @@ export default function RepositorySection() {
           </p>
         </div>
 
-        <button
-          type="button"
-          onClick={() => {
-            setEditingItem(null);
-            setIsUploadModalOpen(true);
-          }}
-          className="inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-xs sm:text-sm font-semibold text-primary-foreground hover:bg-primary/90 transition-colors shadow-xs cursor-pointer shrink-0"
-        >
-          <UploadCloud className="size-4" />
-          <span>Unggah Naskah / Skripsi</span>
-        </button>
+        <div className="flex items-center gap-2.5 flex-wrap shrink-0">
+          <button
+            type="button"
+            onClick={() => setIsChapterModalOpen(true)}
+            className="inline-flex items-center justify-center gap-2 rounded-xl border border-border bg-card px-3.5 py-2.5 text-xs sm:text-sm font-semibold text-foreground hover:bg-muted transition-colors shadow-2xs cursor-pointer"
+          >
+            <Sliders className="size-4 text-primary" />
+            <span>Atur Struktur Bab Jurusan</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              setEditingItem(null);
+              setIsUploadModalOpen(true);
+            }}
+            className="inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-xs sm:text-sm font-semibold text-primary-foreground hover:bg-primary/90 transition-colors shadow-xs cursor-pointer"
+          >
+            <UploadCloud className="size-4" />
+            <span>Unggah Naskah / Skripsi</span>
+          </button>
+        </div>
       </div>
 
       {/* Filter and Search Bar */}
@@ -407,13 +421,7 @@ export default function RepositorySection() {
                         </span>
                         {item.chapter && (
                           <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-primary/10 text-primary border border-primary/20">
-                            {item.chapter.startsWith("BAB_")
-                              ? `BAB ${item.chapter.split("_")[1]}`
-                              : item.chapter === "FRONT_MATTER"
-                              ? "Awal"
-                              : item.chapter === "BACK_MATTER"
-                              ? "Akhir"
-                              : "Full Text"}
+                            {getChapterBadge(item.chapter)}
                           </span>
                         )}
                       </div>
@@ -840,6 +848,13 @@ export default function RepositorySection() {
           triggerBadgeRefresh();
         }}
         editItem={editingItem}
+      />
+
+      {/* Modal Pengaturan Kustom Struktur Bab Skripsi Jurusan */}
+      <ProgramChapterSettingsModal
+        isOpen={isChapterModalOpen}
+        onClose={() => setIsChapterModalOpen(false)}
+        onSaved={fetchProposals}
       />
     </div>
   );

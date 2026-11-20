@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
 import { TablePagination } from "@/components/common/TablePagination";
 import {
-  Plus, Edit, Trash2, Save, Loader, GraduationCap
+  Plus, Edit, Trash2, Save, Loader, GraduationCap, Sliders
 } from "lucide-react";
 import Modal from "@/components/ui/modal";
+import ProgramChapterSettingsModal from "./repository/ProgramChapterSettingsModal";
 import {
   Select,
   SelectContent,
@@ -20,6 +21,8 @@ export default function ProdiSection() {
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isChapterModalOpen, setIsChapterModalOpen] = useState(false);
+  const [selectedProdiForChapter, setSelectedProdiForChapter] = useState<number | null>(null);
   const [editing, setEditing] = useState<StudyProgram | null>(null);
   const [formData, setFormData] = useState({ name: "", code: "", facultyId: 0 });
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -98,13 +101,24 @@ export default function ProdiSection() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <h2 className="text-xl font-bold text-foreground flex items-center gap-2">
           <GraduationCap className="size-5 text-primary" /> Manajemen Program Studi
         </h2>
-        <button onClick={openAdd} className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white hover:bg-primary/95 transition-all flex items-center gap-2">
-          <Plus className="size-4" /> Tambah Prodi
-        </button>
+        <div className="flex items-center gap-2.5 flex-wrap">
+          <button
+            onClick={() => {
+              setSelectedProdiForChapter(null);
+              setIsChapterModalOpen(true);
+            }}
+            className="rounded-lg border border-border bg-card px-3.5 py-2 text-sm font-semibold text-foreground hover:bg-muted transition-all flex items-center gap-2 cursor-pointer shadow-2xs"
+          >
+            <Sliders className="size-4 text-primary" /> Atur Bab Skripsi Prodi
+          </button>
+          <button onClick={openAdd} className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white hover:bg-primary/95 transition-all flex items-center gap-2 cursor-pointer shadow-2xs">
+            <Plus className="size-4" /> Tambah Prodi
+          </button>
+        </div>
       </div>
 
       {loading ? (
@@ -130,8 +144,20 @@ export default function ProdiSection() {
                     <td className="px-4 py-3 font-medium text-foreground">{prog.name}</td>
                     <td className="px-4 py-3 text-muted-foreground">{getFacultyName(prog.facultyId)}</td>
                     <td className="px-4 py-3 text-right">
-                      <button onClick={() => openEdit(prog)} className="p-1.5 text-muted-foreground hover:text-primary transition-colors"><Edit className="size-4" /></button>
-                      <button onClick={() => handleDelete(prog.id, prog.name)} className="p-1.5 text-muted-foreground hover:text-destructive transition-colors"><Trash2 className="size-4" /></button>
+                      <div className="flex items-center justify-end gap-1">
+                        <button
+                          onClick={() => {
+                            setSelectedProdiForChapter(prog.id);
+                            setIsChapterModalOpen(true);
+                          }}
+                          title="Atur Struktur Bab Skripsi Prodi Ini"
+                          className="p-1.5 text-muted-foreground hover:text-primary transition-colors cursor-pointer rounded-lg hover:bg-muted"
+                        >
+                          <Sliders className="size-4" />
+                        </button>
+                        <button onClick={() => openEdit(prog)} className="p-1.5 text-muted-foreground hover:text-primary transition-colors cursor-pointer rounded-lg hover:bg-muted"><Edit className="size-4" /></button>
+                        <button onClick={() => handleDelete(prog.id, prog.name)} className="p-1.5 text-muted-foreground hover:text-destructive transition-colors cursor-pointer rounded-lg hover:bg-muted"><Trash2 className="size-4" /></button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -184,6 +210,14 @@ export default function ProdiSection() {
           </button>
         </div>
       </Modal>
+
+      {/* Modal Pengaturan Kustom Struktur Bab Skripsi */}
+      <ProgramChapterSettingsModal
+        isOpen={isChapterModalOpen}
+        onClose={() => setIsChapterModalOpen(false)}
+        initialProgramId={selectedProdiForChapter || undefined}
+        onSaved={fetchData}
+      />
     </div>
   );
 }

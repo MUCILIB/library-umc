@@ -9,7 +9,8 @@ import {
   members,
   Users,
   studyPrograms,
-  faculties
+  faculties,
+  siteSettings
 } from "../../../db/schema";
 import { eq, desc, and, inArray } from "drizzle-orm";
 import {
@@ -657,6 +658,52 @@ export class ProposalService {
 
     await db.delete(repositoryProposals).where(eq(repositoryProposals.id, id));
     return { id };
+  }
+
+  /**
+   * Mengambil konfigurasi bab kustom per program studi dari site_settings
+   */
+  async getChapterSettings(): Promise<Record<string, any>> {
+    const [row] = await db
+      .select()
+      .from(siteSettings)
+      .where(eq(siteSettings.key, "thesis_program_chapters"))
+      .limit(1);
+
+    if (!row || !row.value || typeof row.value !== "object") {
+      return {};
+    }
+
+    return ((row.value as any)?.settings || row.value) as Record<string, any>;
+  }
+
+  /**
+   * Menyimpan konfigurasi bab kustom per program studi ke site_settings
+   */
+  async saveChapterSettings(userId: string, settings: Record<string, any>) {
+    const now = new Date();
+    const payload = { settings };
+
+    const [saved] = await db
+      .insert(siteSettings)
+      .values({
+        key: "thesis_program_chapters",
+        value: payload,
+        description: "Konfigurasi kustom pembagian bab skripsi per program studi / jurusan",
+        updatedBy: userId,
+        updatedAt: now,
+      })
+      .onConflictDoUpdate({
+        target: siteSettings.key,
+        set: {
+          value: payload,
+          updatedBy: userId,
+          updatedAt: now,
+        },
+      })
+      .returning();
+
+    return ((saved.value as any)?.settings || saved.value) as Record<string, any>;
   }
 }
 

@@ -5,7 +5,10 @@ import {
   getConditionLabel,
   generateThermalReceiptHtml,
   printThermalReceipt,
+  generateLoanThermalReceiptHtml,
+  printLoanThermalReceipt,
   type ReturnReceiptData,
+  type LoanReceiptData,
 } from "../printReceipt";
 
 describe("printReceipt Utility", () => {
@@ -218,6 +221,69 @@ describe("printReceipt Utility", () => {
       vi.advanceTimersByTime(200);
 
       expect(mockWindowPrint).toHaveBeenCalled();
+    });
+  });
+
+  describe("generateLoanThermalReceiptHtml & printLoanThermalReceipt", () => {
+    const loanSample: LoanReceiptData = {
+      receiptNo: "BA-PINJ-20261120-001",
+      loanDate: "2026-11-20T08:00:00.000Z",
+      dueDate: "2026-11-27T00:00:00.000Z",
+      borrowerName: "Dewi Sartika",
+      borrowerCode: "202401099",
+      borrowerType: "Mahasiswa",
+      borrowerFaculty: "Fakultas Ekonomi dan Bisnis",
+      borrowerStudyProgram: "S1 Manajemen",
+      bookTitle: "Manajemen Keuangan Syariah",
+      inventoryCode: "INV-FEB-002",
+      callNumber: "297.273 SUT m",
+      staffName: "Petugas Sirkulasi",
+      notes: "Peminjaman di tempat",
+    };
+
+    it("generates 80mm loan receipt HTML containing member, book, and due date", () => {
+      const html = generateLoanThermalReceiptHtml(loanSample);
+
+      expect(html).toContain("STRUK BUKTI PEMINJAMAN BUKU");
+      expect(html).toContain("BA-PINJ-20261120-001");
+      expect(html).toContain("Dewi Sartika");
+      expect(html).toContain("202401099");
+      expect(html).toContain("Fakultas Ekonomi dan Bisnis");
+      expect(html).toContain("S1 Manajemen");
+      expect(html).toContain("Manajemen Keuangan Syariah");
+      expect(html).toContain("INV-FEB-002");
+      expect(html).toContain("Batas Waktu Pengembalian");
+      expect(html).toContain("SEDANG DIPINJAM (AKTIF)");
+      expect(html).toContain("TERCATAT SIRKULASI SAH");
+    });
+
+    it("invokes print via invisible iframe", () => {
+      const mockPrint = vi.fn();
+      const mockFocus = vi.fn();
+      const mockIframe = {
+        style: {} as Record<string, string>,
+        setAttribute: vi.fn(),
+        contentWindow: {
+          focus: mockFocus,
+          print: mockPrint,
+          document: {
+            open: vi.fn(),
+            write: vi.fn(),
+            close: vi.fn(),
+            images: [],
+          },
+        },
+        remove: vi.fn(),
+      };
+
+      vi.spyOn(document, "createElement").mockReturnValue(mockIframe as unknown as HTMLElement);
+      vi.spyOn(document.body, "appendChild").mockImplementation(() => mockIframe as unknown as Node);
+
+      printLoanThermalReceipt(loanSample);
+      vi.advanceTimersByTime(200);
+
+      expect(mockFocus).toHaveBeenCalled();
+      expect(mockPrint).toHaveBeenCalled();
     });
   });
 });
