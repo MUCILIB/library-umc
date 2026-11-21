@@ -38,10 +38,13 @@ describe("rateLimiter configuration", () => {
   it("should recognize x-test-bypass-key when configured in production", () => {
     const prevBypass = process.env.TEST_BYPASS_KEY;
     const prevEnv = process.env.NODE_ENV;
+    const prevCI = process.env.CI;
 
     try {
-      // Simulate production environment
+      // Simulate production environment (unset CI and test flags)
       (process.env as any).NODE_ENV = "production";
+      delete process.env.CI;
+      delete process.env.DISABLE_RATE_LIMIT;
       process.env.TEST_BYPASS_KEY = "super-secret-test-key";
 
       const validReq = {
@@ -60,6 +63,11 @@ describe("rateLimiter configuration", () => {
     } finally {
       process.env.TEST_BYPASS_KEY = prevBypass;
       (process.env as any).NODE_ENV = prevEnv;
+      if (prevCI !== undefined) {
+        process.env.CI = prevCI;
+      } else {
+        delete process.env.CI;
+      }
     }
   });
 
