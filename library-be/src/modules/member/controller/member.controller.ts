@@ -143,7 +143,11 @@ export class MemberController {
       try {
         buffer = await avatarStorageService.read(`library/avatars/${rawParam}`);
       } catch {
-        buffer = await avatarStorageService.read(rawParam);
+        try {
+          buffer = await avatarStorageService.read(rawParam);
+        } catch {
+          return sendError(res, "Berkas avatar tidak ditemukan", 404);
+        }
       }
 
       res.setHeader("Content-Type", contentType);

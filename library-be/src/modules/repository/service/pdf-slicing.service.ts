@@ -6,8 +6,12 @@ export class PdfSlicingService {
    * Mendapatkan total jumlah halaman dari dokumen PDF buffer
    */
   async getPageCount(inputBuffer: Buffer): Promise<number> {
-    const doc = await PDFDocument.load(inputBuffer, { ignoreEncryption: true });
-    return doc.getPageCount();
+    try {
+      const doc = await PDFDocument.load(inputBuffer, { ignoreEncryption: true });
+      return doc.getPageCount();
+    } catch (_err) {
+      throw new BadRequestError("Berkas PDF rusak, terenkripsi, atau format tidak dapat dibaca");
+    }
   }
 
   /**
@@ -26,7 +30,12 @@ export class PdfSlicingService {
       throw new BadRequestError("Halaman awal (startPage) tidak boleh lebih besar dari halaman akhir (endPage)");
     }
 
-    const sourceDoc = await PDFDocument.load(inputBuffer, { ignoreEncryption: true });
+    let sourceDoc: PDFDocument;
+    try {
+      sourceDoc = await PDFDocument.load(inputBuffer, { ignoreEncryption: true });
+    } catch (_err) {
+      throw new BadRequestError("Berkas PDF rusak, terenkripsi, atau format tidak dapat dibaca");
+    }
     const totalPages = sourceDoc.getPageCount();
 
     if (totalPages === 0) {

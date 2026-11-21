@@ -6,7 +6,8 @@ import BibliographySection from "@/components/dashboard/BibliographySection";
 vi.mock("@/api/client", () => ({
   bibliographyApi: {
     list: vi.fn(),
-    getById: vi.fn(),
+    getById: vi.fn().mockResolvedValue({ data: null }),
+    getItems: vi.fn().mockResolvedValue({ data: [] }),
     create: vi.fn(),
     update: vi.fn(),
     delete: vi.fn(),

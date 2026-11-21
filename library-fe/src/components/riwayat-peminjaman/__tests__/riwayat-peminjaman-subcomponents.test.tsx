@@ -18,7 +18,7 @@ const mockActiveLoan: LoanData = {
   status: "approved",
   extendCount: 0,
   loanDate: "2026-11-01T08:00:00.000Z",
-  dueDate: "2026-11-20T08:00:00.000Z",
+  dueDate: "2099-12-31T08:00:00.000Z",
   notes: "Catatan pinjam",
   item: {
     id: "item-1",

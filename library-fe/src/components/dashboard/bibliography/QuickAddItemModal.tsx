@@ -91,17 +91,17 @@ export function QuickAddItemModal({ bib, onClose, onSuccess }: QuickAddItemModal
 
     Promise.all([
       locationApi.list().catch(() => ({ data: [] as Location[] })),
-      collectionTypeApi?.list
-        ? collectionTypeApi.list().catch(() => ({ data: [] as CollectionType[] }))
+      typeof collectionTypeApi?.list === "function"
+        ? Promise.resolve().then(() => collectionTypeApi.list()).catch(() => ({ data: [] as CollectionType[] }))
         : Promise.resolve({ data: [] as CollectionType[] }),
-      bibliographyApi?.getItems
-        ? bibliographyApi.getItems(bib.id).catch(() => ({ data: [] as any[] }))
+      typeof bibliographyApi?.getItems === "function"
+        ? Promise.resolve().then(() => bibliographyApi.getItems(bib.id)).catch(() => ({ data: [] as any[] }))
         : Promise.resolve({ data: [] as any[] }),
-      bibliographyApi?.getById
-        ? bibliographyApi.getById(bib.id).catch(() => ({ data: bib }))
+      typeof bibliographyApi?.getById === "function"
+        ? Promise.resolve().then(() => bibliographyApi.getById(bib.id)).catch(() => ({ data: bib }))
         : Promise.resolve({ data: bib }),
-      itemApi?.generateCode
-        ? itemApi.generateCode(bib.id).catch(() => ({ data: { itemCode: "" } }))
+      typeof itemApi?.generateCode === "function"
+        ? Promise.resolve().then(() => itemApi.generateCode(bib.id)).catch(() => ({ data: { itemCode: "" } }))
         : Promise.resolve({ data: { itemCode: "" } }),
     ])
       .then(([locRes, colRes, itemsRes, bibRes, genCodeRes]) => {

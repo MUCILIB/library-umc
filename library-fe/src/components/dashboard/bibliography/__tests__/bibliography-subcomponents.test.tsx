@@ -21,6 +21,9 @@ vi.mock("@/api/client", () => ({
       data: { created: 1, items: [], errors: [] },
     }),
   },
+  bibliographyApi: {
+    getItems: vi.fn().mockResolvedValue({ data: [] }),
+  },
 }));
 
 vi.mock("@/hooks/useToast", () => ({
