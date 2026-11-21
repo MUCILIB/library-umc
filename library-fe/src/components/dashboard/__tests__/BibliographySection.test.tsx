@@ -329,10 +329,11 @@ describe("BibliographySection", () => {
 
     fireEvent.click(addExemplarBtn);
 
-    // Modal should be opened
+    // Modal should be opened and locations loaded
     await waitFor(() => {
       expect(screen.getByText("Tambah Eksemplar Fisik Buku")).toBeInTheDocument();
       expect(screen.getByText("Buku Induk (Katalog)")).toBeInTheDocument();
+      expect(screen.getByText(/Ruang Server/i)).toBeInTheDocument();
     });
 
     // Click submit button in modal
