@@ -1,11 +1,11 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Link } from "react-router";
-import { bibliographyApi, type Bibliography } from "@/api/client";
+import { bookmarkApi, type Bibliography } from "@/api/client";
 import { generateColorFromSeed } from "@/utils/format";
 import { Bookmark, Trash2, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/useToast";
 import { authClient } from "@/utils/auth-client";
-import { removeBook, syncBookmarksFromDb, getBookmarkStorageKey } from "@/utils/bookmarks";
+import { removeBook, getSavedBookIds, getBookmarkStorageKey } from "@/utils/bookmarks";
 import { resolveCoverUrl } from "@/utils/imageUrl";
 
 export default function SavedBooksTab() {
@@ -14,88 +14,68 @@ export default function SavedBooksTab() {
   const [savedBooks, setSavedBooks] = useState<Bibliography[]>([]);
   const [loading, setLoading] = useState(true);
   const { info } = useToast();
+  const loadedForUserRef = useRef<string | null>(null);
 
   useEffect(() => {
     let isMounted = true;
 
-    async function fetchBookDetails(bookIds: string[]) {
-      if (bookIds.length === 0) {
-        if (isMounted) {
-          setSavedBooks([]);
-          setLoading(false);
-        }
-        return;
-      }
-
-      try {
-        const bookPromises = bookIds.map(async (id) => {
-          try {
-            const res = await bibliographyApi.getById(id);
-            return res.data;
-          } catch (err) {
-            console.error(`Failed to fetch book ${id}:`, err);
-            return null;
-          }
-        });
-
-        const results = await Promise.all(bookPromises);
-        const validBooks = results.filter((b): b is Bibliography => b !== null);
-
-        if (isMounted) {
-          setSavedBooks(validBooks);
-          setLoading(false);
-        }
-
-        // Jika ada ID buku yang tidak valid / telah dihapus, bersihkan dari cache localStorage
-        const validIds = validBooks.map((b) => b.id);
-        if (validIds.length !== bookIds.length && userId) {
-          const key = getBookmarkStorageKey(userId);
-          localStorage.setItem(key, JSON.stringify(validIds));
-        }
-      } catch (err) {
-        console.error("Error loading saved books details:", err);
-        if (isMounted) setLoading(false);
-      }
+    // Hindari pemanggilan ganda jika userId sama dan sudah dimuat
+    if (loadedForUserRef.current === userId && savedBooks.length > 0) {
+      return;
     }
 
-    async function init() {
+    async function loadSavedBooks() {
       if (!userId) {
-        setSavedBooks([]);
-        setLoading(false);
-        return;
+        // Fallback untuk guest: ambil dari localStorage jika ada
+        const guestIds = getSavedBookIds(null);
+        if (guestIds.length === 0) {
+          if (isMounted) {
+            setSavedBooks([]);
+            setLoading(false);
+          }
+          return;
+        }
       }
 
       setLoading(true);
+      try {
+        if (userId) {
+          // Ambil seluruh daftar buku yang disimpan dalam 1 call efisien
+          const res = await bookmarkApi.getMyBooks();
+          const books = res.data || [];
+          if (isMounted) {
+            setSavedBooks(books);
+            loadedForUserRef.current = userId;
 
-      // Sinkronkan ke database terlebih dahulu
-      const syncedIds = await syncBookmarksFromDb(userId);
-      if (isMounted) {
-        await fetchBookDetails(syncedIds);
+            // Update cache localStorage secara diam-diam tanpa memicu custom dispatch loop
+            const key = getBookmarkStorageKey(userId);
+            const bookIds = books.map((b) => b.id);
+            localStorage.setItem(key, JSON.stringify(bookIds));
+          }
+        } else {
+          setSavedBooks([]);
+        }
+      } catch (err) {
+        console.error("Gagal memuat buku disimpan:", err);
+      } finally {
+        if (isMounted) {
+          setLoading(false);
+        }
       }
     }
 
-    init();
+    loadSavedBooks();
 
-    // Event listener storage hanya merespons perubahan lokal (misal dari tab lain atau tombol simpan)
-    const handleStorageChange = () => {
-      const currentIds = getBookmarkStorageKey(userId);
-      const raw = localStorage.getItem(currentIds);
-      try {
-        const parsed: string[] = raw ? JSON.parse(raw) : [];
-        // Cek apakah ada perbedaan id dengan list yang sedang tampil
-        setSavedBooks((prev) => {
-          const prevIds = prev.map((b) => b.id);
-          const isSame =
-            prevIds.length === parsed.length &&
-            prevIds.every((id, idx) => id === parsed[idx]);
-          if (!isSame) {
-            // Ambil ulang hanya buku yang ada di parsed
-            fetchBookDetails(parsed);
+    // Listener storage hanya untuk perubahan dari tab lain
+    const handleStorageChange = (e: StorageEvent) => {
+      const userKey = getBookmarkStorageKey(userId);
+      if (e.key === userKey) {
+        // Jika storage key berubah secara eksternal (antar-tab browser), sinkronkan ulang
+        bookmarkApi.getMyBooks().then((res) => {
+          if (isMounted) {
+            setSavedBooks(res.data || []);
           }
-          return prev;
-        });
-      } catch {
-        // Abaikan parse error
+        }).catch(() => {});
       }
     };
 

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate, useSearchParams } from "react-router";
 import Navbar from "@/components/ui/navbar";
 import Footer from "@/components/Footer";
@@ -197,32 +197,43 @@ const Profile = () => {
     setSavedCount(getSavedBookIds(currentUserId).length);
 
     // 2. Sinkronkan dengan database satu kali saat user ID tersedia
+    let isMounted = true;
     if (currentUserId) {
       syncBookmarksFromDb(currentUserId).then((ids) => {
-        setSavedCount(ids.length);
-      });
+        if (isMounted) setSavedCount(ids.length);
+      }).catch(() => {});
     }
 
     // 3. Listener storage hanya membaca data lokal yang sudah berubah (tanpa trigger sync baru)
     const updateCount = () => {
-      setSavedCount(getSavedBookIds(currentUserId).length);
+      if (isMounted) setSavedCount(getSavedBookIds(currentUserId).length);
     };
 
     window.addEventListener("storage", updateCount);
     return () => {
+      isMounted = false;
       window.removeEventListener("storage", updateCount);
     };
   }, [currentUserId]);
 
+  const fetchedCountersRef = useRef<string | null>(null);
+
   useEffect(() => {
+    if (!currentUserId) {
+      setActiveLoanCount(0);
+      setUnpaidFineCount(0);
+      fetchedCountersRef.current = null;
+      return;
+    }
+
+    // Hindari pemanggilan ganda jika sudah diambil untuk user yang sama
+    if (fetchedCountersRef.current === currentUserId) {
+      return;
+    }
+
     const fetchProfileCounters = async () => {
       try {
-        if (!currentUserId) {
-          setActiveLoanCount(0);
-          setUnpaidFineCount(0);
-          return;
-        }
-
+        fetchedCountersRef.current = currentUserId;
         const [loans, fines] = await Promise.all([
           loanService.getMyLoanHistory(),
           fineService.getMyFines()
@@ -239,8 +250,6 @@ const Profile = () => {
         setUnpaidFineCount(unpaidFines);
       } catch (err) {
         console.error("Failed to fetch profile counters:", err);
-        setActiveLoanCount(0);
-        setUnpaidFineCount(0);
       }
     };
 
