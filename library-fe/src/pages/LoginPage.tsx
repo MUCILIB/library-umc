@@ -85,7 +85,7 @@ const LoginPage = () => {
         ) {
           try {
             await authClient.signUp.email({
-              name: "Budi Santoso (External)",
+              name: "Budi Santoso",
               email: "external@mucilib.ac.id",
               password,
             });
@@ -300,7 +300,7 @@ const LoginPage = () => {
                   // Auto-register jika belum ada di database server
                   try {
                     await authClient.signUp.email({
-                      name: "Budi Santoso (External)",
+                      name: "Budi Santoso",
                       email: demoEmail,
                       password: demoPass,
                     });

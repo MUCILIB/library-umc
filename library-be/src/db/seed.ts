@@ -51,7 +51,7 @@ async function seed() {
     externalId = "external-seed-001";
     await db.insert(Users).values({
       id: externalId,
-      name: "Budi Santoso (External)",
+      name: "Budi Santoso",
       email: EXTERNAL_EMAIL,
       emailVerified: true,
       role: "external",
@@ -61,8 +61,15 @@ async function seed() {
     console.log("Created external user");
   } else {
     externalId = existingExternal.id;
+    const updates: Partial<typeof Users.$inferInsert> = {};
+    if (existingExternal.name === "Budi Santoso (External)") {
+      updates.name = "Budi Santoso";
+    }
     if (existingExternal.role !== "external") {
-      await db.update(Users).set({ role: "external" }).where(eq(Users.id, externalId));
+      updates.role = "external";
+    }
+    if (Object.keys(updates).length > 0) {
+      await db.update(Users).set(updates).where(eq(Users.id, externalId));
     }
   }
 

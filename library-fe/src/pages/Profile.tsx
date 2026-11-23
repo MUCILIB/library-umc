@@ -465,6 +465,11 @@ const Profile = () => {
   // Resolve the actual member type (prefer profile.memberType which is DB-synced)
   const resolvedMemberType = profile?.memberType ?? (authUser?.role as string | undefined);
   const isExternal = resolvedMemberType === "external";
+  const cleanUserName =
+    (profile?.user?.name || authUser?.name)?.replace(
+      /\s*\((?:external|mahasiswa|dosen|staff)\)$/i,
+      ""
+    ) || "User";
 
   const tabs = [
     {
@@ -545,11 +550,11 @@ const Profile = () => {
               <Avatar className="w-24 h-24 sm:w-32 sm:h-32 rounded-full ring-4 ring-background shadow-lg border-2 border-border overflow-hidden bg-muted">
                 <AvatarImage
                   src={getUserAvatar(profile?.user || authUser)}
-                  alt={profile?.user?.name || authUser?.name || "User"}
+                  alt={cleanUserName}
                   className="object-cover w-full h-full"
                 />
                 <AvatarFallback className="text-xl font-bold bg-muted text-foreground">
-                  {(profile?.user?.name || authUser?.name || "U")[0]?.toUpperCase()}
+                  {(cleanUserName || "U")[0]?.toUpperCase()}
                 </AvatarFallback>
               </Avatar>
             </button>
@@ -577,7 +582,7 @@ const Profile = () => {
           <div className="flex-1 pb-1 text-center sm:text-left flex flex-col items-center sm:items-start w-full">
             <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2.5 mb-1">
               <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-foreground">
-                {profile?.user?.name || authUser?.name}
+                {cleanUserName}
               </h1>
               <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-mono uppercase tracking-wider border border-border bg-muted text-muted-foreground">
                 {MEMBER_TYPE_LABELS[resolvedMemberType ?? ""] ?? resolvedMemberType ?? "Member"}
@@ -1013,12 +1018,12 @@ const Profile = () => {
             <div className="w-64 h-64 sm:w-80 sm:h-80 rounded-2xl overflow-hidden border border-border shadow-md bg-muted flex items-center justify-center">
               <img
                 src={getUserAvatar(profile?.user || authUser)}
-                alt={profile?.user?.name || authUser?.name || "Foto Profil"}
+                alt={cleanUserName}
                 className="w-full h-full object-cover"
               />
             </div>
             <p className="mt-4 text-xs text-muted-foreground text-center font-medium">
-              {profile?.user?.name || authUser?.name}
+              {cleanUserName}
             </p>
           </div>
         </DialogContent>

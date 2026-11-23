@@ -185,7 +185,7 @@ async function runPendingMigrations() {
       const extId = "external-seed-001";
       await db.insert(Users).values({
         id: extId,
-        name: "Budi Santoso (External)",
+        name: "Budi Santoso",
         email: EXTERNAL_EMAIL,
         emailVerified: true,
         role: "external",
@@ -216,6 +216,12 @@ async function runPendingMigrations() {
         updatedAt: now,
       });
       console.log("[Database] Demo external user created successfully.");
+    } else if (existing.name === "Budi Santoso (External)") {
+      await db
+        .update(Users)
+        .set({ name: "Budi Santoso", updatedAt: new Date() })
+        .where(eq(Users.id, existing.id));
+      console.log("[Database] Cleaned up legacy demo external user name to 'Budi Santoso'.");
     }
   } catch (seedErr) {
     console.warn("[Database] Demo external seed skipped:", seedErr);

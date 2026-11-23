@@ -63,7 +63,8 @@ export function MandatoryContactModal() {
           return;
         }
 
-        const currentName = profile.user?.name || session.user.name || "";
+        const rawName = profile.user?.name || session.user.name || "";
+        const currentName = rawName.replace(/\s*\((?:external|mahasiswa|dosen|staff)\)$/i, "").trim();
         const currentPhone = profile.phone || "";
 
         // Hanya wajib bagi mahasiswa / pemustaka baru yang belum memiliki nomor HP atau nama
