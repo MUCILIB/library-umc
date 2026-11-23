@@ -16,7 +16,10 @@ export function getBookmarkStorageKey(userId?: string | null): string {
 export function getSavedBookIds(userId?: string | null): string[] {
   if (!userId) {
     try {
-      return JSON.parse(localStorage.getItem("umc_library_bookmarks_guest") || "[]");
+      const parsed = JSON.parse(localStorage.getItem("umc_library_bookmarks_guest") || "[]");
+      return Array.isArray(parsed)
+        ? parsed.filter((id): id is string => typeof id === "string" && id.trim().length > 0)
+        : [];
     } catch {
       return [];
     }
@@ -27,7 +30,9 @@ export function getSavedBookIds(userId?: string | null): string[] {
   if (data !== null) {
     try {
       const parsed = JSON.parse(data);
-      return Array.isArray(parsed) ? parsed : [];
+      return Array.isArray(parsed)
+        ? parsed.filter((id): id is string => typeof id === "string" && id.trim().length > 0)
+        : [];
     } catch {
       return [];
     }
@@ -38,9 +43,12 @@ export function getSavedBookIds(userId?: string | null): string[] {
   if (legacyData) {
     try {
       const parsed = JSON.parse(legacyData);
-      localStorage.setItem(userKey, JSON.stringify(parsed));
+      const cleaned = Array.isArray(parsed)
+        ? parsed.filter((id): id is string => typeof id === "string" && id.trim().length > 0)
+        : [];
+      localStorage.setItem(userKey, JSON.stringify(cleaned));
       localStorage.removeItem("umc_library_bookmarks");
-      return Array.isArray(parsed) ? parsed : [];
+      return cleaned;
     } catch {
       localStorage.removeItem("umc_library_bookmarks");
     }

@@ -1,6 +1,6 @@
 import { db } from "../../../db";
 import { bookmarks, bibliographies } from "../../../db/schema";
-import { eq, and, desc, inArray } from "drizzle-orm";
+import { eq, and, desc, inArray, isNull } from "drizzle-orm";
 import { bibliographyService } from "../../bibliography/service/bibliography.service";
 
 class BookmarkService {
@@ -13,6 +13,13 @@ class BookmarkService {
     const rows = await db
       .select({ bibliographyId: bookmarks.bibliographyId })
       .from(bookmarks)
+      .innerJoin(
+        bibliographies,
+        and(
+          eq(bookmarks.bibliographyId, bibliographies.id),
+          isNull(bibliographies.deletedAt)
+        )
+      )
       .where(eq(bookmarks.userId, userId))
       .orderBy(desc(bookmarks.createdAt));
 
@@ -131,11 +138,16 @@ class BookmarkService {
       return this.getSavedBookIds(userId);
     }
 
-    // Filter valid bibliography IDs
+    // Filter valid bibliography IDs (exclude soft-deleted)
     const validBibs = await db
       .select({ id: bibliographies.id })
       .from(bibliographies)
-      .where(inArray(bibliographies.id, bibliographyIds));
+      .where(
+        and(
+          inArray(bibliographies.id, bibliographyIds),
+          isNull(bibliographies.deletedAt)
+        )
+      );
 
     for (const bib of validBibs) {
       await db

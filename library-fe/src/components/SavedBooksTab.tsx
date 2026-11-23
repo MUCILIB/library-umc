@@ -5,7 +5,7 @@ import { generateColorFromSeed } from "@/utils/format";
 import { Bookmark, Trash2, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/useToast";
 import { authClient } from "@/utils/auth-client";
-import { removeBook, syncBookmarksFromDb } from "@/utils/bookmarks";
+import { removeBook, syncBookmarksFromDb, getBookmarkStorageKey } from "@/utils/bookmarks";
 import { resolveCoverUrl } from "@/utils/imageUrl";
 
 export default function SavedBooksTab() {
@@ -46,6 +46,14 @@ export default function SavedBooksTab() {
         const results = await Promise.all(bookPromises);
         const validBooks = results.filter((b): b is Bibliography => b !== null);
         setSavedBooks(validBooks);
+
+        // Jika ada ID buku yang tidak valid / telah dihapus, bersihkan dari cache localStorage
+        const validIds = validBooks.map((b) => b.id);
+        if (validIds.length !== savedIds.length) {
+          const key = getBookmarkStorageKey(userId);
+          localStorage.setItem(key, JSON.stringify(validIds));
+          window.dispatchEvent(new Event("storage"));
+        }
       } catch (err) {
         console.error("Error loading saved books:", err);
       } finally {
