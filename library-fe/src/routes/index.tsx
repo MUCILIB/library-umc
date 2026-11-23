@@ -14,7 +14,6 @@ import ReturnConfirmationPage from "../pages/dashboard/ReturnConfirmationPage";
 import Profile from "../pages/Profile";
 import RepositoryDetailPage from "../pages/RepositoryDetailPage";
 import RepositoriPage from "../pages/RepositoriPage";
-import MyRepositoryPage from "../pages/MyRepositoryPage";
 import LecturerRecommendationsPage from "../pages/LecturerRecommendationsPage";
 import NotFound from "../pages/NotFound";
 import ProtectedRoute from "../components/ProtectedRoute";
@@ -45,17 +44,9 @@ const AppRoutes = () => {
         <Route path="/absensi" element={<NonAdminRoute><AbsensiPage /></NonAdminRoute>} />
         <Route path="/input-kunjungan" element={<NonAdminRoute><AbsensiPage /></NonAdminRoute>} />
         <Route path="/buku-tamu" element={<NonAdminRoute><AbsensiPage /></NonAdminRoute>} />
-        <Route path="/repositori-saya" element={<Navigate to="/my-repository" replace />} />
+        <Route path="/repositori-saya" element={<Navigate to="/profile?tab=repositori-saya" replace />} />
         <Route path="/my-loans" element={<Navigate to="/profile?tab=peminjaman-aktif" replace />} />
-
-        <Route 
-          path="/my-repository" 
-          element={
-            <ProtectedRoute excludeRole={["super_admin", "staff"]}>
-              <MyRepositoryPage />
-            </ProtectedRoute>
-          } 
-        />
+        <Route path="/my-repository" element={<Navigate to="/profile?tab=repositori-saya" replace />} />
 
         {/* Fitur Khusus Dosen: Rekomendasi Buku */}
         <Route 

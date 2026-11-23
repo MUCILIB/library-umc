@@ -103,6 +103,10 @@ vi.mock("@/components/SavedBooksTab", () => ({
   default: () => <div data-testid="saved-books-tab" />,
 }));
 
+vi.mock("@/components/StudentRepositoryTab", () => ({
+  default: () => <div data-testid="student-repository-tab" />,
+}));
+
 vi.mock("@/components/LecturerRecommendationList", () => ({
   default: () => <div data-testid="lecturer-recommendations" />,
 }));

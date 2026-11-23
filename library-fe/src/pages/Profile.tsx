@@ -13,10 +13,11 @@ import RiwayatPeminjaman from "@/components/RiwayatPeminjaman";
 import FinesList from "@/components/FinesList";
 import MemberCard from "@/components/MemberCard";
 import SavedBooksTab from "@/components/SavedBooksTab";
+import StudentRepositoryTab from "@/components/StudentRepositoryTab";
 import LecturerRecommendationList from "@/components/LecturerRecommendationList";
 import { useToast } from "@/hooks/useToast";
 import { getSavedBookIds, syncBookmarksFromDb } from "@/utils/bookmarks";
-import { Settings, Mail, BookOpen, Clock, AlertCircle, Bookmark, CreditCard, Sparkles, ChevronRight, ChevronDown, Check, SlidersHorizontal, Camera, Loader2, RotateCcw, RefreshCw, KeyRound } from "lucide-react";
+import { Settings, Mail, BookOpen, Clock, AlertCircle, Bookmark, CreditCard, Sparkles, GraduationCap, ChevronRight, ChevronDown, Check, SlidersHorizontal, Camera, Loader2, RotateCcw, RefreshCw, KeyRound } from "lucide-react";
 import type { AuthUser } from "@/types/auth";
 import { getUserAvatar } from "@/lib/avatar";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -116,8 +117,13 @@ const Profile = () => {
 
   useEffect(() => {
     if (tabParam) {
-      if (tabParam === "repositori-skripsi" || tabParam === "repository") {
-        navigate("/my-repository", { replace: true });
+      if (
+        tabParam === "repositori-skripsi" ||
+        tabParam === "repository" ||
+        tabParam === "my-repository" ||
+        tabParam === "repositori-saya"
+      ) {
+        setActiveTab("repositori-saya");
         return;
       }
       if (tabParam === "loans" || tabParam === "riwayat-peminjaman") {
@@ -452,6 +458,11 @@ const Profile = () => {
 
   const authUser = session?.user as AuthUser | undefined;
   const isLecturerOnly = authUser?.role === "lecturer" || authUser?.role === "dosen";
+  const isStudentOrLecturer =
+    authUser?.role === "student" ||
+    authUser?.role === "mahasiswa" ||
+    authUser?.role === "lecturer" ||
+    authUser?.role === "dosen";
 
   // Map DB enum values to Indonesian labels for display
   const MEMBER_TYPE_LABELS: Record<string, string> = {
@@ -490,6 +501,16 @@ const Profile = () => {
       icon: <AlertCircle size={16} className="shrink-0" />,
       count: unpaidFineCount > 0 ? unpaidFineCount : null
     },
+    ...(isStudentOrLecturer
+      ? [
+          {
+            id: "repositori-saya",
+            label: "Karya Ilmiah & Skripsi",
+            icon: <GraduationCap size={16} className="shrink-0" />,
+            count: null
+          }
+        ]
+      : []),
     {
       id: "buku-disimpan",
       label: "Buku Disimpan",
@@ -749,6 +770,9 @@ const Profile = () => {
               <RiwayatPeminjaman type="history" view="table" />
             )}
             {activeTab === "tagihan-denda" && <FinesList />}
+            {activeTab === "repositori-saya" && isStudentOrLecturer && (
+              <StudentRepositoryTab />
+            )}
             {activeTab === "buku-disimpan" && <SavedBooksTab />}
             {activeTab === "kartu-member" && (
               <div className="flex justify-center">
