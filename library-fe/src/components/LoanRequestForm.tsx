@@ -162,7 +162,7 @@ const LoanRequestForm = ({
               <div className="space-y-2">
                 <label className="flex items-center gap-2 text-sm font-bold text-foreground">
                   <Calendar size={16} className="text-primary" />
-                  Kembali
+                  Kembali (Maks 7 Hari)
                 </label>
                 <input
                   type="date"
@@ -170,6 +170,13 @@ const LoanRequestForm = ({
                   value={loanFormData.dueDate}
                   onChange={handleInputChange}
                   min={loanFormData.loanDate || new Date().toISOString().split('T')[0]}
+                  max={
+                    loanFormData.loanDate
+                      ? new Date(new Date(loanFormData.loanDate).getTime() + 7 * 24 * 60 * 60 * 1000)
+                          .toISOString()
+                          .split('T')[0]
+                      : undefined
+                  }
                   className="w-full px-4 py-3 bg-white border-2 border-border rounded-xl text-foreground font-medium focus:border-primary/20 focus:ring-4 focus:ring-primary/10 outline-none transition-all"
                   required
                 />
