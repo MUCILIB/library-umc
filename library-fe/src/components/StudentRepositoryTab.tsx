@@ -29,7 +29,6 @@ import {
   Plus,
   FileCheck,
   AlertTriangle,
-  Info,
   Maximize2,
   Minimize2,
   Search,
@@ -406,88 +405,78 @@ export default function StudentRepositoryTab() {
   ).length;
 
   return (
-    <div className="space-y-5 animate-fade-in">
-      {/* Header Repositori Karya Ilmiah Mahasiswa */}
-      <div className="bg-card border border-border rounded-2xl p-5 sm:p-7 shadow-xs">
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-5">
-          <div className="space-y-1.5 max-w-2xl">
-            <div className="inline-flex items-center gap-1.5 text-xs font-semibold text-primary">
-              <GraduationCap className="w-4 h-4 shrink-0" />
-              <span>Repositori Karya Ilmiah Mahasiswa</span>
-            </div>
-            <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-foreground">
-              Pengajuan Naskah & Skripsi
-            </h1>
-            <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed">
-              Unggah naskah skripsi, proposal, atau laporan riset Anda untuk diverifikasi pustakawan kampus dan dipublikasikan di repositori digital perpustakaan UMC.
-            </p>
-          </div>
-
-          <div className="shrink-0 flex items-center gap-2.5">
-            <button
-              onClick={openAddModal}
-              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-semibold text-xs sm:text-sm text-white bg-primary hover:bg-primary/90 transition-all shadow-sm active:scale-98 min-h-[42px] cursor-pointer"
-            >
-              <Plus className="w-4 h-4 shrink-0" />
-              <span>Ajukan Naskah Baru</span>
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* Panduan Singkat Prosedur */}
-      <div className="rounded-xl border border-border/80 bg-muted/40 p-3.5 sm:p-4 flex items-start gap-3">
-        <Info className="w-4 h-4 text-primary shrink-0 mt-0.5" />
-        <p className="text-xs text-muted-foreground leading-relaxed">
-          <span className="font-semibold text-foreground">Prosedur Kurasi:</span> Semua naskah yang diajukan akan ditinjau oleh pustakawan kampus. Naskah yang disetujui (APPROVED) akan langsung terpublikasi secara otomatis di repositori perpustakaan digital UMC.
-        </p>
-      </div>
-
-      {/* Summary Cards Grid */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <div className="p-4 rounded-xl border border-border bg-card shadow-2xs">
-          <div className="flex items-center justify-between text-muted-foreground mb-1.5">
-            <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-              Total Pengajuan
+    <div className="space-y-3.5 animate-fade-in">
+      {/* Header Repositori Karya Ilmiah Mahasiswa (Compact) */}
+      <div className="bg-card border border-border rounded-xl p-4 sm:p-5 shadow-xs flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3.5">
+        <div className="space-y-0.5">
+          <div className="flex items-center gap-2">
+            <h2 className="text-base sm:text-lg font-bold text-foreground flex items-center gap-2">
+              <GraduationCap className="w-5 h-5 text-primary shrink-0" />
+              Karya Ilmiah & Skripsi
+            </h2>
+            <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">
+              Repositori Mahasiswa
             </span>
-            <FileText className="w-4 h-4 shrink-0 text-muted-foreground" />
           </div>
-          <p className="text-2xl font-bold tracking-tight text-foreground">{proposals.length}</p>
+          <p className="text-xs text-muted-foreground">
+            Unggah dan pantau draf naskah skripsi, proposal, atau laporan riset untuk dikurasi pustakawan kampus.
+          </p>
         </div>
 
-        <div className="p-4 rounded-xl border border-border bg-card shadow-2xs">
-          <div className="flex items-center justify-between text-blue-600 dark:text-blue-400 mb-1.5">
-            <span className="text-[11px] font-semibold uppercase tracking-wider">
+        <button
+          onClick={openAddModal}
+          className="inline-flex items-center justify-center gap-2 px-3.5 py-2 rounded-xl font-semibold text-xs text-white bg-primary hover:bg-primary/90 transition-all shadow-xs active:scale-98 cursor-pointer shrink-0"
+        >
+          <Plus className="w-4 h-4 shrink-0" />
+          <span>Ajukan Naskah Baru</span>
+        </button>
+      </div>
+
+      {/* Mini Stats Bar (Compact) */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+        <div className="px-3.5 py-2 rounded-xl border border-border bg-card shadow-2xs flex items-center justify-between">
+          <div>
+            <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground block">
+              Total Naskah
+            </span>
+            <span className="text-base sm:text-lg font-bold text-foreground">{proposals.length}</span>
+          </div>
+          <FileText className="w-4 h-4 text-muted-foreground" />
+        </div>
+
+        <div className="px-3.5 py-2 rounded-xl border border-border bg-card shadow-2xs flex items-center justify-between">
+          <div>
+            <span className="text-[10px] font-semibold uppercase tracking-wider text-blue-600 dark:text-blue-400 block">
               Dalam Review
             </span>
-            <Clock className="w-4 h-4 shrink-0" />
+            <span className="text-base sm:text-lg font-bold text-foreground">{countPending}</span>
           </div>
-          <p className="text-2xl font-bold tracking-tight text-foreground">{countPending}</p>
+          <Clock className="w-4 h-4 text-blue-600 dark:text-blue-400" />
         </div>
 
-        <div className="p-4 rounded-xl border border-border bg-card shadow-2xs">
-          <div className="flex items-center justify-between text-amber-600 dark:text-amber-400 mb-1.5">
-            <span className="text-[11px] font-semibold uppercase tracking-wider">
+        <div className="px-3.5 py-2 rounded-xl border border-border bg-card shadow-2xs flex items-center justify-between">
+          <div>
+            <span className="text-[10px] font-semibold uppercase tracking-wider text-amber-600 dark:text-amber-400 block">
               Perlu Revisi
             </span>
-            <AlertTriangle className="w-4 h-4 shrink-0" />
+            <span className="text-base sm:text-lg font-bold text-foreground">{countRevision}</span>
           </div>
-          <p className="text-2xl font-bold tracking-tight text-foreground">{countRevision}</p>
+          <AlertTriangle className="w-4 h-4 text-amber-600 dark:text-amber-400" />
         </div>
 
-        <div className="p-4 rounded-xl border border-border bg-card shadow-2xs">
-          <div className="flex items-center justify-between text-emerald-600 dark:text-emerald-400 mb-1.5">
-            <span className="text-[11px] font-semibold uppercase tracking-wider">
+        <div className="px-3.5 py-2 rounded-xl border border-border bg-card shadow-2xs flex items-center justify-between">
+          <div>
+            <span className="text-[10px] font-semibold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 block">
               Disetujui
             </span>
-            <FileCheck className="w-4 h-4 shrink-0" />
+            <span className="text-base sm:text-lg font-bold text-foreground">{countApproved}</span>
           </div>
-          <p className="text-2xl font-bold tracking-tight text-foreground">{countApproved}</p>
+          <FileCheck className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
         </div>
       </div>
 
-      {/* Toolbar: Search & Filter (Menggunakan Shadcn UI Select pada HP) */}
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 sm:gap-3 bg-card p-3 sm:p-4 rounded-xl sm:rounded-2xl border border-border shadow-2xs">
+      {/* Toolbar: Search & Filter */}
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 bg-card p-2.5 sm:p-3 rounded-xl border border-border shadow-2xs">
         {/* Search */}
         <div className="relative flex-1">
           <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground w-4 h-4" />
@@ -643,7 +632,7 @@ export default function StudentRepositoryTab() {
             {filteredProposals.map((item) => (
               <div
                 key={item.id}
-                className="p-4 sm:p-6 space-y-3 sm:space-y-4 hover:bg-muted/15 transition-colors"
+                className="p-3.5 sm:p-5 space-y-2.5 sm:space-y-3.5 hover:bg-muted/15 transition-colors"
               >
                 {/* Header Card: Nomor Dokumen + Kategori + Status Badge */}
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">

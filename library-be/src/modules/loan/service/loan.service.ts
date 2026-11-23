@@ -135,11 +135,29 @@ export class LoanService {
     const expiresAt = new Date(Date.now() + 20 * 60 * 1000); // 20 menit
 
     const finalLoanDate = reqLoanDate || new Date().toISOString().split("T")[0];
-    const finalDueDate =
-      reqDueDate ||
-      new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+    const startDate = new Date(finalLoanDate);
+    if (isNaN(startDate.getTime())) {
+      throw new Error("Format tanggal peminjaman tidak valid.");
+    }
+
+    let finalDueDate = reqDueDate;
+    if (!finalDueDate) {
+      finalDueDate = new Date(startDate.getTime() + 7 * 24 * 60 * 60 * 1000)
         .toISOString()
         .split("T")[0];
+    } else {
+      const dueDateObj = new Date(finalDueDate);
+      if (isNaN(dueDateObj.getTime())) {
+        throw new Error("Format tanggal jatuh tempo tidak valid.");
+      }
+      const diffDays = Math.ceil((dueDateObj.getTime() - startDate.getTime()) / (1000 * 3600 * 24));
+      if (diffDays < 1) {
+        throw new Error("Tanggal jatuh tempo harus setelah tanggal peminjaman.");
+      }
+      if (diffDays > 7) {
+        throw new Error("Durasi peminjaman mandiri maksimal adalah 7 hari.");
+      }
+    }
 
     const [loan] = await db
       .insert(loans)
@@ -358,12 +376,31 @@ export class LoanService {
     }
 
     // Hitung tanggal peminjaman dan jatuh tempo
-    const durationDays = payload.durationDays && payload.durationDays > 0 ? payload.durationDays : 7;
+    const durationDays = payload.durationDays && payload.durationDays > 0 ? Math.min(payload.durationDays, 14) : 7;
     const finalLoanDate = payload.loanDate || todayStr;
-    const calculatedDue = new Date(new Date(finalLoanDate).getTime() + durationDays * 24 * 60 * 60 * 1000)
-      .toISOString()
-      .split("T")[0];
-    const finalDueDate = payload.dueDate || calculatedDue;
+    const startDate = new Date(finalLoanDate);
+    if (isNaN(startDate.getTime())) {
+      throw new Error("Format tanggal peminjaman tidak valid.");
+    }
+
+    let finalDueDate = payload.dueDate;
+    if (!finalDueDate) {
+      finalDueDate = new Date(startDate.getTime() + durationDays * 24 * 60 * 60 * 1000)
+        .toISOString()
+        .split("T")[0];
+    } else {
+      const dueDateObj = new Date(finalDueDate);
+      if (isNaN(dueDateObj.getTime())) {
+        throw new Error("Format tanggal jatuh tempo tidak valid.");
+      }
+      const diffDays = Math.ceil((dueDateObj.getTime() - startDate.getTime()) / (1000 * 3600 * 24));
+      if (diffDays < 1) {
+        throw new Error("Tanggal jatuh tempo harus setelah tanggal peminjaman.");
+      }
+      if (diffDays > 14) {
+        throw new Error("Durasi peminjaman langsung maksimal adalah 14 hari.");
+      }
+    }
 
     // Eksekusi transaksi langsung status approved
     const createdLoan = await db.transaction(async (tx) => {

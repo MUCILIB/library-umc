@@ -82,7 +82,7 @@ const validateField = (name: string, value: string): string => {
 
 const Profile = () => {
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { data: session, isPending: sessionLoading } = authClient.useSession();
   const [profile, setProfile] = useState<MemberProfile | null>(null);
   const [loading, setLoading] = useState(true);
@@ -106,6 +106,11 @@ const Profile = () => {
   const [passwordResetLoading, setPasswordResetLoading] = useState(false);
   const { success, error } = useToast();
   const currentUserId = session?.user?.id;
+
+  const handleTabChange = (tabId: string) => {
+    setActiveTab(tabId);
+    setSearchParams({ tab: tabId }, { replace: true });
+  };
 
   const [formData, setFormData] = useState<UpdateProfilePayload>({
     nimNidn: "",
@@ -673,7 +678,7 @@ const Profile = () => {
                       key={tab.id}
                       type="button"
                       onClick={() => {
-                        setActiveTab(tab.id);
+                        handleTabChange(tab.id);
                         setIsMobileMenuOpen(false);
                       }}
                       className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs transition-all cursor-pointer ${
@@ -723,7 +728,7 @@ const Profile = () => {
                 return (
                   <button
                     key={tab.id}
-                    onClick={() => setActiveTab(tab.id)}
+                    onClick={() => handleTabChange(tab.id)}
                     className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-lg text-xs font-semibold tracking-wide transition-all cursor-pointer ${
                       isActive
                         ? "bg-primary text-primary-foreground shadow-xs font-bold"

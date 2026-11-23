@@ -1473,8 +1473,6 @@ export default function LoansSection({ searchTerm, onSearchChange }: LoansSectio
                 <SelectContent>
                   <SelectItem value="7">7 Hari (Standar)</SelectItem>
                   <SelectItem value="14">14 Hari (2 Minggu)</SelectItem>
-                  <SelectItem value="21">21 Hari (3 Minggu)</SelectItem>
-                  <SelectItem value="30">30 Hari (1 Bulan)</SelectItem>
                 </SelectContent>
               </Select>
             </div>

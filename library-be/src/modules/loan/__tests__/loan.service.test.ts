@@ -165,6 +165,52 @@ describe("LoanService Unit Tests", () => {
       expect(result.status).toBe("pending");
       expect(result.qrCodeUrl).toContain("data:image");
     });
+
+    it("throw jika durasi peminjaman mandiri melebihi 7 hari", async () => {
+      mockSelectCounts([0, 0, 1]);
+
+      (db.query.items.findFirst as any).mockResolvedValueOnce({
+        id: "item-1",
+        status: "available",
+        collectionType: { code: "S", canBeBorrowed: true }
+      });
+      (db.query.bibliographies.findFirst as any).mockResolvedValueOnce({
+        id: "collection-1",
+        collectionType: { code: "S", canBeBorrowed: true }
+      });
+
+      await expect(
+        loanService.requestLoan(
+          "member-1",
+          "collection-1",
+          "2026-05-01",
+          "2026-05-15" // 14 hari
+        )
+      ).rejects.toThrowError("Durasi peminjaman mandiri maksimal adalah 7 hari.");
+    });
+
+    it("throw jika tanggal jatuh tempo sebelum tanggal peminjaman", async () => {
+      mockSelectCounts([0, 0, 1]);
+
+      (db.query.items.findFirst as any).mockResolvedValueOnce({
+        id: "item-1",
+        status: "available",
+        collectionType: { code: "S", canBeBorrowed: true }
+      });
+      (db.query.bibliographies.findFirst as any).mockResolvedValueOnce({
+        id: "collection-1",
+        collectionType: { code: "S", canBeBorrowed: true }
+      });
+
+      await expect(
+        loanService.requestLoan(
+          "member-1",
+          "collection-1",
+          "2026-05-10",
+          "2026-05-05"
+        )
+      ).rejects.toThrowError("Tanggal jatuh tempo harus setelah tanggal peminjaman.");
+    });
   });
 
   describe("approveLoan", () => {

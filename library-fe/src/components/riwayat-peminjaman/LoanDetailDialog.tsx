@@ -340,7 +340,7 @@ export function LoanDetailDialog({
               Kembalikan
             </Button>
           )}
-          {type === "active" && !isLate && loan.status !== "extended" && !returnPending && (
+          {type === "active" && !isLate && loan.status === "approved" && (loan.extendCount ?? 0) < 1 && loan.extensionStatus !== "pending" && !returnPending && (
             <Button
               type="button"
               className="w-full sm:w-auto flex-1 rounded-xl text-xs font-bold bg-primary text-primary-foreground hover:bg-primary/90 cursor-pointer"

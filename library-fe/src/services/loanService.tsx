@@ -1,4 +1,5 @@
 import { API_BASE_URL } from "@/utils/api-config";
+import { getAuthHeaders } from "@/api/client";
 
 export interface Loan {
   id: string;
@@ -62,6 +63,14 @@ export interface Loan {
 class LoanService {
   private baseUrl = API_BASE_URL;
 
+  private getHeaders(customHeaders: Record<string, string> = {}): Record<string, string> {
+    return {
+      "Content-Type": "application/json",
+      ...getAuthHeaders(),
+      ...customHeaders,
+    };
+  }
+
   // POST /loans/request - Request a book loan (Member)
   async requestLoan(data: {
     memberId: string;
@@ -72,7 +81,7 @@ class LoanService {
   }): Promise<Loan> {
     const response = await fetch(`${this.baseUrl}/api/loans/request`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: this.getHeaders(),
       credentials: "include",
       body: JSON.stringify(data)
     });
@@ -93,7 +102,7 @@ class LoanService {
   }): Promise<Loan> {
     const response = await fetch(`${this.baseUrl}/api/loans/direct`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: this.getHeaders(),
       credentials: "include",
       body: JSON.stringify(payload),
     });
@@ -117,7 +126,10 @@ class LoanService {
     if (params?.itemId) queryParams.append("itemId", params.itemId);
 
     const url = `${this.baseUrl}/api/loans${queryParams.toString() ? `?${queryParams}` : ""}`;
-    const response = await fetch(url, { credentials: "include" });
+    const response = await fetch(url, {
+      credentials: "include",
+      headers: getAuthHeaders(),
+    });
     const result = await response.json();
     if (!result.success)
       throw new Error(result.message || "Gagal memuat data peminjaman");
@@ -127,7 +139,8 @@ class LoanService {
   // GET /loans/history - Get my loan history (Member)
   async getMyLoanHistory(): Promise<Loan[]> {
     const response = await fetch(`${this.baseUrl}/api/loans/history`, {
-      credentials: "include"
+      credentials: "include",
+      headers: getAuthHeaders(),
     });
 
     let result: { success?: boolean; message?: string; data?: Loan[] } | null =
@@ -153,7 +166,7 @@ class LoanService {
       `${this.baseUrl}/api/loans/${requestId}/approve`,
       {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: this.getHeaders(),
         credentials: "include",
         body: JSON.stringify({ notes })
       }
@@ -169,7 +182,7 @@ class LoanService {
       `${this.baseUrl}/api/loans/${requestId}/reject`,
       {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: this.getHeaders(),
         credentials: "include",
         body: JSON.stringify({ reason })
       }
@@ -183,7 +196,7 @@ class LoanService {
   async createReturnRequest(loanId: string): Promise<{ success: boolean; message: string; data: unknown }> {
     const response = await fetch(`${this.baseUrl}/api/loans/${loanId}/return-request`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: this.getHeaders(),
       credentials: "include"
     });
     const result = await response.json();
@@ -194,7 +207,8 @@ class LoanService {
   // GET /loans/return-requests/pending - Admin gets pending return requests
   async getPendingReturnRequests(): Promise<any[]> {
     const response = await fetch(`${this.baseUrl}/api/loans/return-requests/pending`, {
-      credentials: "include"
+      credentials: "include",
+      headers: getAuthHeaders(),
     });
     const result = await response.json();
     if (!result.success) throw new Error(result.message || "Gagal memuat permintaan pengembalian");
@@ -204,7 +218,8 @@ class LoanService {
   // GET /loans/{loanId} - Get loan by ID
   async getLoanById(loanId: string): Promise<Loan> {
     const response = await fetch(`${this.baseUrl}/api/loans/${loanId}`, {
-      credentials: "include"
+      credentials: "include",
+      headers: getAuthHeaders(),
     });
     const result = await response.json();
     if (!result.success) throw new Error(result.message || "Gagal memuat detail peminjaman");
@@ -218,7 +233,7 @@ class LoanService {
   ): Promise<{ success: boolean; message: string; data?: any }> {
     const response = await fetch(`${this.baseUrl}/api/loans/${loanId}/return`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: this.getHeaders(),
       body: JSON.stringify(payload || {}),
       credentials: "include"
     });
@@ -234,7 +249,7 @@ class LoanService {
   ): Promise<any> {
     const response = await fetch(`${this.baseUrl}/api/loans/return-requests/${requestId}/approve`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: this.getHeaders(),
       body: JSON.stringify(payload || {}),
       credentials: "include"
     });
@@ -246,7 +261,8 @@ class LoanService {
   // GET /loans/{loanId}/return-receipt - Download Return Receipt PDF
   async downloadReturnReceiptPdf(loanId: string): Promise<void> {
     const response = await fetch(`${this.baseUrl}/api/loans/${loanId}/return-receipt`, {
-      credentials: "include"
+      credentials: "include",
+      headers: getAuthHeaders(),
     });
     if (!response.ok) {
       const errJson = await response.json().catch(() => null);
@@ -267,7 +283,8 @@ class LoanService {
   // GET /loans/verify/{token} - Verify loan token
   async verifyLoanToken(token: string): Promise<unknown> {
     const response = await fetch(`${this.baseUrl}/api/loans/verify/${token}`, {
-      credentials: "include"
+      credentials: "include",
+      headers: getAuthHeaders(),
     });
     const result = await response.json();
     if (!result.success) throw new Error(result.message || "Token tidak valid");
@@ -280,7 +297,7 @@ class LoanService {
   ): Promise<{ success: boolean; message: string; data: unknown }> {
     const response = await fetch(`${this.baseUrl}/api/loans/${loanId}/extend`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: this.getHeaders(),
       credentials: "include"
     });
     const result = await response.json();
@@ -295,7 +312,7 @@ class LoanService {
   ): Promise<{ success: boolean; message: string; data: unknown }> {
     const response = await fetch(`${this.baseUrl}/api/loans/${loanId}/approve-extension`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: this.getHeaders(),
       credentials: "include"
     });
     const result = await response.json();
@@ -310,7 +327,7 @@ class LoanService {
   ): Promise<{ success: boolean; message: string; data: unknown }> {
     const response = await fetch(`${this.baseUrl}/api/loans/${loanId}/reject-extension`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: this.getHeaders(),
       credentials: "include"
     });
     const result = await response.json();
@@ -323,7 +340,7 @@ class LoanService {
   async cancelLoan(loanId: string): Promise<{ success: boolean; message: string; data?: unknown }> {
     const response = await fetch(`${this.baseUrl}/api/loans/${loanId}/cancel`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: this.getHeaders(),
       credentials: "include"
     });
     const result = await response.json();
