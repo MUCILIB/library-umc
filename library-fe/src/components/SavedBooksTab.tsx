@@ -16,24 +16,19 @@ export default function SavedBooksTab() {
   const { info } = useToast();
 
   useEffect(() => {
-    async function loadSavedBooks() {
+    let isMounted = true;
+
+    async function fetchBookDetails(bookIds: string[]) {
+      if (bookIds.length === 0) {
+        if (isMounted) {
+          setSavedBooks([]);
+          setLoading(false);
+        }
+        return;
+      }
+
       try {
-        setLoading(true);
-        if (!userId) {
-          setSavedBooks([]);
-          return;
-        }
-
-        // Sinkronisasi data bookmark dari database saat membuka tab profil
-        const savedIds: string[] = await syncBookmarksFromDb(userId);
-        
-        if (savedIds.length === 0) {
-          setSavedBooks([]);
-          return;
-        }
-
-        // Fetch details for all saved book IDs in parallel
-        const bookPromises = savedIds.map(async (id) => {
+        const bookPromises = bookIds.map(async (id) => {
           try {
             const res = await bibliographyApi.getById(id);
             return res.data;
@@ -45,27 +40,69 @@ export default function SavedBooksTab() {
 
         const results = await Promise.all(bookPromises);
         const validBooks = results.filter((b): b is Bibliography => b !== null);
-        setSavedBooks(validBooks);
+
+        if (isMounted) {
+          setSavedBooks(validBooks);
+          setLoading(false);
+        }
 
         // Jika ada ID buku yang tidak valid / telah dihapus, bersihkan dari cache localStorage
         const validIds = validBooks.map((b) => b.id);
-        if (validIds.length !== savedIds.length) {
+        if (validIds.length !== bookIds.length && userId) {
           const key = getBookmarkStorageKey(userId);
           localStorage.setItem(key, JSON.stringify(validIds));
-          window.dispatchEvent(new Event("storage"));
         }
       } catch (err) {
-        console.error("Error loading saved books:", err);
-      } finally {
-        setLoading(false);
+        console.error("Error loading saved books details:", err);
+        if (isMounted) setLoading(false);
       }
     }
 
-    loadSavedBooks();
+    async function init() {
+      if (!userId) {
+        setSavedBooks([]);
+        setLoading(false);
+        return;
+      }
 
-    window.addEventListener("storage", loadSavedBooks);
+      setLoading(true);
+
+      // Sinkronkan ke database terlebih dahulu
+      const syncedIds = await syncBookmarksFromDb(userId);
+      if (isMounted) {
+        await fetchBookDetails(syncedIds);
+      }
+    }
+
+    init();
+
+    // Event listener storage hanya merespons perubahan lokal (misal dari tab lain atau tombol simpan)
+    const handleStorageChange = () => {
+      const currentIds = getBookmarkStorageKey(userId);
+      const raw = localStorage.getItem(currentIds);
+      try {
+        const parsed: string[] = raw ? JSON.parse(raw) : [];
+        // Cek apakah ada perbedaan id dengan list yang sedang tampil
+        setSavedBooks((prev) => {
+          const prevIds = prev.map((b) => b.id);
+          const isSame =
+            prevIds.length === parsed.length &&
+            prevIds.every((id, idx) => id === parsed[idx]);
+          if (!isSame) {
+            // Ambil ulang hanya buku yang ada di parsed
+            fetchBookDetails(parsed);
+          }
+          return prev;
+        });
+      } catch {
+        // Abaikan parse error
+      }
+    };
+
+    window.addEventListener("storage", handleStorageChange);
     return () => {
-      window.removeEventListener("storage", loadSavedBooks);
+      isMounted = false;
+      window.removeEventListener("storage", handleStorageChange);
     };
   }, [userId]);
 

@@ -126,8 +126,14 @@ export async function syncBookmarksFromDb(userId: string): Promise<string[]> {
     }
 
     const key = getBookmarkStorageKey(userId);
-    localStorage.setItem(key, JSON.stringify(ids));
-    window.dispatchEvent(new Event("storage"));
+    const prevRaw = localStorage.getItem(key);
+    const newRaw = JSON.stringify(ids);
+
+    // Hanya update localStorage dan trigger event jika data benar-benar berubah
+    if (prevRaw !== newRaw) {
+      localStorage.setItem(key, newRaw);
+      window.dispatchEvent(new Event("storage"));
+    }
     return ids;
   } catch (err) {
     console.warn("Gagal sync bookmarks dari DB, fallback ke local:", err);

@@ -193,16 +193,21 @@ const Profile = () => {
   }, [session?.user?.id, sessionLoading, navigate]);
 
   useEffect(() => {
+    // 1. Inisialisasi hitungan dari cache lokal seketika
+    setSavedCount(getSavedBookIds(currentUserId).length);
+
+    // 2. Sinkronkan dengan database satu kali saat user ID tersedia
+    if (currentUserId) {
+      syncBookmarksFromDb(currentUserId).then((ids) => {
+        setSavedCount(ids.length);
+      });
+    }
+
+    // 3. Listener storage hanya membaca data lokal yang sudah berubah (tanpa trigger sync baru)
     const updateCount = () => {
-      const savedIds = getSavedBookIds(currentUserId);
-      setSavedCount(savedIds.length);
-      if (currentUserId) {
-        syncBookmarksFromDb(currentUserId).then((ids) => {
-          setSavedCount(ids.length);
-        });
-      }
+      setSavedCount(getSavedBookIds(currentUserId).length);
     };
-    updateCount();
+
     window.addEventListener("storage", updateCount);
     return () => {
       window.removeEventListener("storage", updateCount);

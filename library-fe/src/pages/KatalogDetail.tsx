@@ -114,15 +114,18 @@ const KatalogDetail = () => {
       setIsSaved(false);
       return;
     }
+
+    setIsSaved(isBookSaved(bibliography.id, currentUser?.id));
+    if (currentUser?.id) {
+      syncBookmarksFromDb(currentUser.id).then((ids) => {
+        setIsSaved(ids.includes(bibliography.id));
+      });
+    }
+
     const checkSaved = () => {
       setIsSaved(isBookSaved(bibliography.id, currentUser?.id));
-      if (currentUser?.id) {
-        syncBookmarksFromDb(currentUser.id).then((ids) => {
-          setIsSaved(ids.includes(bibliography.id));
-        });
-      }
     };
-    checkSaved();
+
     window.addEventListener("storage", checkSaved);
     return () => {
       window.removeEventListener("storage", checkSaved);
