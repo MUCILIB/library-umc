@@ -1105,15 +1105,46 @@ export default function StudentRepositoryTab() {
             <label className="block text-xs font-bold text-foreground mb-1.5">
               Abstrak / Ringkasan Penelitian
             </label>
-            <textarea
-              rows={3}
-              placeholder="Tuliskan latar belakang singkat, tujuan penelitian, dan metodologi..."
-              value={formData.abstract}
-              onChange={(e) =>
-                setFormData({ ...formData, abstract: e.target.value })
-              }
-              className="w-full px-3.5 py-2.5 rounded-xl border border-border bg-background text-xs sm:text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-red-600 transition-all font-medium"
-            />
+            {(() => {
+              const ABSTRACT_MAX_WORDS = 500;
+              const abstractWordCount = formData.abstract?.trim()
+                ? formData.abstract.trim().split(/\s+/).filter(Boolean).length
+                : 0;
+              const abstractOverLimit = abstractWordCount > ABSTRACT_MAX_WORDS;
+              return (
+                <>
+                  <textarea
+                    rows={3}
+                    placeholder="Tuliskan latar belakang singkat, tujuan penelitian, dan metodologi..."
+                    value={formData.abstract}
+                    onChange={(e) =>
+                      setFormData({ ...formData, abstract: e.target.value })
+                    }
+                    className={`w-full px-3.5 py-2.5 rounded-xl border bg-background text-xs sm:text-sm text-foreground focus:outline-none focus:ring-2 transition-all font-medium ${
+                      abstractOverLimit
+                        ? "border-red-500 focus:ring-red-500"
+                        : "border-border focus:ring-red-600"
+                    }`}
+                  />
+                  <div className="flex justify-between items-center mt-1">
+                    {abstractOverLimit && (
+                      <span className="text-xs text-red-500 font-medium">
+                        Melebihi batas {ABSTRACT_MAX_WORDS} kata
+                      </span>
+                    )}
+                    <span
+                      className={`text-xs ml-auto ${
+                        abstractOverLimit
+                          ? "text-red-500 font-semibold"
+                          : "text-muted-foreground"
+                      }`}
+                    >
+                      {abstractWordCount} / {ABSTRACT_MAX_WORDS} kata
+                    </span>
+                  </div>
+                </>
+              );
+            })()}
           </div>
 
           <div>
@@ -1161,7 +1192,9 @@ export default function StudentRepositoryTab() {
             </button>
             <button
               type="submit"
-              disabled={submitting}
+              disabled={submitting || (formData.abstract?.trim()
+                ? formData.abstract.trim().split(/\s+/).filter(Boolean).length > 500
+                : false)}
               className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl text-xs sm:text-sm font-bold text-white bg-red-700 hover:bg-red-800 transition-colors shadow-xs disabled:opacity-50"
             >
               {submitting && <Loader2 className="w-4 h-4 animate-spin shrink-0" />}

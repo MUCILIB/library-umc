@@ -452,7 +452,19 @@ const Profile = () => {
 
   const authUser = session?.user as AuthUser | undefined;
   const isLecturerOnly = authUser?.role === "lecturer" || authUser?.role === "dosen";
-  const isExternal = profile?.memberType === "external" || profile?.isExternal;
+
+  // Map DB enum values to Indonesian labels for display
+  const MEMBER_TYPE_LABELS: Record<string, string> = {
+    student: "Mahasiswa",
+    lecturer: "Dosen",
+    staff: "Staf Perpustakaan",
+    super_admin: "Super Admin",
+    external: "Anggota Luar",
+  };
+
+  // Resolve the actual member type (prefer profile.memberType which is DB-synced)
+  const resolvedMemberType = profile?.memberType ?? (authUser?.role as string | undefined);
+  const isExternal = resolvedMemberType === "external";
 
   const tabs = [
     {
@@ -568,7 +580,7 @@ const Profile = () => {
                 {profile?.user?.name || authUser?.name}
               </h1>
               <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-mono uppercase tracking-wider border border-border bg-muted text-muted-foreground">
-                {profile?.memberType || authUser?.role || "Member"}
+                {MEMBER_TYPE_LABELS[resolvedMemberType ?? ""] ?? resolvedMemberType ?? "Member"}
               </span>
             </div>
             <p className="text-xs sm:text-sm text-muted-foreground font-medium mb-2">

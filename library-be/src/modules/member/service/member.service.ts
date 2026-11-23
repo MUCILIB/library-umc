@@ -79,21 +79,34 @@ export class MemberService {
         };
       }
 
+      // Map Indonesian role names (mahasiswa, dosen, dll) to DB enum values
+      const ROLE_TO_MEMBER_TYPE: Record<string, string> = {
+        "mahasiswa": "student",
+        "student": "student",
+        "dosen": "lecturer",
+        "lecturer": "lecturer",
+        "pustakawan": "staff",
+        "staff": "staff",
+        "super_admin": "super_admin",
+        "external": "external",
+        "umum": "external",
+      };
       const validMemberTypes = ["student", "lecturer", "staff", "super_admin", "external"];
+      const resolvedMemberType = ROLE_TO_MEMBER_TYPE[member.user?.role ?? ""] ?? member.user?.role;
       if (
-        member.user?.role &&
-        validMemberTypes.includes(member.user.role) &&
-        member.memberType !== member.user.role
+        resolvedMemberType &&
+        validMemberTypes.includes(resolvedMemberType) &&
+        member.memberType !== resolvedMemberType
       ) {
         try {
           await db
             .update(members)
             .set({
-              memberType: member.user.role as any,
+              memberType: resolvedMemberType as any,
               updatedAt: new Date()
             })
             .where(eq(members.id, member.id));
-          member.memberType = member.user.role as any;
+          member.memberType = resolvedMemberType as any;
         } catch (_syncErr) {
           // Keep read path resilient
         }

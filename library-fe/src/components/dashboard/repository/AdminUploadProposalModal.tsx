@@ -475,13 +475,44 @@ export default function AdminUploadProposalModal({
                   <label className="block text-xs font-semibold text-foreground">
                     Abstrak Naskah
                   </label>
-                  <textarea
-                    rows={4}
-                    placeholder="Latar belakang singkat, tujuan penelitian, metodologi, dan kesimpulan..."
-                    value={formData.abstract}
-                    onChange={(e) => setFormData({ ...formData, abstract: e.target.value })}
-                    className="w-full rounded-lg border border-border bg-background px-3 py-2 text-xs leading-relaxed text-foreground focus:outline-none focus:ring-1 focus:ring-primary resize-y"
-                  />
+                  {(() => {
+                    const ABSTRACT_MAX_WORDS = 500;
+                    const abstractWordCount = formData.abstract?.trim()
+                      ? formData.abstract.trim().split(/\s+/).filter(Boolean).length
+                      : 0;
+                    const abstractOverLimit = abstractWordCount > ABSTRACT_MAX_WORDS;
+                    return (
+                      <>
+                        <textarea
+                          rows={4}
+                          placeholder="Latar belakang singkat, tujuan penelitian, metodologi, dan kesimpulan..."
+                          value={formData.abstract}
+                          onChange={(e) => setFormData({ ...formData, abstract: e.target.value })}
+                          className={`w-full rounded-lg border bg-background px-3 py-2 text-xs leading-relaxed text-foreground focus:outline-none focus:ring-1 resize-y ${
+                            abstractOverLimit
+                              ? "border-red-500 focus:ring-red-500"
+                              : "border-border focus:ring-primary"
+                          }`}
+                        />
+                        <div className="flex justify-between items-center mt-0.5">
+                          {abstractOverLimit && (
+                            <span className="text-[11px] text-red-500 font-medium">
+                              Melebihi batas {ABSTRACT_MAX_WORDS} kata
+                            </span>
+                          )}
+                          <span
+                            className={`text-[11px] ml-auto ${
+                              abstractOverLimit
+                                ? "text-red-500 font-semibold"
+                                : "text-muted-foreground"
+                            }`}
+                          >
+                            {abstractWordCount} / {ABSTRACT_MAX_WORDS} kata
+                          </span>
+                        </div>
+                      </>
+                    );
+                  })()}
                 </div>
 
                 <div className="space-y-1.5">
@@ -664,7 +695,9 @@ export default function AdminUploadProposalModal({
           </button>
           <button
             type="submit"
-            disabled={submitting}
+            disabled={submitting || (formData.abstract?.trim()
+              ? formData.abstract.trim().split(/\s+/).filter(Boolean).length > 500
+              : false)}
             className="inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-5 py-2 text-xs font-semibold text-primary-foreground hover:bg-primary/90 transition-colors shadow-xs cursor-pointer disabled:opacity-50"
           >
             {submitting ? (

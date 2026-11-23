@@ -2,7 +2,10 @@ import { z } from "zod";
 
 export const createProposalSchema = z.object({
   title: z.string().min(3, "Judul minimal 3 karakter"),
-  abstract: z.string().optional(),
+  abstract: z.string().optional().refine(
+    (val) => !val || val.trim().split(/\s+/).filter(Boolean).length <= 500,
+    { message: "Abstrak naskah maksimal 500 kata" }
+  ),
   keywords: z.union([z.array(z.string()), z.string()]).optional(),
   advisorName1: z.string().min(2, "Nama dosen pembimbing 1 wajib diisi"),
   advisorName2: z.string().optional(),

@@ -343,12 +343,24 @@ export const UserService = {
         });
 
       // Synchronize members.memberType if nextRole maps to a memberType
-      const validMemberTypes = ["student", "lecturer", "staff", "super_admin", "external"];
-      if (validMemberTypes.includes(normalizedRole)) {
+      // Map Indonesian role names (mahasiswa, dosen, dll) to DB enum values
+      const ROLE_TO_MEMBER_TYPE: Record<string, string> = {
+        "mahasiswa": "student",
+        "student": "student",
+        "dosen": "lecturer",
+        "lecturer": "lecturer",
+        "pustakawan": "staff",
+        "staff": "staff",
+        "super_admin": "super_admin",
+        "external": "external",
+        "umum": "external",
+      };
+      const memberTypeToSync = ROLE_TO_MEMBER_TYPE[normalizedRole];
+      if (memberTypeToSync) {
         await db
           .update(members)
           .set({
-            memberType: normalizedRole as "student" | "lecturer" | "staff" | "super_admin" | "external",
+            memberType: memberTypeToSync as "student" | "lecturer" | "staff" | "super_admin" | "external",
             updatedAt: new Date()
           })
           .where(eq(members.userId, targetUserId));
