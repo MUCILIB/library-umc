@@ -109,14 +109,27 @@ export default function EbookSection() {
     }
   };
 
+  const isFirstSearchRef = useRef(true);
+
   useEffect(() => {
     fetchEbooks();
   }, [page, selectedCategory]);
 
   useEffect(() => {
+    // Lewati render awal agar tidak memicu fetch kedua saat mount
+    if (isFirstSearchRef.current) {
+      isFirstSearchRef.current = false;
+      return;
+    }
+
     const timer = setTimeout(() => {
-      setPage(1);
-      fetchEbooks();
+      setPage((prevPage) => {
+        if (prevPage === 1) {
+          fetchEbooks();
+          return 1;
+        }
+        return 1; // Jika berpindah ke page 1, effect [page, selectedCategory] yang akan mengeksekusi fetch
+      });
     }, 400);
     return () => clearTimeout(timer);
   }, [searchTerm]);

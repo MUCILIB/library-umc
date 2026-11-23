@@ -56,17 +56,22 @@ export default function LecturerRecommendationModal({
     reason: "",
   });
 
+  const initialTitle = initialData?.title || "";
+  const initialIsbn = initialData?.isbn || "";
+  const initialAuthor = initialData?.author || "";
+  const initialPublisher = initialData?.publisher || "";
+
   useEffect(() => {
     if (isOpen) {
       setFormData({
-        isbn: initialData?.isbn ? formatIsbn(initialData.isbn) : "",
-        title: initialData?.title || "",
-        author: initialData?.author || "",
-        publisher: initialData?.publisher || "",
+        isbn: initialIsbn ? formatIsbn(initialIsbn) : "",
+        title: initialTitle,
+        author: initialAuthor,
+        publisher: initialPublisher,
         reason: "",
       });
     }
-  }, [isOpen, initialData]);
+  }, [isOpen, initialTitle, initialIsbn, initialAuthor, initialPublisher]);
 
   if (!isOpen) return null;
 

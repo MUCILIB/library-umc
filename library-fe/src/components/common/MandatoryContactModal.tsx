@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Modal from "@/components/ui/modal";
 import { authClient } from "@/utils/auth-client";
 import memberService, { type MemberProfile } from "@/services/memberService";
@@ -16,11 +16,19 @@ export function MandatoryContactModal() {
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [validationError, setValidationError] = useState<string | null>(null);
+  const checkedUserIdRef = useRef<string | null>(null);
+
+  const userId = session?.user?.id;
 
   useEffect(() => {
     // Hanya periksa jika sesi sudah selesai dimuat dan user telah login
-    if (sessionLoading || !session?.user) {
+    if (sessionLoading || !userId || !session?.user) {
       setIsOpen(false);
+      return;
+    }
+
+    // Hindari pemanggilan getMyProfile berulang jika sudah diperiksa untuk user ini
+    if (checkedUserIdRef.current === userId) {
       return;
     }
 
@@ -37,6 +45,7 @@ export function MandatoryContactModal() {
       typeof window !== "undefined" && window.location.pathname.startsWith("/dashboard");
 
     if (isStaffOrAdmin || isDashboardRoute) {
+      checkedUserIdRef.current = userId;
       setIsOpen(false);
       return;
     }
@@ -48,6 +57,7 @@ export function MandatoryContactModal() {
         setLoading(true);
         const profile: MemberProfile = await memberService.getMyProfile();
         if (!isMounted) return;
+        checkedUserIdRef.current = userId;
 
         // Pastikan kembali dari data profil bahwa akun bukan staf atau admin
         const profileRole = String(
@@ -90,7 +100,7 @@ export function MandatoryContactModal() {
     return () => {
       isMounted = false;
     };
-  }, [session, sessionLoading]);
+  }, [userId, sessionLoading, session?.user]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

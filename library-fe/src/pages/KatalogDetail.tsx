@@ -25,7 +25,8 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { generateColorFromSeed, cleanIsbn } from "@/utils/format";
-import { isBookSaved, saveBook, removeBook, syncBookmarksFromDb } from "@/utils/bookmarks";
+import { isBookSaved, saveBook, removeBook } from "@/utils/bookmarks";
+import { bookmarkApi } from "@/api/client";
 import { resolveCoverUrl } from "@/utils/imageUrl";
 import EbookReaderModal from "@/components/EbookReaderModal";
 
@@ -116,10 +117,13 @@ const KatalogDetail = () => {
     }
 
     setIsSaved(isBookSaved(bibliography.id, currentUser?.id));
+
+    // Sinkronkan status spesifik buku ini ke server jika user login
+    let isMounted = true;
     if (currentUser?.id) {
-      syncBookmarksFromDb(currentUser.id).then((ids) => {
-        setIsSaved(ids.includes(bibliography.id));
-      });
+      bookmarkApi.check(bibliography.id).then((res) => {
+        if (isMounted) setIsSaved(res.data.isSaved);
+      }).catch(() => {});
     }
 
     const checkSaved = () => {
@@ -128,6 +132,7 @@ const KatalogDetail = () => {
 
     window.addEventListener("storage", checkSaved);
     return () => {
+      isMounted = false;
       window.removeEventListener("storage", checkSaved);
     };
   }, [bibliography?.id, currentUser?.id]);

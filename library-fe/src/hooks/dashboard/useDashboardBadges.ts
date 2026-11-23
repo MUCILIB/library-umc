@@ -32,7 +32,16 @@ export function useDashboardBadges(enabled: boolean = true) {
     if (!enabled) return;
     try {
       const data = await dashboardDataService.getBadgeCounts();
-      setBadges(data);
+      setBadges((prev) => {
+        const isIdentical =
+          prev.borrowApprovals === data.borrowApprovals &&
+          prev.returnApprovals === data.returnApprovals &&
+          prev.cardApprovals === data.cardApprovals &&
+          prev.recommendations === data.recommendations &&
+          prev.repository === data.repository &&
+          prev.total === data.total;
+        return isIdentical ? prev : data;
+      });
     } catch {
       // keep current or default badges
     } finally {
@@ -61,12 +70,12 @@ export function useDashboardBadges(enabled: boolean = true) {
     };
     document.addEventListener("visibilitychange", handleVisibilityChange);
 
-    // Periodic poll every 5 seconds while page is active
+    // Periodic poll every 30 seconds while page is active (dari sebelumnya 5 detik)
     const interval = setInterval(() => {
       if (document.visibilityState === "visible") {
         void fetchBadges();
       }
-    }, 5000);
+    }, 30000);
 
     return () => {
       window.removeEventListener(BADGE_REFRESH_EVENT, handleRefresh);

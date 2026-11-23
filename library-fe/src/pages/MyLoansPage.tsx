@@ -1,5 +1,5 @@
 // src/pages/MyLoansPage.tsx
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate } from "react-router";
 import Navbar from "@/components/ui/navbar";
 import Footer from "@/components/Footer";
@@ -107,19 +107,33 @@ function BookingCountdownTimer({
   }, [createdAt, expiresAt]);
 
   const [remaining, setRemaining] = useState(getRemainingSeconds);
+  const onExpireRef = useRef(onExpire);
+  onExpireRef.current = onExpire;
+  const hasFiredRef = useRef(false);
 
   useEffect(() => {
-    setRemaining(getRemainingSeconds());
+    const initialSec = getRemainingSeconds();
+    setRemaining(initialSec);
+
+    // Jika sudah expired sejak awal mount, tandai agar tidak trigger loop
+    if (initialSec <= 0) {
+      hasFiredRef.current = true;
+      return;
+    }
+
     const interval = setInterval(() => {
       const sec = getRemainingSeconds();
       setRemaining(sec);
       if (sec <= 0) {
         clearInterval(interval);
-        onExpire?.();
+        if (!hasFiredRef.current) {
+          hasFiredRef.current = true;
+          onExpireRef.current?.();
+        }
       }
     }, 1000);
     return () => clearInterval(interval);
-  }, [getRemainingSeconds, onExpire]);
+  }, [getRemainingSeconds]);
 
   const mm = String(Math.floor(remaining / 60)).padStart(2, "0");
   const ss = String(remaining % 60).padStart(2, "0");

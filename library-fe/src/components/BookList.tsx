@@ -101,6 +101,11 @@ const BookList = ({
   }, [bibliographies, currentUser?.id]);
 
   // Reset page ke halaman 1 saat filter pencarian/kategori berubah
+  const availabilityKey = availabilityFilter.join(",");
+  const collectionTypeKey = collectionTypeFilter.join(",");
+  const yearStart = yearRange?.start || "";
+  const yearEnd = yearRange?.end || "";
+
   useEffect(() => {
     if (currentPage !== 1) {
       setCurrentPage(1);
@@ -113,9 +118,10 @@ const BookList = ({
   }, [
     searchQuery,
     searchType,
-    availabilityFilter,
-    yearRange,
-    collectionTypeFilter,
+    availabilityKey,
+    collectionTypeKey,
+    yearStart,
+    yearEnd,
     selectedFaculty,
     selectedStudyProgram,
   ]);
