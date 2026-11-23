@@ -51,6 +51,33 @@ function summarizeRow(row: { rawData?: Record<string, string>; resolvedData?: Re
   return parts.length > 0 ? parts.join(" · ") : "—";
 }
 
+function downloadSlimsTemplate(type: "bibliography" | "item") {
+  let headers = "";
+  let sampleRow = "";
+  let filename = "";
+
+  if (type === "bibliography") {
+    headers = "title;gmd_name;edition;isbn_issn;publisher_name;publish_year;collation;series_title;call_number;language_name;place_name;classification;notes;image;sor;authors;topics;item_code";
+    sampleRow = 'Pemrograman Web Modern;Text;Cetakan 1;978-602-1234-56-7;Informatika Bandung;2024;xx, 350 hlm. : ilus. ; 24 cm.;Seri Teknologi;005.13 PEM;Indonesia;Bandung;005.13;Buku ajar pemrograman web;;Tim Dosen;<Budi Santoso><Andi Pratama>;<Pemrograman Web><Javascript>;<B001><B002>';
+    filename = "template_slims9_biblio.csv";
+  } else {
+    headers = "item_code;call_number;coll_type_name;inventory_code;received_date;supplier_name;order_no;location_name;order_date;item_status_name;site;source;invoice;price;price_currency;invoice_date;input_date;last_update;title";
+    sampleRow = 'B001;005.13 PEM;Buku Teks;INV-2024-001;2024-01-15;Penerbit Informatika;PO-001;Rak Koleksi TIK;2024-01-10;Tersedia;Kampus 1 UMC;Beli;INV/2024/001;120000;IDR;2024-01-15;2024-01-15 09:00:00;2024-01-15 09:00:00;Pemrograman Web Modern';
+    filename = "template_slims9_item.csv";
+  }
+
+  const csvContent = "\uFEFF" + headers + "\r\n" + sampleRow + "\r\n";
+  const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.setAttribute("download", filename);
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+}
+
 function ImportWorkflow() {
   return (
     <ol aria-label="Tahapan import" className="grid gap-3 rounded-xl border border-border bg-muted/40 p-4 text-sm sm:grid-cols-4">
@@ -157,7 +184,32 @@ export default function ImportSection() {
 
       {/* Upload Form */}
       <form onSubmit={handleUpload} className="rounded-2xl border border-border bg-card p-6">
-        <h3 className="mb-4 text-sm font-semibold text-muted-foreground">Upload File CSV</h3>
+        <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h3 className="text-sm font-semibold text-foreground">Upload Berkas CSV</h3>
+            <p className="text-xs text-muted-foreground">Kompatibel penuh dengan format ekspor SLiMS 9 Bulian dan format standar perpustakaan</p>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={() => downloadSlimsTemplate("bibliography")}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-muted/50 px-3 py-1.5 text-xs font-medium text-foreground hover:bg-muted transition-colors"
+              title="Unduh contoh template berkas CSV Bibliografi sesuai format SLiMS 9"
+            >
+              <Download className="size-3.5 text-primary" />
+              Template SLiMS (Biblio)
+            </button>
+            <button
+              type="button"
+              onClick={() => downloadSlimsTemplate("item")}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-muted/50 px-3 py-1.5 text-xs font-medium text-foreground hover:bg-muted transition-colors"
+              title="Unduh contoh template berkas CSV Item/Eksemplar sesuai format SLiMS 9"
+            >
+              <Download className="size-3.5 text-primary" />
+              Template SLiMS (Item)
+            </button>
+          </div>
+        </div>
         <div className="flex flex-col gap-4 sm:flex-row sm:items-end">
           <div>
             <label htmlFor="import-type" className="mb-1 block text-xs font-medium text-muted-foreground">Tipe Import</label>

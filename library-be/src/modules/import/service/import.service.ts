@@ -8,7 +8,7 @@ import {
   languages, locations, vendors, faculties, studyPrograms,
   guestLogs, loans, Users, account, members
 } from "../../../db/schema";
-import { eq, and, isNull, sql, asc, inArray } from "drizzle-orm";
+import { eq, and, isNull, sql, asc, inArray, ilike } from "drizzle-orm";
 import { syncCollectionAvailableStock } from "../../shared/utils/stock-sync";
 import crypto from "crypto";
 import { z } from "zod";
@@ -486,10 +486,12 @@ export class ImportService {
         });
 
         if (matchingBibs.length === 0) {
-          const allBibs = await db.query.bibliographies.findMany({
-            where: isNull(bibliographies.deletedAt),
+          matchingBibs = await db.query.bibliographies.findMany({
+            where: and(
+              ilike(bibliographies.title, trimmedTitle),
+              isNull(bibliographies.deletedAt)
+            ),
           });
-          matchingBibs = allBibs.filter(b => b.title.trim().toLowerCase() === trimmedTitle.toLowerCase());
         }
 
         if (matchingBibs.length === 1) {

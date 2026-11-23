@@ -31,6 +31,7 @@ export default function ExportReportModal({
   const { success, error } = useToast();
   const [reportType, setReportType] = useState<ReportType>(initialType);
   const [format, setFormat] = useState<"pdf" | "csv">("pdf");
+  const [csvFlavor, setCsvFlavor] = useState<"library" | "slims">("slims");
   const [faculties, setFaculties] = useState<Faculty[]>([]);
   const [studyPrograms, setStudyPrograms] = useState<StudyProgram[]>([]);
   const [selectedFacultyId, setSelectedFacultyId] = useState<string>("all");
@@ -134,11 +135,13 @@ export default function ExportReportModal({
         if (format === "pdf") {
           url = `${API_BASE_URL}/api/export/bibliographies/pdf?${params.toString()}`;
         } else {
-          params.set("format", "library");
+          params.set("format", csvFlavor);
+          params.set("delimiter", ";");
           url = `${API_BASE_URL}/api/export/bibliographies?${params.toString()}`;
         }
       } else if (reportType === "items") {
-        params.set("format", "library");
+        params.set("format", csvFlavor);
+        params.set("delimiter", ";");
         url = `${API_BASE_URL}/api/export/items?${params.toString()}`;
       } else if (reportType === "fines") {
         params.set("format", format);
@@ -353,6 +356,38 @@ export default function ExportReportModal({
               )}
             </button>
           </div>
+
+          {(format === "csv" || reportType === "items") && (reportType === "bibliographies" || reportType === "items") && (
+            <div className="mt-3 rounded-lg border border-border bg-muted/40 p-3">
+              <span className="mb-2 block text-xs font-semibold text-foreground">Standar Format CSV:</span>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => setCsvFlavor("slims")}
+                  className={`rounded-lg border px-3 py-2 text-left text-xs transition-colors ${
+                    csvFlavor === "slims"
+                      ? "border-primary bg-primary/10 text-primary font-semibold"
+                      : "border-border bg-card text-muted-foreground hover:bg-muted"
+                  }`}
+                >
+                  <p className="font-bold">SLiMS 9 Bulian (;)</p>
+                  <p className="text-[10px] opacity-80">100% kompatibel impor/ekspor SLiMS Perpustakaan</p>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setCsvFlavor("library")}
+                  className={`rounded-lg border px-3 py-2 text-left text-xs transition-colors ${
+                    csvFlavor === "library"
+                      ? "border-primary bg-primary/10 text-primary font-semibold"
+                      : "border-border bg-card text-muted-foreground hover:bg-muted"
+                  }`}
+                >
+                  <p className="font-bold">Standar Sistem UMC</p>
+                  <p className="text-[10px] opacity-80">Menyertakan kolom fakultas & prodi lengkap</p>
+                </button>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Filter Kondisional: Status & Periode Tanggal */}
