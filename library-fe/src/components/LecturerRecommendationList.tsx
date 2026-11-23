@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import {
   BookMarked,
   Plus,
@@ -33,6 +33,8 @@ export default function LecturerRecommendationList({ className = "" }: Props) {
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const toast = useToast();
+  const toastRef = useRef(toast);
+  toastRef.current = toast;
 
   const fetchRecommendations = useCallback(async () => {
     setLoading(true);
@@ -41,11 +43,11 @@ export default function LecturerRecommendationList({ className = "" }: Props) {
       setRecommendations(data);
     } catch (err: any) {
       console.error(err);
-      toast.error("Gagal", err.message || "Gagal memuat daftar rekomendasi buku");
+      toastRef.current.error("Gagal", err.message || "Gagal memuat daftar rekomendasi buku");
     } finally {
       setLoading(false);
     }
-  }, [toast]);
+  }, []);
 
   useEffect(() => {
     void fetchRecommendations();

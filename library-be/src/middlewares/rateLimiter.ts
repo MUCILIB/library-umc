@@ -46,16 +46,16 @@ export const getAuthLimit = (): number =>
   Number(process.env.RATE_LIMIT_AUTH_MAX) || (isProd() ? 20 : 100);
 
 export const getPublicApiLimit = (): number =>
-  Number(process.env.RATE_LIMIT_PUBLIC_MAX) || (isProd() ? 500 : 2000);
+  Number(process.env.RATE_LIMIT_PUBLIC_MAX) || (isProd() ? 1500 : 3000);
 
 export const getGeneralLimit = (): number =>
-  Number(process.env.RATE_LIMIT_GENERAL_MAX) || (isProd() ? 600 : 3000);
+  Number(process.env.RATE_LIMIT_GENERAL_MAX) || (isProd() ? 1200 : 3000);
 
 export const getStrictLimit = (): number =>
-  Number(process.env.RATE_LIMIT_STRICT_MAX) || (isProd() ? 30 : 500);
+  Number(process.env.RATE_LIMIT_STRICT_MAX) || (isProd() ? 60 : 500);
 
 export const getGuestCheckinLimit = (): number =>
-  Number(process.env.RATE_LIMIT_GUEST_MAX) || (isProd() ? 120 : 500);
+  Number(process.env.RATE_LIMIT_GUEST_MAX) || (isProd() ? 180 : 500);
 
 // 1. STRICT - Authentication endpoints (login, register, password reset)
 export const authLimiter = rateLimit({

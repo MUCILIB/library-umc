@@ -1,4 +1,5 @@
 import { API_BASE_URL } from "@/utils/api-config";
+import { getAuthHeaders } from "@/api/client";
 
 export interface Recommendation {
   id: string;
@@ -47,6 +48,7 @@ export const recommendationService = {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
+        ...getAuthHeaders(),
       },
       credentials: "include",
     });
@@ -67,6 +69,7 @@ export const recommendationService = {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
+        ...getAuthHeaders(),
       },
       credentials: "include",
       body: JSON.stringify(payload),
@@ -88,6 +91,7 @@ export const recommendationService = {
       method: "DELETE",
       headers: {
         "Content-Type": "application/json",
+        ...getAuthHeaders(),
       },
       credentials: "include",
     });

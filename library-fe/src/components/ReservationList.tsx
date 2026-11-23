@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { X, BookOpen, Calendar, Clock, CheckCircle, XCircle, Loader } from 'lucide-react';
 import reservationService, { type Reservation } from '@/services/reservationService';
 import { useToast } from '@/hooks/useToast';
@@ -17,6 +17,8 @@ const ReservationList = ({ isOpen, onClose, memberId }: ReservationListProps) =>
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'all' | 'waiting' | 'fulfilled' | 'canceled'>('all');
   const toast = useToast();
+  const toastRef = useRef(toast);
+  toastRef.current = toast;
 
   const fetchUserReservations = useCallback(async () => {
     try {
@@ -30,11 +32,11 @@ const ReservationList = ({ isOpen, onClose, memberId }: ReservationListProps) =>
       console.error('Error fetching reservations:', error);
       const errMsg = error instanceof Error ? error.message : 'Gagal memuat daftar reservasi';
       setError(errMsg);
-      toast.error('Gagal', errMsg);
+      toastRef.current.error('Gagal', errMsg);
     } finally {
       setLoading(false);
     }
-  }, [toast]);
+  }, []);
 
   const handleCancel = async (reservationId: string) => {
     if (!confirm('Apakah Anda yakin ingin membatalkan reservasi ini?')) return;

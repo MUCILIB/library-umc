@@ -11,6 +11,7 @@ import {
   sendValidationError
 } from "../../../utils/api-utils";
 import { MemberService } from "../../member/service/member.service";
+import auditService from "../../audit/service/audit.service";
 import { db } from "../../../db";
 import { members } from "../../../db/schema";
 import { eq, and, isNull } from "drizzle-orm";
@@ -74,6 +75,17 @@ export class LoanController {
         validation.data.dueDate,
         validation.data.notes
       );
+
+      void auditService.createLog({
+        userId: req.user.id,
+        action: "create",
+        entity: "loan",
+        entityId: result.id,
+        ipAddress: req.ip,
+        userAgent: req.get("user-agent"),
+        detail: `Pengajuan peminjaman mandiri buku (${targetBibId}) jatuh tempo ${result.dueDate}`,
+      });
+
       sendSuccess(res, "Permintaan peminjaman berhasil diajukan", result);
     } catch (error) {
       next(error);
@@ -95,6 +107,17 @@ export class LoanController {
       }
 
       const result = await loanService.createDirectLoan(req.user.id, validation.data);
+
+      void auditService.createLog({
+        userId: req.user.id,
+        action: "create",
+        entity: "loan",
+        entityId: (result as any)?.id,
+        ipAddress: req.ip,
+        userAgent: req.get("user-agent"),
+        detail: `Peminjaman langsung petugas untuk member ${validation.data.memberIdentifier}, item ${validation.data.itemIdentifier}`,
+      });
+
       sendSuccess(res, "Peminjaman langsung berhasil diproses", result, 201);
     } catch (error: any) {
       if (
@@ -148,6 +171,17 @@ export class LoanController {
         String(req.params.requestId),
         user.id
       );
+
+      void auditService.createLog({
+        userId: user.id,
+        action: "approve",
+        entity: "loan",
+        entityId: String(req.params.requestId),
+        ipAddress: req.ip,
+        userAgent: req.get("user-agent"),
+        detail: `Persetujuan peminjaman oleh petugas/admin (${user.name || user.id})`,
+      });
+
       sendSuccess(res, "Peminjaman berhasil diapprove", result);
     } catch (error) {
       next(error);
@@ -169,6 +203,17 @@ export class LoanController {
         String(req.params.requestId),
         user.id
       );
+
+      void auditService.createLog({
+        userId: user.id,
+        action: "update",
+        entity: "loan",
+        entityId: String(req.params.requestId),
+        ipAddress: req.ip,
+        userAgent: req.get("user-agent"),
+        detail: `Penolakan peminjaman oleh petugas/admin (${user.name || user.id})`,
+      });
+
       sendSuccess(res, "Peminjaman berhasil ditolak", result);
     } catch (error) {
       next(error);
@@ -196,6 +241,17 @@ export class LoanController {
         memberId || "",
         user.role || undefined
       );
+
+      void auditService.createLog({
+        userId: user.id,
+        action: "delete",
+        entity: "loan",
+        entityId: loanId,
+        ipAddress: req.ip,
+        userAgent: req.get("user-agent"),
+        detail: `Pemesanan peminjaman dibatalkan oleh pengguna`,
+      });
+
       sendSuccess(res, "Pemesanan berhasil dibatalkan", result);
     } catch (error: unknown) {
       const err = error as Error;
@@ -233,6 +289,17 @@ export class LoanController {
           notes,
         }
       );
+
+      void auditService.createLog({
+        userId: user.id,
+        action: "update",
+        entity: "loan",
+        entityId: String(req.params.loanId),
+        ipAddress: req.ip,
+        userAgent: req.get("user-agent"),
+        detail: `Pengembalian buku diproses. Kondisi: ${condition || "good"}${result.fine ? `, Denda: Rp ${result.fine.assessedAmount}` : ", Bebas Denda"}`,
+      });
+
       sendSuccess(res, "Buku berhasil dikembalikan", result);
     } catch (error) {
       next(error);
@@ -262,6 +329,17 @@ export class LoanController {
       const { loanId } = req.params;
       res.setHeader("Content-Type", "application/pdf");
       res.setHeader("Content-Disposition", `attachment; filename="tanda_terima_pengembalian_${loanId}.pdf"`);
+
+      void auditService.createLog({
+        userId: req.user?.id,
+        action: "update",
+        entity: "loan",
+        entityId: String(loanId),
+        ipAddress: req.ip,
+        userAgent: req.get("user-agent"),
+        detail: `Unduh Berita Acara / Resi Pengembalian Buku PDF`,
+      });
+
       await loanService.generateReturnReceiptPdf(String(loanId), res);
     } catch (error) {
       next(error);
@@ -340,6 +418,17 @@ export class LoanController {
         return sendError(res, "Member tidak ditemukan", 400);
       }
       const result = await loanService.createReturnRequest(loanId, memberId);
+
+      void auditService.createLog({
+        userId: user.id,
+        action: "create",
+        entity: "loan",
+        entityId: loanId,
+        ipAddress: req.ip,
+        userAgent: req.get("user-agent"),
+        detail: `Permintaan pengembalian buku diajukan oleh peminjam`,
+      });
+
       sendSuccess(res, result.message, result);
     } catch (error) {
       next(error);
@@ -363,6 +452,17 @@ export class LoanController {
         signature,
         notes,
       });
+
+      void auditService.createLog({
+        userId: user.id,
+        action: "approve",
+        entity: "loan",
+        entityId: requestId,
+        ipAddress: req.ip,
+        userAgent: req.get("user-agent"),
+        detail: `Permintaan pengembalian buku disetujui petugas. Kondisi: ${condition || "good"}`,
+      });
+
       sendSuccess(res, result.message, result);
     } catch (error: any) {
       if (
@@ -393,6 +493,17 @@ export class LoanController {
       }
 
       const result = await loanService.requestExtension(String(loanId), memberId);
+
+      void auditService.createLog({
+        userId: user.id,
+        action: "update",
+        entity: "loan",
+        entityId: String(loanId),
+        ipAddress: req.ip,
+        userAgent: req.get("user-agent"),
+        detail: `Pengajuan perpanjangan peminjaman diajukan oleh peminjam`,
+      });
+
       sendSuccess(res, result.message, result.data);
     } catch (error: unknown) {
       const err = error as Error;
@@ -421,6 +532,17 @@ export class LoanController {
       }
       const { loanId } = req.params;
       const result = await loanService.approveExtension(String(loanId), user.id);
+
+      void auditService.createLog({
+        userId: user.id,
+        action: "approve",
+        entity: "loan",
+        entityId: String(loanId),
+        ipAddress: req.ip,
+        userAgent: req.get("user-agent"),
+        detail: `Perpanjangan peminjaman disetujui petugas (+7 hari)`,
+      });
+
       sendSuccess(res, result.message, result.data);
     } catch (error: unknown) {
       const err = error as Error;
@@ -448,6 +570,17 @@ export class LoanController {
       }
       const { loanId } = req.params;
       const result = await loanService.rejectExtension(String(loanId), user.id);
+
+      void auditService.createLog({
+        userId: user.id,
+        action: "update",
+        entity: "loan",
+        entityId: String(loanId),
+        ipAddress: req.ip,
+        userAgent: req.get("user-agent"),
+        detail: `Perpanjangan peminjaman ditolak petugas`,
+      });
+
       sendSuccess(res, result.message, result.data);
     } catch (error: unknown) {
       const err = error as Error;

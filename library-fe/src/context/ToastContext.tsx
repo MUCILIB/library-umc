@@ -5,6 +5,7 @@ import {
   useContext,
   useReducer,
   useCallback,
+  useMemo,
   useRef,
   type ReactNode,
 } from 'react';
@@ -113,10 +114,13 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     [addToast],
   );
 
+  const contextValue = useMemo(
+    () => ({ notifications, removeToast, success, error, warning, info, loading }),
+    [notifications, removeToast, success, error, warning, info, loading]
+  );
+
   return (
-    <ToastContext.Provider
-      value={{ notifications, removeToast, success, error, warning, info, loading }}
-    >
+    <ToastContext.Provider value={contextValue}>
       {children}
     </ToastContext.Provider>
   );
@@ -124,18 +128,17 @@ export function ToastProvider({ children }: { children: ReactNode }) {
 
 // ─── Hook ─────────────────────────────────────────────────────────────────────
 
+const DEFAULT_TOAST_CONTEXT: ToastContextValue = {
+  notifications: [],
+  removeToast: () => {},
+  success: () => 0,
+  error: () => 0,
+  warning: () => 0,
+  info: () => 0,
+  loading: () => 0,
+};
+
 export function useToast(): ToastContextValue {
   const ctx = useContext(ToastContext);
-  if (!ctx) {
-    return {
-      notifications: [],
-      removeToast: () => {},
-      success: () => 0,
-      error: () => 0,
-      warning: () => 0,
-      info: () => 0,
-      loading: () => 0,
-    };
-  }
-  return ctx;
+  return ctx || DEFAULT_TOAST_CONTEXT;
 }
