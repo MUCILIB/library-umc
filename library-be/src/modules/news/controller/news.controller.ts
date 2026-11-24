@@ -20,7 +20,7 @@ export class NewsController {
       if (!parsed.success) {
         return sendError(
           res,
-          parsed.error.errors[0]?.message || "Parameter tidak valid",
+          parsed.error.issues?.[0]?.message || "Parameter tidak valid",
           400
         );
       }
@@ -117,7 +117,7 @@ export class NewsController {
       if (!parsed.success) {
         return sendError(
           res,
-          parsed.error.errors[0]?.message || "Data input berita tidak valid",
+          parsed.error.issues?.[0]?.message || "Data input berita tidak valid",
           400
         );
       }
@@ -145,7 +145,7 @@ export class NewsController {
       if (!parsed.success) {
         return sendError(
           res,
-          parsed.error.errors[0]?.message || "Data input berita tidak valid",
+          parsed.error.issues?.[0]?.message || "Data input berita tidak valid",
           400
         );
       }

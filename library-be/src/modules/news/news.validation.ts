@@ -12,7 +12,7 @@ export const newsStatusSchema = z.enum(["draft", "published", "archived"]);
 
 export const createNewsSchema = z.object({
   title: z
-    .string({ required_error: "Judul berita wajib diisi" })
+    .string()
     .min(3, "Judul berita minimal 3 karakter")
     .max(255, "Judul berita maksimal 255 karakter"),
   slug: z
@@ -24,7 +24,7 @@ export const createNewsSchema = z.object({
   category: newsCategorySchema.default("pengumuman"),
   excerpt: z.string().max(500, "Ringkasan maksimal 500 karakter").optional().nullable(),
   content: z
-    .string({ required_error: "Konten berita wajib diisi" })
+    .string()
     .min(10, "Konten berita minimal 10 karakter"),
   coverImage: z.string().max(500).optional().nullable(),
   status: newsStatusSchema.default("draft"),

@@ -11,9 +11,9 @@ export interface CreateNewsInput {
   title: string;
   slug?: string;
   category: NewsCategory;
-  excerpt?: string;
+  excerpt?: string | null;
   content: string;
-  coverImage?: string;
+  coverImage?: string | null;
   status?: NewsStatus;
   publishedAt?: Date | string | null;
 }
@@ -22,9 +22,9 @@ export interface UpdateNewsInput {
   title?: string;
   slug?: string;
   category?: NewsCategory;
-  excerpt?: string;
+  excerpt?: string | null;
   content?: string;
-  coverImage?: string;
+  coverImage?: string | null;
   status?: NewsStatus;
   publishedAt?: Date | string | null;
 }
