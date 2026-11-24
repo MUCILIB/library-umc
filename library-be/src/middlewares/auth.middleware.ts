@@ -92,7 +92,7 @@ export const requireRole = (allowedRoles: string[]) => {
  * @param action Tindakan yang diminta: "view" | "add" | "edit" | "delete"
  */
 export const requirePermission = (
-  menuKey: string,
+  menuKey: string | string[],
   action: "view" | "add" | "edit" | "delete" = "view"
 ) => {
   return async (req: Request, res: Response, next: NextFunction) => {
@@ -113,15 +113,16 @@ export const requirePermission = (
         return;
       }
 
+      const keys = Array.isArray(menuKey) ? menuKey : [menuKey];
+
       // Modul koleksi publik (katalog buku, repositori karya ilmiah, dan e-book)
       // berhak dilihat oleh seluruh pengguna terotentikasi (student, external, lecturer, dsb)
-      if (action === "view" && ["bibliographies", "repository", "ebooks"].includes(menuKey)) {
+      if (action === "view" && keys.some((k) => ["bibliographies", "repository", "ebooks"].includes(k))) {
         next();
         return;
       }
 
       const permissions = await roleService.getUserPermissions(userRole);
-      const menuPerm = permissions[menuKey];
 
       const actionKey =
         action === "view"
@@ -132,14 +133,16 @@ export const requirePermission = (
           ? "canEdit"
           : "canDelete";
 
-      if (menuPerm && menuPerm[actionKey]) {
+      const hasPermission = keys.some((k) => permissions[k] && permissions[k][actionKey]);
+
+      if (hasPermission) {
         next();
         return;
       }
 
       res.status(403).json({
         success: false,
-        message: `Forbidden - Role '${userRole}' tidak memiliki hak akses ${action} pada modul ${menuKey}`,
+        message: `Forbidden - Role '${userRole}' tidak memiliki hak akses ${action} pada modul ${keys.join("/")}`,
         data: null,
       });
     } catch (error) {

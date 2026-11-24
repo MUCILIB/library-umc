@@ -9,4 +9,12 @@ describe("Role Constants & Sidebar Menus", () => {
     expect(cmsMenu?.group).toBe("Pengaturan & Audit");
     expect(cmsMenu?.description).toBeDefined();
   });
+
+  it("mendaftarkan menu 'news' (Kabar & Berita) ke dalam SIDEBAR_MENUS", () => {
+    const newsMenu = SIDEBAR_MENUS.find((m) => m.key === "news");
+    expect(newsMenu).toBeDefined();
+    expect(newsMenu?.label).toBe("Kabar & Berita");
+    expect(newsMenu?.group).toBe("Pengaturan & Audit");
+    expect(newsMenu?.description).toBeDefined();
+  });
 });

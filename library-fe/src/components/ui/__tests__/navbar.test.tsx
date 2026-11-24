@@ -67,6 +67,8 @@ describe("Navbar Component (Responsive Mobile Top Dropdown)", () => {
     expect(berandaLinks.length).toBeGreaterThan(0);
     const katalogLinks = screen.getAllByText("Katalog");
     expect(katalogLinks.length).toBeGreaterThan(0);
+    const beritaLinks = screen.getAllByText("Berita");
+    expect(beritaLinks.length).toBeGreaterThan(0);
   });
 
   it("menutup menu saat tombol Escape ditekan", () => {

@@ -44,11 +44,12 @@ describe("Dashboard sidebar interactions", () => {
 });
 
 describe("CMS Sub-Items Navigation & Architecture", () => {
-  it("mendefinisikan 4 sub-menu CMS dengan label jelas dan ikon yang valid", () => {
-    expect(CMS_SUB_ITEMS).toHaveLength(4);
+  it("mendefinisikan sub-menu CMS dengan label jelas dan ikon yang valid", () => {
+    expect(CMS_SUB_ITEMS).toHaveLength(5);
 
     const keys = CMS_SUB_ITEMS.map((item) => item.key);
     expect(keys).toEqual([
+      "cms-news",
       "cms-banner",
       "cms-branding",
       "cms-hero",
@@ -56,6 +57,7 @@ describe("CMS Sub-Items Navigation & Architecture", () => {
     ]);
 
     const labels = CMS_SUB_ITEMS.map((item) => item.label);
+    expect(labels).toContain("Kabar & Berita");
     expect(labels).toContain("Banner Siaran");
     expect(labels).toContain("Identitas & Logo");
     expect(labels).toContain("Hero Landing Page");

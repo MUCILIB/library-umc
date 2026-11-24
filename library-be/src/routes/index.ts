@@ -24,6 +24,7 @@ import { repositoryRoutes } from "../modules/repository/route/proposal.route";
 import { ebookRoutes } from "../modules/ebook/route/ebook.route";
 import { roleRoutes } from "../modules/role/route/role.route";
 import { siteSettingRoutes } from "../modules/site-setting/site-setting.route";
+import { newsRoutes } from "../modules/news/route/news.route";
 
 const router = Router();
 
@@ -35,6 +36,9 @@ router.use(roleRoutes);
 
 // Site Settings & CMS
 router.use(siteSettingRoutes);
+
+// Kabar & Berita (News & Announcements)
+router.use(newsRoutes);
 
 
 // Member

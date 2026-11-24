@@ -168,6 +168,47 @@ async function runPendingMigrations() {
     console.warn("[Database] repository_proposals chapter initialization error:", repoErr);
   }
 
+  // Ensure news enums and table
+  try {
+    const { sql } = await import("drizzle-orm");
+    await db.execute(sql`
+      DO $$ BEGIN
+        CREATE TYPE "news_category" AS ENUM ('pengumuman', 'agenda', 'kegiatan', 'layanan', 'literasi');
+      EXCEPTION
+        WHEN duplicate_object THEN null;
+      END $$;
+
+      DO $$ BEGIN
+        CREATE TYPE "news_status" AS ENUM ('draft', 'published', 'archived');
+      EXCEPTION
+        WHEN duplicate_object THEN null;
+      END $$;
+
+      CREATE TABLE IF NOT EXISTS "news" (
+        "id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        "title" varchar(255) NOT NULL,
+        "slug" varchar(255) NOT NULL UNIQUE,
+        "category" "news_category" NOT NULL DEFAULT 'pengumuman',
+        "excerpt" text,
+        "content" text NOT NULL,
+        "cover_image" varchar(500),
+        "status" "news_status" NOT NULL DEFAULT 'draft',
+        "views" integer NOT NULL DEFAULT 0,
+        "author_id" text REFERENCES "users"("id") ON DELETE SET NULL,
+        "published_at" timestamp,
+        "created_at" timestamp NOT NULL DEFAULT now(),
+        "updated_at" timestamp NOT NULL DEFAULT now()
+      );
+
+      CREATE INDEX IF NOT EXISTS "news_slug_idx" ON "news" ("slug");
+      CREATE INDEX IF NOT EXISTS "news_category_idx" ON "news" ("category");
+      CREATE INDEX IF NOT EXISTS "news_status_idx" ON "news" ("status");
+      CREATE INDEX IF NOT EXISTS "news_published_at_idx" ON "news" ("published_at");
+    `);
+  } catch (newsErr) {
+    console.warn("[Database] news table initialization error:", newsErr);
+  }
+
   // Auto-seed default external demo user if missing
   try {
     const { Users, account: accountTable, members } = await import("./db/schema");

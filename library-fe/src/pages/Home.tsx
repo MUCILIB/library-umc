@@ -6,6 +6,7 @@ import Background from "@/assets/bg1.jpeg";
 import DialogUnauthorized from "@/components/DialogUnauthorized";
 import Footer from "@/components/Footer";
 import HomeBookList from "@/components/HomeBookList";
+import LatestNewsSection from "@/components/LatestNewsSection";
 import { authClient } from "@/utils/auth-client";
 import { useSiteSettings } from "@/hooks/useSiteSettings";
 import {
@@ -259,9 +260,12 @@ export default function Home() {
       </div>
 
       {/* Koleksi Terbaru Section */}
-      <div id="koleksi-terbaru" className="w-full max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 pb-12 sm:pb-20">
+      <div id="koleksi-terbaru" className="w-full max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 pb-8">
         <HomeBookList />
       </div>
+
+      {/* Kabar & Berita Terbaru Section */}
+      <LatestNewsSection />
 
       {/* Footer */}
       <div>

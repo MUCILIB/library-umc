@@ -147,6 +147,12 @@ export const SIDEBAR_MENUS: SidebarMenuItem[] = [
     group: "Pengaturan & Audit",
     description: "Kelola banner pengumuman, favicon, identitas web, hero section, footer, dan peta lokasi",
   },
+  {
+    key: "news",
+    label: "Kabar & Berita",
+    group: "Pengaturan & Audit",
+    description: "Publikasi artikel berita, pengumuman, agenda kegiatan, dan literasi civitas akademika",
+  },
 ];
 
 export const SYSTEM_ROLE_IDS = [

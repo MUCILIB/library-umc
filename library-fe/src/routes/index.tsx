@@ -20,6 +20,8 @@ import ProtectedRoute from "../components/ProtectedRoute";
 import NonAdminRoute from "./NonAdminRoute"; 
 import PublicRoute from "./PublicRoute"; // Komponen baru untuk memblokir akses login saat sudah masuk
 import TentangPage from "../pages/TentangPage";
+import BeritaPage from "../pages/BeritaPage";
+import BeritaDetailPage from "../pages/BeritaDetailPage";
 import WebTrafficTracker from "@/components/WebTrafficTracker";
 import AbsensiPage from "../pages/Absensi";
 import { MandatoryContactModal } from "@/components/common/MandatoryContactModal";
@@ -41,6 +43,8 @@ const AppRoutes = () => {
         <Route path="/e-resource" element={<Navigate to="/repositori" replace />} />
         <Route path="/tentang" element={<NonAdminRoute><TentangPage /></NonAdminRoute>} />
         <Route path="/lokasi" element={<NonAdminRoute><TentangPage /></NonAdminRoute>} />
+        <Route path="/berita" element={<BeritaPage />} />
+        <Route path="/berita/:slug" element={<BeritaDetailPage />} />
         <Route path="/absensi" element={<AbsensiPage />} />
         <Route path="/input-kunjungan" element={<AbsensiPage />} />
         <Route path="/buku-tamu" element={<AbsensiPage />} />

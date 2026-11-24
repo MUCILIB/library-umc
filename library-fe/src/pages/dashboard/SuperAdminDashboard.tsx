@@ -24,7 +24,8 @@ import {
   ChevronDown,
   Megaphone,
   Globe,
-  Tags
+  Tags,
+  Newspaper
 } from "lucide-react";
 
 import Logo from "@/assets/logo_umc.png";
@@ -50,6 +51,7 @@ import ProdiSection from "@/components/dashboard/ProdiSection";
 import LocationSection from "@/components/dashboard/LocationSection";
 import KlasifikasiSection from "@/components/dashboard/KlasifikasiSection";
 import CmsSection from "@/components/dashboard/CmsSection";
+import NewsManagementSection from "./components/NewsManagementSection";
 import { NotificationBellDropdown } from "@/components/dashboard/NotificationBellDropdown";
 import {
   CommandDialog,
@@ -115,15 +117,22 @@ type ActiveMenu =
   | "cms-banner"
   | "cms-branding"
   | "cms-hero"
-  | "cms-location";
+  | "cms-location"
+  | "cms-news";
 
-export type CmsSubMenuKey = "cms-banner" | "cms-branding" | "cms-hero" | "cms-location";
+export type CmsSubMenuKey =
+  | "cms-banner"
+  | "cms-branding"
+  | "cms-hero"
+  | "cms-location"
+  | "cms-news";
 
 export const CMS_SUB_ITEMS: {
   key: CmsSubMenuKey;
   label: string;
   icon: typeof Megaphone;
 }[] = [
+  { key: "cms-news", label: "Kabar & Berita", icon: Newspaper },
   { key: "cms-banner", label: "Banner Siaran", icon: Megaphone },
   { key: "cms-branding", label: "Identitas & Logo", icon: Globe },
   { key: "cms-hero", label: "Hero Landing Page", icon: LayoutTemplate },
@@ -441,6 +450,7 @@ export default function SuperAdminDashboard() {
     if (!menu) return false;
     return (
       MENU_CONFIG.some((item) => item.key === menu) ||
+      menu === "cms-news" ||
       menu === "cms-banner" ||
       menu === "cms-branding" ||
       menu === "cms-hero" ||
@@ -657,6 +667,8 @@ export default function SuperAdminDashboard() {
         return <AuditLogsSection />;
       case "reports":
         return <ReportsSection />;
+      case "cms-news":
+        return <NewsManagementSection />;
       case "cms":
       case "cms-banner":
         return <CmsSection subPage="banner" />;

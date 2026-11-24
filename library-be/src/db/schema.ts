@@ -60,6 +60,12 @@ export const importBatchTypeEnum = pgEnum("import_batch_type", [
 export const importRowStatusEnum = pgEnum("import_row_status", [
   "pending", "valid", "invalid", "committed", "skipped", "duplicate"
 ]);
+export const newsCategoryEnum = pgEnum("news_category", [
+  "pengumuman", "agenda", "kegiatan", "layanan", "literasi"
+]);
+export const newsStatusEnum = pgEnum("news_status", [
+  "draft", "published", "archived"
+]);
 
 // ==========================================
 // 2. MASTER DATA
@@ -932,6 +938,36 @@ export const bookmarksRelations = relations(bookmarks, ({ one }) => ({
   user: one(Users, { fields: [bookmarks.userId], references: [Users.id] }),
   bibliography: one(bibliographies, { fields: [bookmarks.bibliographyId], references: [bibliographies.id] })
 }));
+
+// ==========================================
+// 15. KABAR & BERITA (NEWS & ANNOUNCEMENTS)
+// ==========================================
+
+export const news = pgTable("news", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  title: varchar("title", { length: 255 }).notNull(),
+  slug: varchar("slug", { length: 255 }).notNull().unique(),
+  category: newsCategoryEnum("category").notNull().default("pengumuman"),
+  excerpt: text("excerpt"),
+  content: text("content").notNull(),
+  coverImage: varchar("cover_image", { length: 500 }),
+  status: newsStatusEnum("status").notNull().default("draft"),
+  views: integer("views").notNull().default(0),
+  authorId: text("author_id").references(() => Users.id, { onDelete: "set null" }),
+  publishedAt: timestamp("published_at"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow()
+}, (table) => ({
+  slugIdx: index("news_slug_idx").on(table.slug),
+  categoryIdx: index("news_category_idx").on(table.category),
+  statusIdx: index("news_status_idx").on(table.status),
+  publishedAtIdx: index("news_published_at_idx").on(table.publishedAt)
+}));
+
+export const newsRelations = relations(news, ({ one }) => ({
+  author: one(Users, { fields: [news.authorId], references: [Users.id] })
+}));
+
 
 
 

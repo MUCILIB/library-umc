@@ -69,6 +69,8 @@ export class RoleService {
             "locations",
             "guests",
             "reports",
+            "cms",
+            "news",
           ].includes(menu.key);
 
           const isPublicViewMenu = ["bibliographies", "ebooks", "repository"].includes(menu.key);

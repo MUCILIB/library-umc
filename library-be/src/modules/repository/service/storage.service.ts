@@ -167,3 +167,4 @@ export const storageService = new StorageService();
 export const coverStorageService = new StorageService("covers");
 export const cmsStorageService = new StorageService("cms");
 export const avatarStorageService = new StorageService("avatars");
+export const newsStorageService = new StorageService("news");
