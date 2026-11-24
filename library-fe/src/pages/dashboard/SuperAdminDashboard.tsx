@@ -82,6 +82,7 @@ import {
 import { useDashboardStatsLazy } from "@/hooks/dashboard/useDashboardStatsLazy";
 import { useGuestsData } from "@/hooks/dashboard/useGuestsData";
 import { useDashboardBadges } from "@/hooks/dashboard/useDashboardBadges";
+import { useNotificationReadState } from "@/hooks/dashboard/useNotificationReadState";
 import type { DashboardBadgeCounts } from "@/services/dashboard/dashboardDataService";
 import { cn } from "@/lib/utils";
 import { dashboardDataService } from "@/services/dashboard/dashboardDataService";
@@ -186,6 +187,7 @@ type DashboardSidebarProps = {
     role?: string | null;
   } | null;
   badgeCounts?: DashboardBadgeCounts;
+  unreadCounts?: Record<string, number>;
 };
 
 export function DashboardSidebar({
@@ -194,7 +196,8 @@ export function DashboardSidebar({
   onMenuChange,
   onSignOut,
   user,
-  badgeCounts
+  badgeCounts,
+  unreadCounts
 }: DashboardSidebarProps) {
   const { isMobile, setOpenMobile, state, setOpen } = useSidebar();
   const selectMenu = (menu: ActiveMenu) => {
@@ -332,7 +335,10 @@ export function DashboardSidebar({
               }
 
               const isActive = activeMenu === key;
-              const badgeCount = badgeCounts?.[key] || 0;
+              const rawCount = unreadCounts
+                ? (unreadCounts[key] ?? badgeCounts?.[key] ?? 0)
+                : (badgeCounts?.[key] || 0);
+              const badgeCount = isActive ? 0 : rawCount;
 
               items.push(
                 <SidebarMenuItem key={key}>
@@ -535,6 +541,7 @@ export default function SuperAdminDashboard() {
   } = useGuestsData(activeMenu === "guests");
 
   const { badges, refetch: refetchBadges } = useDashboardBadges();
+  const { unreadCounts } = useNotificationReadState(badges, activeMenu);
 
   const activeLoading = useMemo(() => {
     if (activeMenu === "dashboard") return statsLoading;
@@ -707,6 +714,7 @@ export default function SuperAdminDashboard() {
         onSignOut={handleSignOut}
         user={session?.user}
         badgeCounts={badges}
+        unreadCounts={unreadCounts}
       />
 
       <SidebarInset className="bg-background min-w-0 max-w-full overflow-hidden">
