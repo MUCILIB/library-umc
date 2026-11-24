@@ -31,6 +31,16 @@ const NewsEditRedirect = () => {
   return <Navigate to={`/dashboard/super-admin?tab=cms-news&action=edit&id=${id}`} replace />;
 };
 
+const EbookEditRedirect = () => {
+  const { id } = useParams<{ id: string }>();
+  return <Navigate to={`/dashboard/super-admin?tab=ebooks&action=edit&id=${id}`} replace />;
+};
+
+const RepositoryEditRedirect = () => {
+  const { id } = useParams<{ id: string }>();
+  return <Navigate to={`/dashboard/super-admin?tab=repository&action=edit&id=${id}`} replace />;
+};
+
 const AppRoutes = () => {
   return (
     <>
@@ -111,6 +121,34 @@ const AppRoutes = () => {
         <Route
           path="/dashboard/berita/edit/:id"
           element={<NewsEditRedirect />}
+        />
+        <Route
+          path="/dashboard/ebooks/baru"
+          element={<Navigate to="/dashboard/super-admin?tab=ebooks&action=create" replace />}
+        />
+        <Route
+          path="/dashboard/ebooks/create"
+          element={<Navigate to="/dashboard/super-admin?tab=ebooks&action=create" replace />}
+        />
+        <Route
+          path="/dashboard/ebooks/edit/:id"
+          element={<EbookEditRedirect />}
+        />
+        <Route
+          path="/dashboard/repository/baru"
+          element={<Navigate to="/dashboard/super-admin?tab=repository&action=create" replace />}
+        />
+        <Route
+          path="/dashboard/repository/upload"
+          element={<Navigate to="/dashboard/super-admin?tab=repository&action=create" replace />}
+        />
+        <Route
+          path="/dashboard/repository/create"
+          element={<Navigate to="/dashboard/super-admin?tab=repository&action=create" replace />}
+        />
+        <Route
+          path="/dashboard/repository/edit/:id"
+          element={<RepositoryEditRedirect />}
         />
         <Route
           path="/return-confirmation/:loanId"

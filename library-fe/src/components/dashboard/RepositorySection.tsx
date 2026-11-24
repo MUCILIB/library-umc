@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useSearchParams } from "react-router";
 import { TablePagination } from "@/components/common/TablePagination";
 import {
   GraduationCap,
@@ -19,8 +20,8 @@ import {
   Trash2,
   BookOpen
 } from "lucide-react";
-import AdminUploadProposalModal from "./repository/AdminUploadProposalModal";
 import ProgramChapterSettingsModal from "./repository/ProgramChapterSettingsModal";
+import { RepositoryEditorForm } from "@/pages/dashboard/components/RepositoryEditorForm";
 import { repositoryService, type RepositoryProposal } from "@/services/repositoryService";
 import { triggerBadgeRefresh } from "@/hooks/dashboard/useDashboardBadges";
 import { API_BASE_URL } from "@/utils/api-config";
@@ -58,11 +59,42 @@ export default function RepositorySection() {
     setCurrentPage(1);
   }, [filterStatus, filterCategory, searchTerm]);
 
-  // Upload / Edit modal state for Admin
-  const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
+  // URL Search Params for Dedicated Page Navigation
+  const [searchParams, setSearchParams] = useSearchParams();
+  const currentAction = searchParams.get("action");
+  const editId = searchParams.get("id");
+
   const [isChapterModalOpen, setIsChapterModalOpen] = useState(false);
-  const [editingItem, setEditingItem] = useState<RepositoryProposal | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  const handleOpenCreate = () => {
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      next.set("action", "create");
+      next.delete("id");
+      return next;
+    });
+  };
+
+  const handleOpenEdit = (item: RepositoryProposal) => {
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      next.set("action", "edit");
+      next.set("id", String(item.id));
+      return next;
+    });
+  };
+
+  const handleCloseForm = () => {
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      next.delete("action");
+      next.delete("id");
+      return next;
+    });
+    fetchProposals();
+    triggerBadgeRefresh();
+  };
 
   // Review modal state
   const [reviewModalItem, setReviewModalItem] = useState<RepositoryProposal | null>(null);
@@ -287,6 +319,17 @@ export default function RepositorySection() {
     }
   };
 
+  if (currentAction === "create" || (currentAction === "edit" && editId)) {
+    return (
+      <RepositoryEditorForm
+        isEdit={currentAction === "edit"}
+        editId={editId || undefined}
+        onBack={handleCloseForm}
+        onSuccess={handleCloseForm}
+      />
+    );
+  }
+
   return (
     <div className="space-y-6">
       {/* Header Info */}
@@ -315,10 +358,7 @@ export default function RepositorySection() {
 
           <button
             type="button"
-            onClick={() => {
-              setEditingItem(null);
-              setIsUploadModalOpen(true);
-            }}
+            onClick={handleOpenCreate}
             className="inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-xs sm:text-sm font-semibold text-primary-foreground hover:bg-primary/90 transition-colors shadow-xs cursor-pointer"
           >
             <UploadCloud className="size-4" />
@@ -521,10 +561,7 @@ export default function RepositorySection() {
 
                         <button
                           type="button"
-                          onClick={() => {
-                            setEditingItem(item);
-                            setIsUploadModalOpen(true);
-                          }}
+                          onClick={() => handleOpenEdit(item)}
                           title="Edit Data Naskah Repositori"
                           className="p-1.5 rounded-lg border border-border hover:bg-muted text-foreground transition-colors inline-flex items-center cursor-pointer"
                         >
@@ -834,20 +871,6 @@ export default function RepositorySection() {
           </div>
         )}
       </Modal>
-
-      {/* Modal Unggah / Edit Naskah untuk Admin */}
-      <AdminUploadProposalModal
-        isOpen={isUploadModalOpen}
-        onClose={() => {
-          setIsUploadModalOpen(false);
-          setEditingItem(null);
-        }}
-        onSuccess={() => {
-          fetchProposals();
-          triggerBadgeRefresh();
-        }}
-        editItem={editingItem}
-      />
 
       {/* Modal Pengaturan Kustom Struktur Bab Skripsi Jurusan */}
       <ProgramChapterSettingsModal

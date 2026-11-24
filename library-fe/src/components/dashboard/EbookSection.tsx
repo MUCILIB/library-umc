@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { useSearchParams } from "react-router";
 import { TablePagination } from "@/components/common/TablePagination";
 import {
   BookOpen,
@@ -10,7 +11,6 @@ import {
   Eye,
   Loader2,
   AlertCircle,
-  Upload,
   Lock,
   Globe,
   Filter,
@@ -21,6 +21,7 @@ import { dashboardDataService, type CategoryItem } from "@/services/dashboard/da
 import { useToast } from "@/hooks/useToast";
 import Modal from "@/components/ui/modal";
 import { EmptyState } from "@/components/ui/empty-state";
+import { EbookEditorForm } from "@/pages/dashboard/components/EbookEditorForm";
 import {
   Table,
   TableBody,
@@ -55,26 +56,10 @@ export default function EbookSection() {
   const [totalPages, setTotalPages] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
 
-  // Form Modal State (Add / Edit)
-  const [isFormOpen, setIsFormOpen] = useState(false);
-  const [editingItem, setEditingItem] = useState<EbookItem | null>(null);
-  const [submitting, setSubmitting] = useState(false);
-
-  // Form Fields
-  const [formTitle, setFormTitle] = useState("");
-  const [formAuthor, setFormAuthor] = useState("");
-  const [formPublisher, setFormPublisher] = useState("");
-  const [formYear, setFormYear] = useState<string>("");
-  const [formIsbn, setFormIsbn] = useState("");
-  const [formCategoryId, setFormCategoryId] = useState<string>("");
-  const [formDescription, setFormDescription] = useState("");
-  const [formImage, setFormImage] = useState("");
-  const [formPdfFile, setFormPdfFile] = useState<File | null>(null);
-  const [formIsFullAccess, setFormIsFullAccess] = useState(true);
-  const [formStartPage, setFormStartPage] = useState<number>(1);
-  const [formEndPage, setFormEndPage] = useState<number>(10);
-  const [formAllowDownload, setFormAllowDownload] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  // URL Search Params for Dedicated Page Navigation
+  const [searchParams, setSearchParams] = useSearchParams();
+  const currentAction = searchParams.get("action");
+  const editId = searchParams.get("id");
 
   // Delete State
   const [deletingItem, setDeletingItem] = useState<EbookItem | null>(null);
@@ -140,88 +125,31 @@ export default function EbookSection() {
   }, []);
 
   const openCreateModal = () => {
-    setEditingItem(null);
-    setFormTitle("");
-    setFormAuthor("");
-    setFormPublisher("");
-    setFormYear("");
-    setFormIsbn("");
-    setFormCategoryId("");
-    setFormDescription("");
-    setFormImage("");
-    setFormPdfFile(null);
-    setFormIsFullAccess(true);
-    setFormStartPage(1);
-    setFormEndPage(10);
-    setFormAllowDownload(false);
-    setIsFormOpen(true);
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      next.set("action", "create");
+      next.delete("id");
+      return next;
+    });
   };
 
   const openEditModal = (item: EbookItem) => {
-    setEditingItem(item);
-    setFormTitle(item.title);
-    setFormAuthor(item.authors?.[0]?.name || "");
-    setFormPublisher(item.publisher?.name || "");
-    setFormYear(item.publishYear ? String(item.publishYear) : "");
-    setFormIsbn(item.isbn || "");
-    setFormCategoryId(item.category?.id ? String(item.category.id) : "");
-    setFormDescription(item.description || "");
-    setFormImage(item.image || "");
-    setFormPdfFile(null);
-    setFormIsFullAccess(item.content?.isFullAccess ?? true);
-    setFormStartPage(item.content?.previewStartPage ?? 1);
-    setFormEndPage(item.content?.previewEndPage ?? 10);
-    setFormAllowDownload(item.content?.allowDownload ?? false);
-    setIsFormOpen(true);
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      next.set("action", "edit");
+      next.set("id", String(item.id));
+      return next;
+    });
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!formTitle.trim()) {
-      error("Judul e-book wajib diisi");
-      return;
-    }
-
-    if (!editingItem && !formPdfFile) {
-      error("Berkas PDF e-book wajib diunggah saat menambahkan buku baru");
-      return;
-    }
-
-    try {
-      setSubmitting(true);
-      const formData = new FormData();
-      formData.append("title", formTitle.trim());
-      if (formAuthor.trim()) formData.append("authorName", formAuthor.trim());
-      if (formPublisher.trim()) formData.append("publisherName", formPublisher.trim());
-      if (formYear) formData.append("publishYear", formYear);
-      if (formIsbn.trim()) formData.append("isbn", formIsbn.trim());
-      if (formCategoryId) formData.append("categoryId", formCategoryId);
-      if (formDescription.trim()) formData.append("description", formDescription.trim());
-      if (formImage.trim()) formData.append("image", formImage.trim());
-      formData.append("isFullAccess", String(formIsFullAccess));
-      formData.append("previewStartPage", String(formStartPage));
-      formData.append("previewEndPage", String(formEndPage));
-      formData.append("allowDownload", String(formAllowDownload));
-
-      if (formPdfFile) {
-        formData.append("file", formPdfFile);
-      }
-
-      if (editingItem) {
-        await ebookService.updateEbook(editingItem.id, formData);
-        success("E-Book berhasil diperbarui");
-      } else {
-        await ebookService.createEbook(formData);
-        success("E-Book berhasil ditambahkan");
-      }
-
-      setIsFormOpen(false);
-      fetchEbooks();
-    } catch (err: any) {
-      error(getCleanErrorMessage(err, "Gagal menyimpan e-book"));
-    } finally {
-      setSubmitting(false);
-    }
+  const handleCloseForm = () => {
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      next.delete("action");
+      next.delete("id");
+      return next;
+    });
+    fetchEbooks();
   };
 
   const handleDelete = async () => {
@@ -244,6 +172,17 @@ export default function EbookSection() {
     const mb = bytes / (1024 * 1024);
     return `${mb.toFixed(1)} MB`;
   };
+
+  if (currentAction === "create" || (currentAction === "edit" && editId)) {
+    return (
+      <EbookEditorForm
+        isEdit={currentAction === "edit"}
+        editId={editId || undefined}
+        onBack={handleCloseForm}
+        onSuccess={handleCloseForm}
+      />
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -472,255 +411,6 @@ export default function EbookSection() {
         )}
       </div>
 
-      {/* Modal Form Tambah / Edit */}
-      <Modal
-        isOpen={isFormOpen}
-        onClose={() => !submitting && setIsFormOpen(false)}
-        title={editingItem ? "Edit Metadata E-Book" : "Tambah Koleksi E-Book Baru"}
-        size="lg"
-      >
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-xs font-semibold text-foreground mb-1">
-              Judul E-Book <span className="text-rose-500">*</span>
-            </label>
-            <input
-              type="text"
-              required
-              value={formTitle}
-              onChange={(e) => setFormTitle(e.target.value)}
-              placeholder="Contoh: Pemrograman Web Modern dengan React dan TypeScript"
-              className="w-full px-3 py-2 text-sm bg-background border border-input rounded-lg focus:ring-2 focus:ring-primary focus:outline-none min-h-[44px]"
-            />
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-semibold text-foreground mb-1">Nama Penulis</label>
-              <input
-                type="text"
-                value={formAuthor}
-                onChange={(e) => setFormAuthor(e.target.value)}
-                placeholder="Nama penulis utama"
-                className="w-full px-3 py-2 text-sm bg-background border border-input rounded-lg focus:ring-2 focus:ring-primary focus:outline-none min-h-[44px]"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-foreground mb-1">Penerbit</label>
-              <input
-                type="text"
-                value={formPublisher}
-                onChange={(e) => setFormPublisher(e.target.value)}
-                placeholder="Nama penerbit"
-                className="w-full px-3 py-2 text-sm bg-background border border-input rounded-lg focus:ring-2 focus:ring-primary focus:outline-none min-h-[44px]"
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
-              <label className="block text-xs font-semibold text-foreground mb-1">Tahun Terbit</label>
-              <input
-                type="number"
-                min="1900"
-                max="2100"
-                value={formYear}
-                onChange={(e) => setFormYear(e.target.value)}
-                placeholder="2024"
-                className="w-full px-3 py-2 text-sm bg-background border border-input rounded-lg focus:ring-2 focus:ring-primary focus:outline-none min-h-[44px]"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-foreground mb-1">ISBN</label>
-              <input
-                type="text"
-                value={formIsbn}
-                onChange={(e) => setFormIsbn(e.target.value)}
-                placeholder="978-..."
-                className="w-full px-3 py-2 text-sm bg-background border border-input rounded-lg focus:ring-2 focus:ring-primary focus:outline-none min-h-[44px]"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-foreground mb-1">Kategori</label>
-              <Select
-                value={formCategoryId ? String(formCategoryId) : "none"}
-                onValueChange={(val) => setFormCategoryId(val === "none" ? "" : val)}
-              >
-                <SelectTrigger className="w-full h-[44px] bg-background border-input rounded-lg text-sm cursor-pointer shadow-xs">
-                  <SelectValue placeholder="Pilih Kategori" />
-                </SelectTrigger>
-                <SelectContent className="max-h-60">
-                  <SelectItem value="none" className="cursor-pointer text-muted-foreground">Pilih Kategori</SelectItem>
-                  {categories.map((c) => (
-                    <SelectItem key={c.id} value={String(c.id)} className="cursor-pointer">
-                      {c.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-xs font-semibold text-foreground mb-1">URL Gambar Sampul (Opsional)</label>
-            <input
-              type="url"
-              value={formImage}
-              onChange={(e) => setFormImage(e.target.value)}
-              placeholder="https://..."
-              className="w-full px-3 py-2 text-sm bg-background border border-input rounded-lg focus:ring-2 focus:ring-primary focus:outline-none min-h-[44px]"
-            />
-          </div>
-
-          <div>
-            <label className="block text-xs font-semibold text-foreground mb-1">Deskripsi / Sinopsis</label>
-            <textarea
-              rows={3}
-              value={formDescription}
-              onChange={(e) => setFormDescription(e.target.value)}
-              placeholder="Ringkasan isi buku atau informasi penting..."
-              className="w-full px-3 py-2 text-sm bg-background border border-input rounded-lg focus:ring-2 focus:ring-primary focus:outline-none"
-            />
-          </div>
-
-          {/* Upload File PDF */}
-          <div className="p-4 bg-muted/40 border border-dashed border-border rounded-xl space-y-2">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-foreground flex items-center gap-1.5">
-                <Upload className="h-4 w-4 text-primary" />
-                Berkas Dokumen PDF E-Book
-              </span>
-              {editingItem && (
-                <span className="text-xs text-muted-foreground">
-                  (Kosongkan jika tidak mengganti file PDF)
-                </span>
-              )}
-            </div>
-
-            <input
-              type="file"
-              ref={fileInputRef}
-              accept="application/pdf"
-              onChange={(e) => {
-                const file = e.target.files?.[0];
-                if (file) setFormPdfFile(file);
-              }}
-              className="hidden"
-            />
-
-            <div
-              onClick={() => fileInputRef.current?.click()}
-              className="cursor-pointer py-4 border border-border bg-background hover:bg-muted/50 rounded-lg flex flex-col items-center justify-center gap-1 transition-colors"
-            >
-              <FileText className="h-6 w-6 text-primary" />
-              <span className="text-xs font-medium text-foreground">
-                {formPdfFile
-                  ? formPdfFile.name
-                  : "Klik untuk memilih berkas PDF (Maks. 100 MB)"}
-              </span>
-              <span className="text-[11px] text-muted-foreground">
-                Disimpan langsung ke Cloud Storage S3 Dahono
-              </span>
-            </div>
-          </div>
-
-          {/* Konfigurasi Kebijakan Akses Baca */}
-          <div className="p-4 border border-border rounded-xl bg-card space-y-3">
-            <h4 className="text-xs font-semibold text-foreground flex items-center gap-2">
-              <Lock className="h-4 w-4 text-primary" />
-              Kebijakan Akses Baca Pemustaka
-            </h4>
-
-            <div className="flex items-center gap-3">
-              <label className="inline-flex items-center gap-2 text-xs cursor-pointer">
-                <input
-                  type="radio"
-                  name="accessMode"
-                  checked={formIsFullAccess}
-                  onChange={() => setFormIsFullAccess(true)}
-                  className="text-primary focus:ring-primary"
-                />
-                <span className="font-medium text-foreground">Akses Penuh (Bebas Baca Seluruh Halaman)</span>
-              </label>
-
-              <label className="inline-flex items-center gap-2 text-xs cursor-pointer">
-                <input
-                  type="radio"
-                  name="accessMode"
-                  checked={!formIsFullAccess}
-                  onChange={() => setFormIsFullAccess(false)}
-                  className="text-primary focus:ring-primary"
-                />
-                <span className="font-medium text-foreground">Pratinjau Halaman Terbatas (Slicing)</span>
-              </label>
-            </div>
-
-            {!formIsFullAccess && (
-              <div className="grid grid-cols-2 gap-3 pt-2 border-t border-border">
-                <div>
-                  <label className="block text-[11px] font-medium text-muted-foreground mb-1">
-                    Halaman Awal Pratinjau
-                  </label>
-                  <input
-                    type="number"
-                    min="1"
-                    value={formStartPage}
-                    onChange={(e) => setFormStartPage(Math.max(1, Number(e.target.value)))}
-                    className="w-full px-3 py-1.5 text-xs bg-background border border-input rounded-lg focus:outline-none focus:ring-2 focus:ring-primary min-h-[38px]"
-                  />
-                </div>
-                <div>
-                  <label className="block text-[11px] font-medium text-muted-foreground mb-1">
-                    Halaman Akhir Pratinjau
-                  </label>
-                  <input
-                    type="number"
-                    min="1"
-                    value={formEndPage}
-                    onChange={(e) => setFormEndPage(Math.max(1, Number(e.target.value)))}
-                    className="w-full px-3 py-1.5 text-xs bg-background border border-input rounded-lg focus:outline-none focus:ring-2 focus:ring-primary min-h-[38px]"
-                  />
-                </div>
-                <p className="col-span-2 text-[11px] text-muted-foreground">
-                  * Pengunjung tamu hanya dapat membaca halaman {formStartPage} sampai {formEndPage}. Civitas UMC yang login tetap dapat mengakses buku secara penuh.
-                </p>
-              </div>
-            )}
-
-            <div className="pt-2 border-t border-border flex items-center justify-between">
-              <label className="inline-flex items-center gap-2 text-xs cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={formAllowDownload}
-                  onChange={(e) => setFormAllowDownload(e.target.checked)}
-                  className="rounded text-primary focus:ring-primary"
-                />
-                <span className="text-foreground">Izinkan pemustaka mengunduh berkas PDF utuh</span>
-              </label>
-            </div>
-          </div>
-
-          {/* Modal Actions */}
-          <div className="flex items-center justify-end gap-3 pt-3 border-t border-border">
-            <button
-              type="button"
-              disabled={submitting}
-              onClick={() => setIsFormOpen(false)}
-              className="px-4 py-2 text-sm font-medium text-muted-foreground hover:bg-muted rounded-lg transition-colors min-h-[44px]"
-            >
-              Batal
-            </button>
-            <button
-              type="submit"
-              disabled={submitting}
-              className="inline-flex items-center justify-center gap-2 px-5 py-2 text-sm font-medium text-white bg-primary hover:bg-primary/90 rounded-lg shadow-sm transition-colors min-h-[44px] disabled:opacity-50"
-            >
-              {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
-              {editingItem ? "Simpan Perubahan" : "Unggah & Terbitkan E-Book"}
-            </button>
-          </div>
-        </form>
-      </Modal>
 
       {/* Modal Hapus Konfirmasi */}
       <Modal
