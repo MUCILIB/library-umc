@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import Modal from "@/components/ui/modal";
 import { Skeleton } from "@/components/ui/skeleton";
+import { EmptyState } from "@/components/ui/empty-state";
 import { getUserAvatar } from "@/lib/avatar";
 import { useToast } from "@/hooks/useToast";
 import {
@@ -288,12 +289,11 @@ export default function CardApprovalsSection() {
             ))}
           </div>
         ) : filtered.length === 0 ? (
-          <div className="p-10 text-center text-muted-foreground">
-            <IdCard size={42} className="mx-auto mb-3 opacity-40" />
-            <p className="font-semibold">
-              Tidak ada {activeTab === "new" ? "pengajuan kartu baru" : "pengajuan perpanjangan"} yang pending
-            </p>
-          </div>
+          <EmptyState
+            icon={IdCard}
+            title={activeTab === "new" ? "Tidak ada pengajuan kartu baru" : "Tidak ada pengajuan perpanjangan kartu"}
+            description="Semua pengajuan kartu anggota telah selesai diproses atau belum ada pengajuan baru."
+          />
         ) : (
           <>
             <div className="divide-y divide-border/60">

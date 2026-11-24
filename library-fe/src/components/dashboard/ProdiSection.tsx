@@ -4,6 +4,7 @@ import {
   Plus, Edit, Trash2, Save, Loader, GraduationCap, Sliders
 } from "lucide-react";
 import Modal from "@/components/ui/modal";
+import { EmptyState } from "@/components/ui/empty-state";
 import ProgramChapterSettingsModal from "./repository/ProgramChapterSettingsModal";
 import {
   Select,
@@ -137,7 +138,15 @@ export default function ProdiSection() {
               </thead>
               <tbody>
                 {paginated.length === 0 ? (
-                  <tr><td colSpan={4} className="px-4 py-8 text-center text-muted-foreground">Belum ada data</td></tr>
+                  <tr>
+                    <td colSpan={4} className="px-4 py-6">
+                      <EmptyState
+                        icon={GraduationCap}
+                        title="Belum ada data program studi"
+                        description="Daftarkan program studi baru dengan menekan tombol Tambah Prodi."
+                      />
+                    </td>
+                  </tr>
                 ) : paginated.map((prog) => (
                   <tr key={prog.id} className="border-b border-border hover:bg-muted/30">
                     <td className="px-4 py-3 font-mono text-xs text-muted-foreground">{prog.code || "-"}</td>

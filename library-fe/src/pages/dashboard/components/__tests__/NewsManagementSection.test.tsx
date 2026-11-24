@@ -5,18 +5,10 @@ import { MemoryRouter } from "react-router";
 import NewsManagementSection from "../NewsManagementSection";
 import { newsService } from "@/services/newsService";
 
-const mockNavigate = vi.fn();
-vi.mock("react-router", async () => {
-  const actual = await vi.importActual("react-router");
-  return {
-    ...actual,
-    useNavigate: () => mockNavigate,
-  };
-});
-
 vi.mock("@/services/newsService", () => ({
   newsService: {
     getNewsList: vi.fn(),
+    getNewsById: vi.fn(),
     createNews: vi.fn(),
     updateNews: vi.fn(),
     deleteNews: vi.fn(),
@@ -37,6 +29,28 @@ vi.mock("@/services/newsService", () => ({
     layanan: { bg: "bg-amber-50", text: "text-amber-700", border: "border-amber-200" },
     literasi: { bg: "bg-rose-50", text: "text-rose-700", border: "border-rose-200" },
   },
+}));
+
+vi.mock("@/utils/auth-client", () => ({
+  authClient: {
+    useSession: vi.fn().mockReturnValue({
+      data: { user: { id: "u1", name: "Admin Perpustakaan", email: "admin@umc.ac.id" } },
+    }),
+  },
+}));
+
+// Mock RichTextEditor
+vi.mock("@/components/ui/RichTextEditor", () => ({
+  RichTextEditor: ({ value, onChange, placeholder }: any) => (
+    <div data-testid="mock-rich-editor">
+      <textarea
+        data-testid="rich-editor-textarea"
+        placeholder={placeholder}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+      />
+    </div>
+  ),
 }));
 
 describe("NewsManagementSection Component", () => {
@@ -67,6 +81,7 @@ describe("NewsManagementSection Component", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     (newsService.getNewsList as any).mockResolvedValue(mockNewsData);
+    (newsService.getNewsById as any).mockResolvedValue(mockNewsData.items[0]);
   });
 
   it("merender judul seksi dan data berita dari API", async () => {
@@ -88,7 +103,7 @@ describe("NewsManagementSection Component", () => {
     });
   });
 
-  it("mengarahkan ke halaman form berita baru saat tombol tambah diklik", async () => {
+  it("membuka form berita di dalam dashboard saat tombol tambah diklik", async () => {
     const user = userEvent.setup();
     render(
       <MemoryRouter>
@@ -99,10 +114,14 @@ describe("NewsManagementSection Component", () => {
     const addButton = screen.getByText("+ Tambah Berita");
     await user.click(addButton);
 
-    expect(mockNavigate).toHaveBeenCalledWith("/dashboard/berita/baru");
+    await waitFor(() => {
+      expect(screen.getByText("Tulis Berita Baru")).toBeInTheDocument();
+      expect(screen.getByPlaceholderText(/Ketik judul artikel berita/i)).toBeInTheDocument();
+      expect(screen.getByText("Kembali ke Daftar")).toBeInTheDocument();
+    });
   });
 
-  it("mengarahkan ke halaman edit berita saat tombol edit diklik", async () => {
+  it("membuka form edit berita saat tombol edit diklik", async () => {
     const user = userEvent.setup();
     render(
       <MemoryRouter>
@@ -119,6 +138,29 @@ describe("NewsManagementSection Component", () => {
     const editButton = screen.getByTitle("Edit Artikel");
     await user.click(editButton);
 
-    expect(mockNavigate).toHaveBeenCalledWith("/dashboard/berita/edit/1");
+    await waitFor(() => {
+      expect(screen.getByText("Edit Berita")).toBeInTheDocument();
+      expect(screen.getByText("Kembali ke Daftar")).toBeInTheDocument();
+    });
+  });
+
+  it("merender EmptyState saat data berita kosong", async () => {
+    (newsService.getNewsList as any).mockResolvedValue({
+      items: [],
+      total: 0,
+      page: 1,
+      limit: 10,
+      totalPages: 0,
+    });
+
+    render(
+      <MemoryRouter>
+        <NewsManagementSection />
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText("Belum ada berita ditemukan")).toBeInTheDocument();
+    });
   });
 });

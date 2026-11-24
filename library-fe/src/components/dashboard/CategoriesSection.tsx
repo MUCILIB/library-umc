@@ -10,6 +10,7 @@ import {
   Loader
 } from "lucide-react";
 import Modal from "@/components/ui/modal";
+import { EmptyState } from "@/components/ui/empty-state";
 import { API_BASE_URL } from "@/utils/api-config";
 import { useToast } from "@/hooks/useToast";
 
@@ -143,15 +144,12 @@ export default function CategoriesSection({
 
       <div className="p-8">
         {paginatedCategories.length === 0 ? (
-          <div className="text-center py-20 bg-muted/30 rounded-[24px] border border-dashed border-border">
-            <div className="w-16 h-16 bg-card rounded-2xl shadow-sm flex items-center justify-center mx-auto mb-4">
-              <Tag className="w-8 h-8 text-muted-foreground" />
-            </div>
-            <p className="font-bold text-foreground">Belum Ada Kategori</p>
-            <p className="text-sm text-muted-foreground mt-1">
-              {searchTerm ? "Tidak ada kategori yang sesuai dengan pencarian." : "Mulai dengan menambahkan kategori buku baru."}
-            </p>
-          </div>
+          <EmptyState
+            icon={Tag}
+            title="Belum Ada Kategori"
+            description={searchTerm ? "Tidak ada kategori yang sesuai dengan pencarian." : "Mulai dengan menambahkan kategori buku baru."}
+            className="rounded-[24px] border border-dashed border-border bg-muted/20"
+          />
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {paginatedCategories.map((category) => (

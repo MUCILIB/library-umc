@@ -1,4 +1,4 @@
-import { Routes, Route, Navigate } from "react-router";
+import { Routes, Route, Navigate, useParams } from "react-router";
 
 // Pages
 import Home from "../pages/Home";
@@ -11,7 +11,6 @@ import ResetPasswordPage from "../pages/ResetPasswordPage";
 import HandleLogout from "../pages/Handlelogout";
 import SuperAdminDashboard from "../pages/dashboard/SuperAdminDashboard";
 import ReturnConfirmationPage from "../pages/dashboard/ReturnConfirmationPage";
-import NewsEditorPage from "../pages/dashboard/NewsEditorPage";
 import Profile from "../pages/Profile";
 import RepositoryDetailPage from "../pages/RepositoryDetailPage";
 import RepositoriPage from "../pages/RepositoriPage";
@@ -26,6 +25,11 @@ import BeritaDetailPage from "../pages/BeritaDetailPage";
 import WebTrafficTracker from "@/components/WebTrafficTracker";
 import AbsensiPage from "../pages/Absensi";
 import { MandatoryContactModal } from "@/components/common/MandatoryContactModal";
+
+const NewsEditRedirect = () => {
+  const { id } = useParams<{ id: string }>();
+  return <Navigate to={`/dashboard/super-admin?tab=cms-news&action=edit&id=${id}`} replace />;
+};
 
 const AppRoutes = () => {
   return (
@@ -98,23 +102,15 @@ const AppRoutes = () => {
         />
         <Route
           path="/dashboard/berita/baru"
-          element={
-            <ProtectedRoute requiredRole={["super_admin", "staff"]}>
-              <NewsEditorPage />
-            </ProtectedRoute>
-          }
+          element={<Navigate to="/dashboard/super-admin?tab=cms-news&action=create" replace />}
         />
         <Route
           path="/dashboard/berita/create"
-          element={<Navigate to="/dashboard/berita/baru" replace />}
+          element={<Navigate to="/dashboard/super-admin?tab=cms-news&action=create" replace />}
         />
         <Route
           path="/dashboard/berita/edit/:id"
-          element={
-            <ProtectedRoute requiredRole={["super_admin", "staff"]}>
-              <NewsEditorPage />
-            </ProtectedRoute>
-          }
+          element={<NewsEditRedirect />}
         />
         <Route
           path="/return-confirmation/:loanId"

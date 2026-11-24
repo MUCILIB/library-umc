@@ -1,18 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { MemoryRouter, Route, Routes } from "react-router";
-import NewsEditorPage from "../NewsEditorPage";
+import { MemoryRouter } from "react-router";
+import NewsEditorForm from "../components/NewsEditorForm";
 import { newsService } from "@/services/newsService";
 
-const mockNavigate = vi.fn();
-vi.mock("react-router", async () => {
-  const actual = await vi.importActual("react-router");
-  return {
-    ...actual,
-    useNavigate: () => mockNavigate,
-  };
-});
+const mockBack = vi.fn();
+const mockSuccess = vi.fn();
 
 vi.mock("@/services/newsService", () => ({
   newsService: {
@@ -60,17 +54,15 @@ vi.mock("@/components/ui/RichTextEditor", () => ({
   ),
 }));
 
-describe("NewsEditorPage Component", () => {
+describe("NewsEditorForm Component", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
   it("merender form halaman create berita baru dengan elemen lengkap", async () => {
     render(
-      <MemoryRouter initialEntries={["/dashboard/berita/baru"]}>
-        <Routes>
-          <Route path="/dashboard/berita/baru" element={<NewsEditorPage />} />
-        </Routes>
+      <MemoryRouter>
+        <NewsEditorForm onBack={mockBack} onSuccess={mockSuccess} />
       </MemoryRouter>
     );
 
@@ -83,13 +75,11 @@ describe("NewsEditorPage Component", () => {
     expect(screen.getByText("Gambar Sampul")).toBeInTheDocument();
   });
 
-  it("otomatis membuat slug saat judul diketik", async () => {
+  it("otomatis membuat slug saat judul diketik dan bersifat readOnly", async () => {
     const user = userEvent.setup();
     render(
-      <MemoryRouter initialEntries={["/dashboard/berita/baru"]}>
-        <Routes>
-          <Route path="/dashboard/berita/baru" element={<NewsEditorPage />} />
-        </Routes>
+      <MemoryRouter>
+        <NewsEditorForm onBack={mockBack} onSuccess={mockSuccess} />
       </MemoryRouter>
     );
 
@@ -119,10 +109,8 @@ describe("NewsEditorPage Component", () => {
     (newsService.getNewsById as any).mockResolvedValue(mockItem);
 
     render(
-      <MemoryRouter initialEntries={["/dashboard/berita/edit/news-123"]}>
-        <Routes>
-          <Route path="/dashboard/berita/edit/:id" element={<NewsEditorPage />} />
-        </Routes>
+      <MemoryRouter>
+        <NewsEditorForm id="news-123" onBack={mockBack} onSuccess={mockSuccess} />
       </MemoryRouter>
     );
 
@@ -142,10 +130,8 @@ describe("NewsEditorPage Component", () => {
     (newsService.createNews as any).mockResolvedValue({ id: "new-id", title: "Berita Baru" });
 
     render(
-      <MemoryRouter initialEntries={["/dashboard/berita/baru"]}>
-        <Routes>
-          <Route path="/dashboard/berita/baru" element={<NewsEditorPage />} />
-        </Routes>
+      <MemoryRouter>
+        <NewsEditorForm onBack={mockBack} onSuccess={mockSuccess} />
       </MemoryRouter>
     );
 
@@ -160,7 +146,7 @@ describe("NewsEditorPage Component", () => {
 
     await waitFor(() => {
       expect(newsService.createNews).toHaveBeenCalled();
-      expect(mockNavigate).toHaveBeenCalledWith("/dashboard/super-admin?tab=cms-news");
+      expect(mockSuccess).toHaveBeenCalled();
     });
   });
 });

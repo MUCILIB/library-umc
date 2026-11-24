@@ -5,6 +5,7 @@ import { CheckCircle, Clock, BookOpen, FileCheck2 } from "lucide-react";
 import loanService from "@/services/loanService";
 import { useToast } from "@/hooks/useToast";
 import { useRolePermissions } from "@/hooks/useRolePermissions";
+import { EmptyState } from "@/components/ui/empty-state";
 
 export default function ReturnApprovalsSection() {
   const navigate = useNavigate();
@@ -58,11 +59,12 @@ export default function ReturnApprovalsSection() {
       </div>
 
       {requests.length === 0 ? (
-        <div className="bg-muted border border-border rounded-2xl p-12 text-center flex flex-col items-center">
-          <CheckCircle size={48} className="text-green-300 mb-4" />
-          <h3 className="text-lg font-bold text-muted-foreground">Tidak ada pengajuan pengembalian</h3>
-          <p className="text-sm text-muted-foreground mt-2">Semua buku yang dikembalikan telah diproses.</p>
-        </div>
+        <EmptyState
+          icon={CheckCircle}
+          title="Tidak ada pengajuan pengembalian"
+          description="Semua buku yang dikembalikan telah selesai diverifikasi dan diproses."
+          className="bg-card border border-border rounded-2xl"
+        />
       ) : (
         <>
         <div className="grid gap-4">

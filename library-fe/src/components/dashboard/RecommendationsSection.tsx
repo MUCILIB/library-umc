@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { API_BASE_URL } from "@/utils/api-config";
 import { Skeleton } from "@/components/ui/skeleton";
+import { EmptyState } from "@/components/ui/empty-state";
 import {
   Select,
   SelectContent,
@@ -189,10 +190,11 @@ export default function RecommendationsSection() {
               ))}
             </div>
           ) : filteredData.length === 0 ? (
-            <div className="h-full min-h-[300px] flex flex-col items-center justify-center text-center text-muted-foreground">
-              <BookMarked className="w-12 h-12 mb-4 opacity-10" />
-              <p className="text-sm font-bold">Tidak ada data rekomendasi</p>
-            </div>
+            <EmptyState
+              icon={BookMarked}
+              title="Tidak ada data rekomendasi buku"
+              description="Belum ada usulan pengadaan buku baru yang masuk dari dosen atau civitas akademika."
+            />
           ) : (
             <>
             <div className="space-y-4">

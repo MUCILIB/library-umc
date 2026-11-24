@@ -11,6 +11,7 @@ import {
   Calendar,
 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { EmptyState } from "@/components/ui/empty-state";
 import {
   Select,
   SelectTrigger,
@@ -176,10 +177,11 @@ export function UserTable({
 
   if (users.length === 0) {
     return (
-      <div className="p-10 text-center text-muted-foreground">
-        <Users2 size={42} className="mx-auto mb-3 opacity-40" />
-        <p className="font-semibold">Tidak ada user ditemukan</p>
-      </div>
+      <EmptyState
+        icon={Users2}
+        title="Tidak ada user ditemukan"
+        description="Tidak ada pengguna yang cocok dengan kriteria pencarian atau filter yang dipilih."
+      />
     );
   }
 

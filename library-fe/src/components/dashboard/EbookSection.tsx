@@ -20,6 +20,7 @@ import { ebookService, type EbookItem } from "@/services/ebookService";
 import { dashboardDataService, type CategoryItem } from "@/services/dashboard/dashboardDataService";
 import { useToast } from "@/hooks/useToast";
 import Modal from "@/components/ui/modal";
+import { EmptyState } from "@/components/ui/empty-state";
 import {
   Table,
   TableBody,
@@ -313,22 +314,19 @@ export default function EbookSection() {
             <p className="text-sm">Memuat koleksi e-book...</p>
           </div>
         ) : ebooks.length === 0 ? (
-          <div className="py-20 flex flex-col items-center justify-center gap-3 text-center px-4">
-            <div className="p-3 bg-muted rounded-full text-muted-foreground">
-              <FileText className="h-8 w-8" />
-            </div>
-            <h3 className="text-base font-semibold text-foreground">Belum ada e-book yang terdaftar</h3>
-            <p className="text-sm text-muted-foreground max-w-sm">
-              Mulai tambahkan buku digital ke repositori e-book dengan menekan tombol Tambah E-Book di atas.
-            </p>
+          <EmptyState
+            icon={FileText}
+            title="Belum ada e-book yang terdaftar"
+            description="Mulai tambahkan buku digital ke repositori e-book dengan menekan tombol Tambah E-Book di atas."
+          >
             <button
               onClick={openCreateModal}
-              className="mt-2 inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-primary hover:bg-primary/90 rounded-lg min-h-[44px]"
+              className="mt-4 inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-primary hover:bg-primary/90 rounded-lg min-h-[44px]"
             >
               <Plus className="h-4 w-4" />
               Unggah E-Book Pertama
             </button>
-          </div>
+          </EmptyState>
         ) : (
           <div className="overflow-x-auto">
             <Table>

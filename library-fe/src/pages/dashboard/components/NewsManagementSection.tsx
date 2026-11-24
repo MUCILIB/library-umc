@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { useNavigate } from "react-router";
+import { useSearchParams } from "react-router";
 import {
   Search,
   Plus,
@@ -15,6 +15,8 @@ import {
   ChevronRight,
 } from "lucide-react";
 import Modal from "@/components/ui/modal";
+import { EmptyState } from "@/components/ui/empty-state";
+import NewsEditorForm from "./NewsEditorForm";
 import {
   newsService,
   type NewsItem,
@@ -27,7 +29,13 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
 export default function NewsManagementSection() {
-  const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const actionParam = searchParams.get("action");
+  const editIdParam = searchParams.get("id");
+
+  const isFormActive =
+    actionParam === "create" || (actionParam === "edit" && Boolean(editIdParam));
+
   const [newsList, setNewsList] = useState<NewsItem[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
@@ -68,14 +76,35 @@ export default function NewsManagementSection() {
     fetchNews();
   }, [fetchNews]);
 
-  // Navigate to Create Page
+  // Navigate into Form inside Dashboard
   const handleOpenCreate = () => {
-    navigate("/dashboard/berita/baru");
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      next.set("tab", "cms-news");
+      next.set("action", "create");
+      next.delete("id");
+      return next;
+    });
   };
 
-  // Navigate to Edit Page
   const handleOpenEdit = (item: NewsItem) => {
-    navigate(`/dashboard/berita/edit/${item.id}`);
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      next.set("tab", "cms-news");
+      next.set("action", "edit");
+      next.set("id", item.id);
+      return next;
+    });
+  };
+
+  const handleBackFromForm = () => {
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      next.delete("action");
+      next.delete("id");
+      return next;
+    });
+    fetchNews();
   };
 
   // Quick Toggle Status
@@ -109,6 +138,17 @@ export default function NewsManagementSection() {
       setDeleting(false);
     }
   };
+
+  // Jika sedang membuka form create/edit berita, render form penuh di dalam dashboard
+  if (isFormActive) {
+    return (
+      <NewsEditorForm
+        id={actionParam === "edit" ? editIdParam : null}
+        onBack={handleBackFromForm}
+        onSuccess={handleBackFromForm}
+      />
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -252,12 +292,16 @@ export default function NewsManagementSection() {
                 </tr>
               ) : newsList.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="py-12 text-center text-muted-foreground">
-                    <Newspaper className="w-10 h-10 mx-auto mb-2 text-muted-foreground/40" />
-                    <p className="font-semibold text-foreground">Belum ada berita ditemukan</p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Klik "+ Tambah Berita" untuk mempublikasikan artikel pertama.
-                    </p>
+                  <td colSpan={7} className="py-8">
+                    <EmptyState
+                      icon={Newspaper}
+                      title="Belum ada berita ditemukan"
+                      description={
+                        search
+                          ? "Tidak ada berita yang cocok dengan kata kunci pencarian Anda."
+                          : "Klik '+ Tambah Berita' untuk mempublikasikan artikel pertama."
+                      }
+                    />
                   </td>
                 </tr>
               ) : (

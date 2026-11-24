@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { API_BASE_URL } from "@/utils/api-config";
 import { Skeleton } from "@/components/ui/skeleton";
+import { EmptyState } from "@/components/ui/empty-state";
 import { formatRupiah, calcLateDays } from "@/utils/format";
 import { useRolePermissions } from "@/hooks/useRolePermissions";
 
@@ -350,16 +351,20 @@ export default function FinesSection() {
               <tbody className="divide-y divide-slate-50">
                 {paginatedList.length === 0 ? (
                   <tr>
-                    <td
-                      colSpan={5}
-                      className="px-8 py-12 text-center text-muted-foreground"
-                    >
-                      <Wallet size={48} className="mx-auto mb-4 opacity-20" />
-                      <p className="font-semibold">
-                        {activeTab === "unpaid"
-                          ? "Tidak ada tagihan denda belum lunas"
-                          : "Tidak ada riwayat pembayaran"}
-                      </p>
+                    <td colSpan={5} className="py-6">
+                      <EmptyState
+                        icon={Wallet}
+                        title={
+                          activeTab === "unpaid"
+                            ? "Tidak ada tagihan denda belum lunas"
+                            : "Tidak ada riwayat pembayaran"
+                        }
+                        description={
+                          activeTab === "unpaid"
+                            ? "Semua peminjaman saat ini bebas dari tunggakan denda."
+                            : "Belum ada riwayat pelunasan denda yang tercatat."
+                        }
+                      />
                     </td>
                   </tr>
                 ) : activeTab === "unpaid" ? (

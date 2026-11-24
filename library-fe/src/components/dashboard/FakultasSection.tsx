@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
 import { TablePagination } from "@/components/common/TablePagination";
 import {
-  Plus, Edit, Trash2, Loader
+  Plus, Edit, Trash2, Loader, Building2
 } from "lucide-react";
 import Modal from "@/components/ui/modal";
+import { EmptyState } from "@/components/ui/empty-state";
 import { facultyApi, type Faculty } from "@/api/client";
 import { useToast } from "@/hooks/useToast";
 
@@ -114,7 +115,15 @@ export default function FakultasSection() {
               </thead>
               <tbody className="divide-y divide-border">
                 {paginated.length === 0 ? (
-                  <tr><td colSpan={3} className="px-4 py-8 text-center text-muted-foreground">Belum ada data fakultas</td></tr>
+                  <tr>
+                    <td colSpan={3} className="px-4 py-6">
+                      <EmptyState
+                        icon={Building2}
+                        title="Belum ada data fakultas"
+                        description="Daftarkan fakultas baru dengan menekan tombol Tambah Fakultas."
+                      />
+                    </td>
+                  </tr>
                 ) : paginated.map((fac) => (
                   <tr key={fac.id} className="hover:bg-muted/40">
                     <td className="px-4 py-3 font-mono text-xs text-muted-foreground sm:px-6">{fac.code || "-"}</td>

@@ -30,6 +30,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/useToast";
 import { exportApi } from "@/api/client";
 import Modal from "@/components/ui/modal";
+import { EmptyState } from "@/components/ui/empty-state";
 import { triggerBadgeRefresh } from "@/hooks/dashboard/useDashboardBadges";
 import { useRolePermissions } from "@/hooks/useRolePermissions";
 import { cn } from "@/utils/utils";
@@ -828,16 +829,21 @@ export default function LoansSection({ searchTerm, onSearchChange }: LoansSectio
               </div>
             )
           ) : paginatedLoans.length === 0 ? (
-            <div className="h-full min-h-[300px] flex flex-col items-center justify-center text-center text-muted-foreground">
-              <BookOpen className="w-12 h-12 mb-4 opacity-20" />
-              <p className="text-sm font-bold text-muted-foreground">
-                {searchTerm 
-                  ? "Tidak ada hasil pencarian" 
+            <EmptyState
+              icon={BookOpen}
+              title={
+                searchTerm
+                  ? "Tidak ada hasil pencarian"
                   : filter === "overdue"
-                  ? "Tidak ada peminjaman yang terlambat saat ini"
-                  : "Tidak ada data peminjaman"}
-              </p>
-            </div>
+                  ? "Tidak ada peminjaman yang terlambat"
+                  : "Tidak ada data peminjaman"
+              }
+              description={
+                searchTerm
+                  ? "Coba gunakan kata kunci pencarian yang berbeda."
+                  : "Belum ada transaksi peminjaman pada kategori filter ini."
+              }
+            />
           ) : (
             <div className="space-y-4">
               {paginatedLoans.map((loan) => (

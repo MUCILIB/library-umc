@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { TablePagination } from "@/components/common/TablePagination";
 import { RefreshCw, ShieldCheck, Search } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { EmptyState } from "@/components/ui/empty-state";
 import {
   Select,
   SelectContent,
@@ -173,9 +174,11 @@ export default function AuditLogsSection() {
             <p className="text-sm font-semibold text-destructive">{error}</p>
           </div>
         ) : filteredLogs.length === 0 ? (
-          <div className="p-8 text-center text-muted-foreground text-sm font-semibold">
-            Tidak ada audit log yang cocok dengan filter.
-          </div>
+          <EmptyState
+            icon={ShieldCheck}
+            title="Tidak ada audit log ditemukan"
+            description="Belum ada rekaman log audit aktivitas sistem yang cocok dengan filter yang dipilih."
+          />
         ) : (
           <>
             <div className="overflow-x-auto">

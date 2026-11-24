@@ -6,6 +6,7 @@ import {
   Pencil,
   Trash2,
 } from "lucide-react";
+import { EmptyState } from "@/components/ui/empty-state";
 import {
   Table,
   TableBody,
@@ -49,17 +50,15 @@ export function BibliographyTable({
 }: BibliographyTableProps) {
   if (!data || data.items.length === 0) {
     return (
-      <div className="rounded-2xl border border-border bg-card p-12 text-center">
-        <Book className="mx-auto mb-4 size-12 text-muted-foreground" />
-        <h3 className="text-lg font-semibold text-muted-foreground">
-          {searchTerm ? "Tidak ada hasil" : "Belum ada bibliografi"}
-        </h3>
-        <p className="mt-2 text-sm text-muted-foreground">
-          {searchTerm
+      <EmptyState
+        icon={Book}
+        title={searchTerm ? "Tidak ada hasil" : "Belum ada bibliografi"}
+        description={
+          searchTerm
             ? `Tidak ditemukan bibliografi untuk "${searchTerm}"`
-            : "Bibliografi akan muncul di sini setelah ditambahkan"}
-        </p>
-      </div>
+            : "Bibliografi akan muncul di sini setelah ditambahkan"
+        }
+      />
     );
   }
 

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { TablePagination } from "@/components/common/TablePagination";
 import { locationApi, type Location } from "@/api/client";
+import { EmptyState } from "@/components/ui/empty-state";
 import {
   MapPin, Plus, Trash2, Edit2, Search,
   AlertCircle, CheckCircle2, Loader2, RefreshCw
@@ -186,13 +187,11 @@ export function LocationSection() {
             <span className="ml-2 text-sm text-muted-foreground">Memuat data lokasi...</span>
           </div>
         ) : filteredLocations.length === 0 ? (
-          <div className="flex h-48 flex-col items-center justify-center p-6 text-center">
-            <MapPin className="size-8 text-muted-foreground/60" />
-            <p className="mt-2 text-sm font-medium text-foreground">Tidak ada data lokasi</p>
-            <p className="text-xs text-muted-foreground">
-              {search ? "Tidak ditemukan lokasi yang cocok dengan kata kunci pencarian" : "Belum ada lokasi rak buku yang didaftarkan"}
-            </p>
-          </div>
+          <EmptyState
+            icon={MapPin}
+            title="Tidak ada data lokasi"
+            description={search ? "Tidak ditemukan lokasi yang cocok dengan kata kunci pencarian" : "Belum ada lokasi rak buku yang didaftarkan"}
+          />
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">

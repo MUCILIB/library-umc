@@ -23,6 +23,7 @@ import { useToast } from "@/hooks/useToast";
 import { exportApi, importApi, facultyApi, studyProgramApi, type Faculty, type StudyProgram } from "@/api/client";
 import AddMemberModal from "./AddMemberModal";
 import AddGuestModal from "./AddGuestModal";
+import { EmptyState } from "@/components/ui/empty-state";
 
 interface GuestLog {
   id: string;
@@ -588,14 +589,12 @@ export default function GuestsSection({
                 // BUKU TAMU RENDER
                 paginatedList.length === 0 ? (
                   <tr>
-                    <td
-                      colSpan={5}
-                      className="px-8 py-12 text-center text-muted-foreground"
-                    >
-                      <Users size={48} className="mx-auto mb-4 opacity-20" />
-                      <p className="font-semibold">
-                        Tidak ada data pengunjung ditemukan
-                      </p>
+                    <td colSpan={5} className="py-6">
+                      <EmptyState
+                        icon={Users}
+                        title="Tidak ada data pengunjung ditemukan"
+                        description={searchTerm ? "Tidak ada rekaman pengunjung yang cocok dengan filter pencarian." : "Belum ada kunjungan yang tercatat hari ini."}
+                      />
                     </td>
                   </tr>
                 ) : (
@@ -661,14 +660,12 @@ export default function GuestsSection({
               ) : // DAFTAR ANGGOTA RENDER
               paginatedList.length === 0 ? (
                 <tr>
-                  <td
-                    colSpan={4}
-                    className="px-8 py-12 text-center text-muted-foreground"
-                  >
-                    <UserPlus size={48} className="mx-auto mb-4 opacity-20" />
-                    <p className="font-semibold">
-                      Tidak ada data anggota ditemukan
-                    </p>
+                  <td colSpan={4} className="py-6">
+                    <EmptyState
+                      icon={UserPlus}
+                      title="Tidak ada data anggota ditemukan"
+                      description={searchTerm ? "Tidak ada anggota yang cocok dengan filter pencarian." : "Belum ada anggota perpustakaan yang terdaftar."}
+                    />
                   </td>
                 </tr>
               ) : (

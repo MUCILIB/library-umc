@@ -8,6 +8,7 @@ import {
   QrCode,
   Trash2,
 } from "lucide-react";
+import { EmptyState } from "@/components/ui/empty-state";
 import type { Item } from "@/api/client";
 import { TablePagination } from "@/components/common/TablePagination";
 
@@ -48,15 +49,11 @@ export function ItemTable({
 }: ItemTableProps) {
   if (items.length === 0) {
     return (
-      <div className="rounded-2xl border border-border bg-card p-12 text-center">
-        <Package className="mx-auto mb-4 size-12 text-muted-foreground" />
-        <h3 className="text-lg font-semibold text-muted-foreground">
-          Belum ada item
-        </h3>
-        <p className="mt-2 text-sm text-muted-foreground">
-          Item akan muncul di sini setelah ditambahkan ke bibliografi
-        </p>
-      </div>
+      <EmptyState
+        icon={Package}
+        title="Belum ada item"
+        description="Item akan muncul di sini setelah ditambahkan ke bibliografi"
+      />
     );
   }
 

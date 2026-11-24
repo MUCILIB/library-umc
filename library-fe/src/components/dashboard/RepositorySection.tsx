@@ -26,6 +26,7 @@ import { triggerBadgeRefresh } from "@/hooks/dashboard/useDashboardBadges";
 import { API_BASE_URL } from "@/utils/api-config";
 import { useToast } from "@/hooks/useToast";
 import Modal from "@/components/ui/modal";
+import { EmptyState } from "@/components/ui/empty-state";
 import {
   Select,
   SelectContent,
@@ -381,13 +382,11 @@ export default function RepositorySection() {
             <p className="text-sm">Memuat repositori skripsi...</p>
           </div>
         ) : filteredProposals.length === 0 ? (
-          <div className="p-12 text-center">
-            <FileText className="w-12 h-12 mx-auto text-muted-foreground/40 mb-3" />
-            <h3 className="text-base font-semibold text-foreground">Tidak ada dokumen ditemukan</h3>
-            <p className="text-sm text-muted-foreground mt-1">
-              Belum ada karya ilmiah yang cocok dengan filter pencarian ini.
-            </p>
-          </div>
+          <EmptyState
+            icon={FileText}
+            title="Tidak ada karya ilmiah ditemukan"
+            description="Belum ada karya ilmiah yang cocok dengan filter atau kata kunci pencarian ini."
+          />
         ) : (
           <>
             <Table className="w-full text-left text-sm min-w-[850px]">

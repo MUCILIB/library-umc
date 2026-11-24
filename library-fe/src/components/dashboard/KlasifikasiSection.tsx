@@ -11,6 +11,7 @@ import {
   AlertCircle,
 } from "lucide-react";
 import Modal from "@/components/ui/modal";
+import { EmptyState } from "@/components/ui/empty-state";
 import { collectionTypeApi, type CollectionType } from "@/api/client";
 import { useToast } from "@/hooks/useToast";
 
@@ -197,13 +198,12 @@ export default function KlasifikasiSection() {
           <Loader className="size-6 animate-spin text-muted-foreground" />
         </div>
       ) : collectionTypes.length === 0 ? (
-        <div className="flex h-40 flex-col items-center justify-center rounded-xl border border-dashed border-border bg-card p-6 text-center">
-          <Layers className="mb-2 size-8 text-muted-foreground/60" />
-          <p className="text-sm font-semibold text-foreground">Belum ada data klasifikasi</p>
-          <p className="text-xs text-muted-foreground mt-1">
-            Klik tombol Tambah Klasifikasi untuk mendefinisikan tipe koleksi baru
-          </p>
-        </div>
+        <EmptyState
+          icon={Layers}
+          title="Belum ada data klasifikasi"
+          description="Klik tombol Tambah Klasifikasi untuk mendefinisikan tipe koleksi baru."
+          className="border border-dashed border-border rounded-xl bg-card"
+        />
       ) : (
         <>
           <div className="overflow-hidden rounded-xl border border-border bg-card shadow-xs">
