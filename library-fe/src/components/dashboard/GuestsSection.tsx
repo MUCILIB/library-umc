@@ -573,6 +573,12 @@ export default function GuestsSection({
                     <th className="px-8 py-4 text-[11px] font-bold text-muted-foreground uppercase tracking-widest whitespace-nowrap">
                       TIPE AKUN
                     </th>
+                    <th className="px-8 py-4 text-[11px] font-bold text-muted-foreground uppercase tracking-widest whitespace-nowrap">
+                      FAKULTAS / INSTANSI
+                    </th>
+                    <th className="px-8 py-4 text-[11px] font-bold text-muted-foreground uppercase tracking-widest whitespace-nowrap text-right">
+                      AKSI CEPAT
+                    </th>
                   </>
                 )}
               </tr>
@@ -652,11 +658,11 @@ export default function GuestsSection({
                     </tr>
                   ))
                 )
-              ) : // DAFTAR ANGGOTA RENDER — view only
+              ) : // DAFTAR ANGGOTA RENDER
               paginatedList.length === 0 ? (
                 <tr>
                   <td
-                    colSpan={2}
+                    colSpan={4}
                     className="px-8 py-12 text-center text-muted-foreground"
                   >
                     <UserPlus size={48} className="mx-auto mb-4 opacity-20" />
@@ -673,7 +679,7 @@ export default function GuestsSection({
                   >
                     <td className="px-8 py-5">
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-muted overflow-hidden flex items-center justify-center">
+                        <div className="w-10 h-10 rounded-full bg-muted overflow-hidden flex items-center justify-center shrink-0">
                           <img
                             src={getUserAvatar(member.user)}
                             alt={member.user?.name || "Member"}
@@ -685,7 +691,13 @@ export default function GuestsSection({
                             {member.user?.name || "No Name"}
                           </p>
                           <p className="text-[11px] font-semibold text-muted-foreground tracking-wide mt-1">
-                            {member.nimNidn || "-"}
+                            {member.nimNidn ? (
+                              member.nimNidn
+                            ) : (
+                              <span className="text-muted-foreground/60 italic font-normal">
+                                NIM belum diatur
+                              </span>
+                            )}
                           </p>
                         </div>
                       </div>
@@ -694,9 +706,37 @@ export default function GuestsSection({
                       <p className="text-[13px] font-bold text-muted-foreground capitalize">
                         {member.memberType?.replace("_", " ") || "student"}
                       </p>
-                      <p className="text-[11px] font-medium text-muted-foreground">
-                        {member.major || "-"}
+                      {member.cardNumber && (
+                        <p className="text-[11px] font-mono text-muted-foreground mt-0.5">
+                          {member.cardNumber}
+                        </p>
+                      )}
+                    </td>
+                    <td className="px-8 py-5">
+                      <p className="text-[13px] font-semibold text-foreground">
+                        {member.faculty || member.institution || "-"}
                       </p>
+                      {member.originRegion && (
+                        <p className="text-[11px] text-muted-foreground mt-0.5">
+                          {member.originRegion}
+                        </p>
+                      )}
+                    </td>
+                    <td className="px-8 py-5 text-right">
+                      <button
+                        type="button"
+                        disabled={recordingId === member.id}
+                        onClick={() => void handleQuickRecordFromDropdown(member)}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-primary bg-primary/10 hover:bg-primary hover:text-white transition-all disabled:opacity-50 cursor-pointer shadow-xs"
+                        title="Catat kunjungan anggota ini ke Buku Tamu"
+                      >
+                        {recordingId === member.id ? (
+                          <Loader size={13} className="animate-spin" />
+                        ) : (
+                          <UserCheck size={13} />
+                        )}
+                        <span>Catat Hadir</span>
+                      </button>
                     </td>
                   </tr>
                 ))

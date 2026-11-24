@@ -64,19 +64,21 @@ const CATEGORY_ICONS: Record<
 
 interface NotificationBellDropdownProps {
   badges: DashboardBadgeCounts;
+  activeMenu?: string;
   onSelectMenu: (menuKey: string) => void;
   onRefresh?: () => void;
 }
 
 export function NotificationBellDropdown({
   badges,
+  activeMenu,
   onSelectMenu,
   onRefresh,
 }: NotificationBellDropdownProps) {
   const [open, setOpen] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const { unreadCounts, totalUnread, markAllAsRead, markCategoryAsRead } =
-    useNotificationReadState(badges);
+    useNotificationReadState(badges, activeMenu);
 
   const activeCategories = NOTIFICATION_CATEGORIES.filter((cat) => {
     const count = Number(badges[cat.key] || 0);
@@ -242,15 +244,16 @@ export function NotificationBellDropdown({
                     </p>
                   </div>
 
-                  <span
-                    className={`ml-1 shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold ${
-                      isUnread
-                        ? "bg-rose-500/15 text-rose-600 dark:text-rose-400 font-extrabold"
-                        : "bg-muted text-muted-foreground font-medium"
-                    }`}
-                  >
-                    {count}
-                  </span>
+                  {isUnread ? (
+                    <span className="ml-1 shrink-0 rounded-full px-2 py-0.5 text-[10px] font-extrabold bg-rose-500/15 text-rose-600 dark:text-rose-400">
+                      {unread} Baru
+                    </span>
+                  ) : (
+                    <span className="ml-1 shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium bg-muted text-muted-foreground inline-flex items-center gap-1">
+                      <CheckCheck className="size-3 text-muted-foreground" />
+                      <span>Ditinjau</span>
+                    </span>
+                  )}
                 </button>
               );
             })

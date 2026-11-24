@@ -68,12 +68,16 @@ const Navbar = () => {
     { name: "Beranda", href: "/" },
     { name: "Katalog", href: "/katalog" },
     { name: "Repositori", href: "/repositori" },
+    { name: "Buku Tamu", href: "/absensi" },
     { name: "Tentang", href: "/tentang" },
   ];
 
   // Cek apakah link aktif
   const isActive = (href: string) => {
     if (href === "/repositori" && (location.pathname === "/repositori" || location.pathname === "/e-resource" || location.pathname.startsWith("/repository/"))) {
+      return true;
+    }
+    if (href === "/absensi" && (location.pathname === "/absensi" || location.pathname === "/input-kunjungan" || location.pathname === "/buku-tamu")) {
       return true;
     }
     return location.pathname === href;

@@ -49,7 +49,10 @@ export const NOTIFICATION_CATEGORIES: NotificationCategoryConfig[] = [
   },
 ];
 
-export function useNotificationReadState(badges: DashboardBadgeCounts) {
+export function useNotificationReadState(
+  badges: DashboardBadgeCounts,
+  activeMenu?: string
+) {
   const [readSnapshot, setReadSnapshot] = useState<Record<string, number>>(() => {
     if (typeof window === "undefined") return {};
     try {
@@ -59,6 +62,29 @@ export function useNotificationReadState(badges: DashboardBadgeCounts) {
       return {};
     }
   });
+
+  // Auto-mark category as read when admin navigates to its menu (e.g. "repository", "loans", etc.)
+  useEffect(() => {
+    if (!activeMenu) return;
+    const matched = NOTIFICATION_CATEGORIES.find(
+      (cat) => cat.menuKey === activeMenu || cat.key === activeMenu
+    );
+    if (matched) {
+      const current = Number(badges[matched.key] || 0);
+      if (current > 0) {
+        setReadSnapshot((prev) => {
+          if (Number(prev[matched.key]) === current) return prev;
+          const next = { ...prev, [matched.key]: current };
+          try {
+            localStorage.setItem(NOTIFICATION_STORAGE_KEY, JSON.stringify(next));
+          } catch {
+            // ignore
+          }
+          return next;
+        });
+      }
+    }
+  }, [activeMenu, badges]);
 
   const unreadCounts = useMemo(() => {
     const counts: Record<string, number> = {};

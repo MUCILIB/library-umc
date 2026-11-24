@@ -41,9 +41,14 @@ export default function AuditLogRow({ log }: { log: AuditLog }) {
       <td className={`${cell} col-span-2 row-start-1`}>
         <span className={mobileLabel}>Pelaku</span>
         <div className="flex items-center gap-3">
-          <Avatar className="size-10" title="Foto profil saat ini, bukan foto historis">
-            <AvatarImage src={log.user?.image?.trim() ? getUserAvatar(log.user) : undefined}
-              alt="Foto profil pelaku saat ini, bukan foto historis" width={40} height={40} className="object-cover" />
+          <Avatar className="size-10" title="Foto profil pelaku">
+            <AvatarImage
+              src={getUserAvatar(log.user || log.actorSnapshot)}
+              alt="Foto profil pelaku saat ini, bukan foto historis"
+              width={40}
+              height={40}
+              className="object-cover"
+            />
             <AvatarFallback className="text-xs font-semibold text-muted-foreground" aria-label={`Inisial ${name}`}>{initials}</AvatarFallback>
           </Avatar>
           <div className="min-w-0">

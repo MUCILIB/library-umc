@@ -728,6 +728,7 @@ export default function SuperAdminDashboard() {
           <div className="ml-auto flex items-center gap-3 sm:gap-4">
             <NotificationBellDropdown
               badges={badges}
+              activeMenu={activeMenu}
               onSelectMenu={(menuKey) => setActiveMenu(menuKey as ActiveMenu)}
               onRefresh={refetchBadges}
             />

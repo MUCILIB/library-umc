@@ -90,6 +90,7 @@ export default function Absensi() {
   const [currentTime, setCurrentTime] = useState(new Date());
 
   const nimInputRef = useRef<HTMLInputElement>(null);
+  const fullNameInputRef = useRef<HTMLInputElement>(null);
 
   // Focus NIM input automatically on load
   const focusNimInput = useCallback(() => {
@@ -130,30 +131,34 @@ export default function Absensi() {
       });
   }, []);
 
-  // Auto-lookup member details when NIM is entered/scanned
+  // Auto-scan member when NIM/KTM is entered or scanned
   const handleNimBlurOrEnter = async (val: string) => {
     const trimmed = val.trim();
     if (!trimmed || trimmed.length < 5) return;
 
     try {
+      setIsSubmitting(true);
+      setErrorMessage(null);
       const response = await guestApi.scan(trimmed);
-      if (response.data?.name) {
-        setFullName(response.data.name);
-      }
-      if (response.data?.prodi) {
-        // Find matching study program
-        const prodiName = response.data.prodi;
-        const match = studyProgramsList.find(
-          (sp) => sp.name.toLowerCase() === prodiName.toLowerCase()
-        );
-        if (match) {
-          setStudyProgram(match.name);
-        } else {
-          setStudyProgram(prodiName);
-        }
+      if (response.data) {
+        playKioskBeep();
+        setSuccessData({
+          name: response.data.name,
+          nim: response.data.nim || trimmed,
+          major: response.data.prodi || response.data.faculty || "Anggota Perpustakaan",
+          isMember: true,
+          alreadyCheckedIn: Boolean(response.data.alreadyCheckedIn),
+        });
+        setNim("");
+        setFullName("");
+        setStudyProgram("");
+        return;
       }
     } catch {
-      // If scan fails or student is not pre-registered, let user enter manually
+      // If not registered as member, focus full name input for non-member entry
+      fullNameInputRef.current?.focus();
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -178,6 +183,8 @@ export default function Absensi() {
       let recorded = false;
       let isAlreadyCheckedIn = false;
       let isMember = false;
+      let resolvedName = trimmedName;
+      let resolvedProdi = selectedProdi;
 
       try {
         const scanRes = await guestApi.scan(trimmedNim);
@@ -185,6 +192,9 @@ export default function Absensi() {
           recorded = true;
           isMember = true;
           isAlreadyCheckedIn = Boolean(scanRes.data.alreadyCheckedIn);
+          resolvedName = scanRes.data.name || trimmedName;
+          resolvedProdi =
+            scanRes.data.prodi || scanRes.data.faculty || selectedProdi;
         }
       } catch {
         // Not registered as member, fall back to non-member attendance
@@ -214,9 +224,9 @@ export default function Absensi() {
 
       playKioskBeep();
       setSuccessData({
-        name: trimmedName,
+        name: resolvedName,
         nim: trimmedNim,
-        major: selectedProdi,
+        major: resolvedProdi,
         isMember,
         alreadyCheckedIn: isAlreadyCheckedIn,
       });
@@ -389,17 +399,20 @@ export default function Absensi() {
                     required
                     value={nim}
                     onChange={(e) => setNim(e.target.value)}
-                    onBlur={(e) => handleNimBlurOrEnter(e.target.value)}
                     onKeyDown={(e) => {
                       if (e.key === "Enter") {
-                        handleNimBlurOrEnter(nim);
+                        e.preventDefault();
+                        void handleNimBlurOrEnter(nim);
                       }
                     }}
-                    placeholder="Masukkan NIM Anda"
+                    placeholder="Scan kartu anggota / ketik NIM..."
                     autoComplete="off"
                     className="w-full bg-[#F1F3F5] dark:bg-muted/60 border border-slate-200/90 dark:border-border rounded-xl pl-12 pr-4 py-3.5 text-sm sm:text-base font-medium text-slate-800 dark:text-foreground placeholder:text-slate-400 focus:outline-none focus:border-[#9D171D] focus:ring-2 focus:ring-[#9D171D]/15 transition-all"
                   />
                 </div>
+                <p className="text-[11px] text-slate-500 dark:text-muted-foreground mt-1.5 flex items-center gap-1">
+                  <span>💡 Tip: Scan barcode kartu anggota atau ketik NIM & tekan <strong>Enter</strong> untuk presensi langsung.</span>
+                </p>
               </div>
 
               {/* Field 2: Nama Lengkap */}
@@ -412,6 +425,7 @@ export default function Absensi() {
                     <User className="w-5 h-5" strokeWidth={1.8} />
                   </div>
                   <input
+                    ref={fullNameInputRef}
                     type="text"
                     required
                     value={fullName}

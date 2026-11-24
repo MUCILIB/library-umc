@@ -137,7 +137,7 @@ describe("ImportSection", () => {
   it("should have upload form", async () => {
     render(<ImportSection />);
     await waitFor(() => {
-      expect(screen.getByText("Upload File CSV")).toBeInTheDocument();
+      expect(screen.getByText(/Upload (File|Berkas) CSV/i)).toBeInTheDocument();
       expect(screen.getByText("Upload")).toBeInTheDocument();
     });
   });

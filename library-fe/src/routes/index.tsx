@@ -41,9 +41,9 @@ const AppRoutes = () => {
         <Route path="/e-resource" element={<Navigate to="/repositori" replace />} />
         <Route path="/tentang" element={<NonAdminRoute><TentangPage /></NonAdminRoute>} />
         <Route path="/lokasi" element={<NonAdminRoute><TentangPage /></NonAdminRoute>} />
-        <Route path="/absensi" element={<NonAdminRoute><AbsensiPage /></NonAdminRoute>} />
-        <Route path="/input-kunjungan" element={<NonAdminRoute><AbsensiPage /></NonAdminRoute>} />
-        <Route path="/buku-tamu" element={<NonAdminRoute><AbsensiPage /></NonAdminRoute>} />
+        <Route path="/absensi" element={<AbsensiPage />} />
+        <Route path="/input-kunjungan" element={<AbsensiPage />} />
+        <Route path="/buku-tamu" element={<AbsensiPage />} />
         <Route path="/repositori-saya" element={<Navigate to="/profile?tab=repositori-saya" replace />} />
         <Route path="/my-loans" element={<Navigate to="/profile?tab=peminjaman-aktif" replace />} />
         <Route path="/my-repository" element={<Navigate to="/profile?tab=repositori-saya" replace />} />
