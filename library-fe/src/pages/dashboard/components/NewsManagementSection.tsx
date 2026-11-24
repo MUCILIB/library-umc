@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { useNavigate } from "react-router";
 import {
   Search,
   Plus,
@@ -7,8 +8,6 @@ import {
   Eye,
   ExternalLink,
   RefreshCw,
-  Upload,
-  X,
   Newspaper,
   CheckCircle2,
   Clock,
@@ -16,7 +15,6 @@ import {
   ChevronRight,
 } from "lucide-react";
 import Modal from "@/components/ui/modal";
-import { RichTextEditor } from "@/components/ui/RichTextEditor";
 import {
   newsService,
   type NewsItem,
@@ -29,6 +27,7 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
 export default function NewsManagementSection() {
+  const navigate = useNavigate();
   const [newsList, setNewsList] = useState<NewsItem[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
@@ -39,21 +38,6 @@ export default function NewsManagementSection() {
   const [search, setSearch] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<NewsCategory | "all">("all");
   const [selectedStatus, setSelectedStatus] = useState<NewsStatus | "all">("all");
-
-  // Modal State
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingItem, setEditingItem] = useState<NewsItem | null>(null);
-  const [saving, setSaving] = useState(false);
-
-  // Form State
-  const [formTitle, setFormTitle] = useState("");
-  const [formSlug, setFormSlug] = useState("");
-  const [formCategory, setFormCategory] = useState<NewsCategory>("pengumuman");
-  const [formExcerpt, setFormExcerpt] = useState("");
-  const [formContent, setFormContent] = useState("");
-  const [formCoverImage, setFormCoverImage] = useState<string>("");
-  const [formStatus, setFormStatus] = useState<NewsStatus>("draft");
-  const [uploadingCover, setUploadingCover] = useState(false);
 
   // Delete Confirmation Modal
   const [deleteId, setDeleteId] = useState<string | null>(null);
@@ -84,103 +68,14 @@ export default function NewsManagementSection() {
     fetchNews();
   }, [fetchNews]);
 
-  // Open Create Modal
+  // Navigate to Create Page
   const handleOpenCreate = () => {
-    setEditingItem(null);
-    setFormTitle("");
-    setFormSlug("");
-    setFormCategory("pengumuman");
-    setFormExcerpt("");
-    setFormContent("");
-    setFormCoverImage("");
-    setFormStatus("draft");
-    setIsModalOpen(true);
+    navigate("/dashboard/berita/baru");
   };
 
-  // Open Edit Modal
+  // Navigate to Edit Page
   const handleOpenEdit = (item: NewsItem) => {
-    setEditingItem(item);
-    setFormTitle(item.title);
-    setFormSlug(item.slug);
-    setFormCategory(item.category);
-    setFormExcerpt(item.excerpt || "");
-    setFormContent(item.content);
-    setFormCoverImage(item.coverImage || "");
-    setFormStatus(item.status);
-    setIsModalOpen(true);
-  };
-
-  // Generate slug automatically on title change
-  const handleTitleChange = (val: string) => {
-    setFormTitle(val);
-    if (!editingItem) {
-      const generated = val
-        .toLowerCase()
-        .trim()
-        .replace(/&/g, "-dan-")
-        .replace(/[\s\W-]+/g, "-")
-        .replace(/^-+|-+$/g, "");
-      setFormSlug(generated);
-    }
-  };
-
-  // Upload Cover Image via S3
-  const handleCoverUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    try {
-      setUploadingCover(true);
-      const res = await newsService.uploadImage(file);
-      setFormCoverImage(res.url);
-      toast.success("Foto sampul berhasil diunggah ke S3");
-    } catch (err: any) {
-      toast.error(err?.message || "Gagal mengunggah foto sampul ke S3");
-    } finally {
-      setUploadingCover(false);
-    }
-  };
-
-  // Save News (Create or Update)
-  const handleSave = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    if (!formTitle.trim()) {
-      toast.error("Judul berita wajib diisi");
-      return;
-    }
-    if (!formContent.trim() || formContent === "<p></p>") {
-      toast.error("Isi konten artikel berita wajib diisi");
-      return;
-    }
-
-    try {
-      setSaving(true);
-      const payload = {
-        title: formTitle.trim(),
-        slug: formSlug.trim() || undefined,
-        category: formCategory,
-        excerpt: formExcerpt.trim() || undefined,
-        content: formContent,
-        coverImage: formCoverImage.trim() || undefined,
-        status: formStatus,
-      };
-
-      if (editingItem) {
-        await newsService.updateNews(editingItem.id, payload);
-        toast.success("Artikel berita berhasil diperbarui");
-      } else {
-        await newsService.createNews(payload);
-        toast.success("Artikel berita berhasil diterbitkan/disimpan");
-      }
-
-      setIsModalOpen(false);
-      fetchNews();
-    } catch (err: any) {
-      toast.error(err?.message || "Gagal menyimpan artikel berita");
-    } finally {
-      setSaving(false);
-    }
+    navigate(`/dashboard/berita/edit/${item.id}`);
   };
 
   // Quick Toggle Status
@@ -540,181 +435,6 @@ export default function NewsManagementSection() {
           </div>
         )}
       </div>
-
-      {/* Modal Dialog Form Create / Edit */}
-      <Modal
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        title={editingItem ? "Edit Artikel Berita" : "Tulis Berita Baru"}
-        size="xl"
-      >
-        <form onSubmit={handleSave} className="space-y-5 p-2">
-          {/* Top Section: Title & Category & Status */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="md:col-span-2 space-y-1.5">
-              <label htmlFor="news-title-input" className="text-xs font-bold text-foreground uppercase tracking-wider">
-                Judul Berita <span className="text-red-500">*</span>
-              </label>
-              <input
-                id="news-title-input"
-                type="text"
-                required
-                placeholder="Contoh: Workshop Penguatan Literasi Digital Mahasiswa UMC 2026"
-                value={formTitle}
-                onChange={(e) => handleTitleChange(e.target.value)}
-                className="w-full px-3.5 py-2 text-sm bg-background border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all text-foreground font-medium"
-              />
-            </div>
-
-            <div className="space-y-1.5">
-              <label className="text-xs font-bold text-foreground uppercase tracking-wider">
-                Kategori <span className="text-red-500">*</span>
-              </label>
-              <select
-                value={formCategory}
-                onChange={(e) => setFormCategory(e.target.value as NewsCategory)}
-                className="w-full px-3.5 py-2 text-sm bg-background border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all text-foreground"
-              >
-                <option value="pengumuman">Pengumuman</option>
-                <option value="agenda">Agenda</option>
-                <option value="kegiatan">Kegiatan</option>
-                <option value="layanan">Layanan</option>
-                <option value="literasi">Literasi</option>
-              </select>
-            </div>
-          </div>
-
-          {/* Slug & Status Options */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="md:col-span-2 space-y-1.5">
-              <label className="text-xs font-bold text-foreground uppercase tracking-wider">
-                Slug URL Ramah Mesin Pencari
-              </label>
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-muted-foreground font-mono bg-muted px-2.5 py-2 rounded-lg border border-border select-none">
-                  /berita/
-                </span>
-                <input
-                  type="text"
-                  placeholder="workshop-penguatan-literasi-digital"
-                  value={formSlug}
-                  onChange={(e) => setFormSlug(e.target.value)}
-                  className="flex-1 px-3.5 py-2 text-xs font-mono bg-background border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all text-foreground"
-                />
-              </div>
-            </div>
-
-            <div className="space-y-1.5">
-              <label className="text-xs font-bold text-foreground uppercase tracking-wider">
-                Status Publikasi
-              </label>
-              <select
-                value={formStatus}
-                onChange={(e) => setFormStatus(e.target.value as NewsStatus)}
-                className="w-full px-3.5 py-2 text-sm bg-background border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all text-foreground font-semibold"
-              >
-                <option value="draft">Draft (Disimpan Sementara)</option>
-                <option value="published">Terbitkan Langsung (Publik)</option>
-              </select>
-            </div>
-          </div>
-
-          {/* Cover Image Upload (S3) */}
-          <div className="space-y-1.5">
-            <label className="text-xs font-bold text-foreground uppercase tracking-wider">
-              Foto Sampul (Cover Image S3)
-            </label>
-            <div className="flex flex-col sm:flex-row items-center gap-4 p-4 border border-border rounded-xl bg-muted/20">
-              {formCoverImage ? (
-                <div className="relative w-32 h-20 rounded-lg overflow-hidden border border-border bg-muted shrink-0">
-                  <img
-                    src={newsService.getImageUrl(formCoverImage)}
-                    alt="Cover Preview"
-                    className="w-full h-full object-cover"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setFormCoverImage("")}
-                    title="Hapus Sampul"
-                    className="absolute top-1 right-1 p-1 bg-black/70 text-white rounded-full hover:bg-black transition-colors"
-                  >
-                    <X className="w-3 h-3" />
-                  </button>
-                </div>
-              ) : (
-                <div className="w-32 h-20 rounded-lg border-2 border-dashed border-border flex flex-col items-center justify-center text-muted-foreground/60 text-xs shrink-0">
-                  <Upload className="w-5 h-5 mb-1" />
-                  <span>Belum ada</span>
-                </div>
-              )}
-
-              <div className="flex-1 space-y-2 text-xs w-full">
-                <input
-                  type="file"
-                  accept="image/png, image/jpeg, image/webp"
-                  onChange={handleCoverUpload}
-                  disabled={uploadingCover}
-                  className="block w-full text-xs text-muted-foreground file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-primary file:text-primary-foreground hover:file:bg-primary/90 file:cursor-pointer cursor-pointer"
-                />
-                <p className="text-[11px] text-muted-foreground">
-                  Format gambar JPG, PNG, atau WebP (Maks. 5MB). Otomatis tersimpan aman di penyimpanan S3.
-                </p>
-              </div>
-            </div>
-          </div>
-
-          {/* Excerpt */}
-          <div className="space-y-1.5">
-            <label className="text-xs font-bold text-foreground uppercase tracking-wider">
-              Ringkasan Singkat (Excerpt)
-            </label>
-            <textarea
-              rows={2}
-              placeholder="Tuliskan 1-2 kalimat ringkasan yang menarik untuk ditampilkan pada kartu berita..."
-              value={formExcerpt}
-              onChange={(e) => setFormExcerpt(e.target.value)}
-              className="w-full px-3.5 py-2 text-sm bg-background border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all text-foreground resize-none"
-            />
-          </div>
-
-          {/* Full Rich Text Content Editor */}
-          <div className="space-y-1.5">
-            <label className="text-xs font-bold text-foreground uppercase tracking-wider">
-              Isi Konten Berita Lengkap <span className="text-red-500">*</span>
-            </label>
-            <RichTextEditor
-              value={formContent}
-              onChange={setFormContent}
-              onUploadImage={async (file) => {
-                const res = await newsService.uploadImage(file);
-                return newsService.getImageUrl(res.url);
-              }}
-              minHeight="280px"
-              placeholder="Tuliskan isi berita, tambahkan heading, kutipan, poin, atau gambar di sini..."
-            />
-          </div>
-
-          {/* Action Buttons */}
-          <div className="flex items-center justify-end gap-3 pt-3 border-t border-border">
-            <button
-              type="button"
-              disabled={saving}
-              onClick={() => setIsModalOpen(false)}
-              className="px-4 py-2 text-sm font-semibold text-muted-foreground hover:text-foreground bg-muted hover:bg-muted/80 rounded-xl transition-colors"
-            >
-              Batal
-            </button>
-            <button
-              type="submit"
-              disabled={saving || uploadingCover}
-              className="px-5 py-2 text-sm font-semibold text-primary-foreground bg-primary hover:bg-primary/90 rounded-xl transition-all shadow-sm disabled:opacity-50 flex items-center gap-2"
-            >
-              {saving && <RefreshCw className="w-4 h-4 animate-spin" />}
-              <span>{editingItem ? "Simpan Perubahan" : "Terbitkan Berita"}</span>
-            </button>
-          </div>
-        </form>
-      </Modal>
 
       {/* Delete Confirmation Modal */}
       <Modal

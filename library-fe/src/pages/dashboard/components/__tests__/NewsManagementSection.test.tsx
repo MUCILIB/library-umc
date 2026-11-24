@@ -1,8 +1,18 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { MemoryRouter } from "react-router";
 import NewsManagementSection from "../NewsManagementSection";
 import { newsService } from "@/services/newsService";
+
+const mockNavigate = vi.fn();
+vi.mock("react-router", async () => {
+  const actual = await vi.importActual("react-router");
+  return {
+    ...actual,
+    useNavigate: () => mockNavigate,
+  };
+});
 
 vi.mock("@/services/newsService", () => ({
   newsService: {
@@ -60,7 +70,11 @@ describe("NewsManagementSection Component", () => {
   });
 
   it("merender judul seksi dan data berita dari API", async () => {
-    render(<NewsManagementSection />);
+    render(
+      <MemoryRouter>
+        <NewsManagementSection />
+      </MemoryRouter>
+    );
 
     expect(screen.getByText("Kabar & Berita Perpustakaan")).toBeInTheDocument();
     expect(screen.getByText("+ Tambah Berita")).toBeInTheDocument();
@@ -74,16 +88,37 @@ describe("NewsManagementSection Component", () => {
     });
   });
 
-  it("membuka modal dialog pembuatan berita saat tombol tambah diklik", async () => {
+  it("mengarahkan ke halaman form berita baru saat tombol tambah diklik", async () => {
     const user = userEvent.setup();
-    render(<NewsManagementSection />);
+    render(
+      <MemoryRouter>
+        <NewsManagementSection />
+      </MemoryRouter>
+    );
 
     const addButton = screen.getByText("+ Tambah Berita");
     await user.click(addButton);
 
+    expect(mockNavigate).toHaveBeenCalledWith("/dashboard/berita/baru");
+  });
+
+  it("mengarahkan ke halaman edit berita saat tombol edit diklik", async () => {
+    const user = userEvent.setup();
+    render(
+      <MemoryRouter>
+        <NewsManagementSection />
+      </MemoryRouter>
+    );
+
     await waitFor(() => {
-      expect(screen.getByText("Tulis Berita Baru")).toBeInTheDocument();
-      expect(screen.getByLabelText(/Judul Berita/i)).toBeInTheDocument();
+      expect(
+        screen.getByText("Sosialisasi Perpustakaan Digital UMC 2026")
+      ).toBeInTheDocument();
     });
+
+    const editButton = screen.getByTitle("Edit Artikel");
+    await user.click(editButton);
+
+    expect(mockNavigate).toHaveBeenCalledWith("/dashboard/berita/edit/1");
   });
 });

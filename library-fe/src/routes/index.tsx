@@ -11,6 +11,7 @@ import ResetPasswordPage from "../pages/ResetPasswordPage";
 import HandleLogout from "../pages/Handlelogout";
 import SuperAdminDashboard from "../pages/dashboard/SuperAdminDashboard";
 import ReturnConfirmationPage from "../pages/dashboard/ReturnConfirmationPage";
+import NewsEditorPage from "../pages/dashboard/NewsEditorPage";
 import Profile from "../pages/Profile";
 import RepositoryDetailPage from "../pages/RepositoryDetailPage";
 import RepositoriPage from "../pages/RepositoriPage";
@@ -92,6 +93,26 @@ const AppRoutes = () => {
           element={
             <ProtectedRoute requiredRole={["super_admin", "staff"]}>
               <ReturnConfirmationPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/dashboard/berita/baru"
+          element={
+            <ProtectedRoute requiredRole={["super_admin", "staff"]}>
+              <NewsEditorPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/dashboard/berita/create"
+          element={<Navigate to="/dashboard/berita/baru" replace />}
+        />
+        <Route
+          path="/dashboard/berita/edit/:id"
+          element={
+            <ProtectedRoute requiredRole={["super_admin", "staff"]}>
+              <NewsEditorPage />
             </ProtectedRoute>
           }
         />
