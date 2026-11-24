@@ -76,7 +76,7 @@ describe("NewsEditorPage Component", () => {
 
     expect(screen.getByText("Tulis Berita Baru")).toBeInTheDocument();
     expect(screen.getByPlaceholderText(/Ketik judul artikel berita/i)).toBeInTheDocument();
-    expect(screen.getByText(/Permalink:/i)).toBeInTheDocument();
+    expect(screen.getByText(/Permalink/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/Ringkasan Singkat/i)).toBeInTheDocument();
     expect(screen.getByTestId("mock-rich-editor")).toBeInTheDocument();
     expect(screen.getByText("Status & Publikasi")).toBeInTheDocument();
@@ -96,8 +96,9 @@ describe("NewsEditorPage Component", () => {
     const titleInput = screen.getByPlaceholderText(/Ketik judul artikel berita/i);
     await user.type(titleInput, "Pelatihan Literasi Informasi 2026");
 
-    const slugInput = screen.getByPlaceholderText("slug-otomatis") as HTMLInputElement;
+    const slugInput = screen.getByPlaceholderText("otomatis-mengikuti-judul") as HTMLInputElement;
     expect(slugInput.value).toBe("pelatihan-literasi-informasi-2026");
+    expect(slugInput.readOnly).toBe(true);
   });
 
   it("memuat data berita saat dalam mode edit", async () => {

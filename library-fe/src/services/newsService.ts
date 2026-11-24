@@ -124,7 +124,7 @@ export const newsService = {
     if (params.status) query.set("status", params.status);
 
     const queryString = query.toString();
-    const path = `/news${queryString ? `?${queryString}` : ""}`;
+    const path = `/api/news${queryString ? `?${queryString}` : ""}`;
     const res = await apiFetch<NewsListResponse>(path);
     return res.data;
   },
@@ -133,7 +133,7 @@ export const newsService = {
    * Mengambil beberapa berita terbaru yang dipublikasikan (untuk Landing Page)
    */
   async getRecentNews(limit = 4): Promise<NewsItem[]> {
-    const res = await apiFetch<NewsItem[]>(`/news/recent?limit=${limit}`);
+    const res = await apiFetch<NewsItem[]>(`/api/news/recent?limit=${limit}`);
     return res.data;
   },
 
@@ -141,7 +141,7 @@ export const newsService = {
    * Mengambil detail berita berdasarkan slug (Publik)
    */
   async getNewsBySlug(slug: string): Promise<NewsItem> {
-    const res = await apiFetch<NewsItem>(`/news/${encodeURIComponent(slug)}`);
+    const res = await apiFetch<NewsItem>(`/api/news/${encodeURIComponent(slug)}`);
     return res.data;
   },
 
@@ -149,7 +149,7 @@ export const newsService = {
    * Mengambil data berita berdasarkan ID (CMS Admin)
    */
   async getNewsById(id: string): Promise<NewsItem> {
-    const res = await apiFetch<NewsItem>(`/news/id/${id}`);
+    const res = await apiFetch<NewsItem>(`/api/news/id/${id}`);
     return res.data;
   },
 
@@ -157,7 +157,7 @@ export const newsService = {
    * Membuat artikel berita baru
    */
   async createNews(payload: CreateNewsPayload): Promise<NewsItem> {
-    const res = await apiFetch<NewsItem>("/news", {
+    const res = await apiFetch<NewsItem>("/api/news", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
@@ -169,7 +169,7 @@ export const newsService = {
    * Memperbarui artikel berita
    */
   async updateNews(id: string, payload: UpdateNewsPayload): Promise<NewsItem> {
-    const res = await apiFetch<NewsItem>(`/news/${id}`, {
+    const res = await apiFetch<NewsItem>(`/api/news/${id}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
@@ -181,7 +181,7 @@ export const newsService = {
    * Menghapus artikel berita
    */
   async deleteNews(id: string): Promise<{ id: string }> {
-    const res = await apiFetch<{ id: string }>(`/news/${id}`, {
+    const res = await apiFetch<{ id: string }>(`/api/news/${id}`, {
       method: "DELETE",
     });
     return res.data;
@@ -195,7 +195,7 @@ export const newsService = {
     formData.append("file", file);
 
     const authHeaders = getAuthHeaders();
-    const response = await fetch(`${API_BASE_URL}/news/upload`, {
+    const response = await fetch(`${API_BASE_URL}/api/news/upload`, {
       method: "POST",
       credentials: "include",
       headers: {
@@ -224,6 +224,6 @@ export const newsService = {
     if (urlOrPath.startsWith("/")) {
       return `${API_BASE_URL.replace(/\/api$/, "")}${urlOrPath}`;
     }
-    return `${API_BASE_URL}/news/assets/${urlOrPath}`;
+    return `${API_BASE_URL}/api/news/assets/${urlOrPath}`;
   },
 };

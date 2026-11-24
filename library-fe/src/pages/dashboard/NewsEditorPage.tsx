@@ -6,7 +6,6 @@ import {
   Send,
   Eye,
   Upload,
-  Sparkles,
   Calendar,
   Clock,
   Tag,
@@ -59,7 +58,6 @@ export default function NewsEditorPage() {
   // Form states
   const [title, setTitle] = useState("");
   const [slug, setSlug] = useState("");
-  const [isSlugManuallyEdited, setIsSlugManuallyEdited] = useState(false);
   const [category, setCategory] = useState<NewsCategory>("pengumuman");
   const [excerpt, setExcerpt] = useState("");
   const [content, setContent] = useState("");
@@ -86,7 +84,6 @@ export default function NewsEditorPage() {
 
         setTitle(item.title);
         setSlug(item.slug);
-        setIsSlugManuallyEdited(true);
         setCategory(item.category);
         setExcerpt(item.excerpt || "");
         setContent(item.content);
@@ -138,28 +135,7 @@ export default function NewsEditorPage() {
     const newTitle = e.target.value;
     setTitle(newTitle);
     setIsDirty(true);
-
-    if (!isSlugManuallyEdited) {
-      setSlug(generateSlugFromTitle(newTitle));
-    }
-  };
-
-  const handleSlugChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setSlug(e.target.value);
-    setIsSlugManuallyEdited(true);
-    setIsDirty(true);
-  };
-
-  const handleRegenerateSlug = () => {
-    if (!title.trim()) {
-      toast.info("Ketik judul terlebih dahulu untuk membuat slug otomatis");
-      return;
-    }
-    const autoSlug = generateSlugFromTitle(title);
-    setSlug(autoSlug);
-    setIsSlugManuallyEdited(false);
-    setIsDirty(true);
-    toast.success("Slug diperbarui dari judul");
+    setSlug(generateSlugFromTitle(newTitle));
   };
 
   // Upload Cover Image ke S3
@@ -418,33 +394,26 @@ export default function NewsEditorPage() {
                 />
               </div>
 
-              {/* Slug / URL Field */}
+              {/* Slug / URL Field (Read-only, otomatis mengikuti judul) */}
               <div className="flex flex-col sm:flex-row sm:items-center gap-2 pt-1 text-xs">
                 <span className="font-semibold text-muted-foreground flex items-center gap-1 shrink-0">
                   <Globe className="w-3.5 h-3.5 text-primary" />
-                  Permalink:
+                  Permalink URL:
                 </span>
-                <div className="flex-1 flex items-center gap-1.5 bg-muted/40 border border-border/70 rounded-lg px-2.5 py-1.5 font-mono text-[11px] text-muted-foreground overflow-hidden">
-                  <span className="shrink-0 select-none text-muted-foreground/60">/berita/</span>
+                <div className="flex-1 flex items-center gap-1.5 bg-muted/60 border border-border/80 rounded-lg px-2.5 py-1.5 font-mono text-[11px] text-muted-foreground select-none">
+                  <span className="shrink-0 text-muted-foreground/70">/berita/</span>
                   <input
                     type="text"
                     value={slug}
-                    onChange={handleSlugChange}
-                    placeholder="slug-otomatis"
-                    className="w-full bg-transparent text-foreground placeholder:text-muted-foreground/40 focus:outline-none font-mono"
+                    readOnly
+                    placeholder="otomatis-mengikuti-judul"
+                    className="w-full bg-transparent text-foreground/80 placeholder:text-muted-foreground/40 focus:outline-none font-mono cursor-not-allowed select-all"
+                    title="Slug dibuat otomatis dari judul berita (Read Only)"
                   />
+                  <span className="shrink-0 text-[10px] bg-muted-foreground/10 text-muted-foreground px-1.5 py-0.5 rounded font-sans font-medium">
+                    Otomatis (Read Only)
+                  </span>
                 </div>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={handleRegenerateSlug}
-                  title="Generate ulang slug dari judul saat ini"
-                  className="h-8 px-2 text-xs text-muted-foreground hover:text-foreground shrink-0"
-                >
-                  <Sparkles className="w-3.5 h-3.5 mr-1 text-amber-500" />
-                  <span>Auto Slug</span>
-                </Button>
               </div>
             </div>
 
