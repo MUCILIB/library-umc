@@ -10,7 +10,7 @@ import {
   ArrowLeft,
   Newspaper,
   Sparkles,
-  MessageCircle,
+  Share2,
 } from "lucide-react";
 import {
   newsService,
@@ -18,11 +18,12 @@ import {
   CATEGORY_LABELS,
   CATEGORY_STYLES,
 } from "@/services/newsService";
-import { toast } from "sonner";
+import { useToast } from "@/hooks/useToast";
 import { cn } from "@/lib/utils";
 
 export default function BeritaDetailPage() {
   const { slug } = useParams<{ slug: string }>();
+  const { success, error: showErrorToast } = useToast();
 
   const [item, setItem] = useState<NewsItem | null>(null);
   const [recentNews, setRecentNews] = useState<NewsItem[]>([]);
@@ -65,21 +66,47 @@ export default function BeritaDetailPage() {
     };
   }, [slug]);
 
-  // Copy link handler
-  const handleCopyLink = () => {
-    if (navigator.clipboard) {
-      navigator.clipboard.writeText(window.location.href);
-      toast.success("Tautan artikel berhasil disalin ke clipboard!");
+  // Copy link handler dengan fallback
+  const handleCopyLink = async () => {
+    try {
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(window.location.href);
+      } else {
+        const textArea = document.createElement("textarea");
+        textArea.value = window.location.href;
+        textArea.style.position = "fixed";
+        textArea.style.left = "-999999px";
+        textArea.style.top = "-999999px";
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        document.execCommand("copy");
+        textArea.remove();
+      }
+      success("Tautan Berhasil Disalin", "Tautan artikel berita telah disalin ke clipboard.");
+    } catch {
+      showErrorToast("Gagal Menyalin", "Tidak dapat menyalin tautan artikel.");
     }
   };
 
-  // WhatsApp share handler
-  const handleShareWA = () => {
+  // Generic share handler
+  const handleShare = async () => {
     if (!item) return;
-    const text = encodeURIComponent(
-      `*${item.title}*\n\nBaca artikel selengkapnya di UPT Perpustakaan UMC:\n${window.location.href}`
-    );
-    window.open(`https://api.whatsapp.com/send?text=${text}`, "_blank");
+    if (typeof navigator !== "undefined" && navigator.share) {
+      try {
+        await navigator.share({
+          title: item.title,
+          text: item.excerpt || item.title,
+          url: window.location.href,
+        });
+      } catch (err: any) {
+        if (err?.name !== "AbortError") {
+          handleCopyLink();
+        }
+      }
+    } else {
+      handleCopyLink();
+    }
   };
 
   if (loading) {
@@ -111,7 +138,7 @@ export default function BeritaDetailPage() {
           </p>
           <Link
             to="/berita"
-            className="inline-flex items-center gap-2 mt-6 px-5 py-2.5 bg-[#9D171D] text-white font-semibold text-xs rounded-xl hover:bg-[#801217] transition-all"
+            className="inline-flex items-center gap-2 mt-6 px-5 py-2.5 bg-[#9D171D] text-white font-semibold text-xs rounded-xl hover:bg-[#801217] transition-all cursor-pointer"
           >
             <ArrowLeft className="w-4 h-4" />
             <span>Kembali ke Kabar Perpustakaan</span>
@@ -197,8 +224,21 @@ export default function BeritaDetailPage() {
 
               {/* Author Info */}
               <div className="flex items-center gap-3 py-3 border-y border-slate-100 dark:border-border/60">
-                <div className="w-10 h-10 rounded-full bg-red-100 dark:bg-red-950/60 text-[#9D171D] dark:text-red-400 flex items-center justify-center font-bold text-sm">
-                  {item.author?.name ? item.author.name.charAt(0).toUpperCase() : "U"}
+                <div className="w-10 h-10 rounded-full overflow-hidden bg-red-100 dark:bg-red-950/60 text-[#9D171D] dark:text-red-400 flex items-center justify-center font-bold text-sm shrink-0 border border-border/40">
+                  {item.author?.image ? (
+                    <img
+                      src={item.author.image}
+                      alt={item.author.name || "Penulis"}
+                      className="w-full h-full object-cover"
+                      onError={(e) => {
+                        (e.currentTarget as HTMLImageElement).style.display = "none";
+                      }}
+                    />
+                  ) : item.author?.name ? (
+                    item.author.name.charAt(0).toUpperCase()
+                  ) : (
+                    "U"
+                  )}
                 </div>
                 <div>
                   <div className="text-sm font-bold text-slate-900 dark:text-foreground">
@@ -250,18 +290,20 @@ export default function BeritaDetailPage() {
                 </span>
                 <div className="flex items-center gap-2">
                   <button
+                    type="button"
                     onClick={handleCopyLink}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-border text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-muted transition-colors"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-border text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-muted transition-colors cursor-pointer"
                   >
                     <Copy className="w-3.5 h-3.5" />
                     <span>Salin Tautan</span>
                   </button>
                   <button
-                    onClick={handleShareWA}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#25D366] text-white text-xs font-semibold hover:bg-[#20ba59] transition-colors"
+                    type="button"
+                    onClick={handleShare}
+                    className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-primary text-primary-foreground text-xs font-semibold hover:bg-primary/90 transition-colors shadow-2xs cursor-pointer"
                   >
-                    <MessageCircle className="w-3.5 h-3.5" />
-                    <span>WhatsApp</span>
+                    <Share2 className="w-3.5 h-3.5" />
+                    <span>Bagikan</span>
                   </button>
                 </div>
               </div>

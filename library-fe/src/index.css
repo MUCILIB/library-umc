@@ -166,6 +166,14 @@
     @apply text-foreground;
   }
 
+  button, [role="button"], input[type="submit"], input[type="button"], input[type="reset"] {
+    cursor: pointer;
+  }
+
+  button:disabled, [role="button"][aria-disabled="true"], input[type="submit"]:disabled, input[type="button"]:disabled {
+    cursor: not-allowed;
+  }
+
   /* Typography */
   .font-heading {
     font-family: "Space Grotesk", sans-serif;

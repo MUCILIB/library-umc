@@ -196,6 +196,7 @@ export class NewsService {
         .set({ views: sql`${news.views} + 1` })
         .where(eq(news.id, result.id))
         .catch((err) => console.error("Error incrementing news views:", err));
+      result.views = (result.views || 0) + 1;
     }
 
     return result;
@@ -290,5 +291,57 @@ export class NewsService {
         },
       },
     });
+  }
+
+  /**
+   * Mengambil ringkasan statistik dan analitik traffic berita
+   */
+  static async getNewsStats() {
+    const [counts, totalViewsRes, topArticles, categoryCounts] = await Promise.all([
+      db
+        .select({
+          total: sql<number>`count(*)::int`,
+          published: sql<number>`count(case when ${news.status} = 'published' then 1 end)::int`,
+          draft: sql<number>`count(case when ${news.status} = 'draft' then 1 end)::int`,
+          archived: sql<number>`count(case when ${news.status} = 'archived' then 1 end)::int`,
+        })
+        .from(news),
+      db
+        .select({
+          totalViews: sql<number>`coalesce(sum(${news.views}), 0)::int`,
+        })
+        .from(news),
+      db.query.news.findMany({
+        orderBy: [desc(news.views), desc(news.createdAt)],
+        limit: 5,
+        columns: {
+          id: true,
+          title: true,
+          slug: true,
+          views: true,
+          category: true,
+          publishedAt: true,
+          status: true,
+        },
+      }),
+      db
+        .select({
+          category: news.category,
+          count: sql<number>`count(*)::int`,
+          views: sql<number>`coalesce(sum(${news.views}), 0)::int`,
+        })
+        .from(news)
+        .groupBy(news.category),
+    ]);
+
+    return {
+      total: counts[0]?.total || 0,
+      published: counts[0]?.published || 0,
+      draft: counts[0]?.draft || 0,
+      archived: counts[0]?.archived || 0,
+      totalViews: totalViewsRes[0]?.totalViews || 0,
+      topArticles,
+      categoryStats: categoryCounts,
+    };
   }
 }

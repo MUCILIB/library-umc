@@ -30,7 +30,7 @@ import {
   CATEGORY_STYLES,
 } from "@/services/newsService";
 import { authClient } from "@/utils/auth-client";
-import { toast } from "sonner";
+import { useToast } from "@/hooks/useToast";
 import { cn } from "@/lib/utils";
 
 const CATEGORY_DESCRIPTIONS: Record<NewsCategory, string> = {
@@ -49,6 +49,7 @@ export interface NewsEditorFormProps {
 
 export default function NewsEditorForm({ id, onBack, onSuccess }: NewsEditorFormProps) {
   const { data: session } = authClient.useSession();
+  const { success, error: showErrorToast, info } = useToast();
   const isEditMode = Boolean(id);
 
   // Loading states
@@ -101,7 +102,7 @@ export default function NewsEditorForm({ id, onBack, onSuccess }: NewsEditorForm
           setPublishedAt(localIso);
         }
       } catch (error: any) {
-        toast.error(error?.message || "Gagal memuat data berita");
+        showErrorToast("Gagal Memuat Berita", error?.message || "Gagal memuat data berita");
         onBack();
       } finally {
         if (isMounted) setInitialLoading(false);
@@ -144,23 +145,24 @@ export default function NewsEditorForm({ id, onBack, onSuccess }: NewsEditorForm
     if (!file) return;
 
     if (!file.type.startsWith("image/")) {
-      toast.error("Berkas harus berupa file gambar (JPG, PNG, WebP)");
+      showErrorToast("Format Berkas Salah", "Berkas harus berupa file gambar (JPG, PNG, WebP)");
       return;
     }
 
     if (file.size > 5 * 1024 * 1024) {
-      toast.error("Ukuran file maksimal 5 MB");
+      showErrorToast("Ukuran Terlalu Besar", "Ukuran file gambar maksimal 5 MB");
       return;
     }
 
     try {
       setUploadingCover(true);
+      info("Mengunggah Gambar...", "Sedang mengunggah gambar sampul ke Cloud Storage S3 Dahono...");
       const res = await newsService.uploadImage(file);
       setCoverImage(res.url);
       setIsDirty(true);
-      toast.success("Gambar sampul berhasil diunggah ke S3");
+      success("Unggah Berhasil", "Gambar sampul berhasil diunggah ke S3 Dahono.");
     } catch (error: any) {
-      toast.error(error?.message || "Gagal mengunggah gambar sampul");
+      showErrorToast("Gagal Mengunggah", error?.message || "Gagal mengunggah gambar sampul");
     } finally {
       setUploadingCover(false);
       e.target.value = "";
@@ -172,12 +174,12 @@ export default function NewsEditorForm({ id, onBack, onSuccess }: NewsEditorForm
     const finalStatus = targetStatus || status;
 
     if (!title.trim()) {
-      toast.error("Judul berita wajib diisi");
+      showErrorToast("Validasi Gagal", "Judul berita wajib diisi");
       return;
     }
 
     if (!content.trim() || content.replace(/<[^>]*>/g, "").trim().length < 10) {
-      toast.error("Konten berita minimal 10 karakter");
+      showErrorToast("Validasi Gagal", "Konten berita minimal 10 karakter");
       return;
     }
 
@@ -201,14 +203,16 @@ export default function NewsEditorForm({ id, onBack, onSuccess }: NewsEditorForm
       setSaving(true);
       if (isEditMode && id) {
         await newsService.updateNews(id, payload);
-        toast.success(
+        success(
+          "Berita Diperbarui",
           finalStatus === "published"
             ? "Artikel berita berhasil diperbarui dan dipublikasikan!"
             : "Draf berita berhasil disimpan!"
         );
       } else {
         await newsService.createNews(payload as CreateNewsPayload);
-        toast.success(
+        success(
+          "Berita Berhasil Dibuat",
           finalStatus === "published"
             ? "Artikel berita berhasil diterbitkan!"
             : "Draf berita berhasil dibuat!"
@@ -217,7 +221,7 @@ export default function NewsEditorForm({ id, onBack, onSuccess }: NewsEditorForm
       setIsDirty(false);
       onSuccess();
     } catch (error: any) {
-      toast.error(error?.message || "Gagal menyimpan artikel berita");
+      showErrorToast("Gagal Menyimpan", error?.message || "Gagal menyimpan artikel berita");
     } finally {
       setSaving(false);
     }
@@ -456,8 +460,15 @@ export default function NewsEditorForm({ id, onBack, onSuccess }: NewsEditorForm
                 placeholder="Tulis konten berita secara leluasa di sini. Anda dapat memformat teks (tebal, miring, judul bab), menyisipkan tabel, poin daftar, dan mengunggah gambar langsung ke penyimpanan S3 perpustakaan..."
                 minHeight="480px"
                 onUploadImage={async (file) => {
-                  const res = await newsService.uploadImage(file);
-                  return newsService.getImageUrl(res.url);
+                  try {
+                    info("Mengunggah Gambar...", "Sedang mengunggah dan menyisipkan gambar ke artikel...");
+                    const res = await newsService.uploadImage(file);
+                    success("Gambar Disisipkan", "Gambar berhasil diunggah ke S3 Dahono dan disisipkan.");
+                    return newsService.getImageUrl(res.url);
+                  } catch (err: any) {
+                    showErrorToast("Gagal Menyisipkan Gambar", err?.message || "Gagal mengunggah gambar");
+                    throw err;
+                  }
                 }}
               />
             </div>

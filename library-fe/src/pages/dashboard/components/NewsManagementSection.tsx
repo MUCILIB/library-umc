@@ -13,6 +13,9 @@ import {
   Clock,
   ChevronLeft,
   ChevronRight,
+  TrendingUp,
+  BarChart3,
+  Layers,
 } from "lucide-react";
 import Modal from "@/components/ui/modal";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -22,13 +25,15 @@ import {
   type NewsItem,
   type NewsCategory,
   type NewsStatus,
+  type NewsStatsResponse,
   CATEGORY_LABELS,
   CATEGORY_STYLES,
 } from "@/services/newsService";
-import { toast } from "sonner";
+import { useToast } from "@/hooks/useToast";
 import { cn } from "@/lib/utils";
 
 export default function NewsManagementSection() {
+  const { success, error: showErrorToast } = useToast();
   const [searchParams, setSearchParams] = useSearchParams();
   const actionParam = searchParams.get("action");
   const editIdParam = searchParams.get("id");
@@ -42,6 +47,10 @@ export default function NewsManagementSection() {
   const [totalPages, setTotalPages] = useState(1);
   const [loading, setLoading] = useState(false);
 
+  // Statistics state
+  const [stats, setStats] = useState<NewsStatsResponse | null>(null);
+  const [statsLoading, setStatsLoading] = useState(false);
+
   // Filters
   const [search, setSearch] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<NewsCategory | "all">("all");
@@ -50,6 +59,19 @@ export default function NewsManagementSection() {
   // Delete Confirmation Modal
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
+
+  // Fetch Statistics
+  const fetchStats = useCallback(async () => {
+    try {
+      setStatsLoading(true);
+      const data = await newsService.getNewsStats();
+      setStats(data);
+    } catch (err: any) {
+      console.error("Gagal memuat statistik berita:", err);
+    } finally {
+      setStatsLoading(false);
+    }
+  }, []);
 
   // Fetch News List
   const fetchNews = useCallback(async () => {
@@ -66,15 +88,19 @@ export default function NewsManagementSection() {
       setTotal(res.total);
       setTotalPages(res.totalPages);
     } catch (error: any) {
-      toast.error(error?.message || "Gagal memuat daftar berita");
+      showErrorToast("Gagal Memuat Berita", error?.message || "Gagal memuat daftar berita");
     } finally {
       setLoading(false);
     }
-  }, [page, search, selectedCategory, selectedStatus]);
+  }, [page, search, selectedCategory, selectedStatus, showErrorToast]);
 
   useEffect(() => {
     fetchNews();
   }, [fetchNews]);
+
+  useEffect(() => {
+    fetchStats();
+  }, [fetchStats]);
 
   // Navigate into Form inside Dashboard
   const handleOpenCreate = () => {
@@ -105,6 +131,7 @@ export default function NewsManagementSection() {
       return next;
     });
     fetchNews();
+    fetchStats();
   };
 
   // Quick Toggle Status
@@ -112,14 +139,16 @@ export default function NewsManagementSection() {
     const newStatus: NewsStatus = item.status === "published" ? "draft" : "published";
     try {
       await newsService.updateNews(item.id, { status: newStatus });
-      toast.success(
+      success(
+        "Status Diperbarui",
         newStatus === "published"
           ? "Berita berhasil diterbitkan ke publik"
           : "Berita dialihkan ke draft"
       );
       fetchNews();
+      fetchStats();
     } catch (err: any) {
-      toast.error(err?.message || "Gagal memperbarui status publikasi");
+      showErrorToast("Gagal Mengubah Status", err?.message || "Gagal memperbarui status publikasi");
     }
   };
 
@@ -129,11 +158,12 @@ export default function NewsManagementSection() {
     try {
       setDeleting(true);
       await newsService.deleteNews(deleteId);
-      toast.success("Artikel berita berhasil dihapus");
+      success("Berita Dihapus", "Artikel berita berhasil dihapus secara permanen");
       setDeleteId(null);
       fetchNews();
+      fetchStats();
     } catch (err: any) {
-      toast.error(err?.message || "Gagal menghapus berita");
+      showErrorToast("Gagal Menghapus", err?.message || "Gagal menghapus berita");
     } finally {
       setDeleting(false);
     }
@@ -169,11 +199,162 @@ export default function NewsManagementSection() {
 
         <button
           onClick={handleOpenCreate}
-          className="flex items-center justify-center gap-2 px-4 py-2.5 bg-primary text-primary-foreground font-semibold rounded-xl hover:bg-primary/90 transition-all shadow-sm hover:shadow shrink-0 text-sm"
+          className="flex items-center justify-center gap-2 px-4 py-2.5 bg-primary text-primary-foreground font-semibold rounded-xl hover:bg-primary/90 transition-all shadow-sm hover:shadow shrink-0 text-sm cursor-pointer"
         >
           <Plus className="w-4 h-4" />
-          <span>+ Tambah Berita</span>
+          <span>Tambah Berita</span>
         </button>
+      </div>
+
+      {/* Traffic & Analytics Section */}
+      <div className="space-y-4">
+        {/* Metric Cards */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+          <div className="bg-card border border-border rounded-xl p-4 shadow-xs">
+            <div className="flex items-center justify-between text-muted-foreground mb-2">
+              <span className="text-xs font-medium">Total Artikel</span>
+              <Newspaper className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+            </div>
+            <div className="text-2xl font-bold text-foreground">
+              {stats?.total ?? total}
+            </div>
+            <div className="text-xs text-muted-foreground mt-1 flex items-center gap-1.5">
+              <span className="inline-block w-2 h-2 rounded-full bg-emerald-500" />
+              <span>{stats?.published ?? 0} Terbit</span>
+              <span>•</span>
+              <span className="inline-block w-2 h-2 rounded-full bg-amber-500" />
+              <span>{stats?.draft ?? 0} Draft</span>
+            </div>
+          </div>
+
+          <div className="bg-card border border-border rounded-xl p-4 shadow-xs">
+            <div className="flex items-center justify-between text-muted-foreground mb-2">
+              <span className="text-xs font-medium">Total Pembaca (Views)</span>
+              <TrendingUp className="w-4 h-4 text-primary" />
+            </div>
+            <div className="text-2xl font-bold text-foreground">
+              {(stats?.totalViews ?? 0).toLocaleString("id-ID")}
+            </div>
+            <div className="text-xs text-muted-foreground mt-1">
+              Akumulasi tayangan artikel publik
+            </div>
+          </div>
+
+          <div className="bg-card border border-border rounded-xl p-4 shadow-xs">
+            <div className="flex items-center justify-between text-muted-foreground mb-2">
+              <span className="text-xs font-medium">Rata-rata Pembaca</span>
+              <BarChart3 className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+            </div>
+            <div className="text-2xl font-bold text-foreground">
+              {stats && stats.published > 0
+                ? Math.round(stats.totalViews / stats.published).toLocaleString("id-ID")
+                : "0"}
+            </div>
+            <div className="text-xs text-muted-foreground mt-1">
+              Tayangan per artikel terbit
+            </div>
+          </div>
+
+          <div className="bg-card border border-border rounded-xl p-4 shadow-xs">
+            <div className="flex items-center justify-between text-muted-foreground mb-2">
+              <span className="text-xs font-medium">Kategori Konten</span>
+              <Layers className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+            </div>
+            <div className="text-2xl font-bold text-foreground">
+              {stats?.categoryStats?.length ?? 5}
+            </div>
+            <div className="text-xs text-muted-foreground mt-1">
+              Pengumuman, Agenda, Kegiatan, Layanan, Literasi
+            </div>
+          </div>
+        </div>
+
+        {/* Visual Traffic Bar Chart: Top 5 Articles */}
+        {stats && stats.topArticles && stats.topArticles.length > 0 && (
+          <div className="bg-card border border-border rounded-2xl p-5 shadow-xs">
+            <div className="flex items-center justify-between mb-4 pb-3 border-b border-border">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
+                  <TrendingUp className="w-4 h-4" />
+                </div>
+                <div>
+                  <h2 className="text-sm font-bold text-foreground">
+                    Artikel Terpopuler & Analitik Traffic
+                  </h2>
+                  <p className="text-xs text-muted-foreground">
+                    5 artikel berita dengan jumlah pembaca tertinggi di portal perpustakaan
+                  </p>
+                </div>
+              </div>
+              <span className="text-xs font-semibold px-2.5 py-1 bg-muted rounded-lg text-muted-foreground flex items-center gap-1.5">
+                {statsLoading && <RefreshCw className="w-3 h-3 animate-spin text-primary" />}
+                <span>Live Data</span>
+              </span>
+            </div>
+
+            <div className="space-y-3">
+              {(() => {
+                const maxViews = Math.max(1, ...stats.topArticles.map((a) => a.views));
+                return stats.topArticles.map((article, idx) => {
+                  const percent = Math.max(8, Math.min(100, Math.round((article.views / maxViews) * 100)));
+                  const catStyle = CATEGORY_STYLES[article.category] || CATEGORY_STYLES.pengumuman;
+
+                  return (
+                    <div key={article.id} className="group">
+                      <div className="flex items-center justify-between gap-3 text-xs mb-1.5">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span className={cn(
+                            "w-5 h-5 rounded-md flex items-center justify-center font-bold text-[11px] shrink-0",
+                            idx === 0
+                              ? "bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-400 font-extrabold"
+                              : idx === 1
+                              ? "bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300"
+                              : idx === 2
+                              ? "bg-amber-50 dark:bg-amber-900/40 text-amber-800 dark:text-amber-500"
+                              : "bg-muted text-muted-foreground"
+                          )}>
+                            {idx + 1}
+                          </span>
+                          <span
+                            className={cn(
+                              "px-1.5 py-0.5 rounded text-[10px] font-semibold border shrink-0",
+                              catStyle.bg,
+                              catStyle.text,
+                              catStyle.border
+                            )}
+                          >
+                            {CATEGORY_LABELS[article.category]}
+                          </span>
+                          <a
+                            href={`/berita/${article.slug}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="font-medium text-foreground hover:text-primary transition-colors truncate group-hover:underline cursor-pointer"
+                          >
+                            {article.title}
+                          </a>
+                        </div>
+                        <div className="flex items-center gap-1.5 font-bold text-foreground shrink-0 text-xs">
+                          <Eye className="w-3.5 h-3.5 text-muted-foreground" />
+                          <span>{article.views.toLocaleString("id-ID")}</span>
+                          <span className="text-[10px] font-normal text-muted-foreground">views</span>
+                        </div>
+                      </div>
+
+                      {/* Relative Progress Bar */}
+                      <div className="w-full h-2 rounded-full bg-muted overflow-hidden">
+                        <div
+                          className="h-full rounded-full bg-gradient-to-r from-primary to-rose-400 transition-all duration-500"
+                          style={{ width: `${percent}%` }}
+                        />
+                      </div>
+                    </div>
+                  );
+                });
+              })()}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Filters & Search Bar */}
@@ -219,7 +400,7 @@ export default function NewsManagementSection() {
                 setPage(1);
               }}
               className={cn(
-                "px-2.5 py-1 rounded-md font-medium transition-all",
+                "px-2.5 py-1 rounded-md font-medium transition-all cursor-pointer",
                 selectedStatus === "all"
                   ? "bg-background text-foreground shadow-xs"
                   : "text-muted-foreground hover:text-foreground"
@@ -233,7 +414,7 @@ export default function NewsManagementSection() {
                 setPage(1);
               }}
               className={cn(
-                "px-2.5 py-1 rounded-md font-medium transition-all",
+                "px-2.5 py-1 rounded-md font-medium transition-all cursor-pointer",
                 selectedStatus === "published"
                   ? "bg-background text-foreground shadow-xs"
                   : "text-muted-foreground hover:text-foreground"
@@ -247,7 +428,7 @@ export default function NewsManagementSection() {
                 setPage(1);
               }}
               className={cn(
-                "px-2.5 py-1 rounded-md font-medium transition-all",
+                "px-2.5 py-1 rounded-md font-medium transition-all cursor-pointer",
                 selectedStatus === "draft"
                   ? "bg-background text-foreground shadow-xs"
                   : "text-muted-foreground hover:text-foreground"
@@ -260,7 +441,7 @@ export default function NewsManagementSection() {
           <button
             onClick={fetchNews}
             title="Muat Ulang"
-            className="p-2 text-muted-foreground hover:text-foreground rounded-lg border border-border bg-background hover:bg-muted transition-colors"
+            className="p-2 text-muted-foreground hover:text-foreground rounded-lg border border-border bg-background hover:bg-muted transition-colors cursor-pointer"
           >
             <RefreshCw className={cn("w-3.5 h-3.5", loading && "animate-spin")} />
           </button>
@@ -299,7 +480,7 @@ export default function NewsManagementSection() {
                       description={
                         search
                           ? "Tidak ada berita yang cocok dengan kata kunci pencarian Anda."
-                          : "Klik '+ Tambah Berita' untuk mempublikasikan artikel pertama."
+                          : "Klik 'Tambah Berita' untuk mempublikasikan artikel pertama."
                       }
                     />
                   </td>
@@ -369,7 +550,7 @@ export default function NewsManagementSection() {
                           <button
                             onClick={() => handleToggleStatus(item)}
                             title="Klik untuk beralih ke Draft"
-                            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-900 hover:opacity-80 transition-opacity"
+                            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-900 hover:opacity-80 transition-opacity cursor-pointer"
                           >
                             <CheckCircle2 className="w-3 h-3" />
                             <span>Terbit</span>
@@ -378,7 +559,7 @@ export default function NewsManagementSection() {
                           <button
                             onClick={() => handleToggleStatus(item)}
                             title="Klik untuk terbitkan ke publik"
-                            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-900 hover:opacity-80 transition-opacity"
+                            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-900 hover:opacity-80 transition-opacity cursor-pointer"
                           >
                             <Clock className="w-3 h-3" />
                             <span>Draft</span>
@@ -424,7 +605,7 @@ export default function NewsManagementSection() {
                             target="_blank"
                             rel="noopener noreferrer"
                             title="Lihat Pratinjau Publik"
-                            className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-colors"
+                            className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-colors cursor-pointer"
                           >
                             <ExternalLink className="w-4 h-4" />
                           </a>
@@ -432,7 +613,7 @@ export default function NewsManagementSection() {
                             type="button"
                             onClick={() => handleOpenEdit(item)}
                             title="Edit Artikel"
-                            className="p-1.5 text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-950/50 rounded-lg transition-colors"
+                            className="p-1.5 text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-950/50 rounded-lg transition-colors cursor-pointer"
                           >
                             <Edit className="w-4 h-4" />
                           </button>
@@ -440,7 +621,7 @@ export default function NewsManagementSection() {
                             type="button"
                             onClick={() => setDeleteId(item.id)}
                             title="Hapus Artikel"
-                            className="p-1.5 text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/50 rounded-lg transition-colors"
+                            className="p-1.5 text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/50 rounded-lg transition-colors cursor-pointer"
                           >
                             <Trash2 className="w-4 h-4" />
                           </button>
@@ -464,14 +645,14 @@ export default function NewsManagementSection() {
               <button
                 disabled={page <= 1}
                 onClick={() => setPage((p) => Math.max(1, p - 1))}
-                className="p-1.5 rounded-lg border border-border bg-background disabled:opacity-40 hover:bg-muted transition-colors"
+                className="p-1.5 rounded-lg border border-border bg-background disabled:opacity-40 hover:bg-muted transition-colors cursor-pointer disabled:cursor-not-allowed"
               >
                 <ChevronLeft className="w-4 h-4" />
               </button>
               <button
                 disabled={page >= totalPages}
                 onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                className="p-1.5 rounded-lg border border-border bg-background disabled:opacity-40 hover:bg-muted transition-colors"
+                className="p-1.5 rounded-lg border border-border bg-background disabled:opacity-40 hover:bg-muted transition-colors cursor-pointer disabled:cursor-not-allowed"
               >
                 <ChevronRight className="w-4 h-4" />
               </button>
@@ -496,7 +677,7 @@ export default function NewsManagementSection() {
               type="button"
               disabled={deleting}
               onClick={() => setDeleteId(null)}
-              className="px-4 py-2 text-sm font-semibold text-muted-foreground hover:text-foreground bg-muted rounded-xl transition-colors"
+              className="px-4 py-2 text-sm font-semibold text-muted-foreground hover:text-foreground bg-muted rounded-xl transition-colors cursor-pointer"
             >
               Batal
             </button>
@@ -504,7 +685,7 @@ export default function NewsManagementSection() {
               type="button"
               disabled={deleting}
               onClick={handleDeleteConfirm}
-              className="px-4 py-2 text-sm font-semibold text-white bg-red-600 hover:bg-red-700 rounded-xl transition-colors disabled:opacity-50 flex items-center gap-2"
+              className="px-4 py-2 text-sm font-semibold text-white bg-red-600 hover:bg-red-700 rounded-xl transition-colors disabled:opacity-50 flex items-center gap-2 cursor-pointer disabled:cursor-not-allowed"
             >
               {deleting && <RefreshCw className="w-4 h-4 animate-spin" />}
               <span>Ya, Hapus</span>

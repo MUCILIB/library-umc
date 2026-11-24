@@ -50,6 +50,28 @@ export interface NewsListResponse {
   totalPages: number;
 }
 
+export interface NewsStatsResponse {
+  total: number;
+  published: number;
+  draft: number;
+  archived: number;
+  totalViews: number;
+  topArticles: Array<{
+    id: string;
+    title: string;
+    slug: string;
+    views: number;
+    category: NewsCategory;
+    publishedAt: string | null;
+    status: NewsStatus;
+  }>;
+  categoryStats: Array<{
+    category: NewsCategory;
+    count: number;
+    views: number;
+  }>;
+}
+
 export interface CreateNewsPayload {
   title: string;
   slug?: string;
@@ -142,6 +164,14 @@ export const newsService = {
    */
   async getNewsBySlug(slug: string): Promise<NewsItem> {
     const res = await apiFetch<NewsItem>(`/api/news/${encodeURIComponent(slug)}`);
+    return res.data;
+  },
+
+  /**
+   * Mengambil ringkasan statistik dan analitik traffic berita
+   */
+  async getNewsStats(): Promise<NewsStatsResponse> {
+    const res = await apiFetch<NewsStatsResponse>("/api/news/stats/summary");
     return res.data;
   },
 

@@ -37,6 +37,14 @@ router.get("/news/recent", (req, res, next) =>
   NewsController.getRecent(req, res, next)
 );
 
+// Ambil ringkasan statistik dan analitik traffic berita (CMS Admin)
+router.get(
+  "/news/stats/summary",
+  isAuthenticated,
+  requirePermission(["news", "cms"], "view"),
+  (req, res, next) => NewsController.getStats(req, res, next)
+);
+
 // Ambil daftar artikel berita (publik melihat status 'published', admin melihat sesuai query)
 router.get("/news", (req, res, next) =>
   NewsController.getAll(req, res, next)

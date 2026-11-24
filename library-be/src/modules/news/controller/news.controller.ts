@@ -56,6 +56,18 @@ export class NewsController {
   }
 
   /**
+   * Mengambil ringkasan statistik dan traffic berita (CMS Admin)
+   */
+  static async getStats(req: Request, res: Response, next: NextFunction) {
+    try {
+      const stats = await NewsService.getNewsStats();
+      return sendSuccess(res, "Statistik berita berhasil diambil", stats);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
    * Mengambil detail artikel berdasarkan slug (publik)
    */
   static async getBySlug(req: Request, res: Response, next: NextFunction) {

@@ -9,6 +9,7 @@ vi.mock("@/services/newsService", () => ({
   newsService: {
     getNewsList: vi.fn(),
     getNewsById: vi.fn(),
+    getNewsStats: vi.fn(),
     createNews: vi.fn(),
     updateNews: vi.fn(),
     deleteNews: vi.fn(),
@@ -78,10 +79,31 @@ describe("NewsManagementSection Component", () => {
     totalPages: 1,
   };
 
+  const mockStats = {
+    total: 1,
+    published: 1,
+    draft: 0,
+    archived: 0,
+    totalViews: 1250,
+    topArticles: [
+      {
+        id: "news-1",
+        title: "Sosialisasi Perpustakaan Digital UMC 2026",
+        slug: "sosialisasi-perpustakaan-digital-umc-2026",
+        views: 1250,
+        category: "kegiatan" as const,
+        publishedAt: "2026-03-20T10:00:00.000Z",
+        status: "published" as const,
+      },
+    ],
+    categoryStats: [{ category: "kegiatan" as const, count: 1, views: 1250 }],
+  };
+
   beforeEach(() => {
     vi.clearAllMocks();
     (newsService.getNewsList as any).mockResolvedValue(mockNewsData);
     (newsService.getNewsById as any).mockResolvedValue(mockNewsData.items[0]);
+    (newsService.getNewsStats as any).mockResolvedValue(mockStats);
   });
 
   it("merender judul seksi dan data berita dari API", async () => {
@@ -92,12 +114,12 @@ describe("NewsManagementSection Component", () => {
     );
 
     expect(screen.getByText("Kabar & Berita Perpustakaan")).toBeInTheDocument();
-    expect(screen.getByText("+ Tambah Berita")).toBeInTheDocument();
+    expect(screen.getByText("Tambah Berita")).toBeInTheDocument();
 
     await waitFor(() => {
       expect(
-        screen.getByText("Sosialisasi Perpustakaan Digital UMC 2026")
-      ).toBeInTheDocument();
+        screen.getAllByText("Sosialisasi Perpustakaan Digital UMC 2026").length
+      ).toBeGreaterThanOrEqual(1);
       expect(screen.getAllByText("Kegiatan").length).toBeGreaterThanOrEqual(1);
       expect(screen.getAllByText("Terbit").length).toBeGreaterThanOrEqual(1);
     });
@@ -111,7 +133,7 @@ describe("NewsManagementSection Component", () => {
       </MemoryRouter>
     );
 
-    const addButton = screen.getByText("+ Tambah Berita");
+    const addButton = screen.getByText("Tambah Berita");
     await user.click(addButton);
 
     await waitFor(() => {
@@ -131,8 +153,8 @@ describe("NewsManagementSection Component", () => {
 
     await waitFor(() => {
       expect(
-        screen.getByText("Sosialisasi Perpustakaan Digital UMC 2026")
-      ).toBeInTheDocument();
+        screen.getAllByText("Sosialisasi Perpustakaan Digital UMC 2026").length
+      ).toBeGreaterThanOrEqual(1);
     });
 
     const editButton = screen.getByTitle("Edit Artikel");
