@@ -1,6 +1,6 @@
 import z from "zod";
 
-export const itemStatusSchema = z.enum(["available", "loaned", "damaged", "lost"]);
+export const itemStatusSchema = z.enum(["available", "loaned", "maintenance", "damaged", "lost"]);
 
 export const createItemSchema = z.object({
   bibliographyId: z.string().uuid(),
@@ -32,12 +32,14 @@ export const bulkCreateItemSchema = z.object({
     locationId: z.coerce.number().int().positive().optional(),
     callNumber: z.string().max(100).optional().or(z.literal("")),
     inventoryCode: z.string().max(50).optional().or(z.literal("")),
+    status: itemStatusSchema.optional(),
   })).min(1).max(1000),
   defaults: z.object({
     locationId: z.coerce.number().int().positive().optional(),
     source: z.string().optional(),
     priceCurrency: z.string().optional(),
     collectionTypeId: z.coerce.number().int().positive().optional(),
+    status: itemStatusSchema.optional(),
   }).optional(),
 });
 

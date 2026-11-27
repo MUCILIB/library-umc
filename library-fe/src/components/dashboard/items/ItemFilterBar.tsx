@@ -7,6 +7,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { ITEM_STATUS_OPTIONS } from "@/utils/itemStatus";
 
 export interface ItemFilterBarProps {
   searchInput: string;
@@ -63,10 +64,11 @@ export function ItemFilterBar({
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Semua Status</SelectItem>
-            <SelectItem value="available">Tersedia</SelectItem>
-            <SelectItem value="loaned">Dipinjam</SelectItem>
-            <SelectItem value="damaged">Rusak</SelectItem>
-            <SelectItem value="lost">Hilang</SelectItem>
+            {ITEM_STATUS_OPTIONS.map((opt) => (
+              <SelectItem key={opt.value} value={opt.value}>
+                {opt.label}
+              </SelectItem>
+            ))}
           </SelectContent>
         </Select>
       </div>

@@ -66,7 +66,8 @@ app.use(
 
       callback(new Error("Not allowed by CORS"));
     },
-    credentials: true
+    credentials: true,
+    exposedHeaders: ["Content-Disposition"]
   })
 );
 app.use(express.json());
@@ -137,6 +138,16 @@ async function runPendingMigrations() {
     console.log("[Database] Migrations verified and applied successfully.");
   } catch (error) {
     console.warn("[Database] Migration check failed or skipped:", error);
+  }
+
+  // Ensure item_status enum includes 'maintenance' (Sedang Diperbaiki)
+  try {
+    const { sql } = await import("drizzle-orm");
+    await db.execute(sql`
+      ALTER TYPE "public"."item_status" ADD VALUE IF NOT EXISTS 'maintenance';
+    `);
+  } catch (itemEnumErr) {
+    console.warn("[Database] item_status enum update error:", itemEnumErr);
   }
 
   // Ensure collection_types columns & seed default classification (Sirkulasi & Referensi)

@@ -1,9 +1,17 @@
 import { useState, useEffect } from "react";
 import { Package, AlertCircle, Loader2, Plus, Tag, Bookmark, Lock, Sparkles } from "lucide-react";
 import Modal from "@/components/ui/modal";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useToast } from "@/hooks/useToast";
 import { cn } from "@/lib/utils";
 import { analyzeItemCodeStructure, type CodeStructureAnalysis } from "@/utils/itemCodeHelper";
+import { ITEM_CREATE_STATUS_OPTIONS, type ItemStatusValue } from "@/utils/itemStatus";
 import {
   locationApi,
   itemApi,
@@ -23,6 +31,7 @@ export interface QuickAddItemModalProps {
 export function QuickAddItemModal({ bib, onClose, onSuccess }: QuickAddItemModalProps) {
   const { success: toastSuccess, error: toastError } = useToast();
   const [quantity, setQuantity] = useState<string>("1");
+  const [initialStatus, setInitialStatus] = useState<Exclude<ItemStatusValue, "loaned">>("available");
   const [locations, setLocations] = useState<Location[]>([]);
   const [locationId, setLocationId] = useState<number | null>(null);
   const [codePrefix, setCodePrefix] = useState<string>("");
@@ -246,6 +255,7 @@ export function QuickAddItemModal({ bib, onClose, onSuccess }: QuickAddItemModal
           callNumber: targetBib.callNumber || undefined,
           locationId,
           collectionTypeId: effectiveColTypeId,
+          status: initialStatus,
         };
       });
 
@@ -254,6 +264,7 @@ export function QuickAddItemModal({ bib, onClose, onSuccess }: QuickAddItemModal
         defaults: {
           locationId,
           collectionTypeId: effectiveColTypeId,
+          status: initialStatus,
         },
       });
 
@@ -429,20 +440,45 @@ export function QuickAddItemModal({ bib, onClose, onSuccess }: QuickAddItemModal
           ) : locations.length === 0 ? (
             <p className="text-xs text-amber-600">Belum ada data lokasi rak terdaftar.</p>
           ) : (
-            <select
-              value={locationId || ""}
-              onChange={(e) => setLocationId(Number(e.target.value))}
-              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
-              required
+            <Select
+              value={locationId ? String(locationId) : ""}
+              onValueChange={(val) => setLocationId(Number(val))}
             >
-              {locations.map((loc) => (
-                <option key={loc.id} value={loc.id}>
-                  {loc.room} - {loc.rack}
-                  {loc.shelf ? ` (${loc.shelf})` : ""}
-                </option>
-              ))}
-            </select>
+              <SelectTrigger className="w-full rounded-lg border-border bg-background">
+                <SelectValue placeholder="Pilih lokasi rak" />
+              </SelectTrigger>
+              <SelectContent>
+                {locations.map((loc) => (
+                  <SelectItem key={loc.id} value={String(loc.id)}>
+                    {loc.room} - {loc.rack}
+                    {loc.shelf ? ` (${loc.shelf})` : ""}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           )}
+        </div>
+
+        {/* Status Awal Eksemplar */}
+        <div className="space-y-1.5">
+          <label htmlFor="quick-add-status" className="block text-xs font-semibold text-foreground">
+            Status Awal Eksemplar
+          </label>
+          <Select
+            value={initialStatus}
+            onValueChange={(val) => setInitialStatus(val as Exclude<ItemStatusValue, "loaned">)}
+          >
+            <SelectTrigger id="quick-add-status" className="w-full rounded-lg border-border bg-background">
+              <SelectValue placeholder="Pilih status awal" />
+            </SelectTrigger>
+            <SelectContent>
+              {ITEM_CREATE_STATUS_OPTIONS.map((opt) => (
+                <SelectItem key={opt.value} value={opt.value}>
+                  {opt.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
 
         {/* Awalan Barcode / Kode Eksemplar Otomatis Mengikuti Klasifikasi */}

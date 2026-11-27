@@ -12,12 +12,13 @@ import { dashboardDataService } from "@/services/dashboard/dashboardDataService"
 import { exportApi, roleApi, type Role } from "@/api/client";
 import RolePermissionsManager from "./RolePermissionsManager";
 import { UserFilterBar, type ColumnDef } from "./users/UserFilterBar";
-import { UserTable } from "./users/UserTable";
+import { UserTable, canEditMemberCardExpiry } from "./users/UserTable";
 import { CreateUserModal, type CreateUserFormData } from "./users/CreateUserModal";
 import { BanUserModal } from "./users/BanUserModal";
 import { DeleteUserModal } from "./users/DeleteUserModal";
 import { ImportUserModal } from "./users/ImportUserModal";
 import { EditCardExpiryModal } from "./users/EditCardExpiryModal";
+import { IssueCardModal } from "./users/IssueCardModal";
 
 const ALL_COLUMNS: ColumnDef[] = [
   { key: "user", label: "User" },
@@ -92,13 +93,13 @@ export default function UsersSection() {
   const [savingId, setSavingId] = useState<string | null>(null);
   const [banSavingId, setBanSavingId] = useState<string | null>(null);
   const [syncSavingId, setSyncSavingId] = useState<string | null>(null);
-  const [issueSavingId, setIssueSavingId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [deleteConfirmUser, setDeleteConfirmUser] = useState<DashboardUser | null>(null);
   const [search, setSearch] = useState("");
   const [recordSavingId, setRecordSavingId] = useState<string | null>(null);
   const [banModalUser, setBanModalUser] = useState<DashboardUser | null>(null);
   const [banReasonInput, setBanReasonInput] = useState("Pelanggaran kebijakan sistem");
+  const [issueCardModalUser, setIssueCardModalUser] = useState<DashboardUser | null>(null);
   const [editCardExpiryUser, setEditCardExpiryUser] = useState<DashboardUser | null>(null);
 
   const [showOnlyUnsynced, setShowOnlyUnsynced] = useState(false);
@@ -289,20 +290,8 @@ export default function UsersSection() {
     }
   };
 
-  const handleIssueCard = async (user: DashboardUser) => {
-    setIssueSavingId(user.id);
-    setPageError(null);
-    try {
-      await usersManagementService.issueMemberCard(user.id);
-      await refetch();
-      success("Kartu Diterbitkan", `Kartu member untuk ${user.name} berhasil diterbitkan.`);
-    } catch (err) {
-      const message = err instanceof Error ? err.message : "Gagal menerbitkan kartu member";
-      setPageError(message);
-      showErrorToast("Issue Kartu Gagal", message);
-    } finally {
-      setIssueSavingId(null);
-    }
+  const handleIssueCard = (user: DashboardUser) => {
+    setIssueCardModalUser(user);
   };
 
   const handleRecordVisit = async (user: DashboardUser) => {
@@ -406,7 +395,7 @@ export default function UsersSection() {
             savingId={savingId}
             recordSavingId={recordSavingId}
             syncSavingId={syncSavingId}
-            issueSavingId={issueSavingId}
+            issueSavingId={issueCardModalUser?.id ?? null}
             banSavingId={banSavingId}
             deletingId={deletingId}
             canEditUsers={canEdit("users")}
@@ -419,10 +408,28 @@ export default function UsersSection() {
             onRoleChange={(user, nextRole) => void handleRoleChange(user, nextRole)}
             onRecordVisit={(user) => void handleRecordVisit(user)}
             onSyncMember={(user) => void handleSyncMember(user)}
-            onIssueCard={(user) => void handleIssueCard(user)}
+            onIssueCard={handleIssueCard}
             onToggleBan={handleToggleBan}
             onDeleteUser={(user) => setDeleteConfirmUser(user)}
-            onEditCardExpiry={(user) => setEditCardExpiryUser(user)}
+            onEditCardExpiry={(user) => {
+              if (!canEditMemberCardExpiry(user)) {
+                showErrorToast(
+                  "Kartu Belum Diterbitkan",
+                  "Pemustaka harus mengajukan kartu atau terbitkan kartu terlebih dahulu sebelum mengubah masa aktif."
+                );
+                return;
+              }
+              setEditCardExpiryUser(user);
+            }}
+          />
+
+          <IssueCardModal
+            user={issueCardModalUser}
+            isOpen={Boolean(issueCardModalUser)}
+            onClose={() => setIssueCardModalUser(null)}
+            onSuccess={() => {
+              void refetch();
+            }}
           />
 
           <EditCardExpiryModal

@@ -11,6 +11,18 @@ import {
 import { EmptyState } from "@/components/ui/empty-state";
 import type { Item } from "@/api/client";
 import { TablePagination } from "@/components/common/TablePagination";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  ITEM_STATUS_OPTIONS,
+  getItemStatusBadgeClass,
+  getItemStatusLabel,
+} from "@/utils/itemStatus";
 
 export interface ItemTableProps {
   items: Item[];
@@ -21,6 +33,7 @@ export interface ItemTableProps {
   onOpenQrModal: (item: Item) => void;
   onEdit: (item: Item) => void;
   onDelete: (item: Item) => void;
+  onStatusChange?: (item: Item, status: string) => void;
   canEdit: (resource: string) => boolean;
   canDelete: (resource: string) => boolean;
   page: number;
@@ -39,6 +52,7 @@ export function ItemTable({
   onOpenQrModal,
   onEdit,
   onDelete,
+  onStatusChange,
   canEdit,
   canDelete,
   page,
@@ -116,17 +130,32 @@ export function ItemTable({
                     : "-"}
                 </td>
                 <td className="px-4 py-3 text-center">
-                  <span
-                    className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${
-                      item.status === "available"
-                        ? "bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-400"
-                        : item.status === "loaned"
-                          ? "bg-amber-50 dark:bg-amber-950 text-amber-700 dark:text-amber-400"
-                          : "bg-muted text-muted-foreground"
-                    }`}
-                  >
-                    {item.status}
-                  </span>
+                  {onStatusChange && canEdit("items") ? (
+                    <Select
+                      value={item.status}
+                      onValueChange={(val) => onStatusChange(item, val)}
+                    >
+                      <SelectTrigger
+                        aria-label={`Ubah status ${item.itemCode}`}
+                        className={`mx-auto h-7 w-[155px] rounded-full border px-2.5 text-xs font-semibold ${getItemStatusBadgeClass(item.status)}`}
+                      >
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {ITEM_STATUS_OPTIONS.map((opt) => (
+                          <SelectItem key={opt.value} value={opt.value} className="text-xs">
+                            {opt.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <span
+                      className={`inline-block rounded-full border px-2.5 py-0.5 text-xs font-semibold ${getItemStatusBadgeClass(item.status)}`}
+                    >
+                      {getItemStatusLabel(item.status)}
+                    </span>
+                  )}
                 </td>
                 <td className="px-4 py-3 text-center">
                   {item.qrToken ? (

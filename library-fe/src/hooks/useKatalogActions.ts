@@ -4,6 +4,7 @@ import loanService from "@/services/loanService";
 import reservationService from "@/services/reservationService";
 import { useToast } from "@/hooks/useToast";
 import { triggerBadgeRefresh } from "@/hooks/dashboard/useDashboardBadges";
+import { getItemStatusLabel } from "@/utils/itemStatus";
 import type { Bibliography, LibraryUser, LoanRequest } from "@/types";
 import type { Reservation } from "@/services/reservationService";
 
@@ -33,18 +34,31 @@ export function useKatalogActions({
   const [borrowLoading, setBorrowLoading] = useState(false);
   const [showLoanForm, setShowLoanForm] = useState(false);
 
-  const defaultLoanDate = new Date().toISOString().split("T")[0];
-  const defaultDueDate = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
-    .toISOString()
-    .split("T")[0];
+  const formatLocalYmd = (date: Date) => {
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, "0");
+    const d = String(date.getDate()).padStart(2, "0");
+    return `${y}-${m}-${d}`;
+  };
+
+  const defaultLoanDate = formatLocalYmd(new Date());
+  const defaultDueDate = formatLocalYmd(
+    new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+  );
 
   const [loanFormData, setLoanFormData] = useState({
+    itemId: "",
     loanDate: defaultLoanDate,
     dueDate: defaultDueDate,
     notes: "",
   });
 
-  const getBookStatus = (): "available" | "borrowed" | "reserved" | "empty" => {
+  const getBookStatus = ():
+    | "available"
+    | "borrowed"
+    | "maintenance"
+    | "reserved"
+    | "empty" => {
     if (bibliography?.items && bibliography.items.length > 0) {
       const availableItems = bibliography.items.filter(
         (i) => i.status === "available",
@@ -58,6 +72,13 @@ export function useKatalogActions({
       );
       if (loanedItems.length > 0) {
         return "borrowed";
+      }
+
+      const maintenanceItems = bibliography.items.filter(
+        (i) => i.status === "maintenance",
+      );
+      if (maintenanceItems.length > 0) {
+        return "maintenance";
       }
 
       return "empty";
@@ -74,25 +95,45 @@ export function useKatalogActions({
   const isUserPending = (): boolean => pendingRequests.length > 0;
   const isUserReserved = (): boolean => !!userReservation;
 
+  const selectedLoanItem = bibliography?.items?.find(
+    (i) => i.id === loanFormData.itemId,
+  );
+  const isSelectedItemAvailable =
+    !bibliography?.items ||
+    bibliography.items.length === 0 ||
+    selectedLoanItem?.status === "available";
+
   const handleInputChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
+    e: React.ChangeEvent<
+      HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
+    >,
   ) => {
     const { name, value } = e.target;
 
     if (name === "loanDate") {
-      const selectedDate = new Date(value);
-      const calculatedDueDate = new Date(
-        selectedDate.getTime() + 7 * 24 * 60 * 60 * 1000,
-      )
-        .toISOString()
-        .split("T")[0];
-      setLoanFormData({
-        ...loanFormData,
+      if (!value) {
+        setLoanFormData((prev) => ({
+          ...prev,
+          loanDate: "",
+          dueDate: "",
+        }));
+        return;
+      }
+
+      const [y, m, d] = value.split("-").map(Number);
+      if (!y || !m || !d) return;
+
+      const selectedLocal = new Date(y, m - 1, d);
+      if (isNaN(selectedLocal.getTime())) return;
+
+      const calculatedDueDate = formatLocalYmd(new Date(y, m - 1, d + 7));
+      setLoanFormData((prev) => ({
+        ...prev,
         loanDate: value,
         dueDate: calculatedDueDate,
-      });
+      }));
     } else {
-      setLoanFormData({ ...loanFormData, [name]: value });
+      setLoanFormData((prev) => ({ ...prev, [name]: value }));
     }
   };
 
@@ -161,6 +202,13 @@ export function useKatalogActions({
       );
       return;
     }
+    if (getBookStatus() === "maintenance") {
+      toast.warning(
+        "Sedang Diperbaiki",
+        "Buku ini sedang dalam perbaikan (maintenance) dan sementara tidak dapat dipinjam.",
+      );
+      return;
+    }
     if (getBookStatus() === "empty" || getBookStatus() === "borrowed") {
       if (
         confirm("Buku sedang tidak tersedia. Ingin masuk antrian reservasi?")
@@ -169,6 +217,15 @@ export function useKatalogActions({
       }
       return;
     }
+    const itemsList = bibliography?.items || [];
+    const defaultItem =
+      itemsList.find((i) => i.status === "available") || itemsList[0];
+    setLoanFormData((prev) => ({
+      ...prev,
+      itemId: defaultItem?.id || "",
+      loanDate: prev.loanDate || defaultLoanDate,
+      dueDate: prev.dueDate || defaultDueDate,
+    }));
     setShowLoanForm(true);
   };
 
@@ -192,6 +249,26 @@ export function useKatalogActions({
       return;
     }
 
+    if (bibliography.items && bibliography.items.length > 0) {
+      if (!loanFormData.itemId) {
+        toast.warning(
+          "Pilih Kode Buku",
+          "Silakan pilih kode buku (eksemplar) yang ingin dipinjam.",
+        );
+        return;
+      }
+      const chosenItem = bibliography.items.find(
+        (i) => i.id === loanFormData.itemId,
+      );
+      if (!chosenItem || chosenItem.status !== "available") {
+        toast.warning(
+          "Eksemplar Tidak Tersedia",
+          `Eksemplar ${chosenItem?.itemCode || ""} saat ini berstatus "${getItemStatusLabel(chosenItem?.status)}" sehingga tidak dapat dipinjam.`,
+        );
+        return;
+      }
+    }
+
     if (!loanFormData.loanDate || !loanFormData.dueDate) {
       toast.warning(
         "Form Belum Lengkap",
@@ -200,8 +277,8 @@ export function useKatalogActions({
       return;
     }
 
-    const start = new Date(loanFormData.loanDate);
-    const end = new Date(loanFormData.dueDate);
+    const start = new Date(`${loanFormData.loanDate}T00:00:00`);
+    const end = new Date(`${loanFormData.dueDate}T00:00:00`);
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
@@ -209,6 +286,14 @@ export function useKatalogActions({
       toast.warning(
         "Tanggal Tidak Valid",
         "Tanggal peminjaman tidak boleh kurang dari hari ini",
+      );
+      return;
+    }
+
+    if (start > today) {
+      toast.warning(
+        "Tanggal Tidak Valid",
+        "Tanggal peminjaman tidak boleh melebihi tanggal saat ini",
       );
       return;
     }
@@ -235,6 +320,7 @@ export function useKatalogActions({
       const loan = await loanService.requestLoan({
         memberId: currentUser.memberId,
         bibliographyId: bibliography.id,
+        itemId: loanFormData.itemId || undefined,
         loanDate: loanFormData.loanDate,
         dueDate: loanFormData.dueDate,
         notes: loanFormData.notes,
@@ -251,6 +337,7 @@ export function useKatalogActions({
       triggerBadgeRefresh();
 
       setLoanFormData({
+        itemId: "",
         loanDate: defaultLoanDate,
         dueDate: defaultDueDate,
         notes: "",
@@ -277,6 +364,7 @@ export function useKatalogActions({
   };
 
   return {
+    todayYmd: defaultLoanDate,
     showReservationList,
     setShowReservationList,
     borrowLoading,
@@ -284,6 +372,8 @@ export function useKatalogActions({
     setShowLoanForm,
     loanFormData,
     setLoanFormData,
+    selectedLoanItem,
+    isSelectedItemAvailable,
     getBookStatus,
     isUserBorrowing,
     isUserPending,

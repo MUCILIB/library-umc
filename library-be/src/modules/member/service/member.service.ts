@@ -585,7 +585,7 @@ export class MemberService {
   }
 
   /**
-   * Update masa aktif kartu anggota oleh admin
+   * Update masa aktif kartu anggota oleh admin (hanya untuk kartu yang sudah diterbitkan)
    */
   async updateCardExpiry(
     memberId: string,
@@ -603,7 +603,19 @@ export class MemberService {
       if (!member) {
         return {
           success: false,
-          message: "Data pemustaka tidak ditemukan",
+          message: "Profil member belum tersedia. Sinkronisasi atau terbitkan kartu member terlebih dahulu.",
+          data: null
+        };
+      }
+
+      const isCardIssued =
+        Boolean(member.cardNumber) &&
+        (member.cardStatus === "active" || member.cardStatus === "expired");
+      if (!isCardIssued) {
+        return {
+          success: false,
+          message:
+            "Kartu anggota belum diterbitkan atau belum disetujui. Ajukan kartu atau terbitkan kartu terlebih dahulu sebelum mengubah masa aktif.",
           data: null
         };
       }
@@ -630,15 +642,18 @@ export class MemberService {
         };
       }
 
-      const nextCardNumber = member.cardNumber || this.generateCardNumber(member.id);
+      const endOfExpiryDay = new Date(newExpiry);
+      endOfExpiryDay.setHours(23, 59, 59, 999);
+      const nextCardStatus: MemberCardStatus =
+        endOfExpiryDay.getTime() < Date.now() ? "expired" : "active";
 
       const [updated] = await db
         .update(members)
         .set({
           cardExpiresAt: newExpiry,
-          cardStatus: "active",
-          cardNumber: nextCardNumber,
+          cardStatus: nextCardStatus,
           cardRenewalStatus: null,
+          cardRejectedAt: null,
           cardRejectedReason: null,
           updatedAt: new Date()
         })

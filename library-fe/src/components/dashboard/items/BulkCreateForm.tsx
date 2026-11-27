@@ -1,6 +1,14 @@
 import React, { useEffect, useState } from "react";
 import { AlertCircle, Info, Loader2, X } from "lucide-react";
 import { bibliographyApi, itemApi, type Bibliography } from "@/api/client";
+import { ITEM_CREATE_STATUS_OPTIONS, type ItemStatusValue } from "@/utils/itemStatus";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 export interface BulkCreateFormProps {
   onClose: () => void;
@@ -16,6 +24,7 @@ export function BulkCreateForm({ onClose, onSuccess }: BulkCreateFormProps) {
   const [quantity, setQuantity] = useState("1");
   const [prefix, setPrefix] = useState("ITEM");
   const [locationId, setLocationId] = useState("");
+  const [status, setStatus] = useState<ItemStatusValue>("available");
   const [items, setItems] = useState<
     Array<{ itemCode: string; inventoryCode: string }>
   >([]);
@@ -67,17 +76,19 @@ export function BulkCreateForm({ onClose, onSuccess }: BulkCreateFormProps) {
           itemCode: string;
           inventoryCode?: string;
           locationId?: number;
+          status?: ItemStatusValue;
         }>;
-        defaults?: { locationId?: number };
+        defaults?: { locationId?: number; status?: ItemStatusValue };
       } = {
         items: items.map((item) => ({
           itemCode: item.itemCode,
           ...(item.inventoryCode ? { inventoryCode: item.inventoryCode } : {}),
         })),
+        defaults: {
+          ...(locationId ? { locationId: parseInt(locationId) } : {}),
+          status,
+        },
       };
-      if (locationId) {
-        payload.defaults = { locationId: parseInt(locationId) };
-      }
       const result = await itemApi.bulkCreate(selectedBibId, payload);
       setSuccess(`Berhasil membuat ${result.data.created} item`);
       setTimeout(() => onSuccess(), 1500);
@@ -265,6 +276,29 @@ export function BulkCreateForm({ onClose, onSuccess }: BulkCreateFormProps) {
                 placeholder="Opsional"
                 className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
               />
+            </div>
+            <div>
+              <label
+                htmlFor="bulk-item-status"
+                className="mb-1 block text-xs font-medium text-muted-foreground"
+              >
+                Status Awal Eksemplar
+              </label>
+              <Select
+                value={status}
+                onValueChange={(val) => setStatus(val as ItemStatusValue)}
+              >
+                <SelectTrigger id="bulk-item-status" className="w-full h-9.5 rounded-lg border-border bg-background">
+                  <SelectValue placeholder="Pilih status awal" />
+                </SelectTrigger>
+                <SelectContent>
+                  {ITEM_CREATE_STATUS_OPTIONS.map((opt) => (
+                    <SelectItem key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div className="flex items-end">
               <button

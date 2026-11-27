@@ -55,6 +55,12 @@ vi.mock("../../shared/utils/stock-sync", () => ({
   syncCollectionAvailableStock: vi.fn().mockResolvedValue(undefined),
 }));
 
+vi.mock("../../reservation/service/reservation.service", () => ({
+  default: {
+    fulfillNextReservation: vi.fn().mockResolvedValue(undefined),
+  },
+}));
+
 function createMockTx(availableCount = 0) {
   return {
     execute: vi.fn().mockResolvedValue(undefined),
@@ -462,6 +468,111 @@ describe("ItemService Unit Tests", () => {
       // Canonical prefix should be the dominant standard prefix S-2024-2342
       expect(result.data.canonicalPrefix).toBe("S-2024-2342");
       expect(result.data.updatedCount).toBe(5);
+    });
+  });
+
+  describe("maintenance status support", () => {
+    it("should update item status to maintenance and sync stock", async () => {
+      (db.query.items.findFirst as any).mockResolvedValue({
+        id: "item-1",
+        bibliographyId: "coll-1",
+        status: "available",
+      });
+
+      const mockTx = createMockTx(0);
+      mockTx.update = vi.fn().mockReturnValue({
+        set: vi.fn().mockReturnValue({
+          where: vi.fn().mockReturnValue({
+            returning: vi.fn().mockResolvedValue([
+              { id: "item-1", bibliographyId: "coll-1", status: "maintenance" },
+            ]),
+          }),
+        }),
+      });
+      (db.transaction as any).mockImplementation(async (fn: any) => fn(mockTx));
+
+      const result = await itemService.updateItemStatus("item-1", "maintenance");
+      expect(result.success).toBe(true);
+      expect(result.data.status).toBe("maintenance");
+      expect(db.transaction).toHaveBeenCalled();
+    });
+
+    it("should filter items by maintenance status in getAllItems", async () => {
+      (db.query.items.findMany as any).mockResolvedValue([
+        { id: "item-m1", itemCode: "UMC-M-01", status: "maintenance" },
+      ]);
+      (db.select as any).mockReturnValue({
+        from: vi.fn().mockReturnValue({
+          where: vi.fn().mockResolvedValue([{ count: 1 }]),
+        }),
+      });
+
+      const result = await itemService.getAllItems(undefined, 1, 20, undefined, "maintenance");
+      expect(result.success).toBe(true);
+      expect(result.data).toHaveLength(1);
+      expect(result.data[0].status).toBe("maintenance");
+      expect(result.pagination.total).toBe(1);
+    });
+
+    it("should create items with maintenance status via bulkCreate", async () => {
+      (db.query.bibliographies.findFirst as any).mockResolvedValue({
+        id: "bib-1",
+        title: "Algoritma",
+        collectionTypeId: 1,
+      });
+
+      const insertedValues: any[] = [];
+      const mockTx = {
+        query: {
+          items: {
+            findFirst: vi.fn().mockResolvedValue(null),
+          },
+        },
+        select: vi.fn().mockReturnValue({
+          from: vi.fn().mockReturnValue({
+            where: vi.fn().mockResolvedValue([{ count: 0 }]),
+          }),
+        }),
+        insert: vi.fn().mockReturnValue({
+          values: vi.fn((val: any) => {
+            insertedValues.push(val);
+            return {
+              returning: vi.fn().mockResolvedValue([{ id: `new-${insertedValues.length}`, ...val }]),
+            };
+          }),
+        }),
+      };
+      (db.transaction as any).mockImplementation(async (fn: any) => fn(mockTx));
+
+      const result = await itemService.bulkCreate("bib-1", {
+        items: [{ itemCode: "ALG-01" }, { itemCode: "ALG-02", status: "damaged" }],
+        defaults: { locationId: 1, status: "maintenance" },
+      });
+
+      expect(result.success).toBe(true);
+      expect(result.data.created).toBe(2);
+      expect(insertedValues[0].status).toBe("maintenance");
+      expect(insertedValues[1].status).toBe("damaged");
+    });
+
+    it("should trigger fulfillNextReservation when item status becomes available", async () => {
+      const reservationService = (
+        await import("../../reservation/service/reservation.service")
+      ).default;
+      (db.query.items.findFirst as any).mockResolvedValue({
+        id: "item-1",
+        bibliographyId: "coll-1",
+        status: "maintenance",
+      });
+
+      const mockTx = createMockTx(1);
+      (db.transaction as any).mockImplementation(async (fn: any) => fn(mockTx));
+
+      const result = await itemService.updateItemStatus("item-1", "available");
+      expect(result.success).toBe(true);
+      expect(reservationService.fulfillNextReservation).toHaveBeenCalledWith(
+        "coll-1"
+      );
     });
   });
 });

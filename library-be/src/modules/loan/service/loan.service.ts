@@ -32,7 +32,8 @@ export class LoanService {
     bibliographyId: string,
     reqLoanDate?: string,
     reqDueDate?: string,
-    notes?: string
+    notes?: string,
+    requestedItemId?: string
   ) {
     // Best Practice: Cek apakah member sudah meminjam terlalu banyak (Limit: 3 buku aktif)
     const activeLoansCount = await db
@@ -52,13 +53,52 @@ export class LoanService {
       );
     }
 
-    // Resolusi apakah bibliographyId yang dikirim adalah ID item langsung
+    // Resolusi item spesifik (jika dipilih) atau apakah bibliographyId adalah ID item langsung
     let targetBibId = bibliographyId;
+    const itemLookupId = requestedItemId || bibliographyId;
     const directItem = await db.query.items.findFirst({
-      where: and(eq(items.id, bibliographyId), isNull(items.deletedAt))
+      where: and(eq(items.id, itemLookupId), isNull(items.deletedAt))
     });
+
+    if (requestedItemId && !directItem) {
+      throw new Error("Eksemplar buku yang dipilih tidak ditemukan.");
+    }
+
     if (directItem) {
-      targetBibId = directItem.bibliographyId;
+      if (
+        requestedItemId &&
+        bibliographyId !== requestedItemId &&
+        directItem.bibliographyId !== bibliographyId
+      ) {
+        throw new Error(
+          "Eksemplar buku yang dipilih tidak sesuai dengan judul buku."
+        );
+      }
+      if (directItem.status !== "available") {
+        if (directItem.status === "maintenance") {
+          throw new Error(
+            `Eksemplar [${directItem.itemCode}] sedang diperbaiki (maintenance) dan tidak dapat dipinjam.`
+          );
+        }
+        throw new Error(
+          `Eksemplar [${directItem.itemCode}] sedang berstatus '${directItem.status}' dan tidak tersedia untuk dipinjam.`
+        );
+      }
+      const existingLoanForItem = db.query.loans?.findFirst
+        ? await db.query.loans.findFirst({
+            where: and(
+              eq(loans.itemId, directItem.id),
+              inArray(loans.status, ["pending", "approved", "extended"]),
+              isNull(loans.deletedAt)
+            ),
+          })
+        : null;
+      if (existingLoanForItem) {
+        throw new Error(
+          `Eksemplar [${directItem.itemCode}] sedang dalam proses peminjaman lain dan belum tersedia.`
+        );
+      }
+      targetBibId = directItem.bibliographyId || bibliographyId;
     }
 
     // Validasi antrian reservasi untuk koleksi ini
@@ -86,6 +126,27 @@ export class LoanService {
         )
       );
 
+    if (Number(availableItemsCount.count) <= 0) {
+      const maintenanceItem = await db.query.items.findFirst({
+        where: and(
+          eq(items.bibliographyId, targetBibId),
+          eq(items.status, "maintenance"),
+          isNull(items.deletedAt)
+        ),
+      });
+      if (maintenanceItem && Number(waitingResCount.count) === 0) {
+        throw new Error(
+          "Buku ini sedang dalam perbaikan (maintenance) dan tidak dapat dipinjam."
+        );
+      }
+      if (Number(waitingResCount.count) > 0) {
+        throw new Error(
+          "Buku ini sedang dipesan (reserved) oleh orang lain di antrian. Silakan masuk antrian reservasi."
+        );
+      }
+      throw new Error("Buku ini sedang tidak tersedia untuk dipinjam");
+    }
+
     if (Number(availableItemsCount.count) <= Number(waitingResCount.count)) {
       // Cek apakah member ini ada di urutan pertama reservasi?
       // (Logika ini bisa dikembangkan, tapi untuk sekarang kita proteksi secara umum)
@@ -95,7 +156,7 @@ export class LoanService {
     }
 
     // Validasi item: Gunakan directItem jika available, atau cari salinan pertama yang tersedia
-    const item = directItem && directItem.status === "available"
+    const item = directItem
       ? directItem
       : await db.query.items.findFirst({
           where: and(
@@ -134,10 +195,14 @@ export class LoanService {
     const token = crypto.randomBytes(16).toString("hex");
     const expiresAt = new Date(Date.now() + 20 * 60 * 1000); // 20 menit
 
-    const finalLoanDate = reqLoanDate || new Date().toISOString().split("T")[0];
+    const todayStrJakarta = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Jakarta" }).format(new Date());
+    const finalLoanDate = reqLoanDate || todayStrJakarta;
     const startDate = new Date(finalLoanDate);
     if (isNaN(startDate.getTime())) {
       throw new Error("Format tanggal peminjaman tidak valid.");
+    }
+    if (finalLoanDate.slice(0, 10) > todayStrJakarta) {
+      throw new Error("Tanggal peminjaman tidak boleh melebihi tanggal saat ini.");
     }
 
     let finalDueDate = reqDueDate;
@@ -370,17 +435,26 @@ export class LoanService {
     }
 
     if (item.status !== "available") {
+      if (item.status === "maintenance") {
+        throw new Error(
+          `Eksemplar [${item.itemCode}] sedang berstatus 'Sedang Diperbaiki' (maintenance) dan tidak tersedia untuk dipinjam.`
+        );
+      }
       throw new Error(
         `Eksemplar [${item.itemCode}] sedang berstatus '${item.status}' dan tidak tersedia untuk dipinjam.`
       );
     }
 
-    // Hitung tanggal peminjaman dan jatuh tempo
-    const durationDays = payload.durationDays && payload.durationDays > 0 ? Math.min(payload.durationDays, 14) : 7;
-    const finalLoanDate = payload.loanDate || todayStr;
+    // Hitung tanggal peminjaman dan jatuh tempo (maksimal 7 hari standar)
+    const durationDays = payload.durationDays && payload.durationDays > 0 ? Math.min(payload.durationDays, 7) : 7;
+    const todayStrJakarta = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Jakarta" }).format(new Date());
+    const finalLoanDate = payload.loanDate || todayStrJakarta;
     const startDate = new Date(finalLoanDate);
     if (isNaN(startDate.getTime())) {
       throw new Error("Format tanggal peminjaman tidak valid.");
+    }
+    if (finalLoanDate.slice(0, 10) > todayStrJakarta) {
+      throw new Error("Tanggal peminjaman tidak boleh melebihi tanggal saat ini.");
     }
 
     let finalDueDate = payload.dueDate;
@@ -397,8 +471,8 @@ export class LoanService {
       if (diffDays < 1) {
         throw new Error("Tanggal jatuh tempo harus setelah tanggal peminjaman.");
       }
-      if (diffDays > 14) {
-        throw new Error("Durasi peminjaman langsung maksimal adalah 14 hari.");
+      if (diffDays > 7) {
+        throw new Error("Durasi peminjaman di tempat maksimal adalah 7 hari.");
       }
     }
 
@@ -528,6 +602,17 @@ export class LoanService {
 
       if (!loanData) {
         throw new Error("Data peminjaman tidak ditemukan");
+      }
+
+      if (loanData.item?.status && loanData.item.status !== "available") {
+        if (loanData.item.status === "maintenance") {
+          throw new Error(
+            `Eksemplar [${loanData.item.itemCode}] berstatus Sedang Diperbaiki (maintenance) sehingga tidak dapat dipinjamkan.`
+          );
+        }
+        throw new Error(
+          `Eksemplar [${loanData.item.itemCode}] sedang berstatus '${loanData.item.status}' dan tidak tersedia untuk dipinjam.`
+        );
       }
 
       // Update Loan Status
@@ -704,7 +789,7 @@ export class LoanService {
     const randomSuffix = Math.floor(1000 + Math.random() * 9000);
     const receiptNo = `BA-RET-${dateStr}-${randomSuffix}`;
 
-    return await db.transaction(async (tx) => {
+    const txResult = await db.transaction(async (tx) => {
       // Find the loan
       const loan = await tx.query.loans.findFirst({
         where: and(eq(loans.id, loanId), isNull(loans.deletedAt))
@@ -745,10 +830,10 @@ export class LoanService {
         await syncCollectionAvailableStock(tx, loanItem.bibliographyId);
       }
 
-      // Auto-fulfill next reservation if any (only if returned as available)
-      if (itemStatus === "available" && loanItem?.bibliographyId) {
-        void reservationService.fulfillNextReservation(loanItem.bibliographyId);
-      }
+      const fulfilledBibliographyId =
+        itemStatus === "available" && loanItem?.bibliographyId
+          ? loanItem.bibliographyId
+          : null;
 
       // Calculate late fine or settle existing fine upon return
       const returnDateObj = new Date();
@@ -812,21 +897,33 @@ export class LoanService {
         }
 
         return {
-          success: true,
-          message: isLate
-            ? `Buku berhasil dikembalikan dan denda keterlambatan sebesar Rp ${fineAmount.toLocaleString("id-ID")} (${diffDays} hari) telah dilunasi.`
-            : `Buku berhasil dikembalikan dan denda sebesar Rp ${fineAmount.toLocaleString("id-ID")} telah dilunasi.`,
-          fine: {
-            id: fineId,
-            overdueDays: diffDays,
-            assessedAmount: fineAmount.toString(),
-            status: "paid",
+          fulfilledBibliographyId,
+          response: {
+            success: true,
+            message: isLate
+              ? `Buku berhasil dikembalikan dan denda keterlambatan sebesar Rp ${fineAmount.toLocaleString("id-ID")} (${diffDays} hari) telah dilunasi.`
+              : `Buku berhasil dikembalikan dan denda sebesar Rp ${fineAmount.toLocaleString("id-ID")} telah dilunasi.`,
+            fine: {
+              id: fineId,
+              overdueDays: diffDays,
+              assessedAmount: fineAmount.toString(),
+              status: "paid",
+            }
           }
         };
       }
 
-      return { success: true, message: "Buku telah berhasil dikembalikan tepat waktu.", fine: null };
+      return {
+        fulfilledBibliographyId,
+        response: { success: true, message: "Buku telah berhasil dikembalikan tepat waktu.", fine: null }
+      };
     });
+
+    if (txResult?.fulfilledBibliographyId) {
+      await reservationService.fulfillNextReservation(txResult.fulfilledBibliographyId);
+    }
+
+    return txResult.response;
   }
 
   /**
@@ -844,7 +941,7 @@ export class LoanService {
     const randomSuffix = Math.floor(1000 + Math.random() * 9000);
     const receiptNo = `BA-RET-${dateStr}-${randomSuffix}`;
 
-    return await db.transaction(async (tx) => {
+    const txResult = await db.transaction(async (tx) => {
       // Verify super_admin
       const adminUser = await tx.query.Users.findFirst({ where: eq(Users.id, adminId) });
       if (!adminUser || adminUser.role !== ROLES.SUPER_ADMIN) {
@@ -876,8 +973,11 @@ export class LoanService {
         }).where(eq(returnRequests.id, requestId));
 
         return {
-          success: true,
-          message: "Permintaan pengembalian disetujui (buku telah tercatat dikembalikan sebelumnya)."
+          fulfilledBibliographyId: null as string | null,
+          response: {
+            success: true,
+            message: "Permintaan pengembalian disetujui (buku telah tercatat dikembalikan sebelumnya)."
+          }
         };
       }
 
@@ -910,10 +1010,10 @@ export class LoanService {
         await syncCollectionAvailableStock(tx, loanItem.bibliographyId);
       }
 
-      // Auto-fulfill next reservation if any
-      if (loanItem?.bibliographyId) {
-        void reservationService.fulfillNextReservation(loanItem.bibliographyId);
-      }
+      const fulfilledBibliographyId =
+        itemStatus === "available" && loanItem?.bibliographyId
+          ? loanItem.bibliographyId
+          : null;
 
       // Calculate late fine or settle existing fine upon return
       const returnDateObj = new Date();
@@ -978,17 +1078,29 @@ export class LoanService {
         await tx.update(returnRequests).set({ status: "approved", processedAt: new Date(), processedBy: adminId }).where(eq(returnRequests.id, requestId));
 
         return {
-          success: true,
-          message: isLate
-            ? `Buku berhasil dikembalikan dan denda keterlambatan sebesar Rp ${fineAmount.toLocaleString("id-ID")} (${diffDays} hari) telah dilunasi.`
-            : `Buku berhasil dikembalikan dan denda sebesar Rp ${fineAmount.toLocaleString("id-ID")} telah dilunasi.`
+          fulfilledBibliographyId,
+          response: {
+            success: true,
+            message: isLate
+              ? `Buku berhasil dikembalikan dan denda keterlambatan sebesar Rp ${fineAmount.toLocaleString("id-ID")} (${diffDays} hari) telah dilunasi.`
+              : `Buku berhasil dikembalikan dan denda sebesar Rp ${fineAmount.toLocaleString("id-ID")} telah dilunasi.`
+          }
         };
       }
 
       // Update request status to approved (no fine)
       await tx.update(returnRequests).set({ status: "approved", processedAt: new Date(), processedBy: adminId }).where(eq(returnRequests.id, requestId));
-      return { success: true, message: "Buku telah berhasil dikembalikan tepat waktu." };
+      return {
+        fulfilledBibliographyId,
+        response: { success: true, message: "Buku telah berhasil dikembalikan tepat waktu." }
+      };
     });
+
+    if (txResult?.fulfilledBibliographyId) {
+      await reservationService.fulfillNextReservation(txResult.fulfilledBibliographyId);
+    }
+
+    return txResult.response;
   }
 
   /**

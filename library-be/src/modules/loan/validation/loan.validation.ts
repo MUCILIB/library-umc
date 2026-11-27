@@ -1,5 +1,8 @@
 import z from "zod";
 
+const getJakartaTodayStr = () =>
+  new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Jakarta" }).format(new Date());
+
 export const createLoanSchema = z.object({
   bibliographyId: z.string().optional(),
   collectionId: z.string().optional(),
@@ -12,6 +15,16 @@ export const createLoanSchema = z.object({
   message: "Bibliography ID / Item ID wajib diisi",
   path: ["bibliographyId"]
 }).refine(
+  (data) => {
+    if (!data.loanDate) return true;
+    const loanDateStr = data.loanDate.slice(0, 10);
+    return loanDateStr <= getJakartaTodayStr();
+  },
+  {
+    message: "Tanggal peminjaman tidak boleh melebihi tanggal saat ini",
+    path: ["loanDate"],
+  }
+).refine(
   (data) => {
     if (data.loanDate && data.dueDate) {
       const start = new Date(data.loanDate).getTime();
@@ -49,21 +62,31 @@ export const directLoanSchema = z.object({
   itemIdentifier: z.string().min(1, "ID Item, Kode Eksemplar, atau Barcode wajib diisi"),
   loanDate: z.string().optional(),
   dueDate: z.string().optional(),
-  durationDays: z.number().int().min(1, "Durasi minimal 1 hari").max(14, "Durasi peminjaman langsung maksimal 14 hari").optional().default(7),
+  durationDays: z.number().int().min(1, "Durasi minimal 1 hari").max(7, "Durasi peminjaman di tempat maksimal 7 hari").optional().default(7),
   notes: z.string().optional(),
 }).refine(
+  (data) => {
+    if (!data.loanDate) return true;
+    const loanDateStr = data.loanDate.slice(0, 10);
+    return loanDateStr <= getJakartaTodayStr();
+  },
+  {
+    message: "Tanggal peminjaman tidak boleh melebihi tanggal saat ini",
+    path: ["loanDate"],
+  }
+).refine(
   (data) => {
     if (data.loanDate && data.dueDate) {
       const start = new Date(data.loanDate).getTime();
       const due = new Date(data.dueDate).getTime();
       if (isNaN(start) || isNaN(due)) return false;
       const diffDays = (due - start) / (1000 * 3600 * 24);
-      return diffDays >= 1 && diffDays <= 14;
+      return diffDays >= 1 && diffDays <= 7;
     }
     return true;
   },
   {
-    message: "Durasi peminjaman langsung tidak boleh melebihi 14 hari dan tanggal jatuh tempo harus setelah tanggal pinjam",
+    message: "Durasi peminjaman di tempat tidak boleh melebihi 7 hari dan tanggal jatuh tempo harus setelah tanggal pinjam",
     path: ["dueDate"],
   }
 );

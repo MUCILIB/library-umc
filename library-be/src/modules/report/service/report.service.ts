@@ -159,8 +159,22 @@ export class ReportService {
     }
   }
 
-  private buildExportFilename(reportName: string, extension: "csv" | "pdf") {
-    return `${this.getDatePrefix()}_${reportName}.${extension}`;
+  private slugifyFilenamePart(value: string): string {
+    return value
+      .toLowerCase()
+      .normalize("NFKD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "");
+  }
+
+  private buildExportFilename(reportName: string, extension: "csv" | "pdf", parts: string[] = []) {
+    const slugParts = [
+      this.slugifyFilenamePart(reportName),
+      this.getDatePrefix(),
+      ...parts.map((p) => this.slugifyFilenamePart(p)).filter(Boolean)
+    ].filter(Boolean);
+    return `${slugParts.join("_")}.${extension}`;
   }
 
   /**
@@ -431,23 +445,31 @@ export class ReportService {
             .groupBy(sql`DATE(${webTraffic.visitTimestamp})`)
             .orderBy(sql`DATE(${webTraffic.visitTimestamp})`);
 
-      // 3. Physical visits breakdown by Study Program & Faculty
+      // 3. Physical visits breakdown by Study Program & Faculty (all faculties/prodis)
       const prodiBreakdown = await db
         .select({
+          studyProgramId: studyPrograms.id,
           studyProgramName: sql<string>`COALESCE(${studyPrograms.name}, ${guestLogs.major}, 'Umum / Lainnya')`,
+          facultyId: faculties.id,
+          facultyName: sql<string>`COALESCE(${faculties.name}, ${guestLogs.faculty}, 'Umum')`,
           count: sql<number>`count(*)::int`
         })
         .from(guestLogs)
         .leftJoin(studyPrograms, eq(guestLogs.studyProgramId, studyPrograms.id))
+        .leftJoin(faculties, eq(studyPrograms.facultyId, faculties.id))
         .where(
           and(
             sql`${guestLogs.visitDate} >= ${start} AND ${guestLogs.visitDate} <= ${end}`,
             isNull(guestLogs.deletedAt)
           )
         )
-        .groupBy(sql`COALESCE(${studyPrograms.name}, ${guestLogs.major}, 'Umum / Lainnya')`)
-        .orderBy(desc(sql`count(*)`))
-        .limit(10);
+        .groupBy(
+          studyPrograms.id,
+          faculties.id,
+          sql`COALESCE(${studyPrograms.name}, ${guestLogs.major}, 'Umum / Lainnya')`,
+          sql`COALESCE(${faculties.name}, ${guestLogs.faculty}, 'Umum')`
+        )
+        .orderBy(desc(sql`count(*)`));
 
       // Build unified timeline
       const physicalMap = new Map(physicalRaw.map(r => [r.timeKey, Number(r.count) || 0]));
@@ -607,7 +629,20 @@ export class ReportService {
         where: conditions.length > 0 ? and(...conditions) : undefined,
         with: {
           member: { with: { user: true } },
-          item: { with: { bibliography: true } }
+          item: {
+            with: {
+              bibliography: {
+                with: {
+                  bibliographyFaculties: { with: { faculty: true } },
+                  bibliographyStudyPrograms: {
+                    with: {
+                      studyProgram: { with: { faculty: true } }
+                    }
+                  }
+                }
+              }
+            }
+          }
         },
         orderBy: [desc(loans.createdAt)]
       });
@@ -840,88 +875,105 @@ export class ReportService {
     data: Array<{
       memberName?: string;
       bookTitle?: string;
+      faculty?: string;
+      studyProgram?: string;
       status?: string;
       borrowDate?: string;
       dueDate?: string;
       returnDate?: string | null;
     }>,
     title = "Laporan Peminjaman Buku",
-    subtitle?: string
+    subtitle?: string,
+    filenameParts: string[] = []
   ): void {
     res.setHeader("Content-Type", "application/pdf");
     res.setHeader(
       "Content-Disposition",
-      `attachment; filename="${this.buildExportFilename("Laporan Peminjaman", "pdf")}"`
+      `attachment; filename="${this.buildExportFilename("laporan-peminjaman", "pdf", filenameParts)}"`
     );
 
-    const doc = new PDFDocument({ margin: 40, size: "A4" });
+    const doc = new PDFDocument({ margin: 36, size: "A4", layout: "landscape" });
     doc.pipe(res);
 
     // Header
     doc
-      .fontSize(18)
+      .fontSize(16)
       .font("Helvetica-Bold")
       .text("MUCILIB — Perpustakaan UMC", { align: "center" });
-    doc.fontSize(13).font("Helvetica").text(title, { align: "center" });
+    doc.fontSize(12).font("Helvetica").text(title, { align: "center" });
     if (subtitle) {
-      doc.fontSize(10).font("Helvetica-Oblique").fillColor("#475569").text(subtitle, { align: "center" });
+      doc.fontSize(9).font("Helvetica-Oblique").fillColor("#475569").text(subtitle, { align: "center" });
       doc.fillColor("#000000");
     }
-    doc.fontSize(9).text(`Dicetak: ${new Date().toLocaleString("id-ID")}`, {
+    doc.fontSize(8.5).text(`Dicetak: ${new Date().toLocaleString("id-ID")}`, {
       align: "center"
     });
-    doc.moveDown(1);
+    doc.moveDown(0.8);
 
-    // Table Header
-    const colWidths = [160, 100, 70, 80, 80];
+    // Table Header (total width = 760)
+    const colWidths = [115, 165, 115, 135, 70, 80, 80];
     const headers = [
       "Peminjam",
       "Judul Buku",
+      "Fakultas",
+      "Program Studi",
       "Status",
       "Tgl Pinjam",
       "Tgl Kembali"
     ];
-    const startX = 40;
+    const startX = 36;
     let y = doc.y;
 
-    doc.font("Helvetica-Bold").fontSize(9);
-    doc.rect(startX, y, 515, 16).fill("#2563EB");
+    doc.font("Helvetica-Bold").fontSize(8.5);
+    doc.rect(startX, y, 760, 18).fill("#2563EB");
     doc.fill("white");
     let x = startX + 4;
     headers.forEach((h, i) => {
-      doc.text(h, x, y + 3, { width: colWidths[i] - 4, lineBreak: false });
+      doc.text(h, x, y + 4, { width: colWidths[i] - 4, lineBreak: false });
       x += colWidths[i];
     });
     doc.fill("black");
-    y += 16;
+    y += 18;
 
     // Table Rows
-    doc.font("Helvetica").fontSize(8);
+    doc.font("Helvetica").fontSize(7.8);
     data.forEach((row, idx) => {
-      if (y > 740) {
+      if (y > 520) {
         doc.addPage();
-        y = 40;
+        y = 36;
+        doc.font("Helvetica-Bold").fontSize(8.5);
+        doc.rect(startX, y, 760, 18).fill("#2563EB");
+        doc.fill("white");
+        let hx = startX + 4;
+        headers.forEach((h, i) => {
+          doc.text(h, hx, y + 4, { width: colWidths[i] - 4, lineBreak: false });
+          hx += colWidths[i];
+        });
+        doc.fill("black").font("Helvetica").fontSize(7.8);
+        y += 18;
       }
       const bg = idx % 2 === 0 ? "#F1F5F9" : "white";
-      doc.rect(startX, y, 515, 14).fill(bg);
+      doc.rect(startX, y, 760, 15).fill(bg);
       doc.fill("black");
 
       x = startX + 4;
       const cols = [
         row.memberName ?? "-",
         row.bookTitle ?? "-",
+        row.faculty ?? "-",
+        row.studyProgram ?? "-",
         row.status ?? "-",
         row.borrowDate ?? "-",
         row.returnDate ?? row.dueDate ?? "-"
       ];
       cols.forEach((val, i) => {
-        doc.text(String(val).substring(0, 25), x, y + 3, {
+        doc.text(String(val).substring(0, 32), x, y + 4, {
           width: colWidths[i] - 4,
           lineBreak: false
         });
         x += colWidths[i];
       });
-      y += 14;
+      y += 15;
     });
 
     doc.moveDown(1);
@@ -946,12 +998,13 @@ export class ReportService {
       amount?: string;
     }>,
     title = "Laporan Denda Peminjaman",
-    filenameBase = "Laporan Denda"
+    filenameBase = "laporan-denda",
+    filenameParts: string[] = []
   ): void {
     res.setHeader("Content-Type", "application/pdf");
     res.setHeader(
       "Content-Disposition",
-      `attachment; filename="${this.buildExportFilename(filenameBase, "pdf")}"`
+      `attachment; filename="${this.buildExportFilename(filenameBase, "pdf", filenameParts)}"`
     );
 
     const doc = new PDFDocument({ margin: 40, size: "A4" });

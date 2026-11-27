@@ -154,7 +154,7 @@ const swaggerDefinition = {
           uniqueCode: { type: "string", nullable: true },
           status: {
             type: "string",
-            enum: ["available", "loaned", "damaged", "lost"],
+            enum: ["available", "loaned", "maintenance", "damaged", "lost"],
           },
           locationId: { type: "integer" },
           createdAt: { type: "string", format: "date-time" },
@@ -1120,7 +1120,7 @@ const swaggerDefinition = {
                   locationId: { type: "integer" },
                   callNumber: { type: "string", maxLength: 100 },
                   inventoryCode: { type: "string", maxLength: 50 },
-                  status: { type: "string", enum: ["available", "repair", "damaged", "lost"], default: "available" },
+                  status: { type: "string", enum: ["available", "loaned", "maintenance", "damaged", "lost"], default: "available" },
                 },
               },
             },
@@ -1237,7 +1237,7 @@ const swaggerDefinition = {
                   priceCurrency: { type: "string", default: "IDR" },
                   invoiceDate: { type: "string", format: "date" },
                   site: { type: "string" },
-                  status: { type: "string", enum: ["available", "loaned", "damaged", "lost"], default: "available" },
+                  status: { type: "string", enum: ["available", "loaned", "maintenance", "damaged", "lost"], default: "available" },
                 },
               },
             },
@@ -1322,7 +1322,7 @@ const swaggerDefinition = {
     "/items/{id}/status": {
       patch: {
         summary: "Update Item Status",
-        description: "Change item status: available, loaned, damaged, lost (Admin/Staff only).",
+        description: "Change item status: available, loaned, maintenance, damaged, lost (Admin/Staff only).",
         tags: ["Items"],
         security: [{ bearerAuth: [] }],
         parameters: [
@@ -1336,7 +1336,7 @@ const swaggerDefinition = {
                 type: "object",
                 required: ["status"],
                 properties: {
-                  status: { type: "string", enum: ["available", "loaned", "damaged", "lost"] },
+                  status: { type: "string", enum: ["available", "loaned", "maintenance", "damaged", "lost"] },
                 },
               },
             },

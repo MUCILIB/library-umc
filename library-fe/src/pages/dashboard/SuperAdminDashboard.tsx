@@ -25,6 +25,7 @@ import {
   Megaphone,
   Globe,
   Tags,
+  Layers,
   Newspaper
 } from "lucide-react";
 
@@ -50,6 +51,7 @@ import FakultasSection from "@/components/dashboard/FakultasSection";
 import ProdiSection from "@/components/dashboard/ProdiSection";
 import LocationSection from "@/components/dashboard/LocationSection";
 import KlasifikasiSection from "@/components/dashboard/KlasifikasiSection";
+import GmdSection from "@/components/dashboard/GmdSection";
 import CmsSection from "@/components/dashboard/CmsSection";
 import NewsManagementSection from "./components/NewsManagementSection";
 import { NotificationBellDropdown } from "@/components/dashboard/NotificationBellDropdown";
@@ -113,6 +115,7 @@ type ActiveMenu =
   | "prodi"
   | "locations"
   | "klasifikasi"
+  | "gmd"
   | "cms"
   | "cms-banner"
   | "cms-branding"
@@ -172,6 +175,7 @@ const MENU_CONFIG: MenuConfig[] = [
   { key: "prodi", label: "Program Studi", icon: GraduationCap, group: "Master Data" },
   { key: "locations", label: "Lokasi Rak", icon: MapPin, group: "Master Data" },
   { key: "klasifikasi", label: "Klasifikasi Koleksi (S/R)", icon: Tags, group: "Master Data" },
+  { key: "gmd", label: "Tipe GMD", icon: Layers, group: "Master Data" },
 
   // Pengaturan & Audit
   { key: "guests", label: "Data Pengunjung", icon: Users, group: "Pengaturan & Audit" },
@@ -686,6 +690,8 @@ export default function SuperAdminDashboard() {
         return <LocationSection />;
       case "klasifikasi":
         return <KlasifikasiSection />;
+      case "gmd":
+        return <GmdSection />;
       case "returnApprovals":
         return <ReturnApprovalsSection />;
       case "recommendations":

@@ -108,7 +108,8 @@ describe("Riwayat Peminjaman Modular Subcomponents", () => {
       );
 
       expect(screen.getByText("Algoritma Pemrograman Modern")).toBeInTheDocument();
-      expect(screen.getByText("Ketentuan Perpanjangan")).toBeInTheDocument();
+      expect(screen.getByText(/Ketentuan Perpanjangan \(Maksimal 1 Kali\)/i)).toBeInTheDocument();
+      expect(screen.getByText(/maksimal 1 kali \(\+7 hari/i)).toBeInTheDocument();
 
       const confirmBtn = screen.getByRole("button", { name: /Perpanjang Sekarang/i });
       fireEvent.click(confirmBtn);
@@ -139,6 +140,17 @@ describe("Riwayat Peminjaman Modular Subcomponents", () => {
       const extendBtn = screen.getByRole("button", { name: /Perpanjang/i });
       fireEvent.click(extendBtn);
       expect(onExtendClick).toHaveBeenCalledWith(mockActiveLoan);
+    });
+
+    it("menampilkan badge Sudah Diperpanjang (Maks 1x) dan menyembunyikan tombol Perpanjang jika extendCount >= 1", () => {
+      render(
+        <ActiveLoanCard
+          loan={{ ...mockActiveLoan, status: "extended", extendCount: 1 }}
+        />
+      );
+
+      expect(screen.getByText("Sudah Diperpanjang (Maks 1x)")).toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: /Perpanjang/i })).not.toBeInTheDocument();
     });
   });
 

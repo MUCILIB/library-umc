@@ -122,6 +122,14 @@ export default function CirculationSection() {
 
   const handleLoan = async () => {
     if (!itemResult) return;
+    if (itemResult.item.status !== "available") {
+      setError(
+        itemResult.item.status === "maintenance"
+          ? "Buku ini berstatus Sedang Diperbaiki dan tidak dapat dipinjam."
+          : `Buku ini berstatus ${itemResult.item.status} dan tidak dapat dipinjam.`
+      );
+      return;
+    }
     const isPending = Boolean(itemResult.activeLoan && itemResult.activeLoan.status === "pending");
     if (!isPending) {
       setError("Tidak ada permintaan peminjaman (request) aktif untuk buku ini.");

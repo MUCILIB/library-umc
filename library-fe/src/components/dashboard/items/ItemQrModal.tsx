@@ -1,6 +1,7 @@
 import { Download } from "lucide-react";
 import Modal from "@/components/ui/modal";
 import { itemApi, type Item } from "@/api/client";
+import { getItemStatusBadgeClass, getItemStatusLabel } from "@/utils/itemStatus";
 
 export interface ItemQrModalProps {
   isOpen: boolean;
@@ -63,13 +64,9 @@ export function ItemQrModal({ isOpen, item, onClose }: ItemQrModalProps) {
             {item.itemCode}
           </span>
           <span
-            className={`mt-1.5 px-3 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider ${
-              item.status === "available"
-                ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800"
-                : "bg-rose-50 text-rose-700 dark:bg-rose-950/50 dark:text-rose-300 border border-rose-200 dark:border-rose-800"
-            }`}
+            className={`mt-1.5 px-3 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider border ${getItemStatusBadgeClass(item.status)}`}
           >
-            Status: {item.status === "available" ? "Tersedia" : "Dipinjam"}
+            Status: {getItemStatusLabel(item.status)}
           </span>
         </div>
 

@@ -115,6 +115,12 @@ export const SIDEBAR_MENUS: SidebarMenuItem[] = [
     group: "Master Data",
     description: "Data master kategori tipe klasifikasi koleksi buku (Sirkulasi & Referensi)",
   },
+  {
+    key: "gmd",
+    label: "Tipe GMD",
+    group: "Master Data",
+    description: "Data master General Material Designation (GMD / spesifikasi isi koleksi)",
+  },
 
   // Pengaturan & Audit
   {

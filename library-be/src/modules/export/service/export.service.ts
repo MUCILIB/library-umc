@@ -285,6 +285,7 @@ export class ExportService {
       const statusMap: Record<string, string> = {
         available: "Available",
         loaned: "Loaned",
+        maintenance: "Maintenance",
         damaged: "Damaged",
         lost: "Lost",
       };
@@ -516,6 +517,36 @@ export class ExportService {
   }
 
   async exportBibliographiesPdf(res: Response, filter: ExportFilter = {}): Promise<void> {
+    let facultyLabel = "Semua Fakultas";
+    if (filter.facultyId) {
+      const f = await db.query.faculties.findFirst({ where: eq(faculties.id, filter.facultyId) });
+      if (f) facultyLabel = f.name;
+    }
+    let prodiLabel = "Semua Program Studi";
+    if (filter.studyProgramId) {
+      const sp = await db.query.studyPrograms.findFirst({ where: eq(studyPrograms.id, filter.studyProgramId) });
+      if (sp) prodiLabel = sp.name;
+    }
+
+    const now = new Date();
+    const datePrefix = `${String(now.getDate()).padStart(2, "0")}-${String(now.getMonth() + 1).padStart(2, "0")}-${now.getFullYear()}`;
+    const slugify = (val: string) =>
+      val
+        .toLowerCase()
+        .normalize("NFKD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-+|-+$/g, "");
+    const scopeSlug = filter.studyProgramId
+      ? `prodi-${slugify(prodiLabel)}`
+      : filter.facultyId
+        ? slugify(facultyLabel)
+        : "semua-fakultas";
+    const pdfFilename = `katalog-koleksi-umc_${datePrefix}_${scopeSlug}.pdf`;
+
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", `attachment; filename="${pdfFilename}"`);
+
     const matchingIds = await getFilteredBibliographyIds(filter);
     if (matchingIds !== null && matchingIds.length === 0) {
       const doc = new PDFDocument({ margin: 36, size: "A4", layout: "landscape" });
@@ -535,21 +566,12 @@ export class ExportService {
       with: {
         publisher: true,
         bibliographyAuthors: { with: { author: true } },
+        bibliographyFaculties: { with: { faculty: true } },
+        bibliographyStudyPrograms: { with: { studyProgram: { with: { faculty: true } } } },
         items: { where: isNull(items.deletedAt) },
       },
       orderBy: [asc(bibliographies.title)],
     });
-
-    let facultyLabel = "Semua Fakultas";
-    if (filter.facultyId) {
-      const f = await db.query.faculties.findFirst({ where: eq(faculties.id, filter.facultyId) });
-      if (f) facultyLabel = f.name;
-    }
-    let prodiLabel = "Semua Program Studi";
-    if (filter.studyProgramId) {
-      const sp = await db.query.studyPrograms.findFirst({ where: eq(studyPrograms.id, filter.studyProgramId) });
-      if (sp) prodiLabel = sp.name;
-    }
 
     const doc = new PDFDocument({ margin: 36, size: "A4", layout: "landscape" });
     doc.pipe(res);
@@ -565,8 +587,8 @@ export class ExportService {
     doc.moveDown(0.8);
 
     const startX = 36;
-    const colWidths = [25, 270, 160, 110, 70, 50, 75];
-    const headers = ["No", "Judul Buku", "Pengarang", "ISBN / ISSN", "DDC", "Tahun", "Eksemplar"];
+    const colWidths = [25, 200, 125, 165, 95, 55, 40, 55];
+    const headers = ["No", "Judul Buku", "Pengarang", "Fakultas / Prodi", "ISBN / ISSN", "DDC", "Thn", "Eks"];
     let y = doc.y;
 
     doc.rect(startX, y, 760, 18).fill("#0F172A");
@@ -600,6 +622,16 @@ export class ExportService {
       const copyCount = bib.items?.length || 0;
       totalCopies += copyCount;
       const authorStr = bib.bibliographyAuthors.map(ba => ba.author.name).join(", ") || "-";
+      const prodiNames = [...new Set(bib.bibliographyStudyPrograms.map(bsp => bsp.studyProgram?.name).filter(Boolean))];
+      const facultyNames = [...new Set([
+        ...bib.bibliographyFaculties.map(bf => bf.faculty?.name).filter(Boolean),
+        ...bib.bibliographyStudyPrograms.map(bsp => bsp.studyProgram?.faculty?.name).filter(Boolean),
+      ])];
+      const facProdiStr = prodiNames.length > 0
+        ? prodiNames.join(", ")
+        : facultyNames.length > 0
+          ? facultyNames.join(", ")
+          : "Umum";
       const isbnStr = bib.isbn || bib.isbnIssn || bib.issn || "-";
 
       const bg = idx % 2 === 0 ? "#F8FAFC" : "#FFFFFF";
@@ -611,6 +643,7 @@ export class ExportService {
         String(idx + 1),
         bib.title,
         authorStr,
+        facProdiStr,
         isbnStr,
         bib.classification || bib.callNumber || "-",
         bib.publishYear ? String(bib.publishYear) : "-",

@@ -1,6 +1,6 @@
 import { db } from "../../../db";
 import { collectionTypes, gmds } from "../../../db/schema";
-import { eq, isNull, asc } from "drizzle-orm";
+import { eq, and, ilike, isNull, asc } from "drizzle-orm";
 import type { CreateCollectionTypeInput, UpdateCollectionTypeInput } from "../validation/collection-type.validation";
 
 export class CollectionTypeService {
@@ -61,6 +61,61 @@ export class CollectionTypeService {
     return deleted;
   }
 
+  async getAllGmds() {
+    return db.query.gmds.findMany({
+      where: isNull(gmds.deletedAt),
+      orderBy: [asc(gmds.name)],
+    });
+  }
+
+  async getGmdById(id: number) {
+    return db.query.gmds.findFirst({
+      where: and(eq(gmds.id, id), isNull(gmds.deletedAt)),
+    });
+  }
+
+  async createGmd(name: string) {
+    const trimmed = name.trim();
+    const existing = await db.query.gmds.findFirst({
+      where: and(ilike(gmds.name, trimmed), isNull(gmds.deletedAt)),
+    });
+    if (existing) {
+      throw new Error(`Tipe GMD "${trimmed}" sudah ada`);
+    }
+
+    const [created] = await db.insert(gmds).values({ name: trimmed }).returning();
+    return created;
+  }
+
+  async updateGmd(id: number, name: string) {
+    const trimmed = name.trim();
+    const target = await this.getGmdById(id);
+    if (!target) return null;
+
+    const duplicate = await db.query.gmds.findFirst({
+      where: and(ilike(gmds.name, trimmed), isNull(gmds.deletedAt)),
+    });
+    if (duplicate && duplicate.id !== id) {
+      throw new Error(`Tipe GMD "${trimmed}" sudah ada`);
+    }
+
+    const [updated] = await db
+      .update(gmds)
+      .set({ name: trimmed })
+      .where(and(eq(gmds.id, id), isNull(gmds.deletedAt)))
+      .returning();
+    return updated || null;
+  }
+
+  async deleteGmd(id: number) {
+    const [deleted] = await db
+      .update(gmds)
+      .set({ deletedAt: new Date() })
+      .where(and(eq(gmds.id, id), isNull(gmds.deletedAt)))
+      .returning();
+    return deleted || null;
+  }
+
   async seedDefaultsIfEmpty() {
     try {
       const existing = await db.query.collectionTypes.findMany({
@@ -89,19 +144,17 @@ export class CollectionTypeService {
         });
       }
 
-      // Pastikan GMD spesifikasi isi tersedia
-      const defaultGmds = [
-        "Buku Inti",
-        "Buku Pendukung",
-        "Buku Referensi",
-        "Koleksi Muatan Lokal",
-        "Koleksi Khusus",
-      ];
-      for (const gmdName of defaultGmds) {
-        const found = await db.query.gmds.findFirst({
-          where: eq(gmds.name, gmdName),
-        });
-        if (!found) {
+      // Seed GMD bawaan hanya jika tabel GMD masih kosong agar penghapusan oleh admin tetap bertahan
+      const existingGmds = await db.query.gmds.findMany({ limit: 1 });
+      if (existingGmds.length === 0) {
+        const defaultGmds = [
+          "Buku Inti",
+          "Buku Pendukung",
+          "Buku Referensi",
+          "Koleksi Muatan Lokal",
+          "Koleksi Khusus",
+        ];
+        for (const gmdName of defaultGmds) {
           await db.insert(gmds).values({ name: gmdName });
         }
       }

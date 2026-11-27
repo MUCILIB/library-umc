@@ -199,7 +199,21 @@ export async function apiFetch<T>(
   return response.json();
 }
 
-async function apiFetchBlob(path: string, filename: string): Promise<void> {
+function extractFilenameFromHeader(header: string | null | undefined): string | null {
+  if (!header) return null;
+  const utf8Match = header.match(/filename\*=UTF-8''([^;\s]+)/i);
+  if (utf8Match?.[1]) {
+    try {
+      return decodeURIComponent(utf8Match[1].replace(/["']/g, ""));
+    } catch {
+      return utf8Match[1].replace(/["']/g, "");
+    }
+  }
+  const plainMatch = header.match(/filename="?([^";\n]+)"?/i);
+  return plainMatch?.[1]?.trim() || null;
+}
+
+async function apiFetchBlob(path: string, fallbackFilename: string): Promise<void> {
   const url = `${API_BASE_URL}${path}`;
   const authHeaders = getAuthHeaders();
   const response = await fetch(url, {
@@ -213,11 +227,15 @@ async function apiFetchBlob(path: string, filename: string): Promise<void> {
     throw new Error(`Export failed: ${response.statusText}`);
   }
 
+  const resolvedFilename =
+    extractFilenameFromHeader(response.headers?.get?.("Content-Disposition")) ||
+    fallbackFilename;
+
   const blob = await response.blob();
   const downloadUrl = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = downloadUrl;
-  a.download = filename;
+  a.download = resolvedFilename;
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
@@ -605,6 +623,14 @@ export const gmdApi = {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
     }),
+  update: (id: number, data: { name: string }) =>
+    apiFetch<Gmd>(`/api/gmds/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    }),
+  delete: (id: number) =>
+    apiFetch<null>(`/api/gmds/${id}`, { method: "DELETE" }),
 };
 
 // ==========================================

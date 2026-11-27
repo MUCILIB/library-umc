@@ -15,6 +15,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { ITEM_STATUS_OPTIONS } from "@/utils/itemStatus";
 
 export interface ItemFormProps {
   item: Item | null;
@@ -246,11 +247,11 @@ export function ItemForm({ item, onClose, onSuccess }: ItemFormProps) {
                   <SelectValue placeholder="Pilih status" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="available">Tersedia</SelectItem>
-                  <SelectItem value="loaned">Dipinjam</SelectItem>
-                  <SelectItem value="reserved">Direservasi</SelectItem>
-                  <SelectItem value="maintenance">Maintenance</SelectItem>
-                  <SelectItem value="lost">Hilang</SelectItem>
+                  {ITEM_STATUS_OPTIONS.map((opt) => (
+                    <SelectItem key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>

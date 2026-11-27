@@ -29,7 +29,7 @@ function mapRawBibliography(item: any): Bibliography {
     callNumber: item.callNumber || undefined,
     type: item.type || "physical_book",
     image: item.image || null,
-    stock: item.stock ?? item.totalItems ?? 0,
+    stock: item.availableItems ?? item.stock ?? 0,
     items: Array.isArray(item.items) ? item.items : [],
     subjects: Array.isArray(item.subjects) ? item.subjects : [],
     collectionTypeId: item.collectionTypeId || (item.collectionType?.id ? Number(item.collectionType.id) : undefined),

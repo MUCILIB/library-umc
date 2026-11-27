@@ -20,6 +20,13 @@ import {
   Lock,
 } from "lucide-react";
 import { analyzeItemCodeStructure } from "@/utils/itemCodeHelper";
+import {
+  ITEM_CREATE_STATUS_OPTIONS,
+  ITEM_STATUS_OPTIONS,
+  getItemStatusBadgeClass,
+  getItemStatusLabel,
+  type ItemStatusValue,
+} from "@/utils/itemStatus";
 import { useToast } from "@/hooks/useToast";
 import { cleanIsbn } from "@/utils/format";
 import { resolveCoverUrl } from "@/utils/imageUrl";
@@ -319,10 +326,11 @@ function BibliographyForm({ bib, onClose, onSuccess }: BibliographyFormProps) {
   const [itemsLoading, setItemsLoading] = useState(false);
 
   // New items added locally (for new bibliography)
-  const [localNewItems, setLocalNewItems] = useState<Array<{ itemCode: string; inventoryCode?: string; locationId: number; locationName: string }>>([]);
+  const [localNewItems, setLocalNewItems] = useState<Array<{ itemCode: string; inventoryCode?: string; locationId: number; locationName: string; status: ItemStatusValue }>>([]);
 
   // Form for adding copies (Format standar selaras dengan modal dialog tambah eksemplar)
   const [quantity, setQuantity] = useState<string>("1");
+  const [newItemStatus, setNewItemStatus] = useState<Exclude<ItemStatusValue, "loaned">>("available");
   const [codePrefix, setCodePrefix] = useState<string>("");
   const [customCodePrefix, setCustomCodePrefix] = useState<boolean>(false);
   const [serverNewPrefix, setServerNewPrefix] = useState<string>("");
@@ -549,6 +557,7 @@ function BibliographyForm({ bib, onClose, onSuccess }: BibliographyFormProps) {
             callNumber: formData.callNumber || bib.callNumber || undefined,
             locationId: locId,
             collectionTypeId: colTypeId,
+            status: newItemStatus,
           };
         });
 
@@ -557,6 +566,7 @@ function BibliographyForm({ bib, onClose, onSuccess }: BibliographyFormProps) {
           defaults: {
             locationId: locId,
             collectionTypeId: colTypeId,
+            status: newItemStatus,
           },
         });
 
@@ -586,6 +596,7 @@ function BibliographyForm({ bib, onClose, onSuccess }: BibliographyFormProps) {
           inventoryCode: `INV-${code}`,
           locationId: locId,
           locationName: locName,
+          status: newItemStatus,
         };
       });
 
@@ -766,6 +777,7 @@ function BibliographyForm({ bib, onClose, onSuccess }: BibliographyFormProps) {
             items: localNewItems.map((item) => ({
               itemCode: item.itemCode,
               locationId: item.locationId,
+              status: item.status,
               ...(item.inventoryCode ? { inventoryCode: item.inventoryCode } : {}),
             })),
           });
@@ -1050,13 +1062,9 @@ function BibliographyForm({ bib, onClose, onSuccess }: BibliographyFormProps) {
                         </SelectItem>
                       ))
                     ) : (
-                      <>
-                        <SelectItem value="1">Buku Inti</SelectItem>
-                        <SelectItem value="2">Buku Pendukung</SelectItem>
-                        <SelectItem value="3">Buku Referensi</SelectItem>
-                        <SelectItem value="4">Koleksi Muatan Lokal</SelectItem>
-                        <SelectItem value="5">Koleksi Khusus</SelectItem>
-                      </>
+                      <div className="px-3 py-2 text-xs text-muted-foreground">
+                        Belum ada tipe GMD. Tambahkan di Master Data &rarr; Tipe GMD.
+                      </div>
                     )}
                   </SelectContent>
                 </Select>
@@ -1696,20 +1704,48 @@ function BibliographyForm({ bib, onClose, onSuccess }: BibliographyFormProps) {
                 {locations.length === 0 ? (
                   <p className="text-xs text-amber-600">Belum ada data lokasi rak terdaftar.</p>
                 ) : (
-                  <select
+                  <Select
                     value={selectedLocationId}
-                    onChange={(e) => setSelectedLocationId(e.target.value)}
-                    className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
-                    required
+                    onValueChange={setSelectedLocationId}
                   >
-                    {locations.map((loc) => (
-                      <option key={loc.id} value={loc.id}>
-                        {loc.room} - Rak {loc.rack}
-                        {loc.shelf ? ` (${loc.shelf})` : ""}
-                      </option>
-                    ))}
-                  </select>
+                    <SelectTrigger className="w-full rounded-lg border-border bg-background">
+                      <SelectValue placeholder="Pilih lokasi rak" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {locations.map((loc) => (
+                        <SelectItem key={loc.id} value={String(loc.id)}>
+                          {loc.room} - Rak {loc.rack}
+                          {loc.shelf ? ` (${loc.shelf})` : ""}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 )}
+              </div>
+
+              {/* 2b. Status Awal Eksemplar */}
+              <div className="space-y-1.5">
+                <label htmlFor="step3-item-status" className="block text-xs font-semibold text-foreground">
+                  Status Awal Eksemplar
+                </label>
+                <Select
+                  value={newItemStatus}
+                  onValueChange={(val) => setNewItemStatus(val as Exclude<ItemStatusValue, "loaned">)}
+                >
+                  <SelectTrigger id="step3-item-status" className="w-full rounded-lg border-border bg-background">
+                    <SelectValue placeholder="Pilih status awal" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {ITEM_CREATE_STATUS_OPTIONS.map((opt) => (
+                      <SelectItem key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-[11px] text-muted-foreground">
+                  Pilih &quot;Sedang Diperbaiki&quot; jika buku fisik sedang dalam proses perbaikan/perawatan sebelum siap dipinjam.
+                </p>
               </div>
 
               {/* 3. Awalan Barcode / Kode Item */}
@@ -1868,15 +1904,33 @@ function BibliographyForm({ bib, onClose, onSuccess }: BibliographyFormProps) {
                                   : "Sirkulasi"}
                               </TableCell>
                               <TableCell className="px-4 py-3">
-                                <span
-                                  className={`inline-flex items-center gap-1.5 text-xs font-semibold px-2 py-0.5 rounded-full ${
-                                    item.status === "available"
-                                      ? "bg-success/10 text-success"
-                                      : "bg-amber-500/10 text-amber-600"
-                                  }`}
+                                <Select
+                                  value={item.status}
+                                  onValueChange={async (nextStatus) => {
+                                    try {
+                                      await itemApi.updateStatus(item.id, nextStatus);
+                                      await loadItems();
+                                      toast.success("Status Diperbarui", `Status ${item.itemCode} diubah menjadi ${getItemStatusLabel(nextStatus)}.`);
+                                    } catch (err: unknown) {
+                                      toast.error("Gagal", err instanceof Error ? err.message : "Gagal memperbarui status");
+                                    }
+                                  }}
                                 >
-                                  {item.status === "available" ? "Tersedia" : item.status}
-                                </span>
+                                  <SelectTrigger
+                                    size="sm"
+                                    aria-label={`Status ${item.itemCode}`}
+                                    className={`h-7 rounded-full border px-2.5 text-xs font-semibold ${getItemStatusBadgeClass(item.status)}`}
+                                  >
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {ITEM_STATUS_OPTIONS.map((opt) => (
+                                      <SelectItem key={opt.value} value={opt.value}>
+                                        {opt.label}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
                               </TableCell>
                               <TableCell className="px-4 py-3 text-right">
                                 <button
@@ -1910,9 +1964,31 @@ function BibliographyForm({ bib, onClose, onSuccess }: BibliographyFormProps) {
                                 {item.locationName}
                               </TableCell>
                               <TableCell className="px-4 py-3">
-                                <span className="inline-flex items-center gap-1.5 text-xs font-semibold px-2 py-0.5 rounded-full bg-success/10 text-success">
-                                  Tersedia
-                                </span>
+                                <Select
+                                  value={item.status}
+                                  onValueChange={(nextStatus) => {
+                                    setLocalNewItems((prev) =>
+                                      prev.map((row, rIdx) =>
+                                        rIdx === idx ? { ...row, status: nextStatus as ItemStatusValue } : row
+                                      )
+                                    );
+                                  }}
+                                >
+                                  <SelectTrigger
+                                    size="sm"
+                                    aria-label={`Status ${item.itemCode}`}
+                                    className={`h-7 rounded-full border px-2.5 text-xs font-semibold ${getItemStatusBadgeClass(item.status)}`}
+                                  >
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {ITEM_CREATE_STATUS_OPTIONS.map((opt) => (
+                                      <SelectItem key={opt.value} value={opt.value}>
+                                        {opt.label}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
                               </TableCell>
                               <TableCell className="px-4 py-3 text-right">
                                 <button

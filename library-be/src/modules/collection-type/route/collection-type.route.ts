@@ -55,4 +55,20 @@ router.post(
   (req, res, next) => collectionTypeController.createGmd(req, res, next)
 );
 
+router.patch(
+  "/gmds/:id",
+  publicApiLimiter,
+  isAuthenticated,
+  requireRole(["super_admin", "staff"]),
+  (req, res, next) => collectionTypeController.updateGmd(req, res, next)
+);
+
+router.delete(
+  "/gmds/:id",
+  publicApiLimiter,
+  isAuthenticated,
+  requireRole(["super_admin", "staff"]),
+  (req, res, next) => collectionTypeController.deleteGmd(req, res, next)
+);
+
 export const collectionTypeRoutes = router;

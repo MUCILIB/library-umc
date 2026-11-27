@@ -11,8 +11,17 @@ import {
   Loader2,
 } from "lucide-react";
 import Modal from "@/components/ui/modal";
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectLabel,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { API_BASE_URL } from "@/utils/api-config";
-import { facultyApi, studyProgramApi, type Faculty, type StudyProgram } from "@/api/client";
+import { facultyApi, getAuthHeaders, studyProgramApi, type Faculty, type StudyProgram } from "@/api/client";
 import { useToast } from "@/hooks/useToast";
 
 export type ReportType = "loans" | "bibliographies" | "items" | "fines";
@@ -68,15 +77,22 @@ export default function ExportReportModal({
 
   // Filter study programs based on selected faculty
   const filteredStudyPrograms = selectedFacultyId && selectedFacultyId !== "all"
-    ? studyPrograms.filter((sp) => String(sp.facultyId) === selectedFacultyId)
+    ? studyPrograms.filter((sp) => String(sp.facultyId ?? sp.faculty?.id ?? "") === selectedFacultyId)
     : studyPrograms;
+
+  const groupedStudyPrograms = faculties
+    .map((fac) => ({
+      faculty: fac,
+      prodis: studyPrograms.filter((sp) => String(sp.facultyId ?? sp.faculty?.id ?? "") === String(fac.id)),
+    }))
+    .filter((group) => group.prodis.length > 0);
 
   const handleFacultyChange = (facId: string) => {
     setSelectedFacultyId(facId);
     if (facId !== "all") {
       // Jika prodi saat ini tidak termasuk dalam fakultas ini, reset ke "all"
       const matched = studyPrograms.find(
-        (sp) => String(sp.id) === selectedStudyProgramId && String(sp.facultyId) === facId
+        (sp) => String(sp.id) === selectedStudyProgramId && String(sp.facultyId ?? sp.faculty?.id ?? "") === facId
       );
       if (!matched) {
         setSelectedStudyProgramId("all");
@@ -88,8 +104,9 @@ export default function ExportReportModal({
     setSelectedStudyProgramId(spId);
     if (spId !== "all") {
       const sp = studyPrograms.find((item) => String(item.id) === spId);
-      if (sp?.facultyId) {
-        setSelectedFacultyId(String(sp.facultyId));
+      const facId = sp?.facultyId ?? sp?.faculty?.id;
+      if (facId) {
+        setSelectedFacultyId(String(facId));
       }
     }
   };
@@ -107,6 +124,43 @@ export default function ExportReportModal({
       default:
         return "Export Laporan Perpustakaan";
     }
+  };
+
+  const buildFallbackFilename = () => {
+    const now = new Date();
+    const datePrefix = `${String(now.getDate()).padStart(2, "0")}-${String(now.getMonth() + 1).padStart(2, "0")}-${now.getFullYear()}`;
+    const slugify = (val: string) =>
+      val
+        .toLowerCase()
+        .normalize("NFKD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-+|-+$/g, "");
+
+    const spName =
+      selectedStudyProgramId !== "all"
+        ? studyPrograms.find((sp) => String(sp.id) === selectedStudyProgramId)?.name
+        : undefined;
+    const facName =
+      selectedFacultyId !== "all"
+        ? faculties.find((f) => String(f.id) === selectedFacultyId)?.name
+        : undefined;
+
+    const scopeSlug = spName
+      ? `prodi-${slugify(spName)}`
+      : facName
+        ? `fakultas-${slugify(facName)}`
+        : "semua-fakultas";
+
+    const ext = reportType === "items" ? "csv" : format;
+    const baseMap: Record<ReportType, string> = {
+      loans: "laporan-peminjaman",
+      bibliographies: "katalog-koleksi-umc",
+      items: "eksemplar-koleksi",
+      fines: "laporan-denda",
+    };
+
+    return `${baseMap[reportType]}_${datePrefix}_${scopeSlug}.${ext}`;
   };
 
   const handleDownload = async () => {
@@ -151,16 +205,41 @@ export default function ExportReportModal({
         url = `${API_BASE_URL}/api/reports/fines/export?${params.toString()}`;
       }
 
-      // Trigger download via native browser new window/tab
-      window.open(url, "_blank");
+      const response = await fetch(url, {
+        credentials: "include",
+        headers: {
+          ...getAuthHeaders(),
+        },
+      });
+
+      if (!response.ok) {
+        const errJson = await response.json().catch(() => null);
+        throw new Error(errJson?.message || `Gagal mengunduh laporan (${response.status})`);
+      }
+
+      const disposition = response.headers?.get?.("Content-Disposition") || "";
+      const filenameMatch = disposition.match(/filename="?([^";\n]+)"?/i);
+      const resolvedFilename = filenameMatch?.[1]?.trim() || buildFallbackFilename();
+
+      const blob = await response.blob();
+      const downloadUrl = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = downloadUrl;
+      link.download = resolvedFilename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(downloadUrl);
 
       const prodiName = selectedStudyProgramId !== "all"
         ? studyPrograms.find((sp) => String(sp.id) === selectedStudyProgramId)?.name
-        : "Semua Program Studi";
+        : selectedFacultyId !== "all"
+          ? faculties.find((f) => String(f.id) === selectedFacultyId)?.name
+          : "Semua Fakultas & Program Studi";
 
       success(
         "Mengunduh Laporan",
-        `Laporan (${prodiName}) format ${format.toUpperCase()} sedang diproses peramban.`
+        `File ${resolvedFilename} (${prodiName}) berhasil diunduh.`
       );
 
       // Tutup modal setelah mengunduh
@@ -262,19 +341,33 @@ export default function ExportReportModal({
               >
                 Program Studi (Pilihan Spesifik) *
               </label>
-              <select
-                id="export-study-program"
-                value={selectedStudyProgramId}
-                onChange={(e) => handleStudyProgramChange(e.target.value)}
-                className="w-full rounded-lg border border-border bg-card px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
-              >
-                <option value="all">Semua Program Studi (Universitas)</option>
-                {filteredStudyPrograms.map((sp) => (
-                  <option key={sp.id} value={String(sp.id)}>
-                    {sp.name} {sp.faculty?.name && selectedFacultyId === "all" ? `(${sp.faculty.name})` : ""}
-                  </option>
-                ))}
-              </select>
+              <Select value={selectedStudyProgramId} onValueChange={handleStudyProgramChange}>
+                <SelectTrigger
+                  id="export-study-program"
+                  className="w-full rounded-lg border-border bg-card px-3 py-2 text-sm text-foreground"
+                >
+                  <SelectValue placeholder="Semua Program Studi (Universitas)" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Semua Program Studi (Universitas)</SelectItem>
+                  {selectedFacultyId === "all" && groupedStudyPrograms.length > 0
+                    ? groupedStudyPrograms.map(({ faculty, prodis }) => (
+                        <SelectGroup key={faculty.id}>
+                          <SelectLabel>{faculty.name}</SelectLabel>
+                          {prodis.map((sp) => (
+                            <SelectItem key={sp.id} value={String(sp.id)}>
+                              {sp.name}
+                            </SelectItem>
+                          ))}
+                        </SelectGroup>
+                      ))
+                    : filteredStudyPrograms.map((sp) => (
+                        <SelectItem key={sp.id} value={String(sp.id)}>
+                          {sp.name}
+                        </SelectItem>
+                      ))}
+                </SelectContent>
+              </Select>
               <p className="mt-1 text-[11px] text-muted-foreground">
                 Pilih prodi untuk mengambil laporan khusus prodi tersebut saja.
               </p>
@@ -287,19 +380,22 @@ export default function ExportReportModal({
               >
                 Fakultas (Opsional)
               </label>
-              <select
-                id="export-faculty"
-                value={selectedFacultyId}
-                onChange={(e) => handleFacultyChange(e.target.value)}
-                className="w-full rounded-lg border border-border bg-card px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
-              >
-                <option value="all">Semua Fakultas</option>
-                {faculties.map((f) => (
-                  <option key={f.id} value={String(f.id)}>
-                    {f.name}
-                  </option>
-                ))}
-              </select>
+              <Select value={selectedFacultyId} onValueChange={handleFacultyChange}>
+                <SelectTrigger
+                  id="export-faculty"
+                  className="w-full rounded-lg border-border bg-card px-3 py-2 text-sm text-foreground"
+                >
+                  <SelectValue placeholder="Semua Fakultas" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Semua Fakultas</SelectItem>
+                  {faculties.map((f) => (
+                    <SelectItem key={f.id} value={String(f.id)}>
+                      {f.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
               <p className="mt-1 text-[11px] text-muted-foreground">
                 Menyaring daftar prodi di samping.
               </p>
@@ -405,16 +501,17 @@ export default function ExportReportModal({
                 <label className="mb-1 block text-xs font-medium text-muted-foreground">
                   Status
                 </label>
-                <select
-                  value={loanStatus}
-                  onChange={(e) => setLoanStatus(e.target.value)}
-                  className="w-full rounded-lg border border-border bg-card px-2.5 py-1.5 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
-                >
-                  <option value="all">Semua Status</option>
-                  <option value="borrowed">Sedang Dipinjam</option>
-                  <option value="returned">Sudah Dikembalikan</option>
-                  <option value="overdue">Terlambat</option>
-                </select>
+                <Select value={loanStatus} onValueChange={setLoanStatus}>
+                  <SelectTrigger size="sm" className="w-full rounded-lg border-border bg-card px-2.5 text-xs text-foreground">
+                    <SelectValue placeholder="Semua Status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Semua Status</SelectItem>
+                    <SelectItem value="borrowed">Sedang Dipinjam</SelectItem>
+                    <SelectItem value="returned">Sudah Dikembalikan</SelectItem>
+                    <SelectItem value="overdue">Terlambat</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
 
               <div>
@@ -456,15 +553,16 @@ export default function ExportReportModal({
               <label className="mb-1 block text-xs font-medium text-muted-foreground">
                 Status Pembayaran Denda
               </label>
-              <select
-                value={fineStatus}
-                onChange={(e) => setFineStatus(e.target.value)}
-                className="w-full rounded-lg border border-border bg-card px-2.5 py-1.5 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
-              >
-                <option value="all">Semua Denda</option>
-                <option value="paid">Sudah Lunas (Paid)</option>
-                <option value="unpaid">Belum Lunas (Unpaid)</option>
-              </select>
+              <Select value={fineStatus} onValueChange={setFineStatus}>
+                <SelectTrigger size="sm" className="w-full rounded-lg border-border bg-card px-2.5 text-xs text-foreground">
+                  <SelectValue placeholder="Semua Denda" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Semua Denda</SelectItem>
+                  <SelectItem value="paid">Sudah Lunas (Paid)</SelectItem>
+                  <SelectItem value="unpaid">Belum Lunas (Unpaid)</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
         )}

@@ -3,11 +3,10 @@ import { collectionTypeService } from "../service/collection-type.service";
 import {
   createCollectionTypeSchema,
   updateCollectionTypeSchema,
+  createGmdSchema,
+  updateGmdSchema,
 } from "../validation/collection-type.validation";
 import { sendSuccess, sendError, sendValidationError } from "../../../utils/api-utils";
-import { db } from "../../../db";
-import { gmds } from "../../../db/schema";
-import { isNull, asc } from "drizzle-orm";
 
 export class CollectionTypeController {
   async getAll(req: Request, res: Response, next: NextFunction) {
@@ -83,10 +82,7 @@ export class CollectionTypeController {
   // Endpoints untuk GMD (Spesifikasi Isi Bahan Pustaka)
   async getGmds(req: Request, res: Response, next: NextFunction) {
     try {
-      const list = await db.query.gmds.findMany({
-        where: isNull(gmds.deletedAt),
-        orderBy: [asc(gmds.name)],
-      });
+      const list = await collectionTypeService.getAllGmds();
       return sendSuccess(res, "Daftar GMD berhasil diambil", list);
     } catch (err) {
       next(err);
@@ -95,11 +91,59 @@ export class CollectionTypeController {
 
   async createGmd(req: Request, res: Response, next: NextFunction) {
     try {
-      const name = (req.body?.name || "").trim();
-      if (!name) return sendError(res, "Nama GMD wajib diisi", 400);
+      const parsed = createGmdSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return sendValidationError(res, parsed.error.flatten());
+      }
 
-      const [created] = await db.insert(gmds).values({ name }).returning();
-      return sendSuccess(res, "GMD berhasil ditambahkan", created, 201);
+      try {
+        const created = await collectionTypeService.createGmd(parsed.data.name);
+        return sendSuccess(res, "GMD berhasil ditambahkan", created, 201);
+      } catch (err) {
+        if (err instanceof Error && err.message.includes("sudah ada")) {
+          return sendError(res, err.message, 409);
+        }
+        throw err;
+      }
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  async updateGmd(req: Request, res: Response, next: NextFunction) {
+    try {
+      const id = Number(req.params.id);
+      if (isNaN(id)) return sendError(res, "ID GMD tidak valid", 400);
+
+      const parsed = updateGmdSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return sendValidationError(res, parsed.error.flatten());
+      }
+
+      try {
+        const updated = await collectionTypeService.updateGmd(id, parsed.data.name);
+        if (!updated) return sendError(res, "Tipe GMD tidak ditemukan", 404);
+        return sendSuccess(res, "Tipe GMD berhasil diperbarui", updated);
+      } catch (err) {
+        if (err instanceof Error && err.message.includes("sudah ada")) {
+          return sendError(res, err.message, 409);
+        }
+        throw err;
+      }
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  async deleteGmd(req: Request, res: Response, next: NextFunction) {
+    try {
+      const id = Number(req.params.id);
+      if (isNaN(id)) return sendError(res, "ID GMD tidak valid", 400);
+
+      const deleted = await collectionTypeService.deleteGmd(id);
+      if (!deleted) return sendError(res, "Tipe GMD tidak ditemukan", 404);
+
+      return sendSuccess(res, "Tipe GMD berhasil dihapus", deleted);
     } catch (err) {
       next(err);
     }

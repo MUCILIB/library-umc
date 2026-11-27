@@ -16,6 +16,7 @@ import {
   SelectItem,
 } from "@/components/ui/select";
 import type { ItemResult } from "./types";
+import { getItemStatusBadgeClass, getItemStatusLabel } from "@/utils/itemStatus";
 
 export interface CirculationItemResultProps {
   itemResult: ItemResult;
@@ -51,8 +52,13 @@ export function CirculationItemResult({
       (itemResult.activeLoan &&
         ["approved", "extended"].includes(itemResult.activeLoan.status))
   );
+  const isItemUnavailableStatus = ["maintenance", "damaged", "lost"].includes(
+    itemResult.item.status
+  );
   const hasPendingRequest = Boolean(
-    itemResult.activeLoan && itemResult.activeLoan.status === "pending"
+    !isItemUnavailableStatus &&
+      itemResult.activeLoan &&
+      itemResult.activeLoan.status === "pending"
   );
   const hasPendingExtension = Boolean(
     isLoaned &&
@@ -144,8 +150,12 @@ export function CirculationItemResult({
               </span>
             )}
             {!isLoaned && !hasPendingRequest && (
-              <span className="text-[11px] font-semibold px-2 py-0.5 rounded-md bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300">
-                Tersedia di Rak
+              <span
+                className={`text-[11px] font-semibold px-2 py-0.5 rounded-md border ${getItemStatusBadgeClass(itemResult.item.status)}`}
+              >
+                {itemResult.item.status === "available"
+                  ? "Tersedia di Rak"
+                  : getItemStatusLabel(itemResult.item.status)}
               </span>
             )}
           </dd>
@@ -493,14 +503,24 @@ export function CirculationItemResult({
               <Info className="size-5 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
               <div className="space-y-1">
                 <h4 className="text-sm font-bold text-foreground">
-                  {intent === "loan"
+                  {itemResult.item.status === "maintenance"
+                    ? "Buku Sedang Diperbaiki"
+                    : itemResult.item.status === "damaged"
+                    ? "Buku Dalam Kondisi Rusak"
+                    : itemResult.item.status === "lost"
+                    ? "Buku Tercatat Hilang"
+                    : intent === "loan"
                     ? "Tidak Ada Permintaan Peminjaman (Request)"
                     : intent === "return"
                     ? "Buku Tidak Sedang Dipinjam"
                     : "Buku Tersedia di Perpustakaan"}
                 </h4>
                 <p className="text-xs text-muted-foreground leading-relaxed">
-                  {intent === "loan"
+                  {itemResult.item.status === "maintenance"
+                    ? "Eksemplar buku ini sedang berstatus Sedang Diperbaiki (Maintenance) sehingga sementara tidak dapat dipinjam oleh pemustaka."
+                    : itemResult.item.status !== "available"
+                    ? `Eksemplar buku ini sedang berstatus ${getItemStatusLabel(itemResult.item.status)} dan tidak tersedia untuk dipinjam.`
+                    : intent === "loan"
                     ? "Belum ada anggota perpustakaan yang mengajukan permintaan (request) untuk kode buku ini. Tombol pinjamkan dinonaktifkan karena buku hanya dapat diserahkan jika sudah ada request peminjaman dari anggota."
                     : intent === "return"
                     ? "Buku ini berstatus tersedia di rak perpustakaan dan saat ini tidak sedang dalam masa peminjaman."

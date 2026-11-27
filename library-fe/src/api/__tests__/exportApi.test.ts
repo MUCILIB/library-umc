@@ -42,3 +42,26 @@ describe.each([
     expect(url.search).toBe("");
   });
 });
+
+describe("PDF export filename resolution", () => {
+  it("uses Content-Disposition filename from backend response when downloading PDF", async () => {
+    const appendSpy = vi.spyOn(document.body, "appendChild");
+    fetchMock.mockResolvedValueOnce({
+      ok: true,
+      headers: {
+        get: (name: string) =>
+          name.toLowerCase() === "content-disposition"
+            ? 'attachment; filename="katalog-koleksi-umc_26-11-2026_fakultas-teknik.pdf"'
+            : null,
+      },
+      blob: async () => new Blob(["%PDF-1.4"]),
+    });
+
+    await exportApi.downloadBibliographiesPdf({ facultyId: 3 });
+
+    const anchor = appendSpy.mock.calls.find(
+      ([node]) => node instanceof HTMLAnchorElement
+    )?.[0] as HTMLAnchorElement | undefined;
+    expect(anchor?.download).toBe("katalog-koleksi-umc_26-11-2026_fakultas-teknik.pdf");
+  });
+});

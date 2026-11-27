@@ -166,6 +166,16 @@ export default function ItemSection({
     await fetchData();
   };
 
+  const handleStatusChange = async (item: Item, nextStatus: string) => {
+    if (item.status === nextStatus) return;
+    try {
+      await itemApi.updateStatus(item.id, nextStatus);
+      await fetchData();
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Gagal memperbarui status");
+    }
+  };
+
   const handleToggleSort = () => {
     if (sortBy === "itemCode") {
       setSortOrder(sortOrder === "asc" ? "desc" : "asc");
@@ -323,6 +333,7 @@ export default function ItemSection({
         }}
         onEdit={handleEdit}
         onDelete={handleDelete}
+        onStatusChange={handleStatusChange}
         canEdit={canEdit}
         canDelete={canDelete}
         page={page}

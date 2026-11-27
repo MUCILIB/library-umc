@@ -202,6 +202,82 @@ describe("MemberService - Card Renewal Workflow", () => {
       expect(updatedData.cardExpiresAt).toBeInstanceOf(Date);
       expect(updatedData.cardExpiresAt.toISOString().startsWith("2027-05-19")).toBe(true);
     });
+
+    it("sukses mengubah masa berlaku kartu ke tanggal lampau dan menandai status expired", async () => {
+      (db.query.members.findFirst as any).mockResolvedValueOnce({
+        id: "mem-1",
+        userId: "user-1",
+        cardStatus: "active",
+        cardNumber: "UMCLIB-20261118-98AA16F9",
+      });
+
+      let updatedData: any = null;
+      (db.update as any).mockImplementationOnce(() => ({
+        set: vi.fn().mockImplementation((val) => {
+          updatedData = val;
+          return {
+            where: vi.fn().mockReturnValue({
+              returning: vi.fn().mockResolvedValueOnce([{ id: "mem-1", ...val }]),
+            }),
+          };
+        }),
+      }));
+
+      const res = await memberService.updateCardExpiry("mem-1", { cardExpiresAt: "2020-01-01" });
+      expect(res.success).toBe(true);
+      expect(updatedData.cardStatus).toBe("expired");
+    });
+
+    it("menolak ubah masa aktif jika kartu belum diterbitkan (not_requested / pending / tanpa nomor kartu)", async () => {
+      (db.query.members.findFirst as any).mockResolvedValueOnce({
+        id: "mem-unissued",
+        userId: "user-unissued",
+        cardStatus: "not_requested",
+        cardNumber: null,
+      });
+
+      const res = await memberService.updateCardExpiry("user-unissued", { durationDays: 180 });
+      expect(res.success).toBe(false);
+      expect(res.message).toMatch(/belum diterbitkan/i);
+      expect(db.update).not.toHaveBeenCalled();
+
+      (db.query.members.findFirst as any).mockResolvedValueOnce({
+        id: "mem-pending",
+        userId: "user-pending",
+        cardStatus: "pending",
+        cardNumber: null,
+      });
+
+      const resPending = await memberService.updateCardExpiry("user-pending", { durationDays: 180 });
+      expect(resPending.success).toBe(false);
+      expect(resPending.message).toMatch(/belum diterbitkan/i);
+      expect(db.update).not.toHaveBeenCalled();
+    });
+
+    it("mengizinkan ubah masa aktif pada kartu yang sudah diterbitkan namun berstatus expired", async () => {
+      (db.query.members.findFirst as any).mockResolvedValueOnce({
+        id: "mem-exp",
+        userId: "user-exp",
+        cardStatus: "expired",
+        cardNumber: "UMCLIB-2024-0001",
+      });
+
+      let updatedData: any = null;
+      (db.update as any).mockImplementationOnce(() => ({
+        set: vi.fn().mockImplementation((val) => {
+          updatedData = val;
+          return {
+            where: vi.fn().mockReturnValue({
+              returning: vi.fn().mockResolvedValueOnce([{ id: "mem-exp", ...val }]),
+            }),
+          };
+        }),
+      }));
+
+      const res = await memberService.updateCardExpiry("mem-exp", { durationDays: 365 });
+      expect(res.success).toBe(true);
+      expect(updatedData.cardStatus).toBe("active");
+    });
   });
 
   describe("approveMemberCard with custom expiry / 6 months", () => {

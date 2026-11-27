@@ -1,6 +1,7 @@
+import crypto from "crypto";
 import { db } from "../../../db";
-import { eq, and, isNull, desc, asc, sql } from "drizzle-orm";
-import { reservations, items, bibliographies } from "../../../db/schema";
+import { eq, and, isNull, desc, asc, sql, inArray } from "drizzle-orm";
+import { reservations, items, bibliographies, loans } from "../../../db/schema";
 import {
   BadRequestError,
   NotFoundError,
@@ -90,6 +91,42 @@ class ReservationService {
     }
   }
 
+  private mapReservationBibliography<T extends { bibliography?: any }>(res: T): T {
+    if (res.bibliography) {
+      const bib = res.bibliography;
+      const authorNames = Array.isArray(bib.bibliographyAuthors)
+        ? bib.bibliographyAuthors
+            .map((ba: any) => ba.author?.name)
+            .filter(Boolean)
+            .join(", ")
+        : "";
+      const activeItems = Array.isArray(bib.items) ? bib.items : [];
+      const availableItems = activeItems.filter(
+        (i: any) => i.status === "available",
+      ).length;
+      const publisherName =
+        typeof bib.publisher === "object"
+          ? bib.publisher?.name || ""
+          : bib.publisher || "";
+
+      res.bibliography = {
+        ...bib,
+        author: authorNames || bib.author || bib.sor || "Penulis tidak tersedia",
+        authors: Array.isArray(bib.bibliographyAuthors)
+          ? bib.bibliographyAuthors.map((ba: any) => ba.author).filter(Boolean)
+          : [],
+        publisher: publisherName,
+        publicationYear: bib.publishYear ?? bib.publicationYear ?? null,
+        isbnIssn: bib.isbn || bib.issn || bib.isbnIssn || undefined,
+        totalItems: activeItems.length,
+        availableItems,
+        stock: availableItems > 0 ? availableItems : (bib.stock ?? 0),
+        bibliographyAuthors: undefined,
+      };
+    }
+    return res;
+  }
+
   /**
    * 2. Admin lihat semua reservasi
    */
@@ -103,6 +140,12 @@ class ReservationService {
     } = {},
   ) {
     try {
+      if (!filters.status || filters.status === "waiting") {
+        await this.syncPendingReservationsWithAvailableStock(
+          filters.bibliographyId,
+        );
+      }
+
       const conditions = [isNull(reservations.deletedAt)];
       if (filters.status) {
         conditions.push(eq(reservations.status, filters.status));
@@ -117,7 +160,19 @@ class ReservationService {
       const result = await db.query.reservations.findMany({
         where: and(...conditions),
         with: {
-          bibliography: true,
+          bibliography: {
+            with: {
+              publisher: true,
+              collectionType: true,
+              bibliographyAuthors: {
+                with: { author: true },
+              },
+              items: {
+                where: isNull(items.deletedAt),
+                columns: { id: true, itemCode: true, status: true },
+              },
+            },
+          },
           member: { with: { user: true } },
         },
         limit: filters.limit || 50,
@@ -125,10 +180,14 @@ class ReservationService {
         orderBy: [desc(reservations.createdAt)],
       });
 
+      const mapped = result.map((res: any) =>
+        this.mapReservationBibliography(res),
+      );
+
       return {
         success: true,
         message: "Berhasil mengambil semua reservasi.",
-        data: result,
+        data: mapped,
       };
     } catch (error) {
       console.error("ReservationService.getAllReservations Error:", error);
@@ -149,27 +208,24 @@ class ReservationService {
         with: {
           bibliography: {
             with: {
+              publisher: true,
+              collectionType: true,
               bibliographyAuthors: {
-                with: { author: true }
-              }
-            }
-          }
+                with: { author: true },
+              },
+              items: {
+                where: isNull(items.deletedAt),
+                columns: { id: true, itemCode: true, status: true },
+              },
+            },
+          },
         },
         orderBy: [desc(reservations.createdAt)],
       });
 
-      const mappedData = result.map((res: any) => {
-        if (res.bibliography) {
-          const authorNames = Array.isArray(res.bibliography.bibliographyAuthors)
-            ? res.bibliography.bibliographyAuthors.map((ba: any) => ba.author?.name).filter(Boolean).join(", ")
-            : "";
-          res.bibliography.author = authorNames || res.bibliography.author || res.bibliography.sor || "Penulis tidak tersedia";
-          res.bibliography.authors = Array.isArray(res.bibliography.bibliographyAuthors)
-            ? res.bibliography.bibliographyAuthors.map((ba: any) => ba.author).filter(Boolean)
-            : [];
-        }
-        return res;
-      });
+      const mappedData = result.map((res: any) =>
+        this.mapReservationBibliography(res),
+      );
 
       return {
         success: true,
@@ -226,13 +282,55 @@ class ReservationService {
   }
 
   /**
-   * 5. Auto-fulfill reservasi tertua saat buku dikembalikan.
-   * DIPANGGIL INTERNAL dari LoanService.returnLoan() — BUKAN dari HTTP request.
-   * Ambil reservasi waiting PALING LAMA (FIFO) untuk collectionId ini.
+   * 5. Auto-fulfill reservasi waiting saat stok tersedia kembali:
+   * - Mencocokkan item berstatus `available` yang belum dialokasikan ke pinjaman aktif/pending
+   * - Mengklaim reservasi waiting tertua (FIFO) secara atomik -> `fulfilled`
+   * - Membuat pengajuan peminjaman (`loans.status = 'pending'`) agar langsung tampil di menu persetujuan admin
    */
   async fulfillNextReservation(bibliographyId: string): Promise<void> {
     try {
-      const oldestReservation = await db.query.reservations.findFirst({
+      const bib = await db.query.bibliographies.findFirst({
+        where: and(
+          eq(bibliographies.id, bibliographyId),
+          isNull(bibliographies.deletedAt),
+        ),
+        with: { collectionType: true },
+      });
+
+      if (!bib) return;
+
+      const isReference =
+        bib.collectionType &&
+        (bib.collectionType.canBeBorrowed === false ||
+          bib.collectionType.code === "R");
+      if (isReference) return;
+
+      const availableItems = await db.query.items.findMany({
+        where: and(
+          eq(items.bibliographyId, bibliographyId),
+          eq(items.status, "available"),
+          isNull(items.deletedAt),
+        ),
+        orderBy: [asc(items.itemCode)],
+      });
+      if (!availableItems || availableItems.length === 0) return;
+
+      const availableIds = availableItems.map((it) => it.id);
+      const openLoans = await db.query.loans.findMany({
+        where: and(
+          inArray(loans.itemId, availableIds),
+          inArray(loans.status, ["pending", "approved", "extended"]),
+          isNull(loans.deletedAt),
+        ),
+        columns: { itemId: true },
+      });
+      const occupiedItemIds = new Set(openLoans.map((l) => l.itemId));
+      const freeItems = availableItems.filter(
+        (it) => !occupiedItemIds.has(it.id),
+      );
+      if (freeItems.length === 0) return;
+
+      const waitingReservations = await db.query.reservations.findMany({
         where: and(
           eq(reservations.bibliographyId, bibliographyId),
           eq(reservations.status, "waiting"),
@@ -244,32 +342,111 @@ class ReservationService {
           bibliography: true,
         },
       });
+      if (!waitingReservations || waitingReservations.length === 0) return;
 
-      if (!oldestReservation) {
-        // Tidak ada yang antri — skip
-        return;
-      }
+      for (const resv of waitingReservations) {
+        if (freeItems.length === 0) break;
 
-      // Update status reservasi jadi fulfilled
-      await db
-        .update(reservations)
-        .set({ status: "fulfilled", updatedAt: new Date() })
-        .where(eq(reservations.id, oldestReservation.id));
+        // Pastikan member tidak melebihi batas maksimal 3 pinjaman aktif/pending
+        const memberOpenLoans = await db.query.loans.findMany({
+          where: and(
+            eq(loans.memberId, resv.memberId),
+            inArray(loans.status, ["pending", "approved", "extended"]),
+            isNull(loans.deletedAt),
+          ),
+          columns: { id: true },
+        });
+        if (memberOpenLoans.length >= 3) {
+          continue;
+        }
 
-      // Kirim email notifikasi ke member (fire-and-forget)
-      const memberUser = oldestReservation.member?.user;
-      const bookTitle = oldestReservation.bibliography?.title ?? "Buku";
-      if (memberUser?.email && memberUser?.name) {
-        void notificationService.sendReservationFulfilledNotification(
-          memberUser.email,
-          memberUser.name,
-          bookTitle,
-        );
+        const assignedItem = freeItems.shift()!;
+
+        const converted = await db.transaction(async (tx) => {
+          const [claimed] = await tx
+            .update(reservations)
+            .set({ status: "fulfilled", updatedAt: new Date() })
+            .where(
+              and(
+                eq(reservations.id, resv.id),
+                eq(reservations.status, "waiting"),
+                isNull(reservations.deletedAt),
+              ),
+            )
+            .returning();
+
+          if (!claimed) return false;
+
+          const today = new Date();
+          const loanDate = today.toISOString().split("T")[0];
+          const dueDate = new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000)
+            .toISOString()
+            .split("T")[0];
+
+          await tx.insert(loans).values({
+            memberId: resv.memberId,
+            itemId: assignedItem.id,
+            status: "pending",
+            loanDate,
+            dueDate,
+            notes: `Pengajuan peminjaman otomatis dari antrean reservasi (#RES-${resv.id.slice(0, 8).toUpperCase()})`,
+            verificationToken: crypto.randomBytes(16).toString("hex"),
+            verificationExpiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+          });
+
+          return true;
+        });
+
+        if (converted) {
+          const memberUser = resv.member?.user;
+          const bookTitle = resv.bibliography?.title ?? bib.title ?? "Buku";
+          if (memberUser?.email && memberUser?.name) {
+            void notificationService.sendReservationFulfilledNotification(
+              memberUser.email,
+              memberUser.name,
+              bookTitle,
+            );
+          }
+        }
       }
     } catch (error) {
-      // Jangan throw — jangan sampai proses return loan gagal hanya karena reservasi
+      // Jangan throw — jangan sampai proses stok/return gagal hanya karena sinkronisasi reservasi
       console.error(
         "ReservationService.fulfillNextReservation Error [Ignored]:",
+        error,
+      );
+    }
+  }
+
+  /**
+   * Rekonsiliasi antrean reservasi `waiting` apabila stok buku sudah tersedia lagi.
+   */
+  async syncPendingReservationsWithAvailableStock(
+    bibliographyId?: string,
+  ): Promise<void> {
+    try {
+      const conditions = [
+        eq(reservations.status, "waiting"),
+        isNull(reservations.deletedAt),
+      ];
+      if (bibliographyId) {
+        conditions.push(eq(reservations.bibliographyId, bibliographyId));
+      }
+
+      const waitingRows = await db.query.reservations.findMany({
+        where: and(...conditions),
+        columns: { bibliographyId: true },
+      });
+
+      const uniqueBibIds = Array.from(
+        new Set(waitingRows.map((r) => r.bibliographyId).filter(Boolean)),
+      );
+      for (const bibId of uniqueBibIds) {
+        await this.fulfillNextReservation(bibId);
+      }
+    } catch (error) {
+      console.error(
+        "ReservationService.syncPendingReservationsWithAvailableStock Error [Ignored]:",
         error,
       );
     }

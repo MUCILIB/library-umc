@@ -11,6 +11,18 @@ import {
 } from "lucide-react";
 import { itemApi, type Item } from "@/api/client";
 import { useRolePermissions } from "@/hooks/useRolePermissions";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  ITEM_STATUS_OPTIONS,
+  getItemStatusBadgeClass,
+  getItemStatusLabel,
+} from "@/utils/itemStatus";
 
 export interface ItemDetailProps {
   item: Item;
@@ -125,18 +137,36 @@ export function ItemDetail({
           </div>
           <div>
             <dt className="text-xs font-medium text-muted-foreground">Status</dt>
-            <dd className="mt-0.5">
+            <dd className="mt-0.5 flex flex-wrap items-center gap-2">
               <span
-                className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${
-                  item.status === "available"
-                    ? "bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-400"
-                    : item.status === "loaned"
-                      ? "bg-amber-50 dark:bg-amber-950 text-amber-700 dark:text-amber-400"
-                      : "bg-muted text-muted-foreground"
-                }`}
+                className={`inline-block rounded-full border px-2.5 py-0.5 text-xs font-semibold ${getItemStatusBadgeClass(item.status)}`}
               >
-                {item.status}
+                {getItemStatusLabel(item.status)}
               </span>
+              {canEdit("items") && (
+                <Select
+                  value={item.status}
+                  onValueChange={async (val) => {
+                    try {
+                      await itemApi.updateStatus(item.id, val);
+                      await onRefresh();
+                    } catch (err: unknown) {
+                      setError(err instanceof Error ? err.message : "Gagal memperbarui status");
+                    }
+                  }}
+                >
+                  <SelectTrigger aria-label="Ubah status item" className="h-8 w-[170px] text-xs">
+                    <SelectValue placeholder="Ubah status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {ITEM_STATUS_OPTIONS.map((opt) => (
+                      <SelectItem key={opt.value} value={opt.value} className="text-xs">
+                        {opt.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
             </dd>
           </div>
           <div>

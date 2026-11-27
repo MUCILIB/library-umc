@@ -1,8 +1,16 @@
 import { useState, useEffect } from "react";
 import Modal from "@/components/ui/modal";
-import { type DashboardUser, usersManagementService } from "@/services/dashboard/usersManagementService";
+import {
+  type DashboardUser,
+  usersManagementService,
+} from "@/services/dashboard/usersManagementService";
 import { useToast } from "@/hooks/useToast";
-import { Calendar, IdCard, Loader2, CheckCircle } from "lucide-react";
+import { IdCard, Loader2, CheckCircle } from "lucide-react";
+import {
+  CardExpiryFields,
+  type CardExpiryPreset,
+  calculatePresetExpiryDate,
+} from "./CardExpiryFields";
 
 interface EditCardExpiryModalProps {
   user: DashboardUser | null;
@@ -19,22 +27,8 @@ export function EditCardExpiryModal({
 }: EditCardExpiryModalProps) {
   const { success, error } = useToast();
   const [submitting, setSubmitting] = useState(false);
-  const [preset, setPreset] = useState<"6m" | "1y" | "2y" | "4y" | "custom">("1y");
+  const [preset, setPreset] = useState<CardExpiryPreset>("1y");
   const [customDate, setCustomDate] = useState("");
-
-  const calculatePresetDate = (type: "6m" | "1y" | "2y" | "4y"): string => {
-    const d = new Date();
-    if (type === "6m") {
-      d.setMonth(d.getMonth() + 6);
-    } else if (type === "1y") {
-      d.setFullYear(d.getFullYear() + 1);
-    } else if (type === "2y") {
-      d.setFullYear(d.getFullYear() + 2);
-    } else if (type === "4y") {
-      d.setFullYear(d.getFullYear() + 4);
-    }
-    return d.toISOString().split("T")[0];
-  };
 
   useEffect(() => {
     if (user?.cardExpiresAt) {
@@ -42,15 +36,15 @@ export function EditCardExpiryModal({
       setCustomDate(expDate);
       setPreset("custom");
     } else {
-      setCustomDate(calculatePresetDate("6m"));
+      setCustomDate(calculatePresetExpiryDate("6m"));
       setPreset("6m");
     }
   }, [user]);
 
-  const handlePresetChange = (type: "6m" | "1y" | "2y" | "4y" | "custom") => {
+  const handlePresetChange = (type: CardExpiryPreset) => {
     setPreset(type);
     if (type !== "custom") {
-      setCustomDate(calculatePresetDate(type));
+      setCustomDate(calculatePresetExpiryDate(type));
     }
   };
 
@@ -81,11 +75,17 @@ export function EditCardExpiryModal({
         year: "numeric",
       });
 
-      success("Masa Aktif Diperbarui", `Masa berlaku kartu untuk ${user.name} berhasil diubah hingga ${formatted}.`);
+      success(
+        "Masa Aktif Diperbarui",
+        `Masa berlaku kartu untuk ${user.name} berhasil diubah hingga ${formatted}.`
+      );
       onSuccess();
       onClose();
     } catch (err) {
-      const msg = err instanceof Error ? err.message : "Gagal memperbarui masa aktif kartu";
+      const msg =
+        err instanceof Error
+          ? err.message
+          : "Gagal memperbarui masa aktif kartu";
       error("Gagal", msg);
     } finally {
       setSubmitting(false);
@@ -124,80 +124,32 @@ export function EditCardExpiryModal({
 
           <div className="grid grid-cols-2 gap-2 text-xs text-muted-foreground pt-1 border-t border-border/50">
             <div>
-              <span className="block text-[10px] text-muted-foreground uppercase font-bold">NIM / NIDN:</span>
-              <span className="font-medium text-foreground">{user.nimNidn || "-"}</span>
+              <span className="block text-[10px] text-muted-foreground uppercase font-bold">
+                NIM / NIDN:
+              </span>
+              <span className="font-medium text-foreground">
+                {user.nimNidn || "-"}
+              </span>
             </div>
             <div>
-              <span className="block text-[10px] text-muted-foreground uppercase font-bold">Masa Aktif Saat Ini:</span>
-              <span className="font-medium text-foreground">{currentFormattedExpiry}</span>
+              <span className="block text-[10px] text-muted-foreground uppercase font-bold">
+                Masa Aktif Saat Ini:
+              </span>
+              <span className="font-medium text-foreground">
+                {currentFormattedExpiry}
+              </span>
             </div>
           </div>
         </div>
 
-        {/* Quick Presets */}
-        <div>
-          <label className="block text-xs font-bold text-foreground mb-2">
-            Pilihan Periode Masa Aktif
-          </label>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-            {[
-              { id: "6m", label: "6 Bulan" },
-              { id: "1y", label: "1 Tahun" },
-              { id: "2y", label: "2 Tahun" },
-              { id: "4y", label: "4 Tahun" },
-            ].map((item) => (
-              <button
-                key={item.id}
-                type="button"
-                onClick={() => handlePresetChange(item.id as any)}
-                className={`py-2 px-3 rounded-xl text-xs font-bold transition-all border cursor-pointer text-center ${
-                  preset === item.id
-                    ? "bg-primary text-primary-foreground border-primary shadow-xs"
-                    : "bg-background border-border text-foreground hover:bg-muted"
-                }`}
-              >
-                {item.label}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Date Input */}
-        <div>
-          <div className="flex items-center justify-between mb-1.5">
-            <label className="text-xs font-bold text-foreground">
-              Berlaku Sampai Tanggal
-            </label>
-            <button
-              type="button"
-              onClick={() => handlePresetChange("custom")}
-              className={`text-[11px] font-medium transition-colors cursor-pointer ${
-                preset === "custom" ? "text-primary font-bold underline" : "text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              Pilih Tanggal Kustom
-            </button>
-          </div>
-
-          <div className="relative">
-            <Calendar className="absolute left-3.5 top-1/2 -translate-y-1/2 size-4 text-muted-foreground pointer-events-none" />
-            <input
-              type="date"
-              required
-              value={customDate}
-              onChange={(e) => {
-                setPreset("custom");
-                setCustomDate(e.target.value);
-              }}
-              min={new Date().toISOString().split("T")[0]}
-              disabled={submitting}
-              className="w-full pl-10 pr-4 py-2.5 bg-background border border-border rounded-xl text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary text-foreground"
-            />
-          </div>
-          <p className="mt-1 text-[11px] text-muted-foreground">
-            Admin dapat menentukan masa berlaku kartu anggota hingga tanggal tertentu (misalnya 1 tahun ke depan atau sampai selesai masa studi).
-          </p>
-        </div>
+        <CardExpiryFields
+          preset={preset}
+          customDate={customDate}
+          disabled={submitting}
+          onPresetChange={handlePresetChange}
+          onCustomDateChange={setCustomDate}
+          helperText="Admin dapat mengubah masa berlaku kartu anggota kapan saja ke tanggal mana pun (misalnya 6 bulan, 1–4 tahun ke depan, atau tanggal kustom)."
+        />
 
         {/* Action Buttons */}
         <div className="flex items-center justify-end gap-3 pt-3 border-t border-border mt-3">

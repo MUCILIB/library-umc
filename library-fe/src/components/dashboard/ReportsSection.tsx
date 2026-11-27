@@ -19,6 +19,7 @@ import {
   Legend
 } from "recharts";
 import { API_BASE_URL } from "@/utils/api-config";
+import { facultyApi, studyProgramApi, type Faculty, type StudyProgram } from "@/api/client";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/useToast";
 import { analyzeReportCsv } from "@/utils/dashboardReportImport";
@@ -83,7 +84,22 @@ export default function ReportsSection({
     []
   );
   const [popularBooks, setPopularBooks] = useState<PopularBookItem[]>([]);
-  const [prodiDistribution, setProdiDistribution] = useState<{ studyProgramName: string; count: number }[]>([]);
+  const [prodiDistribution, setProdiDistribution] = useState<
+    { studyProgramId?: number | null; studyProgramName: string; facultyId?: number | null; facultyName?: string | null; count: number }[]
+  >([]);
+  const [faculties, setFaculties] = useState<Faculty[]>([]);
+  const [studyPrograms, setStudyPrograms] = useState<StudyProgram[]>([]);
+
+  useEffect(() => {
+    facultyApi
+      .list()
+      .then((res) => setFaculties(res.data || []))
+      .catch(() => {});
+    studyProgramApi
+      .list()
+      .then((res) => setStudyPrograms(res.data || []))
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     const fetchStats = async () => {
@@ -661,23 +677,74 @@ export default function ReportsSection({
             </ResponsiveContainer>
           </div>
 
-          {/* Breakdown Per Program Studi yang hadir */}
-          {prodiDistribution.length > 0 && (
-            <div className="mt-4 pt-4 border-t border-border">
-              <p className="text-[12px] font-extrabold text-muted-foreground uppercase tracking-wider mb-2.5">
-                Top Program Studi Pengunjung Fisik:
-              </p>
-              <div className="flex flex-wrap gap-2">
-                {prodiDistribution.slice(0, 5).map((p, idx) => (
-                  <span
-                    key={idx}
-                    className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800"
-                  >
-                    <span>{p.studyProgramName}:</span>
-                    <strong className="font-extrabold">{p.count} orang</strong>
-                  </span>
-                ))}
-              </div>
+          {/* Breakdown Per Program Studi & Semua Fakultas */}
+          {(prodiDistribution.length > 0 || faculties.length > 0) && (
+            <div className="mt-4 pt-4 border-t border-border space-y-4">
+              {prodiDistribution.length > 0 && (
+                <div>
+                  <p className="text-[12px] font-extrabold text-muted-foreground uppercase tracking-wider mb-2.5">
+                    Top Program Studi Pengunjung Fisik:
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {prodiDistribution.slice(0, 5).map((p, idx) => (
+                      <span
+                        key={idx}
+                        className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800"
+                      >
+                        <span>{p.studyProgramName}:</span>
+                        <strong className="font-extrabold">{p.count} orang</strong>
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {faculties.length > 0 && studyPrograms.length > 0 && (
+                <div>
+                  <p className="text-[12px] font-extrabold text-muted-foreground uppercase tracking-wider mb-2.5">
+                    Sebaran Program Studi Semua Fakultas:
+                  </p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {faculties.map((fac) => {
+                      const facProdis = studyPrograms.filter(
+                        (sp) => String(sp.facultyId ?? sp.faculty?.id ?? "") === String(fac.id)
+                      );
+                      if (facProdis.length === 0) return null;
+                      return (
+                        <div
+                          key={fac.id}
+                          className="rounded-xl border border-border/80 bg-muted/20 p-3 space-y-1.5"
+                        >
+                          <p className="text-xs font-bold text-foreground">
+                            {fac.name}
+                          </p>
+                          <div className="space-y-1">
+                            {facProdis.map((sp) => {
+                              const match = prodiDistribution.find(
+                                (item) =>
+                                  (item.studyProgramId != null && Number(item.studyProgramId) === sp.id) ||
+                                  item.studyProgramName.toLowerCase() === sp.name.toLowerCase()
+                              );
+                              const visitCount = match?.count ?? 0;
+                              return (
+                                <div
+                                  key={sp.id}
+                                  className="flex items-center justify-between text-[11px] text-muted-foreground"
+                                >
+                                  <span className="truncate pr-2">{sp.name}</span>
+                                  <span className="font-bold text-foreground shrink-0">
+                                    {visitCount}
+                                  </span>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
             </div>
           )}
 

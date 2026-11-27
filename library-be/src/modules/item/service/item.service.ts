@@ -3,6 +3,7 @@ import { items, bibliographies, locations, logs, loans } from "../../../db/schem
 import { eq, and, like, ilike, or, isNull, sql, asc, desc } from "drizzle-orm";
 import type { CreateItemData, BulkCreateItemData, UpdateItemData } from "../validation/item.validation";
 import { syncCollectionAvailableStock } from "../../shared/utils/stock-sync";
+import reservationService from "../../reservation/service/reservation.service";
 import crypto from "crypto";
 
 export class ItemService {
@@ -24,7 +25,7 @@ export class ItemService {
       whereClause = and(whereClause, eq(items.bibliographyId, bibliographyId));
     }
 
-    if (status && ["available", "loaned", "damaged", "lost"].includes(status)) {
+    if (status && ["available", "loaned", "maintenance", "damaged", "lost"].includes(status)) {
       whereClause = and(whereClause, eq(items.status, status as any));
     }
 
@@ -487,6 +488,10 @@ export class ItemService {
       throw err;
     }
 
+    if (result?.status === "available") {
+      await reservationService.fulfillNextReservation(data.bibliographyId);
+    }
+
     return { success: true, message: "Item created", data: result };
   }
 
@@ -516,7 +521,7 @@ export class ItemService {
             source: data.defaults?.source || null,
             priceCurrency: data.defaults?.priceCurrency || "IDR",
             collectionTypeId: (itemData as any).collectionTypeId || data.defaults?.collectionTypeId || bib.collectionTypeId || null,
-            status: "available",
+            status: ((itemData as any).status || data.defaults?.status || "available") as any,
             qrToken: this.generateQrToken(),
             qrVersion: 1,
             qrGeneratedAt: new Date(),
@@ -528,6 +533,10 @@ export class ItemService {
       }
       await syncCollectionAvailableStock(tx, bibliographyId);
     });
+
+    if (createdItems.some((item) => item?.status === "available")) {
+      await reservationService.fulfillNextReservation(bibliographyId);
+    }
 
     return { success: true, message: `Created ${createdItems.length} items`, data: { created: createdItems.length, items: createdItems, errors } };
   }
@@ -653,6 +662,10 @@ export class ItemService {
       return updated;
     });
 
+    if (result?.status === "available") {
+      await reservationService.fulfillNextReservation(existingItem.bibliographyId);
+    }
+
     return { success: true, message: "Item updated", data: result };
   }
 
@@ -667,6 +680,10 @@ export class ItemService {
       await syncCollectionAvailableStock(tx, existingItem.bibliographyId);
       return updated;
     });
+
+    if (status === "available") {
+      await reservationService.fulfillNextReservation(existingItem.bibliographyId);
+    }
 
     return { success: true, message: "Status updated", data: result };
   }

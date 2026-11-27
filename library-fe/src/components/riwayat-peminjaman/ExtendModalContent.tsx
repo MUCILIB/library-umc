@@ -54,9 +54,9 @@ export function ExtendModalContent({
       <div className="p-3.5 bg-purple-50 dark:bg-purple-950/40 border border-purple-200 dark:border-purple-800 rounded-xl flex items-start gap-3 text-xs text-purple-700 dark:text-purple-300">
         <Clock className="size-4 shrink-0 mt-0.5 text-purple-600 dark:text-purple-400" />
         <div className="space-y-1">
-          <p className="font-bold">Ketentuan Perpanjangan</p>
+          <p className="font-bold">Ketentuan Perpanjangan (Maksimal 1 Kali)</p>
           <p className="text-muted-foreground text-[11px] leading-relaxed">
-            Masa peminjaman buku akan diperpanjang sesuai ketentuan perpustakaan. Pastikan buku tidak melewati batas waktu dan tidak dalam antrean reservasi anggota lain.
+            Setiap peminjaman hanya dapat diperpanjang maksimal 1 kali (+7 hari dari batas kembali saat ini). Pastikan buku tidak melewati batas waktu dan tidak dalam antrean reservasi anggota lain.
           </p>
         </div>
       </div>

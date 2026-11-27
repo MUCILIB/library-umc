@@ -34,6 +34,16 @@ const LoanRequestForm = ({
     type: 'success'
   });
 
+  const getLocalTodayYmd = () => {
+    const now = new Date();
+    const y = now.getFullYear();
+    const m = String(now.getMonth() + 1).padStart(2, '0');
+    const d = String(now.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+  };
+
+  const todayYmd = getLocalTodayYmd();
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setLoanFormData({ ...loanFormData, [e.target.name]: e.target.value });
   };
@@ -49,13 +59,18 @@ const LoanRequestForm = ({
       return;
     }
 
-    const start = new Date(loanFormData.loanDate);
-    const end = new Date(loanFormData.dueDate);
+    const start = new Date(`${loanFormData.loanDate}T00:00:00`);
+    const end = new Date(`${loanFormData.dueDate}T00:00:00`);
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
     if (start < today) {
       showNotification('Tanggal peminjaman tidak boleh kurang dari hari ini', 'error');
+      return;
+    }
+
+    if (start > today) {
+      showNotification('Tanggal peminjaman tidak boleh melebihi tanggal saat ini', 'error');
       return;
     }
 
@@ -152,7 +167,8 @@ const LoanRequestForm = ({
                   name="loanDate"
                   value={loanFormData.loanDate}
                   onChange={handleInputChange}
-                  min={new Date().toISOString().split('T')[0]}
+                  min={todayYmd}
+                  max={todayYmd}
                   className="w-full px-4 py-3 bg-white border-2 border-border rounded-xl text-foreground font-medium focus:border-primary/20 focus:ring-4 focus:ring-primary/10 outline-none transition-all"
                   required
                 />

@@ -42,8 +42,6 @@ export class ExportController {
   async exportBibliographiesPdf(req: Request, res: Response, next: NextFunction) {
     try {
       const filter = parseFilter(req.query);
-      res.setHeader("Content-Type", "application/pdf");
-      res.setHeader("Content-Disposition", 'attachment; filename="katalog_koleksi_umc.pdf"');
       await exportService.exportBibliographiesPdf(res, filter);
     } catch (error) { next(error); }
   }

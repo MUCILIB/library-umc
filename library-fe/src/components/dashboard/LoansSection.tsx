@@ -793,34 +793,93 @@ export default function LoansSection({ searchTerm, onSearchChange }: LoansSectio
 
                     <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
                       {/* Detail Bahan Pustaka */}
-                      <div className="lg:col-span-7 rounded-xl border border-border/70 bg-muted/10 p-4 space-y-2.5">
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1">
-                          Bahan Pustaka yang Dipesan
-                        </span>
-                        <h4 className="font-bold text-foreground text-sm sm:text-base leading-snug">
-                          {res.bibliography?.title || "Judul tidak tersedia"}
-                        </h4>
-                        <p className="text-xs text-muted-foreground font-medium mt-0.5">
-                          {res.bibliography?.author || "-"}
-                        </p>
-                        {res.bibliography?.publisher && (
-                          <p className="text-xs text-muted-foreground pt-1.5 border-t border-border/50">
-                            Penerbit: {[res.bibliography.publisher, res.bibliography.publicationYear].filter(Boolean).join(" • ")}
-                          </p>
-                        )}
+                      <div className="lg:col-span-7 rounded-xl border border-border/70 bg-muted/10 p-4 space-y-3">
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="min-w-0">
+                            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1">
+                              Bahan Pustaka yang Dipesan
+                            </span>
+                            <h4 className="font-bold text-foreground text-sm sm:text-base leading-snug">
+                              {res.bibliography?.title || "Judul tidak tersedia"}
+                            </h4>
+                            <p className="text-xs text-muted-foreground font-medium mt-0.5">
+                              {res.bibliography?.author || "Penulis tidak tersedia"}
+                            </p>
+                          </div>
+                          <span className="shrink-0 text-[11px] font-semibold px-2 py-0.5 rounded bg-muted text-muted-foreground border border-border/70">
+                            {res.bibliography?.type === "ebook" ? "E-Book" : "Buku Fisik"}
+                          </span>
+                        </div>
+
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 pt-2.5 border-t border-border/50 text-xs">
+                          <div>
+                            <span className="text-[10px] font-medium text-muted-foreground block">ISBN / ISSN</span>
+                            <span className="font-mono font-semibold text-foreground">
+                              {res.bibliography?.isbnIssn || res.bibliography?.isbn || "-"}
+                            </span>
+                          </div>
+                          <div>
+                            <span className="text-[10px] font-medium text-muted-foreground block">Nomor Panggil</span>
+                            <span className="font-mono font-semibold text-foreground">
+                              {res.bibliography?.callNumber || res.bibliography?.classification || "-"}
+                            </span>
+                          </div>
+                          <div>
+                            <span className="text-[10px] font-medium text-muted-foreground block">Penerbit &amp; Tahun</span>
+                            <span className="font-medium text-foreground">
+                              {[
+                                res.bibliography?.publisher,
+                                res.bibliography?.publicationYear ?? res.bibliography?.publishYear,
+                              ]
+                                .filter(Boolean)
+                                .join(" • ") || "-"}
+                            </span>
+                          </div>
+                          <div>
+                            <span className="text-[10px] font-medium text-muted-foreground block">Ketersediaan Stok</span>
+                            <span className="font-semibold text-amber-700 dark:text-amber-400">
+                              {res.bibliography?.availableItems ?? res.bibliography?.stock ?? 0} /{" "}
+                              {res.bibliography?.totalItems ?? 0} tersedia
+                            </span>
+                          </div>
+                        </div>
                       </div>
 
                       {/* Detail Pemustaka */}
-                      <div className="lg:col-span-5 rounded-xl border border-border/70 bg-muted/20 p-4 space-y-2.5">
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1">
-                          Identitas Pemustaka
-                        </span>
-                        <h4 className="font-bold text-foreground text-sm leading-snug">
-                          {res.member?.user?.name || "Nama tidak tersedia"}
-                        </h4>
-                        <div className="text-xs pt-1.5 border-t border-border/50">
-                          <span className="text-[10px] font-medium text-muted-foreground block">NIM / NIDN</span>
-                          <span className="font-mono font-semibold text-foreground">{res.member?.nimNidn || "-"}</span>
+                      <div className="lg:col-span-5 rounded-xl border border-border/70 bg-muted/20 p-4 space-y-3">
+                        <div>
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1">
+                            Identitas Pemustaka
+                          </span>
+                          <h4 className="font-bold text-foreground text-sm leading-snug">
+                            {res.member?.user?.name || "Nama tidak tersedia"}
+                          </h4>
+                        </div>
+                        <div className="grid grid-cols-2 gap-2.5 pt-2.5 border-t border-border/50 text-xs">
+                          <div>
+                            <span className="text-[10px] font-medium text-muted-foreground block">NIM / NIDN</span>
+                            <span className="font-mono font-semibold text-foreground">
+                              {res.member?.nimNidn || "-"}
+                            </span>
+                          </div>
+                          <div>
+                            <span className="text-[10px] font-medium text-muted-foreground block">No. Kartu Anggota</span>
+                            <span className="font-mono font-semibold text-foreground">
+                              {res.member?.cardNumber || "-"}
+                            </span>
+                          </div>
+                          {(res.member?.faculty || res.member?.studyProgram) && (
+                            <div className="col-span-2">
+                              <span className="text-[10px] font-medium text-muted-foreground block">
+                                Fakultas &amp; Program Studi
+                              </span>
+                              <span className="font-medium text-foreground">
+                                {[res.member?.faculty, res.member?.studyProgram]
+                                  .filter(Boolean)
+                                  .join(" • ")}
+                              </span>
+                            </div>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -1468,19 +1527,9 @@ export default function LoansSection({ searchTerm, onSearchChange }: LoansSectio
               <label className="block text-xs font-bold text-foreground mb-1.5">
                 Durasi Peminjaman
               </label>
-              <Select
-                value={String(directForm.durationDays)}
-                onValueChange={(val) => setDirectForm({ ...directForm, durationDays: Number(val) })}
-                disabled={directLoanSubmitting}
-              >
-                <SelectTrigger className="w-full rounded-xl text-xs font-semibold">
-                  <SelectValue placeholder="Pilih Durasi" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="7">7 Hari (Standar)</SelectItem>
-                  <SelectItem value="14">14 Hari (2 Minggu)</SelectItem>
-                </SelectContent>
-              </Select>
+              <div className="h-10 px-3 flex items-center bg-muted/50 rounded-xl border border-border text-xs font-semibold text-foreground">
+                <span>7 Hari (Standar)</span>
+              </div>
             </div>
 
             <div>
@@ -1490,7 +1539,7 @@ export default function LoansSection({ searchTerm, onSearchChange }: LoansSectio
               <div className="h-10 px-3 flex items-center bg-muted/50 rounded-xl border border-border text-xs font-medium text-muted-foreground">
                 <Calendar size={14} className="mr-2 text-primary" />
                 <span>
-                  {new Date(Date.now() + (directForm.durationDays || 7) * 24 * 60 * 60 * 1000).toLocaleDateString("id-ID", {
+                  {new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toLocaleDateString("id-ID", {
                     day: "2-digit",
                     month: "short",
                     year: "numeric",

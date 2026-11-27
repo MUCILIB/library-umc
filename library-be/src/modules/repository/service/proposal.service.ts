@@ -269,9 +269,13 @@ export class ProposalService {
 
     if (options?.search) {
       const q = options.search.toLowerCase();
+      const qNormalized = q.replace(/\s+/g, "_");
       items = items.filter((item) =>
         item.title.toLowerCase().includes(q) ||
         item.authorName.toLowerCase().includes(q) ||
+        (item.proposalNumber && item.proposalNumber.toLowerCase().includes(q)) ||
+        (item.chapter && (item.chapter.toLowerCase().includes(q) || item.chapter.toLowerCase().includes(qNormalized))) ||
+        (item.chapterTitle && item.chapterTitle.toLowerCase().includes(q)) ||
         (item.abstract && item.abstract.toLowerCase().includes(q)) ||
         (item.keywords && item.keywords.some((k: string) => k.toLowerCase().includes(q)))
       );

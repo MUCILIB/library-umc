@@ -4,7 +4,8 @@ import Navbar from "@/components/ui/navbar";
 import Footer from "@/components/Footer";
 import SecurePdfViewer from "@/components/SecurePdfViewer";
 import { repositoryService, type RepositoryProposal } from "@/services/repositoryService";
-import { Loader2, ArrowLeft, AlertCircle } from "lucide-react";
+import { getChapterBadge } from "@/utils/thesisChapters";
+import { Loader2, ArrowLeft, AlertCircle, BookOpen } from "lucide-react";
 
 export default function RepositoryDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -62,6 +63,11 @@ export default function RepositoryDetailPage() {
                 <span className="text-xs px-2.5 py-0.5 rounded-full font-semibold bg-red-100 text-red-800 dark:bg-red-950/60 dark:text-red-300">
                   {proposal.documentCategory}
                 </span>
+                {proposal.chapter && (
+                  <span className="text-xs px-2.5 py-0.5 rounded-full font-bold bg-primary/10 text-primary border border-primary/20">
+                    {getChapterBadge(proposal.chapter)}
+                  </span>
+                )}
                 <span className="text-xs font-mono text-muted-foreground">
                   {proposal.proposalNumber}
                 </span>
@@ -70,6 +76,17 @@ export default function RepositoryDetailPage() {
               <h1 className="text-2xl md:text-3xl font-extrabold text-foreground leading-tight">
                 {proposal.title}
               </h1>
+
+              {(proposal.chapterTitle || proposal.chapter) && (
+                <div className="flex items-center gap-2 text-sm font-semibold text-primary">
+                  <BookOpen className="w-4 h-4 shrink-0" />
+                  <span>
+                    {proposal.chapter && proposal.chapterTitle
+                      ? `${getChapterBadge(proposal.chapter)} — ${proposal.chapterTitle}`
+                      : proposal.chapterTitle || getChapterBadge(proposal.chapter)}
+                  </span>
+                </div>
+              )}
 
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 pt-2 text-xs text-muted-foreground">
                 <div>

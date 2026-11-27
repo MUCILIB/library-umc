@@ -582,4 +582,197 @@ describe("LoanService Unit Tests", () => {
       expect(res.data).toEqual([]);
     });
   });
+
+  describe("requestExtension", () => {
+    it("menolak pengajuan perpanjangan jika sudah pernah diperpanjang 1 kali (extendCount >= 1)", async () => {
+      (db.query.loans.findFirst as any).mockResolvedValueOnce({
+        id: "loan-ext-1",
+        memberId: "member-1",
+        status: "approved",
+        extendCount: 1,
+        extensionStatus: "approved",
+        dueDate: "2099-12-31",
+        item: { bibliographyId: "bib-1" },
+      });
+
+      await expect(
+        loanService.requestExtension("loan-ext-1", "member-1")
+      ).rejects.toThrowError("Batas perpanjangan adalah 1 kali");
+    });
+  });
+
+  describe("createDirectLoan", () => {
+    it("menolak peminjaman di tempat jika dueDate melebihi 7 hari", async () => {
+      (db.query.members.findFirst as any).mockResolvedValueOnce({
+        id: "mem-1",
+        cardStatus: "active",
+        cardNumber: "UMCLIB-2026-0001",
+        cardExpiresAt: "2099-12-31T00:00:00.000Z",
+        user: { name: "Mahasiswa A" },
+      });
+      (db.select as any).mockReturnValueOnce({
+        from: vi.fn().mockReturnValue({
+          innerJoin: vi.fn().mockReturnValue({
+            where: vi.fn().mockResolvedValue([]),
+          }),
+        }),
+      });
+      (db.query.loans.findMany as any).mockResolvedValueOnce([]);
+      (db.query.items.findFirst as any).mockResolvedValueOnce({
+        id: "item-1",
+        itemCode: "S-2026-00001-c1",
+        status: "available",
+        bibliographyId: "bib-1",
+        collectionType: { code: "S", canBeBorrowed: true },
+        bibliography: { collectionType: { code: "S", canBeBorrowed: true } },
+      });
+
+      await expect(
+        loanService.createDirectLoan("staff-1", {
+          memberIdentifier: "22010199",
+          itemIdentifier: "S-2026-00001-c1",
+          loanDate: "2026-11-01",
+          dueDate: "2026-11-15",
+        })
+      ).rejects.toThrowError("Durasi peminjaman di tempat maksimal adalah 7 hari.");
+    });
+
+    it("menolak peminjaman di tempat jika eksemplar berstatus maintenance", async () => {
+      (db.query.members.findFirst as any).mockResolvedValueOnce({
+        id: "mem-1",
+        cardStatus: "active",
+        cardNumber: "UMCLIB-2026-0001",
+        cardExpiresAt: "2099-12-31T00:00:00.000Z",
+        user: { name: "Mahasiswa A" },
+      });
+      (db.select as any).mockReturnValueOnce({
+        from: vi.fn().mockReturnValue({
+          innerJoin: vi.fn().mockReturnValue({
+            where: vi.fn().mockResolvedValue([]),
+          }),
+        }),
+      });
+      (db.query.loans.findMany as any).mockResolvedValueOnce([]);
+      (db.query.items.findFirst as any).mockResolvedValueOnce({
+        id: "item-maint",
+        itemCode: "S-2026-00002-c1",
+        status: "maintenance",
+        bibliographyId: "bib-1",
+        collectionType: { code: "S", canBeBorrowed: true },
+        bibliography: { collectionType: { code: "S", canBeBorrowed: true } },
+      });
+
+      await expect(
+        loanService.createDirectLoan("staff-1", {
+          memberIdentifier: "22010199",
+          itemIdentifier: "S-2026-00002-c1",
+        })
+      ).rejects.toThrowError(/Sedang Diperbaiki.*maintenance/i);
+    });
+  });
+
+  describe("maintenance item loan prevention", () => {
+    it("menolak requestLoan jika item yang dipilih langsung berstatus maintenance", async () => {
+      mockSelectCounts([0]);
+      (db.query.items.findFirst as any).mockResolvedValueOnce({
+        id: "item-maint-1",
+        itemCode: "S-2026-10001-c1",
+        bibliographyId: "bib-1",
+        status: "maintenance",
+      });
+
+      await expect(
+        loanService.requestLoan("member-1", "item-maint-1")
+      ).rejects.toThrowError(/sedang diperbaiki/i);
+    });
+
+    it("menolak requestLoan jika tidak ada item available dan buku sedang dalam perbaikan", async () => {
+      mockSelectCounts([0, 0, 0]);
+      (db.query.items.findFirst as any)
+        .mockResolvedValueOnce(null)
+        .mockResolvedValueOnce({
+          id: "item-maint-2",
+          bibliographyId: "bib-1",
+          status: "maintenance",
+        });
+
+      await expect(
+        loanService.requestLoan("member-1", "bib-1")
+      ).rejects.toThrowError(/dalam perbaikan/i);
+    });
+
+    it("menolak approveLoan jika item berubah status menjadi maintenance", async () => {
+      (db.transaction as any).mockImplementationOnce(async (cb: any) => {
+        const tx = createTxForStockSync(0);
+        tx.query.loans.findFirst = vi.fn().mockResolvedValueOnce({
+          id: "loan-pending-1",
+          itemId: "item-maint-3",
+          member: { user: { email: "user@example.com", name: "User" } },
+          item: {
+            id: "item-maint-3",
+            itemCode: "S-2026-10002-c1",
+            status: "maintenance",
+            bibliography: { title: "Buku Perbaikan", bibliographyId: "bib-1" },
+          },
+        });
+        return cb(tx);
+      });
+
+      await expect(
+        loanService.approveLoan("loan-pending-1", "admin-1")
+      ).rejects.toThrowError(/Sedang Diperbaiki/i);
+    });
+
+    it("menolak requestLoan jika itemId spesifik yang dipilih berstatus loaned/maintenance meskipun ada salinan lain tersedia", async () => {
+      mockSelectCounts([0]);
+      (db.query.items.findFirst as any).mockResolvedValueOnce({
+        id: "item-c2",
+        itemCode: "S-2026-10001-c2",
+        bibliographyId: "bib-1",
+        status: "loaned",
+      });
+
+      await expect(
+        loanService.requestLoan(
+          "member-1",
+          "bib-1",
+          undefined,
+          undefined,
+          undefined,
+          "item-c2"
+        )
+      ).rejects.toThrowError(/S-2026-10001-c2.*loaned/i);
+    });
+
+    it("menolak requestLoan jika tanggal peminjaman melebihi tanggal saat ini", async () => {
+      mockSelectCounts([0, 0, 1]);
+      (db.query.items.findFirst as any)
+        .mockResolvedValueOnce({
+          id: "item-ok",
+          itemCode: "S-2026-10001-c1",
+          bibliographyId: "bib-1",
+          status: "available",
+        })
+        .mockResolvedValueOnce({
+          id: "item-ok",
+          collectionType: { canBeBorrowed: true, code: "S" },
+        });
+      (db.query.loans.findFirst as any).mockResolvedValueOnce(null);
+      (db.query.bibliographies.findFirst as any).mockResolvedValueOnce({
+        id: "bib-1",
+        collectionType: { canBeBorrowed: true, code: "S" },
+      });
+
+      await expect(
+        loanService.requestLoan(
+          "member-1",
+          "bib-1",
+          "2099-12-31",
+          "2100-01-05",
+          undefined,
+          "item-ok"
+        )
+      ).rejects.toThrowError(/melebihi tanggal saat ini/i);
+    });
+  });
 });

@@ -3,7 +3,6 @@ import {
   IdCard,
   User,
   GraduationCap,
-  ChevronDown,
   CheckCircle2,
   AlertCircle,
   Loader2,
@@ -11,6 +10,13 @@ import {
   Sparkles,
 } from "lucide-react";
 import { studyProgramApi, guestApi, type StudyProgram } from "@/api/client";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import LogoUmc from "@/assets/logo_umc.png";
 import BgLibrary from "@/assets/bg1.jpeg";
 
@@ -443,31 +449,21 @@ export default function Absensi() {
                   Program Studi <span className="text-red-600">*</span>
                 </label>
                 <div className="relative flex items-center">
-                  <div className="absolute left-4 pointer-events-none text-slate-400">
+                  <div className="absolute left-4 z-10 pointer-events-none text-slate-400">
                     <GraduationCap className="w-5 h-5" strokeWidth={1.8} />
                   </div>
-                  <select
-                    required
-                    value={studyProgram}
-                    onChange={(e) => setStudyProgram(e.target.value)}
-                    className="w-full bg-[#F1F3F5] dark:bg-muted/60 border border-slate-200/90 dark:border-border rounded-xl pl-12 pr-10 py-3.5 text-sm sm:text-base font-medium text-slate-800 dark:text-foreground focus:outline-none focus:border-[#9D171D] focus:ring-2 focus:ring-[#9D171D]/15 transition-all appearance-none cursor-pointer"
-                  >
-                    <option value="" disabled className="text-slate-400">
-                      Pilih program studi
-                    </option>
-                    {studyProgramsList.map((prodi) => (
-                      <option
-                        key={prodi.id}
-                        value={prodi.name}
-                        className="text-slate-800 dark:text-foreground"
-                      >
-                        {prodi.name}
-                      </option>
-                    ))}
-                  </select>
-                  <div className="absolute right-4 pointer-events-none text-slate-400">
-                    <ChevronDown className="w-5 h-5" strokeWidth={2} />
-                  </div>
+                  <Select value={studyProgram} onValueChange={setStudyProgram}>
+                    <SelectTrigger className="h-auto w-full bg-[#F1F3F5] dark:bg-muted/60 border border-slate-200/90 dark:border-border rounded-xl pl-12 pr-4 py-3.5 text-sm sm:text-base font-medium text-slate-800 dark:text-foreground focus:border-[#9D171D] focus:ring-2 focus:ring-[#9D171D]/15 transition-all">
+                      <SelectValue placeholder="Pilih program studi" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {studyProgramsList.map((prodi) => (
+                        <SelectItem key={prodi.id} value={prodi.name}>
+                          {prodi.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
 

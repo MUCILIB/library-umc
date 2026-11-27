@@ -14,14 +14,24 @@ export interface Reservation {
     title: string;
     author: string;
     publisher: string;
-    publicationYear: number;
+    publicationYear: number | null;
+    publishYear?: number | null;
     isbn?: string;
+    isbnIssn?: string;
+    callNumber?: string;
+    classification?: string;
     type: string;
-    image?: string;
+    image?: string | null;
+    stock?: number;
+    availableItems?: number;
+    totalItems?: number;
   };
   member?: {
     id: string;
     nimNidn: string;
+    cardNumber?: string | null;
+    faculty?: string | null;
+    studyProgram?: string | null;
     user?: { name: string };
   };
 }

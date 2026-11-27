@@ -1066,6 +1066,7 @@ export class ImportService {
         const statusMap: Record<string, string> = {
           "available": "available", "tersedia": "available",
           "loaned": "loaned", "dipinjam": "loaned",
+          "maintenance": "maintenance", "sedang diperbaiki": "maintenance", "diperbaiki": "maintenance", "perbaikan": "maintenance", "repair": "maintenance",
           "damaged": "damaged", "rusak": "damaged",
           "lost": "lost", "hilang": "lost",
         };
