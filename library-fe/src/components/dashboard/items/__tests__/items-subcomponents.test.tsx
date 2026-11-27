@@ -203,5 +203,58 @@ describe("Item Modular Subcomponents", () => {
       fireEvent.click(backBtn);
       expect(onBack).toHaveBeenCalled();
     });
+
+    it("menampilkan status Sedang Diperbaiki saat item berstatus maintenance", () => {
+      render(
+        <ItemDetail
+          item={{ ...mockItem, status: "maintenance" }}
+          loading={false}
+          onBack={vi.fn()}
+          onEdit={vi.fn()}
+          onDelete={vi.fn()}
+          onRefresh={vi.fn().mockResolvedValue(undefined)}
+        />
+      );
+
+      expect(screen.getAllByText("Sedang Diperbaiki").length).toBeGreaterThanOrEqual(1);
+    });
+  });
+
+  describe("Maintenance status display", () => {
+    it("merender badge Sedang Diperbaiki di ItemTable dan ItemQrModal", () => {
+      const maintenanceItem: Item = { ...mockItem, status: "maintenance" };
+
+      render(
+        <ItemTable
+          items={[maintenanceItem]}
+          sortBy="itemCode"
+          sortOrder="asc"
+          onToggleSort={vi.fn()}
+          onOpenDetail={vi.fn()}
+          onOpenQrModal={vi.fn()}
+          onEdit={vi.fn()}
+          onDelete={vi.fn()}
+          canEdit={() => false}
+          canDelete={() => false}
+          page={1}
+          totalPages={1}
+          totalItems={1}
+          limit={10}
+          onPageChange={vi.fn()}
+        />
+      );
+
+      expect(screen.getByText("Sedang Diperbaiki")).toBeInTheDocument();
+
+      render(
+        <ItemQrModal
+          isOpen={true}
+          item={maintenanceItem}
+          onClose={vi.fn()}
+        />
+      );
+
+      expect(screen.getAllByText(/Sedang Diperbaiki/i).length).toBeGreaterThanOrEqual(2);
+    });
   });
 });

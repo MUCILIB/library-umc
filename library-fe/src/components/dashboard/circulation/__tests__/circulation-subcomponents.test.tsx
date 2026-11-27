@@ -159,5 +159,47 @@ describe("Circulation Modular Subcomponents", () => {
       fireEvent.click(backBtn);
       expect(onReset).toHaveBeenCalled();
     });
+
+    it("tidak menampilkan tombol Setujui & Serahkan Buku jika item berstatus maintenance meski ada activeLoan pending", () => {
+      render(
+        <CirculationItemResult
+          itemResult={{
+            item: {
+              id: "item-maint",
+              itemCode: "UMC-M001",
+              title: "Buku Perbaikan",
+              status: "maintenance",
+              location: "Lantai 1",
+            },
+            activeLoan: {
+              id: "loan-pending",
+              loanCode: "LN-2026-999",
+              memberId: "usr-1",
+              memberName: "Mahasiswa A",
+              dueDate: "2026-12-01T00:00:00.000Z",
+              status: "pending",
+              extensionStatus: "none",
+            },
+            allowedActions: [],
+          }}
+          intent="loan"
+          onIntentChange={vi.fn()}
+          returnCondition="good"
+          onReturnConditionChange={vi.fn()}
+          loading={false}
+          onLoan={vi.fn()}
+          onReturn={vi.fn()}
+          onApproveExtension={vi.fn()}
+          onRejectExtension={vi.fn()}
+          onReset={vi.fn()}
+          formatDateStr={(d) => d || "-"}
+        />
+      );
+
+      expect(screen.getByText("Buku Sedang Diperbaiki")).toBeInTheDocument();
+      expect(
+        screen.queryByRole("button", { name: /Setujui & Serahkan Buku/i })
+      ).not.toBeInTheDocument();
+    });
   });
 });

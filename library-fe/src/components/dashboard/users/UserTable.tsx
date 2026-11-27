@@ -129,6 +129,16 @@ export function cardStatusClass(status?: string | null): string {
   }
 }
 
+export function canEditMemberCardExpiry(
+  user: Pick<DashboardUser, "hasSyncedMember" | "cardStatus" | "cardNumber">
+): boolean {
+  return Boolean(
+    user.hasSyncedMember &&
+      user.cardNumber &&
+      (user.cardStatus === "active" || user.cardStatus === "expired")
+  );
+}
+
 export function UserTable({
   users,
   loading,
@@ -412,28 +422,26 @@ export function UserTable({
                               <span>{syncSavingId === user.id ? "Menyinkronkan..." : "Sinkronisasi Member"}</span>
                             </DropdownMenuItem>
                           ) : (
-                            <>
-                              {user.cardStatus !== "active" ? (
-                                <DropdownMenuItem
-                                  onClick={() => onIssueCard(user)}
-                                  disabled={issueSavingId === user.id}
-                                  className="cursor-pointer text-xs flex items-center gap-2"
-                                >
-                                  <CreditCard size={14} className="text-blue-600 dark:text-blue-400" />
-                                  <span>{issueSavingId === user.id ? "Menerbitkan..." : "Terbitkan Kartu"}</span>
-                                </DropdownMenuItem>
-                              ) : null}
+                            user.cardStatus !== "active" ? (
+                              <DropdownMenuItem
+                                onClick={() => onIssueCard(user)}
+                                disabled={issueSavingId === user.id}
+                                className="cursor-pointer text-xs flex items-center gap-2"
+                              >
+                                <CreditCard size={14} className="text-blue-600 dark:text-blue-400" />
+                                <span>{issueSavingId === user.id ? "Menerbitkan..." : "Terbitkan Kartu"}</span>
+                              </DropdownMenuItem>
+                            ) : null
+                          )}
 
-                              {onEditCardExpiry && (
-                                <DropdownMenuItem
-                                  onClick={() => onEditCardExpiry(user)}
-                                  className="cursor-pointer text-xs flex items-center gap-2"
-                                >
-                                  <Calendar size={14} className="text-primary" />
-                                  <span>Ubah Masa Aktif Kartu</span>
-                                </DropdownMenuItem>
-                              )}
-                            </>
+                          {onEditCardExpiry && canEditUsers && canEditMemberCardExpiry(user) && (
+                            <DropdownMenuItem
+                              onClick={() => onEditCardExpiry(user)}
+                              className="cursor-pointer text-xs flex items-center gap-2"
+                            >
+                              <Calendar size={14} className="text-primary" />
+                              <span>Ubah Masa Aktif Kartu</span>
+                            </DropdownMenuItem>
                           )}
 
                           {canEditUsers && (

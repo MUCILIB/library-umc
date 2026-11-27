@@ -75,6 +75,7 @@ class LoanService {
   async requestLoan(data: {
     memberId: string;
     bibliographyId: string;
+    itemId?: string;
     loanDate: string;
     dueDate: string;
     notes?: string;
@@ -268,11 +269,15 @@ class LoanService {
       const errJson = await response.json().catch(() => null);
       throw new Error(errJson?.message || "Gagal mengunduh tanda terima pengembalian PDF");
     }
+    const disposition = response.headers?.get?.("Content-Disposition") || "";
+    const match = disposition.match(/filename="?([^";\n]+)"?/i);
+    const filename = match?.[1]?.trim() || `berita-acara-pengembalian_${loanId.slice(0, 8)}.pdf`;
+
     const blob = await response.blob();
     const url = window.URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
-    link.download = `tanda_terima_pengembalian_${loanId}.pdf`;
+    link.download = filename;
     document.body.appendChild(link);
     link.click();
     link.remove();

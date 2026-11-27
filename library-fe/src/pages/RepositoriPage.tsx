@@ -4,6 +4,7 @@ import Navbar from "@/components/ui/navbar";
 import Footer from "@/components/Footer";
 import { repositoryService } from "@/services/repositoryService";
 import { facultyApi, studyProgramApi, type Faculty, type StudyProgram } from "@/api/client";
+import { getChapterBadge } from "@/utils/thesisChapters";
 import {
   Select,
   SelectContent,
@@ -14,6 +15,7 @@ import {
 import {
   Search,
   FileText,
+  BookOpen,
   RotateCcw,
   X,
   Filter,
@@ -32,6 +34,8 @@ interface FormattedRepositoryItem {
   id: string;
   proposalNumber?: string;
   title: string;
+  chapter?: string | null;
+  chapterTitle?: string | null;
   author: string;
   authorNim?: string;
   department: string;
@@ -41,10 +45,25 @@ interface FormattedRepositoryItem {
   categoryRaw: string;
   year: string;
   date: string;
+  createdAt: string;
   fileSize: string;
   pageCount?: number;
   keywords: string[];
 }
+
+const CHAPTER_FILTER_OPTIONS = [
+  { value: "ALL", label: "Semua Bagian / Bab" },
+  { value: "FULL_TEXT", label: "Naskah Lengkap (Full Text)" },
+  { value: "FRONT_MATTER", label: "Bagian Awal" },
+  { value: "BAB_1", label: "BAB 1" },
+  { value: "BAB_2", label: "BAB 2" },
+  { value: "BAB_3", label: "BAB 3" },
+  { value: "BAB_4", label: "BAB 4" },
+  { value: "BAB_5", label: "BAB 5" },
+  { value: "BAB_6", label: "BAB 6" },
+  { value: "BACK_MATTER", label: "Bagian Akhir" },
+  { value: "OTHER", label: "Bab Khusus" },
+];
 
 const CATEGORY_MAP: Record<string, string> = {
   THESIS: "Skripsi",
@@ -72,6 +91,7 @@ export default function RepositoriPage() {
   const [activeSearch, setActiveSearch] = useState("");
   const [searchScope, setSearchScope] = useState<"all" | "title" | "author" | "keywords">("all");
   const [selectedCategory, setSelectedCategory] = useState("ALL");
+  const [selectedChapter, setSelectedChapter] = useState("ALL");
   const [selectedFacultyId, setSelectedFacultyId] = useState("ALL");
   const [selectedStudyProgramId, setSelectedStudyProgramId] = useState("ALL");
   const [yearStart, setYearStart] = useState("");
@@ -104,6 +124,8 @@ export default function RepositoriPage() {
           id: p.id,
           proposalNumber: p.proposalNumber,
           title: p.title,
+          chapter: p.chapter || null,
+          chapterTitle: p.chapterTitle || null,
           author: p.authorName,
           authorNim: p.authorNim && p.authorNim !== "-" ? p.authorNim : undefined,
           department: p.studyProgram?.name || "Program Studi",
@@ -117,6 +139,7 @@ export default function RepositoriPage() {
             month: "long",
             year: "numeric",
           }),
+          createdAt: p.createdAt,
           fileSize: p.fileSize ? `${(p.fileSize / (1024 * 1024)).toFixed(1)} MB` : "PDF Dokumen",
           pageCount: p.pageCount || undefined,
           keywords: p.keywords && p.keywords.length > 0 ? p.keywords : ["karya ilmiah", "umc"],
@@ -166,6 +189,7 @@ export default function RepositoriPage() {
     setActiveSearch("");
     setSearchScope("all");
     setSelectedCategory("ALL");
+    setSelectedChapter("ALL");
     setSelectedFacultyId("ALL");
     setSelectedStudyProgramId("ALL");
     setYearStart("");
@@ -181,9 +205,15 @@ export default function RepositoriPage() {
         // Filter Kata Kunci / Teks Pencarian
         if (activeSearch) {
           const q = activeSearch.toLowerCase();
+          const chapterLabel = item.chapter ? getChapterBadge(item.chapter).toLowerCase() : "";
+          const chapterTitle = (item.chapterTitle || "").toLowerCase();
           switch (searchScope) {
             case "title":
-              return item.title.toLowerCase().includes(q);
+              return (
+                item.title.toLowerCase().includes(q) ||
+                chapterLabel.includes(q) ||
+                chapterTitle.includes(q)
+              );
             case "author":
               return (
                 item.author.toLowerCase().includes(q) ||
@@ -195,6 +225,9 @@ export default function RepositoriPage() {
             default:
               return (
                 item.title.toLowerCase().includes(q) ||
+                chapterLabel.includes(q) ||
+                chapterTitle.includes(q) ||
+                (item.proposalNumber ? item.proposalNumber.toLowerCase().includes(q) : false) ||
                 item.author.toLowerCase().includes(q) ||
                 Boolean(item.authorNim && item.authorNim.toLowerCase().includes(q)) ||
                 item.abstract.toLowerCase().includes(q) ||
@@ -208,6 +241,14 @@ export default function RepositoriPage() {
         // Filter Kategori
         if (selectedCategory !== "ALL") {
           return item.categoryRaw === selectedCategory;
+        }
+        return true;
+      })
+      .filter((item) => {
+        // Filter Bab / Bagian Naskah
+        if (selectedChapter !== "ALL") {
+          const normalized = item.chapter || "FULL_TEXT";
+          return normalized === selectedChapter;
         }
         return true;
       })
@@ -244,19 +285,22 @@ export default function RepositoriPage() {
       })
       .sort((a, b) => {
         if (sortBy === "date_asc") {
-          return new Date(a.date).getTime() - new Date(b.date).getTime();
+          return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
         }
         if (sortBy === "title_asc") {
-          return a.title.localeCompare(b.title);
+          const titleCmp = a.title.localeCompare(b.title);
+          if (titleCmp !== 0) return titleCmp;
+          return (a.chapter || "").localeCompare(b.chapter || "");
         }
         // default date_desc
-        return new Date(b.date).getTime() - new Date(a.date).getTime();
+        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
       });
   }, [
     items,
     activeSearch,
     searchScope,
     selectedCategory,
+    selectedChapter,
     selectedFacultyId,
     selectedStudyProgramId,
     yearStart,
@@ -427,6 +471,31 @@ export default function RepositoriPage() {
                   </Select>
                 </div>
 
+                {/* Filter Bab / Bagian Naskah */}
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-medium text-muted-foreground">
+                    Bagian / Bab Naskah
+                  </label>
+                  <Select
+                    value={selectedChapter}
+                    onValueChange={(val) => {
+                      setSelectedChapter(val);
+                      setCurrentPage(1);
+                    }}
+                  >
+                    <SelectTrigger className="w-full h-9 rounded-lg bg-background border-border text-xs font-medium cursor-pointer">
+                      <SelectValue placeholder="Semua Bagian / Bab" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-card border-border shadow-md max-h-60">
+                      {CHAPTER_FILTER_OPTIONS.map((opt) => (
+                        <SelectItem key={opt.value} value={opt.value} className="text-xs cursor-pointer">
+                          {opt.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
                 {/* Filter 7 Fakultas UMC */}
                 <div className="space-y-1.5">
                   <label className="block text-xs font-medium text-muted-foreground">
@@ -517,6 +586,7 @@ export default function RepositoriPage() {
                 {/* Active Filter Chips */}
                 {(activeSearch ||
                   selectedCategory !== "ALL" ||
+                  selectedChapter !== "ALL" ||
                   selectedFacultyId !== "ALL" ||
                   yearStart ||
                   yearEnd) && (
@@ -547,6 +617,18 @@ export default function RepositoriPage() {
                             type="button"
                             onClick={() => setSelectedCategory("ALL")}
                             className="cursor-pointer hover:text-muted-foreground"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        </span>
+                      )}
+                      {selectedChapter !== "ALL" && (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] bg-primary/10 text-primary border border-primary/20">
+                          {getChapterBadge(selectedChapter)}
+                          <button
+                            type="button"
+                            onClick={() => setSelectedChapter("ALL")}
+                            className="cursor-pointer hover:text-primary/70"
                           >
                             <X className="w-3 h-3" />
                           </button>
@@ -689,6 +771,11 @@ export default function RepositoriPage() {
                           <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-muted text-foreground border border-border">
                             {item.category}
                           </span>
+                          {item.chapter && (
+                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-primary/10 text-primary border border-primary/20">
+                              {getChapterBadge(item.chapter)}
+                            </span>
+                          )}
                           <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20">
                             <CheckCircle className="w-3 h-3" />
                             Terverifikasi Pustakawan UMC
@@ -703,11 +790,23 @@ export default function RepositoriPage() {
                       </div>
 
                       {/* Judul Naskah */}
-                      <h3 className="text-base sm:text-lg font-bold text-foreground group-hover:text-primary transition-colors leading-snug mb-2.5">
+                      <h3 className="text-base sm:text-lg font-bold text-foreground group-hover:text-primary transition-colors leading-snug mb-1.5">
                         <Link to={`/repository/${item.id}`} className="hover:underline">
                           {item.title}
                         </Link>
                       </h3>
+
+                      {/* Judul / Sub-bagian Bab */}
+                      {(item.chapterTitle || item.chapter) && (
+                        <div className="flex items-center gap-1.5 text-xs font-semibold text-primary mb-2.5">
+                          <BookOpen className="w-3.5 h-3.5 shrink-0" />
+                          <span>
+                            {item.chapter && item.chapterTitle
+                              ? `${getChapterBadge(item.chapter)} — ${item.chapterTitle}`
+                              : item.chapterTitle || getChapterBadge(item.chapter)}
+                          </span>
+                        </div>
+                      )}
 
                       {/* Penulis, NIM, Prodi & Fakultas */}
                       <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs text-muted-foreground mb-3">

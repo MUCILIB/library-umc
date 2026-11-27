@@ -21,14 +21,23 @@ import {
   Heart,
   X,
   BookOpen,
-  Info
+  Info,
+  Wrench
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { generateColorFromSeed, cleanIsbn } from "@/utils/format";
 import { isBookSaved, saveBook, removeBook } from "@/utils/bookmarks";
 import { bookmarkApi } from "@/api/client";
 import { resolveCoverUrl } from "@/utils/imageUrl";
+import { getItemStatusBadgeClass, getItemStatusLabel } from "@/utils/itemStatus";
 import EbookReaderModal from "@/components/EbookReaderModal";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 const KatalogDetail = () => {
   const { id } = useParams<{ id: string }>();
@@ -80,6 +89,7 @@ const KatalogDetail = () => {
   );
 
   const {
+    todayYmd,
     showReservationList,
     setShowReservationList,
     borrowLoading,
@@ -87,6 +97,8 @@ const KatalogDetail = () => {
     setShowLoanForm,
     loanFormData,
     setLoanFormData,
+    selectedLoanItem,
+    isSelectedItemAvailable,
     getBookStatus,
     isUserBorrowing,
     isUserPending,
@@ -214,7 +226,9 @@ const KatalogDetail = () => {
     }
   };
 
-  const getSimilarBookStatus = (book: Bibliography): "available" | "borrowed" => {
+  const getSimilarBookStatus = (
+    book: Bibliography
+  ): "available" | "borrowed" | "maintenance" => {
     if (book.type === "ebook") return "available";
 
     if (book.items && book.items.length > 0) {
@@ -223,6 +237,11 @@ const KatalogDetail = () => {
 
       const loanedItems = book.items.filter((i) => i.status === "loaned");
       if (loanedItems.length > 0) return "borrowed";
+
+      const maintenanceItems = book.items.filter(
+        (i) => i.status === "maintenance"
+      );
+      if (maintenanceItems.length > 0) return "maintenance";
 
       return "borrowed";
     }
@@ -271,48 +290,123 @@ const KatalogDetail = () => {
 
       {/* Modal Form Peminjaman */}
       {showLoanForm && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-card rounded-2xl p-6 max-w-md w-full">
-            <h3 className="text-lg font-bold text-slate-900 mb-4">
-              Ajukan Peminjaman Buku
-            </h3>
-
-            <div className="space-y-4 mb-6">
-              {/* Info Buku */}
-              <div className="p-4 bg-slate-50 rounded-xl">
-                <p className="font-medium text-slate-900">
-                  {bibliography?.title}
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-xs flex items-center justify-center z-50 p-4 sm:p-6">
+          <div className="bg-card rounded-2xl p-5 sm:p-7 max-w-2xl w-full max-h-[90vh] overflow-y-auto border border-border shadow-2xl">
+            <div className="flex items-center justify-between gap-3 mb-5">
+              <div>
+                <h3 className="text-lg sm:text-xl font-bold text-slate-900">
+                  Ajukan Peminjaman Buku
+                </h3>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Pilih kode eksemplar tersedia dan tentukan tanggal pengambilan buku.
                 </p>
-                <p className="text-sm text-slate-600">{bibliography?.author}</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowLoanForm(false);
+                  setLoanFormData((prev) => ({
+                    ...prev,
+                    itemId: "",
+                    notes: "",
+                  }));
+                }}
+                aria-label="Tutup modal peminjaman"
+                className="p-2 rounded-full text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="space-y-4 sm:space-y-5 mb-6">
+              {/* Info Buku */}
+              <div className="p-4 bg-slate-50 border border-slate-100 rounded-xl flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                <div className="min-w-0">
+                  <p className="font-semibold text-slate-900 truncate">
+                    {bibliography?.title}
+                  </p>
+                  <p className="text-sm text-slate-600 truncate">{bibliography?.author}</p>
+                </div>
+                {selectedLoanItem && (
+                  <span
+                    className={`self-start sm:self-auto shrink-0 inline-flex items-center px-3 py-1 rounded-full text-xs font-bold border ${getItemStatusBadgeClass(selectedLoanItem.status)}`}
+                  >
+                    {getItemStatusLabel(selectedLoanItem.status)}
+                  </span>
+                )}
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">
-                  Tanggal Peminjaman
-                </label>
-                <input
-                  type="date"
-                  name="loanDate"
-                  value={loanFormData.loanDate}
-                  onChange={handleInputChange}
-                  min={new Date().toISOString().split("T")[0]}
-                  className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm text-slate-900 focus:ring-2 focus:ring-primary/10"
-                  required
-                />
-              </div>
+              {/* Pilihan Kode Buku (Eksemplar) */}
+              {bibliography?.items && bibliography.items.length > 0 && (
+                <div>
+                  <label
+                    htmlFor="loan-item-select"
+                    className="block text-sm font-medium text-slate-700 mb-2"
+                  >
+                    Pilih Kode Buku (Eksemplar) <span className="text-primary">*</span>
+                  </label>
+                  <Select
+                    value={loanFormData.itemId}
+                    onValueChange={(val) =>
+                      setLoanFormData((prev) => ({ ...prev, itemId: val }))
+                    }
+                  >
+                    <SelectTrigger
+                      id="loan-item-select"
+                      className="w-full h-11 px-4 rounded-xl border-slate-200 bg-white text-sm text-slate-900 font-mono focus:ring-2 focus:ring-primary/10"
+                    >
+                      <SelectValue placeholder="Pilih kode eksemplar" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {bibliography.items.map((item, idx) => (
+                        <SelectItem key={item.id} value={item.id} className="font-mono text-xs sm:text-sm">
+                          #{idx + 1} • {item.itemCode || item.id} ({getItemStatusLabel(item.status)})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
 
-              {/* ✅ Tanggal Pengembalian — otomatis 7 hari, diblokir dari input */}
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">
-                  Tanggal Pengembalian (Maks 7 Hari)
-                </label>
-                <input
-                  type="date"
-                  name="dueDate"
-                  value={loanFormData.dueDate}
-                  readOnly
-                  className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm bg-slate-100 text-slate-500 cursor-not-allowed"
-                />
+                  {!isSelectedItemAvailable && selectedLoanItem && (
+                    <div className="mt-2.5 rounded-xl border border-amber-300 bg-amber-50 p-3.5 text-xs sm:text-sm text-amber-900">
+                      Eksemplar <strong>{selectedLoanItem.itemCode || selectedLoanItem.id}</strong> saat ini berstatus{" "}
+                      <strong>{getItemStatusLabel(selectedLoanItem.status)}</strong> sehingga{" "}
+                      <strong>tidak dapat diajukan peminjaman</strong>. Silakan pilih eksemplar lain yang berstatus{" "}
+                      <strong>Tersedia</strong>.
+                    </div>
+                  )}
+                </div>
+              )}
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">
+                    Tanggal Peminjaman
+                  </label>
+                  <input
+                    type="date"
+                    name="loanDate"
+                    value={loanFormData.loanDate}
+                    onChange={handleInputChange}
+                    min={todayYmd}
+                    max={todayYmd}
+                    className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm text-slate-900 focus:ring-2 focus:ring-primary/10"
+                    required
+                  />
+                </div>
+
+                {/* ✅ Tanggal Pengembalian — otomatis 7 hari, diblokir dari input */}
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">
+                    Tanggal Pengembalian (Maks 7 Hari)
+                  </label>
+                  <input
+                    type="date"
+                    name="dueDate"
+                    value={loanFormData.dueDate}
+                    readOnly
+                    className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm bg-slate-100 text-slate-500 cursor-not-allowed"
+                  />
+                </div>
               </div>
 
               {/* Catatan */}
@@ -326,31 +420,37 @@ const KatalogDetail = () => {
                   onChange={handleInputChange}
                   placeholder="Contoh: untuk tugas akhir, dll"
                   className="w-full px-4 py-2.5 border border-slate-200 text-slate-900 rounded-xl text-sm focus:ring-2 focus:ring-primary/10"
-                  rows={3}
+                  rows={2}
                 />
               </div>
 
-              <div className="text-xs text-slate-500 bg-slate-50 p-3 rounded-xl space-y-1">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs text-slate-600 bg-slate-50 border border-slate-100 p-3.5 rounded-xl">
                 <p>• Maksimal peminjaman 7 hari</p>
                 <p>• Denda keterlambatan Rp 500/hari</p>
-                <p>• Permintaan akan diproses oleh petugas</p>
+                <p>• Permintaan diproses petugas</p>
               </div>
             </div>
 
-            <div className="flex gap-3">
+            <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-3 pt-2 border-t border-slate-100">
               <button
+                type="button"
                 onClick={() => {
                   setShowLoanForm(false);
-                  setLoanFormData({ loanDate: "", dueDate: "", notes: "" });
+                  setLoanFormData((prev) => ({
+                    ...prev,
+                    itemId: "",
+                    notes: "",
+                  }));
                 }}
-                className="flex-1 px-4 py-2.5 border border-slate-200 rounded-xl text-foreground text-sm font-medium hover:bg-slate-50"
+                className="sm:min-w-28 px-5 py-2.5 border border-slate-200 rounded-xl text-foreground text-sm font-medium hover:bg-slate-50 cursor-pointer"
               >
                 Batal
               </button>
               <button
+                type="button"
                 onClick={handleSubmitLoan}
-                disabled={borrowLoading}
-                className="flex-1 bg-primary text-white px-4 py-2.5 rounded-xl text-sm font-bold hover:bg-primary/90 disabled:bg-slate-400 transition-all"
+                disabled={borrowLoading || !isSelectedItemAvailable}
+                className="sm:min-w-48 bg-primary text-white px-6 py-2.5 rounded-xl text-sm font-bold hover:bg-primary/90 disabled:bg-slate-400 disabled:cursor-not-allowed transition-all cursor-pointer"
               >
                 {borrowLoading ? "Memproses..." : "Ajukan Peminjaman"}
               </button>
@@ -398,12 +498,8 @@ const KatalogDetail = () => {
                 <span className="mt-4 font-mono font-extrabold text-sm text-slate-800 tracking-wider">
                   {selectedItemForQr.itemCode || "-"}
                 </span>
-                <span className={`mt-1.5 px-2.5 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider ${
-                  selectedItemForQr.status === "available"
-                    ? "bg-green-50 text-green-700"
-                    : "bg-red-50 text-primary"
-                }`}>
-                  Status: {selectedItemForQr.status === "available" ? "Tersedia" : "Dipinjam"}
+                <span className={`mt-1.5 px-2.5 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider border ${getItemStatusBadgeClass(selectedItemForQr.status)}`}>
+                  Status: {getItemStatusLabel(selectedItemForQr.status)}
                 </span>
               </div>
 
@@ -413,20 +509,24 @@ const KatalogDetail = () => {
                   <label className="block text-[9px] font-bold text-muted-foreground uppercase tracking-widest mb-1.5 ml-1">
                     Pilih Salinan Lain
                   </label>
-                  <select
+                  <Select
                     value={selectedItemForQr.id}
-                    onChange={(e) => {
-                      const found = bibliography.items?.find((i) => i.id === e.target.value);
+                    onValueChange={(val) => {
+                      const found = bibliography.items?.find((i) => i.id === val);
                       if (found) setSelectedItemForQr(found as any);
                     }}
-                    className="w-full p-3 bg-muted border border-border rounded-xl text-xs outline-none focus:ring-2 focus:ring-red-100 focus:border-primary transition-all cursor-pointer text-foreground font-semibold"
                   >
-                    {bibliography.items.map((item, idx) => (
-                      <option key={item.id} value={item.id}>
-                        Salinan #{idx + 1} - {item.itemCode} ({item.status === "available" ? "Tersedia" : "Dipinjam"})
-                      </option>
-                    ))}
-                  </select>
+                    <SelectTrigger className="w-full h-11 px-3 bg-muted border-border rounded-xl text-xs font-semibold text-foreground">
+                      <SelectValue placeholder="Pilih salinan buku" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {bibliography.items.map((item, idx) => (
+                        <SelectItem key={item.id} value={item.id} className="text-xs font-medium">
+                          Salinan #{idx + 1} - {item.itemCode} ({getItemStatusLabel(item.status)})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
               )}
 
@@ -720,6 +820,34 @@ const KatalogDetail = () => {
                   </p>
                 </div>
               </div>
+            ) : bookStatus === "maintenance" ? (
+              <div className="mt-6 sm:mt-auto space-y-2.5">
+                <div className="flex flex-col sm:flex-row gap-2.5 sm:gap-3">
+                  <button
+                    type="button"
+                    disabled
+                    className="w-full sm:flex-1 bg-amber-500/15 text-amber-900 dark:text-amber-300 border border-amber-300 dark:border-amber-700/60 py-3 sm:py-3.5 rounded-xl font-bold flex items-center justify-center gap-2 text-xs sm:text-sm cursor-not-allowed"
+                  >
+                    <Wrench size={16} className="sm:size-[18px]" />
+                    Sedang Diperbaiki (Tidak Dapat Dipinjam)
+                  </button>
+                  {currentUser && (
+                    <button
+                      onClick={onCheckStatusClick}
+                      className="w-full sm:w-auto sm:px-6 bg-card border border-border hover:bg-muted text-foreground py-3 sm:py-3.5 rounded-xl font-bold flex items-center justify-center gap-2 text-xs sm:text-sm transition-all active:scale-[0.98]"
+                    >
+                      <Bell size={16} className="sm:size-[18px]" />
+                      Cek Status
+                    </button>
+                  )}
+                </div>
+                <div className="rounded-xl border border-amber-200 dark:border-amber-900/60 bg-amber-50/80 dark:bg-amber-950/30 p-3 text-xs text-amber-900 dark:text-amber-300 flex items-start gap-2">
+                  <Info size={16} className="shrink-0 mt-0.5 text-amber-600 dark:text-amber-400" />
+                  <p className="leading-relaxed">
+                    Seluruh eksemplar buku ini berstatus <strong>Sedang Diperbaiki</strong> dan sementara tidak dapat dipinjam sampai perbaikan selesai.
+                  </p>
+                </div>
+              </div>
             ) : (
               <div className="flex flex-col sm:flex-row gap-2.5 sm:gap-3 mt-6 sm:mt-auto">
                 <button
@@ -903,6 +1031,11 @@ const KatalogDetail = () => {
                               <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
                               Tersedia
                             </span>
+                          ) : status === "maintenance" ? (
+                            <span className="inline-flex items-center gap-1 sm:gap-1.5 px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full text-[10px] sm:text-[11px] font-semibold bg-amber-50/95 backdrop-blur-xs text-amber-700 border border-amber-200/90 shadow-xs">
+                              <span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+                              Sedang Diperbaiki
+                            </span>
                           ) : (
                             <span className="inline-flex items-center gap-1 sm:gap-1.5 px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full text-[10px] sm:text-[11px] font-semibold bg-blue-50/95 backdrop-blur-xs text-blue-600 border border-blue-100/90 shadow-xs">
                               <span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
@@ -970,6 +1103,18 @@ const KatalogDetail = () => {
                         >
                           <span className="truncate">LIHAT DETAIL</span>
                           <ArrowRight size={12} className="shrink-0 sm:w-[13px] sm:h-[13px]" />
+                        </button>
+                      ) : status === "maintenance" ? (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            navigate(`/katalog/${book.id}`);
+                            window.scrollTo({ top: 0, behavior: "smooth" });
+                          }}
+                          className="flex-1 min-w-0 inline-flex items-center justify-center gap-1 sm:gap-1.5 py-1.5 px-2 sm:px-3 rounded-lg text-[10px] sm:text-[11px] font-bold text-amber-800 bg-amber-50 hover:bg-amber-100 transition-colors cursor-pointer"
+                        >
+                          <span className="truncate">Sedang Diperbaiki</span>
                         </button>
                       ) : (
                         <button

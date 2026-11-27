@@ -24,7 +24,7 @@ export const collectionTypeEnum = pgEnum("collection_type", [
 ]);
 export const contentTypeEnum = pgEnum("content_type", ["text", "pdf", "url"]);
 export const itemStatusEnum = pgEnum("item_status", [
-  "available", "loaned", "damaged", "lost"
+  "available", "loaned", "maintenance", "damaged", "lost"
 ]);
 export const loansStatusEnum = pgEnum("loans_status", [
   "pending", "approved", "returned", "extended", "rejected"

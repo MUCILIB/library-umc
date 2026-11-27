@@ -19,6 +19,13 @@ import {
 } from "lucide-react";
 import Modal from "@/components/ui/modal";
 import { EmptyState } from "@/components/ui/empty-state";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import NewsEditorForm from "./NewsEditorForm";
 import {
   newsService,
@@ -376,21 +383,25 @@ export default function NewsManagementSection() {
 
         {/* Category Filter */}
         <div className="flex items-center gap-2 overflow-x-auto pb-1 lg:pb-0">
-          <select
+          <Select
             value={selectedCategory}
-            onChange={(e) => {
-              setSelectedCategory(e.target.value as any);
+            onValueChange={(value) => {
+              setSelectedCategory(value as NewsCategory | "all");
               setPage(1);
             }}
-            className="text-xs bg-background border border-border rounded-lg px-3 py-2 text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
           >
-            <option value="all">Semua Kategori</option>
-            <option value="pengumuman">Pengumuman</option>
-            <option value="agenda">Agenda</option>
-            <option value="kegiatan">Kegiatan</option>
-            <option value="layanan">Layanan</option>
-            <option value="literasi">Literasi</option>
-          </select>
+            <SelectTrigger size="sm" className="h-8 min-w-[140px] rounded-lg border-border bg-background px-3 text-xs text-foreground">
+              <SelectValue placeholder="Semua Kategori" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Semua Kategori</SelectItem>
+              <SelectItem value="pengumuman">Pengumuman</SelectItem>
+              <SelectItem value="agenda">Agenda</SelectItem>
+              <SelectItem value="kegiatan">Kegiatan</SelectItem>
+              <SelectItem value="layanan">Layanan</SelectItem>
+              <SelectItem value="literasi">Literasi</SelectItem>
+            </SelectContent>
+          </Select>
 
           {/* Status Tabs */}
           <div className="flex items-center bg-muted/60 p-1 rounded-lg border border-border/60 text-xs">

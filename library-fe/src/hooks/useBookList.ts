@@ -91,7 +91,7 @@ export function useBookList(
       isbnIssn: item.isbnIssn || undefined,
       type: item.type || "physical_book",
       image: item.image || null,
-      stock: item.stock ?? item.totalItems ?? 0,
+      stock: item.availableItems ?? item.stock ?? 0,
       items: Array.isArray(item.items) ? item.items : [],
       subjects: Array.isArray(item.subjects) ? item.subjects : [],
       faculties: Array.isArray(item.faculties) ? item.faculties : [],

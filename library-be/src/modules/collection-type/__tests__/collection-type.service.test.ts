@@ -91,4 +91,66 @@ describe("CollectionTypeService", () => {
     const result = await service.delete(1);
     expect(result.deletedAt).toBeDefined();
   });
+
+  describe("GMD CRUD", () => {
+    it("should return all active GMDs", async () => {
+      const mockGmds = [
+        { id: 1, name: "Audio" },
+        { id: 2, name: "Buku Inti" },
+      ];
+      (db.query.gmds.findMany as any).mockResolvedValue(mockGmds);
+
+      const result = await service.getAllGmds();
+      expect(result).toEqual(mockGmds);
+    });
+
+    it("should create a new GMD when name is unique", async () => {
+      (db.query.gmds.findFirst as any).mockResolvedValue(null);
+      (db.insert as any).mockReturnValue({
+        values: vi.fn().mockReturnValue({
+          returning: vi.fn().mockResolvedValue([{ id: 10, name: "Skripsi Digital" }]),
+        }),
+      });
+
+      const result = await service.createGmd("  Skripsi Digital  ");
+      expect(result).toEqual({ id: 10, name: "Skripsi Digital" });
+    });
+
+    it("should reject duplicate GMD name", async () => {
+      (db.query.gmds.findFirst as any).mockResolvedValue({ id: 1, name: "Audio" });
+
+      await expect(service.createGmd("audio")).rejects.toThrow(/sudah ada/i);
+    });
+
+    it("should update an existing GMD", async () => {
+      (db.query.gmds.findFirst as any)
+        .mockResolvedValueOnce({ id: 2, name: "Buku Inti" })
+        .mockResolvedValueOnce(null);
+      (db.update as any).mockReturnValue({
+        set: vi.fn().mockReturnValue({
+          where: vi.fn().mockReturnValue({
+            returning: vi.fn().mockResolvedValue([{ id: 2, name: "Buku Utama" }]),
+          }),
+        }),
+      });
+
+      const result = await service.updateGmd(2, "Buku Utama");
+      expect(result).toEqual({ id: 2, name: "Buku Utama" });
+    });
+
+    it("should soft delete a GMD", async () => {
+      (db.update as any).mockReturnValue({
+        set: vi.fn().mockReturnValue({
+          where: vi.fn().mockReturnValue({
+            returning: vi.fn().mockResolvedValue([
+              { id: 3, name: "Text", deletedAt: new Date() },
+            ]),
+          }),
+        }),
+      });
+
+      const result = await service.deleteGmd(3);
+      expect(result?.deletedAt).toBeDefined();
+    });
+  });
 });

@@ -69,7 +69,7 @@ const ReservationList = ({ isOpen, onClose, memberId }: ReservationListProps) =>
       fulfilled: { 
         bg: 'bg-green-50', 
         text: 'text-green-600', 
-        label: 'Disetujui', 
+        label: 'Tersedia — Diajukan Pinjam', 
         icon: CheckCircle 
       },
       canceled: { 
@@ -93,8 +93,8 @@ const ReservationList = ({ isOpen, onClose, memberId }: ReservationListProps) =>
 
   const getStatusText = (status: string) => {
     const statusMap = {
-      waiting: 'Menunggu Konfirmasi',
-      fulfilled: 'Sedang Dipinjam',
+      waiting: 'Menunggu Stok Tersedia',
+      fulfilled: 'Dialihkan ke Pengajuan Peminjaman',
       canceled: 'Dibatalkan'
     };
     return statusMap[status as keyof typeof statusMap] || status;
@@ -244,9 +244,14 @@ const ReservationList = ({ isOpen, onClose, memberId }: ReservationListProps) =>
                               <span className="px-2 py-0.5 bg-card rounded-full text-[8px] font-medium text-muted-foreground">
                                 {res.bibliography.type === 'physical_book' ? '📚 Buku Fisik' : '📱 E-Book'}
                               </span>
+                              {res.bibliography.callNumber && (
+                                <span className="px-2 py-0.5 bg-card rounded-full text-[8px] font-mono font-medium text-muted-foreground">
+                                  No. Panggil: {res.bibliography.callNumber}
+                                </span>
+                              )}
                               {res.bibliography.publisher && (
                                 <span className="px-2 py-0.5 bg-card rounded-full text-[8px] font-medium text-muted-foreground">
-                                  {res.bibliography.publisher}
+                                  {[res.bibliography.publisher, res.bibliography.publicationYear].filter(Boolean).join(' • ')}
                                 </span>
                               )}
                             </div>

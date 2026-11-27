@@ -28,7 +28,7 @@ import {
 
 export default function ExportSection() {
   const modalRef = useRef<HTMLDivElement>(null);
-  const formatRef = useRef<HTMLSelectElement>(null);
+  const formatRef = useRef<HTMLButtonElement>(null);
   const exportTriggerRef = useRef<HTMLElement | null>(null);
   const [faculties, setFaculties] = useState<Faculty[]>([]);
   const [studyPrograms, setStudyPrograms] = useState<StudyProgram[]>([]);
@@ -425,16 +425,22 @@ export default function ExportSection() {
               <label htmlFor="export-format" className="mb-1.5 block text-sm font-medium text-foreground">
                 Format export
               </label>
-              <select
-                ref={formatRef}
-                id="export-format"
+              <Select
                 value={selectedFormat}
-                onChange={(event) => setSelectedFormat(event.target.value === "slims" ? "slims" : "library")}
-                className="min-h-11 w-full cursor-pointer rounded-lg border border-border bg-card px-3 py-2 text-sm text-foreground hover:bg-muted/50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                onValueChange={(value) => setSelectedFormat(value === "slims" ? "slims" : "library")}
               >
-                <option value="library">Library</option>
-                <option value="slims">SLiMS</option>
-              </select>
+                <SelectTrigger
+                  ref={formatRef}
+                  id="export-format"
+                  className="min-h-11 w-full rounded-lg border-border bg-card px-3 py-2 text-sm text-foreground hover:bg-muted/50"
+                >
+                  <SelectValue placeholder="Pilih format export" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="library">Library</SelectItem>
+                  <SelectItem value="slims">SLiMS</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
             <div className="space-y-3">

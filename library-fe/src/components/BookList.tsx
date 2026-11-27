@@ -127,7 +127,9 @@ const BookList = ({
   ]);
 
   // Helper status ketersediaan riil
-  const getBookStatus = (bibliography: Bibliography): "available" | "borrowed" => {
+  const getBookStatus = (
+    bibliography: Bibliography
+  ): "available" | "borrowed" | "maintenance" => {
     if (bibliography.type === "ebook") return "available";
 
     if (bibliography.items && bibliography.items.length > 0) {
@@ -136,6 +138,11 @@ const BookList = ({
 
       const loanedItems = bibliography.items.filter((i) => i.status === "loaned");
       if (loanedItems.length > 0) return "borrowed";
+
+      const maintenanceItems = bibliography.items.filter(
+        (i) => i.status === "maintenance"
+      );
+      if (maintenanceItems.length > 0) return "maintenance";
 
       return "borrowed";
     }
@@ -468,6 +475,11 @@ const BookList = ({
                           <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
                           Tersedia
                         </span>
+                      ) : status === "maintenance" ? (
+                        <span className="inline-flex items-center gap-1 sm:gap-1.5 px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full text-[10px] sm:text-[11px] font-semibold bg-amber-50/95 backdrop-blur-xs text-amber-700 border border-amber-200/90 shadow-xs">
+                          <span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+                          Sedang Diperbaiki
+                        </span>
                       ) : (
                         <span className="inline-flex items-center gap-1 sm:gap-1.5 px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full text-[10px] sm:text-[11px] font-semibold bg-blue-50/95 backdrop-blur-xs text-blue-600 border border-blue-100/90 shadow-xs">
                           <span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
@@ -534,6 +546,17 @@ const BookList = ({
                     >
                       <span className="truncate">LIHAT DETAIL</span>
                       <ArrowRight size={12} className="shrink-0 sm:w-[13px] sm:h-[13px]" />
+                    </button>
+                  ) : status === "maintenance" ? (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleBookClick(bibliography.id);
+                      }}
+                      className="flex-1 min-w-0 inline-flex items-center justify-center gap-1 sm:gap-1.5 py-1.5 px-2 sm:px-3 rounded-lg text-[10px] sm:text-[11px] font-bold text-amber-800 bg-amber-50 hover:bg-amber-100 transition-colors cursor-pointer"
+                    >
+                      <span className="truncate">Sedang Diperbaiki</span>
                     </button>
                   ) : (
                     <button

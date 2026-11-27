@@ -192,4 +192,44 @@ describe("RepositoriPage Component (Anti-Slop & Academic Search)", () => {
     const retryBtn = screen.getByRole("button", { name: /Coba Lagi/i });
     expect(retryBtn).toBeInTheDocument();
   });
+
+  it("displays distinct chapter badges and chapter titles for multi-chapter uploads with the same title", async () => {
+    vi.mocked(repositoryService.getPublishedProposals).mockResolvedValue([
+      {
+        ...mockProposals[0],
+        id: "repo-bab-1",
+        proposalNumber: "PROP-202611-0001",
+        title: "Belajar hacking",
+        chapter: "BAB_1",
+        chapterTitle: "Pendahuluan",
+      },
+      {
+        ...mockProposals[0],
+        id: "repo-bab-6",
+        proposalNumber: "PROP-202611-0006",
+        title: "Belajar hacking",
+        chapter: "BAB_6",
+        chapterTitle: "Kesimpulan dan Saran",
+      },
+    ]);
+
+    render(
+      <MemoryRouter>
+        <RepositoriPage />
+      </MemoryRouter>
+    );
+
+    expect((await screen.findAllByText("BAB 1")).length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText("BAB 6").length).toBeGreaterThanOrEqual(1);
+    expect(screen.getByText("BAB 1 — Pendahuluan")).toBeInTheDocument();
+    expect(screen.getByText("BAB 6 — Kesimpulan dan Saran")).toBeInTheDocument();
+
+    // Searching by chapter title filters down to the matching chapter
+    const searchInput = screen.getByPlaceholderText(/Cari berdasarkan judul, penulis, NIM, atau abstrak.../i);
+    fireEvent.change(searchInput, { target: { value: "Kesimpulan" } });
+    fireEvent.click(screen.getByRole("button", { name: /^Cari$/i }));
+
+    expect(await screen.findByText("BAB 6 — Kesimpulan dan Saran")).toBeInTheDocument();
+    expect(screen.queryByText("BAB 1 — Pendahuluan")).not.toBeInTheDocument();
+  });
 });

@@ -246,27 +246,31 @@ export function ActiveLoanCard({
           </div>
         )}
 
-        {/* Tombol Perpanjang: HANYA jika status approved, extendCount < 1, dan tidak telat */}
-        {loan.status === "approved" && (loan.extendCount ?? 0) < 1 && !isLate && (
+        {/* Tombol / Status Perpanjangan: batas maksimal 1 kali */}
+        {!returnPending && (
           loan.extensionStatus === "pending" ? (
             <div className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 px-3 py-1.5 bg-purple-50 dark:bg-purple-950/60 text-purple-700 dark:text-purple-400 border border-purple-200 dark:border-purple-800 text-xs font-bold rounded-xl">
               <Clock size={12} />
               <span>Perpanjangan Diajukan</span>
             </div>
-          ) : (
+          ) : (loan.extendCount ?? 0) >= 1 || loan.status === "extended" ? (
+            <div className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 px-3 py-1.5 bg-muted text-muted-foreground border border-border text-xs font-bold rounded-xl">
+              <RefreshCw size={12} />
+              <span>Sudah Diperpanjang (Maks 1x)</span>
+            </div>
+          ) : loan.status === "approved" && !isLate ? (
             <button
               type="button"
               onClick={(e) => {
                 e.stopPropagation();
                 onExtendClick?.(loan);
               }}
-              disabled={returnPending}
               className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 px-3 py-2 bg-primary/10 text-primary border border-primary/20 text-xs font-bold rounded-xl hover:bg-primary/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
             >
               <RefreshCw size={12} />
               <span>Perpanjang</span>
             </button>
-          )
+          ) : null
         )}
       </div>
     </div>

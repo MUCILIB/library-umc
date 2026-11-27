@@ -6,6 +6,13 @@ import {
   X
 } from "lucide-react";
 import Modal from "@/components/ui/modal";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useToast } from "@/hooks/useToast";
 import {
   studyProgramApi,
@@ -298,11 +305,10 @@ export default function AdminUploadProposalModal({
                   <label className="block text-xs font-semibold text-foreground">
                     Program Studi *
                   </label>
-                  <select
-                    required
-                    value={formData.studyProgramId}
-                    onChange={(e) => {
-                      const newProgId = Number(e.target.value);
+                  <Select
+                    value={loadingPrograms || studyPrograms.length === 0 ? "" : String(formData.studyProgramId)}
+                    onValueChange={(value) => {
+                      const newProgId = Number(value);
                       const newProg = studyPrograms.find((p) => p.id === newProgId);
                       const newConfig = getProgramChapterConfig(newProg, customChapterSettings);
                       const chapterExists = newConfig.chapters.some((c) => c.value === formData.chapter);
@@ -329,39 +335,45 @@ export default function AdminUploadProposalModal({
                         chapterTitle: nextChapterTitle,
                       }));
                     }}
-                    disabled={loadingPrograms}
-                    className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                    disabled={loadingPrograms || studyPrograms.length === 0}
                   >
-                    {loadingPrograms ? (
-                      <option value="">Memuat program studi...</option>
-                    ) : (
-                      studyPrograms.map((prog) => (
-                        <option key={prog.id} value={prog.id}>
+                    <SelectTrigger className="w-full rounded-lg border-border bg-background px-3 py-2 text-sm text-foreground">
+                      <SelectValue
+                        placeholder={loadingPrograms ? "Memuat program studi..." : "Pilih program studi"}
+                      />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {studyPrograms.map((prog) => (
+                        <SelectItem key={prog.id} value={String(prog.id)}>
                           {prog.name} {prog.faculty?.name ? `(${prog.faculty.name})` : ""}
-                        </option>
-                      ))
-                    )}
-                  </select>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
 
                 <div className="space-y-1.5">
                   <label className="block text-xs font-semibold text-foreground">
                     Kategori Dokumen *
                   </label>
-                  <select
+                  <Select
                     value={formData.documentCategory}
-                    onChange={(e) =>
+                    onValueChange={(value) =>
                       setFormData({
                         ...formData,
-                        documentCategory: e.target.value as "THESIS" | "PROPOSAL" | "REPORT",
+                        documentCategory: value as "THESIS" | "PROPOSAL" | "REPORT",
                       })
                     }
-                    className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
                   >
-                    <option value="THESIS">Skripsi / Tesis / Tugas Akhir</option>
-                    <option value="PROPOSAL">Proposal Penelitian Skripsi</option>
-                    <option value="REPORT">Laporan Praktik Kerja Lapangan (PKL)</option>
-                  </select>
+                    <SelectTrigger className="w-full rounded-lg border-border bg-background px-3 py-2 text-sm text-foreground">
+                      <SelectValue placeholder="Pilih kategori dokumen" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="THESIS">Skripsi / Tesis / Tugas Akhir</SelectItem>
+                      <SelectItem value="PROPOSAL">Proposal Penelitian Skripsi</SelectItem>
+                      <SelectItem value="REPORT">Laporan Praktik Kerja Lapangan (PKL)</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
 
@@ -381,10 +393,9 @@ export default function AdminUploadProposalModal({
                     <label className="block text-xs font-semibold text-foreground">
                       Upload Bab Berapa? *
                     </label>
-                    <select
+                    <Select
                       value={formData.chapter}
-                      onChange={(e) => {
-                        const val = e.target.value;
+                      onValueChange={(val) => {
                         const opt = currentChapterOptions.find((c) => c.value === val);
                         setFormData((prev) => ({
                           ...prev,
@@ -392,14 +403,18 @@ export default function AdminUploadProposalModal({
                           chapterTitle: opt?.defaultTitle || prev.chapterTitle,
                         }));
                       }}
-                      className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm font-medium text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
                     >
-                      {currentChapterOptions.map((opt) => (
-                        <option key={opt.value} value={opt.value}>
-                          {opt.label}
-                        </option>
-                      ))}
-                    </select>
+                      <SelectTrigger className="w-full rounded-lg border-border bg-background px-3 py-2 text-sm font-medium text-foreground">
+                        <SelectValue placeholder="Pilih bab naskah" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {currentChapterOptions.map((opt) => (
+                          <SelectItem key={opt.value} value={opt.value}>
+                            {opt.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
 
                   <div className="space-y-1.5">
@@ -632,20 +647,24 @@ export default function AdminUploadProposalModal({
                   <label className="block text-xs font-semibold text-foreground">
                     Status Naskah
                   </label>
-                  <select
+                  <Select
                     value={formData.status}
-                    onChange={(e) =>
+                    onValueChange={(value) =>
                       setFormData({
                         ...formData,
-                        status: e.target.value as "APPROVED" | "SUBMITTED" | "ARCHIVED",
+                        status: value as "APPROVED" | "SUBMITTED" | "ARCHIVED",
                       })
                     }
-                    className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
                   >
-                    <option value="APPROVED">Disetujui / Publikasi Repositori (APPROVED)</option>
-                    <option value="SUBMITTED">Pengajuan Baru (SUBMITTED)</option>
-                    <option value="ARCHIVED">Arsip Khusus (ARCHIVED)</option>
-                  </select>
+                    <SelectTrigger className="w-full rounded-lg border-border bg-background px-3 py-2 text-sm text-foreground">
+                      <SelectValue placeholder="Pilih status naskah" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="APPROVED">Disetujui / Publikasi Repositori (APPROVED)</SelectItem>
+                      <SelectItem value="SUBMITTED">Pengajuan Baru (SUBMITTED)</SelectItem>
+                      <SelectItem value="ARCHIVED">Arsip Khusus (ARCHIVED)</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
 
                 <div className="space-y-2 rounded-xl border border-border/70 bg-muted/10 p-4">

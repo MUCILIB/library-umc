@@ -11,6 +11,7 @@ import {
   sendValidationError
 } from "../../../utils/api-utils";
 import { MemberService } from "../../member/service/member.service";
+import reservationService from "../../reservation/service/reservation.service";
 import auditService from "../../audit/service/audit.service";
 import { db } from "../../../db";
 import { members } from "../../../db/schema";
@@ -73,7 +74,8 @@ export class LoanController {
         targetBibId,
         validation.data.loanDate,
         validation.data.dueDate,
-        validation.data.notes
+        validation.data.notes,
+        validation.data.itemId
       );
 
       void auditService.createLog({
@@ -87,7 +89,22 @@ export class LoanController {
       });
 
       sendSuccess(res, "Permintaan peminjaman berhasil diajukan", result);
-    } catch (error) {
+    } catch (error: any) {
+      if (
+        error?.message &&
+        (error.message.includes("tidak tersedia") ||
+          error.message.includes("perbaikan") ||
+          error.message.includes("diperbaiki") ||
+          error.message.includes("sedang berstatus") ||
+          error.message.includes("batas maksimal") ||
+          error.message.includes("Referensi") ||
+          error.message.includes("dipesan") ||
+          error.message.includes("setelah tanggal") ||
+          error.message.includes("tidak valid") ||
+          error.message.includes("maksimal adalah 7"))
+      ) {
+        return sendError(res, error.message, 400);
+      }
       next(error);
     }
   }
@@ -183,7 +200,16 @@ export class LoanController {
       });
 
       sendSuccess(res, "Peminjaman berhasil diapprove", result);
-    } catch (error) {
+    } catch (error: any) {
+      if (
+        error?.message &&
+        (error.message.includes("tidak ditemukan") ||
+          error.message.includes("Sedang Diperbaiki") ||
+          error.message.includes("sedang berstatus") ||
+          error.message.includes("tidak tersedia"))
+      ) {
+        return sendError(res, error.message, 400);
+      }
       next(error);
     }
   }
@@ -326,21 +352,29 @@ export class LoanController {
    */
   async downloadReturnReceiptPdf(req: Request, res: Response, next: NextFunction) {
     try {
-      const { loanId } = req.params;
+      const loanId = String(req.params.loanId || "");
+      const loan = await loanService.getLoanById(loanId);
+      const rawRef = loan?.returnReceiptNo || `BA-RET-${loanId.slice(0, 8).toUpperCase()}`;
+      const safeRef = rawRef
+        .toLowerCase()
+        .replace(/[^a-z0-9-_]+/g, "-")
+        .replace(/^-+|-+$/g, "");
+      const filename = `berita-acara-pengembalian_${safeRef}.pdf`;
+
       res.setHeader("Content-Type", "application/pdf");
-      res.setHeader("Content-Disposition", `attachment; filename="tanda_terima_pengembalian_${loanId}.pdf"`);
+      res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
 
       void auditService.createLog({
         userId: req.user?.id,
         action: "update",
         entity: "loan",
-        entityId: String(loanId),
+        entityId: loanId,
         ipAddress: req.ip,
         userAgent: req.get("user-agent"),
-        detail: `Unduh Berita Acara / Resi Pengembalian Buku PDF`,
+        detail: `Unduh Berita Acara / Resi Pengembalian Buku PDF (${filename})`,
       });
 
-      await loanService.generateReturnReceiptPdf(String(loanId), res);
+      await loanService.generateReturnReceiptPdf(loanId, res);
     } catch (error) {
       next(error);
     }
@@ -388,6 +422,10 @@ export class LoanController {
       }
 
       const { status, memberId } = validation.data;
+
+      if (!status || status === "pending") {
+        await reservationService.syncPendingReservationsWithAvailableStock();
+      }
 
       const result = await loanService.getAllLoans({
         status: status as any,

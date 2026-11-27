@@ -104,13 +104,15 @@ class ReportController {
         facultyId
       });
 
-      let subtitle = "";
+      let subtitle = "Semua Fakultas & Program Studi";
+      let scopeSlug = "semua-fakultas";
       if (studyProgramId) {
         const sp = await db.query.studyPrograms.findFirst({
           where: eq(studyPrograms.id, studyProgramId)
         });
         if (sp) {
           subtitle = `Program Studi: ${sp.name}`;
+          scopeSlug = `prodi-${sp.name}`;
         }
       } else if (facultyId) {
         const fac = await db.query.faculties.findFirst({
@@ -118,27 +120,47 @@ class ReportController {
         });
         if (fac) {
           subtitle = `Fakultas: ${fac.name}`;
+          scopeSlug = `fakultas-${fac.name}`;
         }
       }
 
-      const rows = data.map((loan) => ({
-        memberName: (loan as any).member?.user?.name ?? "-",
-        memberEmail: (loan as any).member?.user?.email ?? "-",
-        faculty: (loan as any).member?.faculty ?? "-",
-        bookTitle: (loan as any).item?.bibliography?.title ?? "-",
-        ISBN: (loan as any).item?.bibliography?.isbn ?? (loan as any).item?.bibliography?.isbnIssn ?? "-",
-        status: (loan as any).status,
-        borrowDate: (loan as any).createdAt
-          ? new Date((loan as any).createdAt).toLocaleDateString("id-ID")
-          : "-",
-        dueDate: (loan as any).dueDate ?? "-",
-        returnDate: (loan as any).returnDate ?? "-"
-      }));
+      const rows = data.map((loan) => {
+        const bib = (loan as any).item?.bibliography;
+        const prodiList = (bib?.bibliographyStudyPrograms ?? [])
+          .map((bsp: any) => bsp.studyProgram?.name)
+          .filter(Boolean);
+        const bibFacList = [
+          ...(bib?.bibliographyFaculties ?? []).map((bf: any) => bf.faculty?.name),
+          ...(bib?.bibliographyStudyPrograms ?? []).map((bsp: any) => bsp.studyProgram?.faculty?.name)
+        ].filter(Boolean);
+
+        const uniqueProdi = [...new Set(prodiList)].join(", ");
+        const uniqueBibFac = [...new Set(bibFacList)].join(", ");
+
+        return {
+          memberName: (loan as any).member?.user?.name ?? "-",
+          memberEmail: (loan as any).member?.user?.email ?? "-",
+          faculty: (loan as any).member?.faculty || uniqueBibFac || "-",
+          studyProgram: uniqueProdi || "-",
+          bookTitle: bib?.title ?? "-",
+          ISBN: bib?.isbn ?? bib?.isbnIssn ?? "-",
+          status: (loan as any).status,
+          borrowDate: (loan as any).createdAt
+            ? new Date((loan as any).createdAt).toLocaleDateString("id-ID")
+            : "-",
+          dueDate: (loan as any).dueDate ?? "-",
+          returnDate: (loan as any).returnDate ?? "-"
+        };
+      });
+
+      const filenameParts = [scopeSlug, status || ""].filter(Boolean);
 
       if (format === "pdf") {
         const pdfRows = rows.map((r) => ({
           memberName: r.memberName,
           bookTitle: r.bookTitle,
+          faculty: r.faculty,
+          studyProgram: r.studyProgram,
           status: r.status,
           borrowDate: r.borrowDate,
           dueDate: r.dueDate,
@@ -148,19 +170,21 @@ class ReportController {
           res,
           pdfRows,
           "Laporan Peminjaman Buku",
-          subtitle || undefined
+          subtitle,
+          filenameParts
         );
       }
 
       // Default: CSV
       return reportService.exportToCSV(
         res,
-        subtitle ? `Laporan Peminjaman (${subtitle})` : "Laporan Peminjaman",
+        `laporan-peminjaman_${scopeSlug}`,
         rows,
         [
           { key: "memberName", header: "Nama Peminjam" },
           { key: "memberEmail", header: "Email" },
           { key: "faculty", header: "Fakultas" },
+          { key: "studyProgram", header: "Program Studi" },
           { key: "bookTitle", header: "Judul Buku" },
           { key: "ISBN", header: "ISBN" },
           { key: "status", header: "Status" },
@@ -192,9 +216,11 @@ class ReportController {
         ? this.getMonthName(numericMonth)
         : null;
 
-      const finesReportName = isMonthlyRevenueExport
-        ? `Laporan Pendapatan Denda Bulanan_${monthLabel}-${numericYear}`
-        : "Laporan Denda";
+      const finesFilenameParts = isMonthlyRevenueExport
+        ? [`pendapatan-bulanan-${monthLabel}-${numericYear}`]
+        : status
+          ? [status]
+          : ["semua-status"];
 
       const { data } = await reportService.getFinesReportForAudit({
         status,
@@ -230,11 +256,12 @@ class ReportController {
           isMonthlyRevenueExport
             ? `Laporan Pendapatan Denda Bulanan ${monthLabel} ${numericYear}`
             : "Laporan Denda Peminjaman",
-          finesReportName
+          "laporan-denda",
+          finesFilenameParts
         );
       }
 
-      return reportService.exportToCSV(res, finesReportName, rows, [
+      return reportService.exportToCSV(res, `laporan-denda_${finesFilenameParts.join("_")}`, rows, [
         { key: "memberName", header: "Nama Member" },
         { key: "memberEmail", header: "Email" },
         { key: "bookTitle", header: "Judul Buku" },

@@ -37,7 +37,7 @@ export default function CardApprovalsSection() {
   const itemsPerPage = 10;
   const [approvalModalItem, setApprovalModalItem] = useState<{
     item: PendingMemberCardRequest;
-    type: "new" | "renewal";
+    type: "new" | "renewal" | "issue";
   } | null>(null);
   const [approvalDuration, setApprovalDuration] = useState<number>(365);
   const [customApprovalDate, setCustomApprovalDate] = useState<string>("");
@@ -95,7 +95,10 @@ export default function CardApprovalsSection() {
     setCurrentPage(1);
   };
 
-  const openApprovalModal = (item: PendingMemberCardRequest, type: "new" | "renewal") => {
+  const openApprovalModal = (
+    item: PendingMemberCardRequest,
+    type: "new" | "renewal" | "issue"
+  ) => {
     const defaultDate = new Date();
     defaultDate.setFullYear(defaultDate.getFullYear() + 1);
     setCustomApprovalDate(defaultDate.toISOString().split("T")[0]);
@@ -119,6 +122,12 @@ export default function CardApprovalsSection() {
           durationDays,
         });
         success("Berhasil", `Kartu member ${item.user.name} berhasil disetujui`);
+      } else if (type === "issue") {
+        await usersManagementService.issueMemberCard(item.userId, undefined, {
+          cardExpiresAt: payloadDate,
+          durationDays,
+        });
+        success("Berhasil", `Kartu member ${item.user.name} berhasil diterbitkan`);
       } else {
         await usersManagementService.approveCardRenewal(item.id, durationDays || 365);
         if (payloadDate) {
@@ -169,20 +178,8 @@ export default function CardApprovalsSection() {
     }
   };
 
-  const handleIssueDirect = async (item: PendingMemberCardRequest) => {
-    setActionId(item.id);
-    try {
-      await usersManagementService.issueMemberCard(item.userId);
-      success("Berhasil", `Kartu member ${item.user.name} diterbitkan`, 3000);
-      await loadAll();
-      triggerBadgeRefresh();
-    } catch (err) {
-      const message =
-        err instanceof Error ? err.message : "Gagal menerbitkan kartu";
-      error("Gagal", message, 4000);
-    } finally {
-      setActionId(null);
-    }
+  const handleIssueDirect = (item: PendingMemberCardRequest) => {
+    openApprovalModal(item, "issue");
   };
 
   // Actions for Renewal Requests
@@ -415,6 +412,8 @@ export default function CardApprovalsSection() {
         title={
           approvalModalItem?.type === "renewal"
             ? "Persetujuan Perpanjangan Kartu"
+            : approvalModalItem?.type === "issue"
+            ? "Terbitkan Kartu Member"
             : "Persetujuan Penerbitan Kartu Member"
         }
         size="md"
@@ -500,7 +499,6 @@ export default function CardApprovalsSection() {
                     setIsCustomApprovalDate(true);
                     setCustomApprovalDate(e.target.value);
                   }}
-                  min={new Date().toISOString().split("T")[0]}
                   disabled={approvingLoading}
                   className="w-full pl-10 pr-4 py-2.5 bg-background border border-border rounded-xl text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary text-foreground"
                 />
@@ -530,7 +528,11 @@ export default function CardApprovalsSection() {
                 ) : (
                   <>
                     <UserCheck size={14} />
-                    <span>Konfirmasi & Setujui</span>
+                    <span>
+                      {approvalModalItem.type === "issue"
+                        ? "Konfirmasi & Terbitkan"
+                        : "Konfirmasi & Setujui"}
+                    </span>
                   </>
                 )}
               </button>

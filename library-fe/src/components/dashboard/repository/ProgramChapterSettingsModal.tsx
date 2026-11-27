@@ -8,6 +8,13 @@ import {
   Loader2,
 } from "lucide-react";
 import Modal from "@/components/ui/modal";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useToast } from "@/hooks/useToast";
 import { studyProgramApi, type StudyProgram } from "@/api/client";
 import { repositoryService } from "@/services/repositoryService";
@@ -251,21 +258,25 @@ export default function ProgramChapterSettingsModal({
                   {isCustomized ? "Kustom Aktif" : "Default Sistem"}
                 </span>
               </div>
-              <select
-                value={selectedProgramId}
-                onChange={(e) => handleProgramChange(Number(e.target.value))}
-                disabled={loading || saving}
-                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm font-medium text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+              <Select
+                value={programs.length > 0 ? String(selectedProgramId) : ""}
+                onValueChange={(value) => handleProgramChange(Number(value))}
+                disabled={loading || saving || programs.length === 0}
               >
-                {programs.map((prog) => {
-                  const hasCustom = Boolean(customMap[prog.id] || customMap[String(prog.id)]);
-                  return (
-                    <option key={prog.id} value={prog.id}>
-                      {prog.name} {prog.code ? `(${prog.code})` : ""} {hasCustom ? "— [Kustom]" : ""}
-                    </option>
-                  );
-                })}
-              </select>
+                <SelectTrigger className="w-full rounded-lg border-border bg-background px-3 py-2 text-sm font-medium text-foreground">
+                  <SelectValue placeholder="Pilih program studi" />
+                </SelectTrigger>
+                <SelectContent>
+                  {programs.map((prog) => {
+                    const hasCustom = Boolean(customMap[prog.id] || customMap[String(prog.id)]);
+                    return (
+                      <SelectItem key={prog.id} value={String(prog.id)}>
+                        {prog.name} {prog.code ? `(${prog.code})` : ""} {hasCustom ? "— [Kustom]" : ""}
+                      </SelectItem>
+                    );
+                  })}
+                </SelectContent>
+              </Select>
             </div>
 
             {/* Pilihan Template Preset */}

@@ -340,6 +340,12 @@ export function LoanDetailDialog({
               Kembalikan
             </Button>
           )}
+          {type === "active" && !returnPending && ((loan.extendCount ?? 0) >= 1 || loan.status === "extended") && (
+            <div className="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-muted text-muted-foreground border border-border text-xs font-bold">
+              <RefreshCw size={12} />
+              <span>Sudah Diperpanjang (Maks 1x)</span>
+            </div>
+          )}
           {type === "active" && !isLate && loan.status === "approved" && (loan.extendCount ?? 0) < 1 && loan.extensionStatus !== "pending" && !returnPending && (
             <Button
               type="button"
