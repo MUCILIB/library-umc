@@ -51,9 +51,12 @@ describe("Absensi - Form Lama + Fitur Scan Kartu Cepat", () => {
     });
   });
 
-  it("tetap menampilkan seluruh field form lama sekaligus menyediakan tombol Scan Kamera", () => {
+  it("tetap menampilkan seluruh field form lama sekaligus menyediakan tombol Scan Kamera", async () => {
     render(<Absensi />);
 
+    expect(
+      await screen.findByRole("option", { name: "Teknik Informatika" })
+    ).toBeInTheDocument();
     expect(
       screen.getByPlaceholderText(/Scan kartu anggota \/ ketik NIM/i)
     ).toBeInTheDocument();
