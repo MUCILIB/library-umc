@@ -85,6 +85,23 @@ describe("Guest Validation Schema", () => {
       });
       expect(res.success).toBe(false);
     });
+
+    it("menerima tamu non-member tanpa nomor HP/NIM untuk pengunjung umum", () => {
+      const resEmpty = createNonMemberGuestSchema.safeParse({
+        fullName: "Pengunjung Umum",
+        institution: "Umum",
+        purpose: "Kunjungan Perpustakaan",
+        phone: ""
+      });
+      expect(resEmpty.success).toBe(true);
+
+      const resOmitted = createNonMemberGuestSchema.safeParse({
+        fullName: "Pengunjung Umum",
+        institution: "Umum",
+        purpose: "Kunjungan Perpustakaan"
+      });
+      expect(resOmitted.success).toBe(true);
+    });
   });
 
   describe("guestFilterQuerySchema", () => {

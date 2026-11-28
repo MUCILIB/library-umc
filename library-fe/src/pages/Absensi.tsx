@@ -8,6 +8,8 @@ import {
   Loader2,
   X,
   Sparkles,
+  Camera,
+  ScanLine,
 } from "lucide-react";
 import { studyProgramApi, guestApi, type StudyProgram } from "@/api/client";
 import {
@@ -17,6 +19,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { CameraScannerModal } from "@/components/dashboard/circulation/CameraScannerModal";
 import LogoUmc from "@/assets/logo_umc.png";
 import BgLibrary from "@/assets/bg1.jpeg";
 
@@ -45,6 +48,18 @@ function playKioskBeep() {
     // Audio context may fail if user hasn't interacted with page yet
   }
 }
+
+function isMemberNotFoundError(err: unknown): boolean {
+  if (!(err instanceof Error)) return false;
+  const msg = err.message.toLowerCase();
+  return (
+    msg.includes("tidak ditemukan") ||
+    msg.includes("not found") ||
+    msg.includes("not_found")
+  );
+}
+
+const GENERAL_PUBLIC_OPTION = "Umum / Pengunjung Luar";
 
 // Fallback list of UMC study programs
 const FALLBACK_STUDY_PROGRAMS = [
@@ -82,10 +97,12 @@ export default function Absensi() {
 
   // UI / Status State
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isCameraOpen, setIsCameraOpen] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successData, setSuccessData] = useState<{
     name: string;
     nim?: string;
+    cardNumber?: string;
     major?: string;
     isMember?: boolean;
     alreadyCheckedIn?: boolean;
@@ -97,8 +114,9 @@ export default function Absensi() {
 
   const nimInputRef = useRef<HTMLInputElement>(null);
   const fullNameInputRef = useRef<HTMLInputElement>(null);
+  const isSubmittingRef = useRef(false);
 
-  // Focus NIM input automatically on load
+  // Focus NIM / Card input automatically on load
   const focusNimInput = useCallback(() => {
     nimInputRef.current?.focus();
   }, []);
@@ -122,7 +140,9 @@ export default function Absensi() {
       .then((res) => {
         const raw = res.data || [];
         if (raw.length > 0) {
-          setStudyProgramsList(raw.map((sp: StudyProgram) => ({ id: sp.id, name: sp.name })));
+          setStudyProgramsList(
+            raw.map((sp: StudyProgram) => ({ id: sp.id, name: sp.name }))
+          );
         } else {
           setStudyProgramsList(
             FALLBACK_STUDY_PROGRAMS.map((name, idx) => ({ id: idx + 1, name }))
@@ -137,36 +157,73 @@ export default function Absensi() {
       });
   }, []);
 
-  // Auto-scan member when NIM/KTM is entered or scanned
-  const handleNimBlurOrEnter = async (val: string) => {
-    const trimmed = val.trim();
-    if (!trimmed || trimmed.length < 5) return;
-
-    try {
-      setIsSubmitting(true);
-      setErrorMessage(null);
-      const response = await guestApi.scan(trimmed);
-      if (response.data) {
-        playKioskBeep();
-        setSuccessData({
-          name: response.data.name,
-          nim: response.data.nim || trimmed,
-          major: response.data.prodi || response.data.faculty || "Anggota Perpustakaan",
-          isMember: true,
-          alreadyCheckedIn: Boolean(response.data.alreadyCheckedIn),
-        });
-        setNim("");
-        setFullName("");
-        setStudyProgram("");
+  // Direct Card / NIM Scan Attendance (without needing Nama & Prodi)
+  const executeCardScan = useCallback(
+    async (rawIdentifier: string) => {
+      const trimmed = rawIdentifier.trim();
+      if (!trimmed) {
+        setErrorMessage(
+          "Silakan scan kartu anggota atau masukkan NIM/No. Kartu."
+        );
+        focusNimInput();
         return;
       }
-    } catch {
-      // If not registered as member, focus full name input for non-member entry
-      fullNameInputRef.current?.focus();
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
+
+      if (isSubmittingRef.current) return;
+      isSubmittingRef.current = true;
+      setIsSubmitting(true);
+      setErrorMessage(null);
+
+      try {
+        const response = await guestApi.scan(trimmed);
+        if (response.data) {
+          playKioskBeep();
+          setSuccessData({
+            name: response.data.name,
+            nim: response.data.nim || undefined,
+            cardNumber: response.data.cardNumber || undefined,
+            major:
+              response.data.prodi ||
+              response.data.faculty ||
+              "Anggota Perpustakaan",
+            isMember: true,
+            alreadyCheckedIn: Boolean(response.data.alreadyCheckedIn),
+          });
+          setNim("");
+          setFullName("");
+          setStudyProgram("");
+          return;
+        }
+      } catch (err: unknown) {
+        if (isMemberNotFoundError(err)) {
+          setErrorMessage(
+            "Kartu atau NIM belum terdaftar sebagai anggota. Silakan lengkapi Nama Lengkap dan Program Studi untuk presensi tamu."
+          );
+          fullNameInputRef.current?.focus();
+        } else {
+          const msg =
+            err instanceof Error
+              ? err.message
+              : "Gagal memproses scan kartu. Silakan coba lagi.";
+          setErrorMessage(msg);
+        }
+      } finally {
+        isSubmittingRef.current = false;
+        setIsSubmitting(false);
+      }
+    },
+    [focusNimInput]
+  );
+
+  // Handle Camera QR / Barcode Scan Success
+  const handleCameraScanSuccess = useCallback(
+    (scannedText: string) => {
+      setIsCameraOpen(false);
+      setNim(scannedText);
+      void executeCardScan(scannedText);
+    },
+    [executeCardScan]
+  );
 
   // Handle Form Submission
   const handleSubmit = async (e: React.FormEvent) => {
@@ -176,42 +233,71 @@ export default function Absensi() {
     const trimmedName = fullName.trim();
     const selectedProdi = studyProgram.trim();
 
-    if (!trimmedNim || !trimmedName || !selectedProdi) {
-      setErrorMessage("Silakan lengkapi NIM, Nama Lengkap, dan Program Studi.");
+    if (!trimmedNim && !trimmedName) {
+      setErrorMessage(
+        "Silakan scan kartu / ketik NIM, atau isi Nama Lengkap untuk pengunjung umum."
+      );
+      focusNimInput();
       return;
     }
 
+    // Jika hanya NIM / Kartu Anggota yang diisi, proses langsung sebagai scan anggota
+    if (trimmedNim && !trimmedName && !selectedProdi) {
+      await executeCardScan(trimmedNim);
+      return;
+    }
+
+    if (!trimmedName) {
+      setErrorMessage("Silakan isi Nama Lengkap Anda.");
+      fullNameInputRef.current?.focus();
+      return;
+    }
+
+    if (isSubmittingRef.current) return;
+    isSubmittingRef.current = true;
     setIsSubmitting(true);
     setErrorMessage(null);
 
     try {
-      // Step 1: Attempt standard member scan first
+      // Step 1: Jika NIM/kartu diisi, coba scan member terlebih dahulu
       let recorded = false;
       let isAlreadyCheckedIn = false;
       let isMember = false;
       let resolvedName = trimmedName;
-      let resolvedProdi = selectedProdi;
+      const isGeneralPublic =
+        !selectedProdi || selectedProdi === GENERAL_PUBLIC_OPTION;
+      let resolvedProdi = isGeneralPublic ? "Pengunjung Umum" : selectedProdi;
+      let resolvedNim: string | undefined = trimmedNim || undefined;
+      let resolvedCardNumber: string | undefined;
 
-      try {
-        const scanRes = await guestApi.scan(trimmedNim);
-        if (scanRes.data) {
-          recorded = true;
-          isMember = true;
-          isAlreadyCheckedIn = Boolean(scanRes.data.alreadyCheckedIn);
-          resolvedName = scanRes.data.name || trimmedName;
-          resolvedProdi =
-            scanRes.data.prodi || scanRes.data.faculty || selectedProdi;
+      if (trimmedNim) {
+        try {
+          const scanRes = await guestApi.scan(trimmedNim);
+          if (scanRes.data) {
+            recorded = true;
+            isMember = true;
+            isAlreadyCheckedIn = Boolean(scanRes.data.alreadyCheckedIn);
+            resolvedName = scanRes.data.name || trimmedName;
+            resolvedProdi =
+              scanRes.data.prodi || scanRes.data.faculty || resolvedProdi;
+            resolvedNim = scanRes.data.nim || trimmedNim;
+            resolvedCardNumber = scanRes.data.cardNumber;
+          }
+        } catch (scanErr: unknown) {
+          if (!isMemberNotFoundError(scanErr)) {
+            throw scanErr;
+          }
+          // Tidak terdaftar sebagai member, lanjut catat sebagai pengunjung umum / non-member
         }
-      } catch {
-        // Not registered as member, fall back to non-member attendance
       }
 
-      // Step 2: Fallback to non-member if not found in member database
+      // Step 2: Catat sebagai pengunjung umum / non-member (tanpa wajib NIM)
       if (!recorded) {
-        // Find matching study program ID if available
-        const matchedProdi = studyProgramsList.find(
-          (sp) => sp.name.toLowerCase() === selectedProdi.toLowerCase()
-        );
+        const matchedProdi = !isGeneralPublic
+          ? studyProgramsList.find(
+              (sp) => sp.name.toLowerCase() === selectedProdi.toLowerCase()
+            )
+          : undefined;
         const prodiId =
           matchedProdi && typeof matchedProdi.id === "number"
             ? matchedProdi.id
@@ -219,9 +305,11 @@ export default function Absensi() {
 
         await guestApi.createNonMember({
           fullName: trimmedName,
-          institution: "Universitas Muhammadiyah Cirebon",
+          institution: isGeneralPublic
+            ? "Pengunjung Umum"
+            : "Universitas Muhammadiyah Cirebon",
           purpose: "Kunjungan Perpustakaan",
-          phone: trimmedNim, // Stored as identifier
+          phone: trimmedNim.length >= 8 ? trimmedNim : "",
           studyProgramId: prodiId,
         });
         recorded = true;
@@ -231,7 +319,8 @@ export default function Absensi() {
       playKioskBeep();
       setSuccessData({
         name: resolvedName,
-        nim: trimmedNim,
+        nim: resolvedNim,
+        cardNumber: resolvedCardNumber,
         major: resolvedProdi,
         isMember,
         alreadyCheckedIn: isAlreadyCheckedIn,
@@ -248,6 +337,7 @@ export default function Absensi() {
           : "Gagal mencatat absensi. Silakan coba lagi.";
       setErrorMessage(msg);
     } finally {
+      isSubmittingRef.current = false;
       setIsSubmitting(false);
     }
   };
@@ -294,7 +384,7 @@ export default function Absensi() {
 
   return (
     <div
-      className="relative min-h-screen w-full flex flex-col justify-between overflow-x-hidden bg-cover bg-center font-sans select-none"
+      className="relative min-h-[100dvh] lg:h-[100dvh] lg:overflow-hidden w-full flex flex-col justify-between overflow-x-hidden bg-cover bg-center font-sans select-none"
       style={{
         backgroundImage: `linear-gradient(to right, rgba(255, 255, 255, 0.40) 0%, rgba(255, 255, 255, 0.20) 50%, rgba(255, 255, 255, 0.15) 100%), url(${BgLibrary})`,
         backgroundAttachment: "fixed",
@@ -304,20 +394,18 @@ export default function Absensi() {
       <div className="absolute inset-0 bg-white/20 dark:bg-slate-950/40 pointer-events-none" />
 
       {/* Decorative Red Curved Wave Shapes at Bottom-Left (Matching Design) */}
-      <div className="absolute bottom-0 left-0 w-80 sm:w-96 h-80 sm:h-96 pointer-events-none overflow-hidden z-0">
+      <div className="absolute bottom-0 left-0 w-64 sm:w-80 lg:w-88 h-64 sm:h-80 lg:h-88 pointer-events-none overflow-hidden z-0">
         <svg
           viewBox="0 0 350 350"
           fill="none"
           xmlns="http://www.w3.org/2000/svg"
           className="w-full h-full"
         >
-          {/* Outer softer wave */}
           <path
             d="M-50 380 C-40 240, 100 180, 240 260 C290 290, 310 350, 310 380 Z"
             fill="#9D171D"
             fillOpacity="0.45"
           />
-          {/* Inner primary red wave */}
           <path
             d="M-60 390 C-30 270, 70 230, 170 300 C210 330, 230 360, 230 390 Z"
             fill="#B30E16"
@@ -327,13 +415,12 @@ export default function Absensi() {
       </div>
 
       {/* TOP HEADER BAR */}
-      <header className="relative w-full z-20 flex items-center justify-between px-4 sm:px-12 lg:px-16 pt-4 sm:pt-8">
-        {/* Left: UMC Library Logo & Title */}
-        <div className="flex items-center gap-2.5 sm:gap-3.5">
+      <header className="relative w-full z-20 flex items-center justify-between px-4 sm:px-10 lg:px-14 pt-3 sm:pt-5 pb-1 shrink-0">
+        <div className="flex items-center gap-2.5 sm:gap-3">
           <img
             src={LogoUmc}
             alt="Logo UMC"
-            className="w-10 h-10 sm:w-12 sm:h-12 object-contain shrink-0 drop-shadow-xs"
+            className="w-9 h-9 sm:w-11 sm:h-11 object-contain shrink-0 drop-shadow-xs"
           />
           <div>
             <h1 className="font-extrabold text-slate-900 dark:text-foreground text-xs sm:text-base leading-tight tracking-tight">
@@ -345,30 +432,29 @@ export default function Absensi() {
           </div>
         </div>
 
-        {/* Right: Real-time Live Date & Digital Clock */}
         <div className="text-right shrink-0">
-          <p className="text-[10px] sm:text-sm font-semibold text-slate-700 dark:text-slate-300">
+          <p className="text-[10px] sm:text-xs font-semibold text-slate-700 dark:text-slate-300">
             {formattedDate}
           </p>
-          <p className="text-xl sm:text-4xl font-black text-slate-900 dark:text-foreground tracking-tight leading-none mt-0.5">
+          <p className="text-xl sm:text-3xl font-black text-slate-900 dark:text-foreground tracking-tight leading-none mt-0.5">
             {formattedTime}
           </p>
         </div>
       </header>
 
       {/* MAIN CONTENT AREA */}
-      <main className="relative z-10 w-full max-w-7xl mx-auto px-4 sm:px-12 lg:px-16 py-6 sm:py-12 flex-1 flex flex-col lg:flex-row items-center justify-between gap-6 sm:gap-10 lg:gap-16">
+      <main className="relative z-10 w-full max-w-7xl mx-auto px-4 sm:px-10 lg:px-14 py-3 sm:py-4 flex-1 min-h-0 flex flex-col lg:flex-row items-center justify-center lg:justify-between gap-5 sm:gap-8 lg:gap-12">
         {/* LEFT COLUMN: Glassmorphism Welcome Card */}
         <div className="w-full lg:max-w-xl">
-          <div className="backdrop-blur-md bg-white/70 dark:bg-card/70 border border-white/70 dark:border-border/60 rounded-2xl sm:rounded-3xl p-6 sm:p-12 shadow-[0_20px_50px_rgba(0,0,0,0.06)] transition-all">
-            <h2 className="text-2xl sm:text-4xl lg:text-[44px] font-black text-slate-900 dark:text-foreground leading-[1.15] tracking-tight">
+          <div className="backdrop-blur-md bg-white/70 dark:bg-card/70 border border-white/70 dark:border-border/60 rounded-2xl sm:rounded-3xl p-5 sm:p-8 lg:p-10 shadow-[0_20px_50px_rgba(0,0,0,0.06)] transition-all">
+            <h2 className="text-2xl sm:text-3xl lg:text-[40px] font-black text-slate-900 dark:text-foreground leading-[1.15] tracking-tight">
               Selamat Datang di
             </h2>
-            <h2 className="text-2xl sm:text-4xl lg:text-[44px] font-black text-[#9D171D] leading-[1.15] tracking-tight mt-1">
+            <h2 className="text-2xl sm:text-3xl lg:text-[40px] font-black text-[#9D171D] leading-[1.15] tracking-tight mt-1">
               Perpustakaan UMC
             </h2>
 
-            <p className="text-slate-600 dark:text-muted-foreground text-xs sm:text-base font-normal leading-relaxed mt-3 sm:mt-6 max-w-md">
+            <p className="text-slate-600 dark:text-muted-foreground text-xs sm:text-sm lg:text-base font-normal leading-relaxed mt-2.5 sm:mt-4 max-w-md">
               Silahkan lakukan absen kunjungan sebelum memasuki area perpustakaan
             </p>
           </div>
@@ -376,87 +462,124 @@ export default function Absensi() {
 
         {/* RIGHT COLUMN: Clean White Form Card ("Absen Pengunjung") */}
         <div className="w-full max-w-md sm:max-w-lg">
-          <div className="bg-white dark:bg-card rounded-2xl sm:rounded-3xl p-6 sm:p-10 shadow-[0_25px_60px_rgba(0,0,0,0.12)] border border-slate-100 dark:border-border/80">
-            <h3 className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-foreground tracking-tight mb-6 sm:mb-8">
-              Absen Pengunjung
-            </h3>
+          <div className="bg-white dark:bg-card rounded-2xl sm:rounded-3xl p-5 sm:p-7 lg:p-8 shadow-[0_25px_60px_rgba(0,0,0,0.12)] border border-slate-100 dark:border-border/80">
+            <div className="flex items-center justify-between gap-3 mb-4 sm:mb-5">
+              <h3 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-foreground tracking-tight">
+                Absen Pengunjung
+              </h3>
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-red-50 dark:bg-red-950/40 text-[#9D171D] px-2.5 py-1 text-[11px] font-bold shrink-0 border border-red-100 dark:border-red-900/50">
+                <ScanLine className="w-3.5 h-3.5" />
+                <span>Support Scan Kartu</span>
+              </span>
+            </div>
 
             {/* Error Notification Alert */}
             {errorMessage && (
-              <div className="mb-5 p-3.5 rounded-xl bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900 text-red-600 dark:text-red-300 text-xs sm:text-sm flex items-start gap-2.5 animate-in fade-in duration-200">
+              <div className="mb-3.5 p-3 rounded-xl bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900 text-red-600 dark:text-red-300 text-xs flex items-start gap-2 animate-in fade-in duration-200">
                 <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
                 <span>{errorMessage}</span>
               </div>
             )}
 
-            <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-5">
-              {/* Field 1: NIM */}
+            <form onSubmit={handleSubmit} className="space-y-3 sm:space-y-3.5">
+              {/* Field 1: NIM / Kartu Anggota + Scan Kamera */}
               <div>
-                <label className="block text-xs sm:text-sm font-bold text-slate-800 dark:text-slate-200 mb-2">
-                  NIM <span className="text-red-600">*</span>
+                <label className="block text-xs sm:text-sm font-bold text-slate-800 dark:text-slate-200 mb-1.5">
+                  NIM / Kartu Anggota{" "}
+                  <span className="text-[11px] font-normal text-slate-400 dark:text-muted-foreground">
+                    (opsional untuk umum)
+                  </span>
                 </label>
-                <div className="relative flex items-center">
-                  <div className="absolute left-4 pointer-events-none text-slate-400">
-                    <IdCard className="w-5 h-5" strokeWidth={1.8} />
+                <div className="flex items-stretch gap-2">
+                  <div className="relative flex-1 flex items-center">
+                    <div className="absolute left-3.5 pointer-events-none text-slate-400">
+                      <IdCard className="w-4 h-4 sm:w-5 sm:h-5" strokeWidth={1.8} />
+                    </div>
+                    <input
+                      ref={nimInputRef}
+                      type="text"
+                      value={nim}
+                      onChange={(e) => {
+                        setNim(e.target.value);
+                        if (errorMessage) setErrorMessage(null);
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          if (fullName.trim() && studyProgram.trim()) {
+                            void handleSubmit(e as unknown as React.FormEvent);
+                          } else {
+                            void executeCardScan(nim);
+                          }
+                        }
+                      }}
+                      placeholder="Scan kartu anggota / ketik NIM..."
+                      autoComplete="off"
+                      className="w-full bg-[#F1F3F5] dark:bg-muted/60 border border-slate-200/90 dark:border-border rounded-xl pl-10 sm:pl-11 pr-3 py-2.5 sm:py-3 text-sm font-medium text-slate-800 dark:text-foreground placeholder:text-slate-400 focus:outline-none focus:border-[#9D171D] focus:ring-2 focus:ring-[#9D171D]/15 transition-all"
+                    />
                   </div>
-                  <input
-                    ref={nimInputRef}
-                    type="text"
-                    required
-                    value={nim}
-                    onChange={(e) => setNim(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") {
-                        e.preventDefault();
-                        void handleNimBlurOrEnter(nim);
-                      }
-                    }}
-                    placeholder="Scan kartu anggota / ketik NIM..."
-                    autoComplete="off"
-                    className="w-full bg-[#F1F3F5] dark:bg-muted/60 border border-slate-200/90 dark:border-border rounded-xl pl-12 pr-4 py-3.5 text-sm sm:text-base font-medium text-slate-800 dark:text-foreground placeholder:text-slate-400 focus:outline-none focus:border-[#9D171D] focus:ring-2 focus:ring-[#9D171D]/15 transition-all"
-                  />
+
+                  <button
+                    type="button"
+                    onClick={() => setIsCameraOpen(true)}
+                    disabled={isSubmitting}
+                    aria-label="Scan Kamera"
+                    title="Scan Barcode / QR Kartu via Kamera"
+                    className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-slate-900 dark:bg-slate-100 hover:bg-slate-800 dark:hover:bg-slate-200 text-white dark:text-slate-900 px-3 sm:px-4 font-bold text-xs sm:text-sm transition-all active:scale-[0.98] disabled:opacity-60 shrink-0 cursor-pointer"
+                  >
+                    <Camera className="w-4 h-4" />
+                    <span className="hidden sm:inline">Scan Kartu</span>
+                  </button>
                 </div>
-                <p className="text-[11px] text-slate-500 dark:text-muted-foreground mt-1.5 flex items-center gap-1">
-                  <span>💡 Tip: Scan barcode kartu anggota atau ketik NIM & tekan <strong>Enter</strong> untuk presensi langsung.</span>
+                <p className="text-[11px] text-slate-500 dark:text-muted-foreground mt-1 leading-snug">
+                  💡 Scan kartu / tekan <strong>Scan Kartu</strong> untuk absensi cepat tanpa isi Nama &amp; Prodi.
                 </p>
               </div>
 
-              {/* Field 2: Nama Lengkap */}
+              {/* Field 2: Nama Lengkap (tetap tampil untuk tamu / manual) */}
               <div>
-                <label className="block text-xs sm:text-sm font-bold text-slate-800 dark:text-slate-200 mb-2">
-                  Nama Lengkap <span className="text-red-600">*</span>
+                <label className="block text-xs sm:text-sm font-bold text-slate-800 dark:text-slate-200 mb-1.5">
+                  Nama Lengkap{" "}
+                  <span className="text-[11px] font-normal text-slate-400 dark:text-muted-foreground">
+                    (opsional jika scan kartu)
+                  </span>
                 </label>
                 <div className="relative flex items-center">
-                  <div className="absolute left-4 pointer-events-none text-slate-400">
-                    <User className="w-5 h-5" strokeWidth={1.8} />
+                  <div className="absolute left-3.5 pointer-events-none text-slate-400">
+                    <User className="w-4 h-4 sm:w-5 sm:h-5" strokeWidth={1.8} />
                   </div>
                   <input
                     ref={fullNameInputRef}
                     type="text"
-                    required
                     value={fullName}
                     onChange={(e) => setFullName(e.target.value)}
                     placeholder="Ahmad Rizky Pratama"
                     autoComplete="off"
-                    className="w-full bg-[#F1F3F5] dark:bg-muted/60 border border-slate-200/90 dark:border-border rounded-xl pl-12 pr-4 py-3.5 text-sm sm:text-base font-medium text-slate-800 dark:text-foreground placeholder:text-slate-400 focus:outline-none focus:border-[#9D171D] focus:ring-2 focus:ring-[#9D171D]/15 transition-all"
+                    className="w-full bg-[#F1F3F5] dark:bg-muted/60 border border-slate-200/90 dark:border-border rounded-xl pl-10 sm:pl-11 pr-3 py-2.5 sm:py-3 text-sm font-medium text-slate-800 dark:text-foreground placeholder:text-slate-400 focus:outline-none focus:border-[#9D171D] focus:ring-2 focus:ring-[#9D171D]/15 transition-all"
                   />
                 </div>
               </div>
 
-              {/* Field 3: Program Studi */}
+              {/* Field 3: Program Studi (tetap tampil untuk tamu / manual) */}
               <div>
-                <label className="block text-xs sm:text-sm font-bold text-slate-800 dark:text-slate-200 mb-2">
-                  Program Studi <span className="text-red-600">*</span>
+                <label className="block text-xs sm:text-sm font-bold text-slate-800 dark:text-slate-200 mb-1.5">
+                  Program Studi{" "}
+                  <span className="text-[11px] font-normal text-slate-400 dark:text-muted-foreground">
+                    (opsional jika scan kartu)
+                  </span>
                 </label>
                 <div className="relative flex items-center">
-                  <div className="absolute left-4 z-10 pointer-events-none text-slate-400">
-                    <GraduationCap className="w-5 h-5" strokeWidth={1.8} />
+                  <div className="absolute left-3.5 z-10 pointer-events-none text-slate-400">
+                    <GraduationCap className="w-4 h-4 sm:w-5 sm:h-5" strokeWidth={1.8} />
                   </div>
                   <Select value={studyProgram} onValueChange={setStudyProgram}>
-                    <SelectTrigger className="h-auto w-full bg-[#F1F3F5] dark:bg-muted/60 border border-slate-200/90 dark:border-border rounded-xl pl-12 pr-4 py-3.5 text-sm sm:text-base font-medium text-slate-800 dark:text-foreground focus:border-[#9D171D] focus:ring-2 focus:ring-[#9D171D]/15 transition-all">
+                    <SelectTrigger className="h-auto w-full bg-[#F1F3F5] dark:bg-muted/60 border border-slate-200/90 dark:border-border rounded-xl pl-10 sm:pl-11 pr-3 py-2.5 sm:py-3 text-sm font-medium text-slate-800 dark:text-foreground focus:border-[#9D171D] focus:ring-2 focus:ring-[#9D171D]/15 transition-all">
                       <SelectValue placeholder="Pilih program studi" />
                     </SelectTrigger>
                     <SelectContent>
+                      <SelectItem value={GENERAL_PUBLIC_OPTION}>
+                        {GENERAL_PUBLIC_OPTION}
+                      </SelectItem>
                       {studyProgramsList.map((prodi) => (
                         <SelectItem key={prodi.id} value={prodi.name}>
                           {prodi.name}
@@ -468,11 +591,11 @@ export default function Absensi() {
               </div>
 
               {/* Action Button: Masuk */}
-              <div className="pt-2 sm:pt-3">
+              <div className="pt-1 sm:pt-1.5">
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="w-full bg-[#B30E16] hover:bg-[#8F0B11] text-white font-bold py-3.5 sm:py-4 rounded-xl shadow-md hover:shadow-lg transition-all active:scale-[0.99] disabled:opacity-60 flex items-center justify-center gap-2 text-base cursor-pointer"
+                  className="w-full bg-[#B30E16] hover:bg-[#8F0B11] text-white font-bold py-3 sm:py-3.5 rounded-xl shadow-md hover:shadow-lg transition-all active:scale-[0.99] disabled:opacity-60 flex items-center justify-center gap-2 text-sm sm:text-base cursor-pointer"
                 >
                   {isSubmitting ? (
                     <>
@@ -489,10 +612,20 @@ export default function Absensi() {
         </div>
       </main>
 
-      {/* FOOTER / SUBTLE ATTRIBUTION */}
-      <footer className="relative z-10 w-full py-4 text-center text-xs text-slate-400 dark:text-slate-500 font-medium">
+      {/* FOOTER */}
+      <footer className="relative z-10 w-full py-2.5 sm:py-3 text-center text-[11px] sm:text-xs text-slate-400 dark:text-slate-500 font-medium shrink-0">
         Perpustakaan Universitas Muhammadiyah Cirebon &bull; Kiosk Presensi Mandiri
       </footer>
+
+      {/* CAMERA SCANNER MODAL */}
+      <CameraScannerModal
+        isOpen={isCameraOpen}
+        onClose={() => {
+          setIsCameraOpen(false);
+          focusNimInput();
+        }}
+        onScanSuccess={handleCameraScanSuccess}
+      />
 
       {/* SUCCESS MODAL POPUP */}
       {successData && (
@@ -506,7 +639,6 @@ export default function Absensi() {
               <X className="w-5 h-5" />
             </button>
 
-            {/* Success Icon */}
             <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-emerald-100 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 mb-4 animate-bounce">
               <CheckCircle2 className="w-9 h-9" strokeWidth={2.2} />
             </div>
@@ -520,7 +652,6 @@ export default function Absensi() {
               Selamat Datang!
             </h4>
 
-            {/* Visitor Details Card */}
             <div className="bg-slate-50 dark:bg-muted/40 border border-slate-200/80 dark:border-border rounded-2xl p-4 sm:p-5 text-left my-4">
               <div className="flex items-center justify-between gap-2">
                 <p className="text-xs text-slate-400 font-bold uppercase tracking-wider">
@@ -540,9 +671,16 @@ export default function Absensi() {
                 {successData.name}
               </p>
               <div className="flex flex-wrap items-center gap-2 mt-2 pt-2 border-t border-slate-200/60 dark:border-border/60 text-xs">
-                <span className="font-mono font-bold text-[#9D171D] bg-red-50 dark:bg-red-950/40 px-2 py-0.5 rounded-md">
-                  NIM: {successData.nim}
-                </span>
+                {successData.cardNumber && (
+                  <span className="font-mono font-bold text-slate-700 dark:text-slate-200 bg-slate-200/70 dark:bg-slate-800 px-2 py-0.5 rounded-md">
+                    Kartu: {successData.cardNumber}
+                  </span>
+                )}
+                {successData.nim && (
+                  <span className="font-mono font-bold text-[#9D171D] bg-red-50 dark:bg-red-950/40 px-2 py-0.5 rounded-md">
+                    NIM: {successData.nim}
+                  </span>
+                )}
                 <span className="text-slate-600 dark:text-slate-300 font-medium truncate">
                   {successData.major}
                 </span>

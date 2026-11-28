@@ -10,7 +10,13 @@ import {
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/useToast";
 import { cn } from "@/lib/utils";
-import { analyzeItemCodeStructure, type CodeStructureAnalysis } from "@/utils/itemCodeHelper";
+import {
+  analyzeItemCodeStructure,
+  formatItemCodeYear,
+  sanitizeItemCodePrefixInput,
+  validateItemCodePrefix,
+  type CodeStructureAnalysis,
+} from "@/utils/itemCodeHelper";
 import { ITEM_CREATE_STATUS_OPTIONS, type ItemStatusValue } from "@/utils/itemStatus";
 import {
   locationApi,
@@ -87,7 +93,7 @@ export function QuickAddItemModal({ bib, onClose, onSuccess }: QuickAddItemModal
     const initialItems = (bib as any).items || [];
 
     if (initialItems.length > 0) {
-      const initAnalysis = analyzeItemCodeStructure(initialItems, initialPrefix, year, "10001");
+      const initAnalysis = analyzeItemCodeStructure(initialItems, initialPrefix, year, "1001");
       setStructureAnalysis(initAnalysis);
       setCodePrefix(initAnalysis.basePrefix);
     } else {
@@ -153,14 +159,14 @@ export function QuickAddItemModal({ bib, onClose, onSuccess }: QuickAddItemModal
         let serverBasePrefix = "";
         const genCode = (genCodeRes as any)?.data?.itemCode || "";
         if (genCode) {
-          const matchBase = genCode.match(/^([A-Z0-9_.-]+-\d{4}-[A-Z0-9]+)/i);
+          const matchBase = genCode.match(/^([A-Z0-9_.-]+-(?:\d{2}|\d{4})-[A-Z0-9]+)/i);
           if (matchBase) {
             serverBasePrefix = matchBase[1].toUpperCase();
           }
         }
 
         const finalYear = updatedBib.publishYear || new Date().getFullYear();
-        const fallbackSeq = serverBasePrefix ? (serverBasePrefix.split("-")[2] || "10001") : "10001";
+        const fallbackSeq = serverBasePrefix ? (serverBasePrefix.split("-")[2] || "1001") : "1001";
 
         // Analisis struktur kode eksemplar buku (pola tunggal konsisten)
         const analysis = analyzeItemCodeStructure(existingItems, resolvedPrefix, finalYear, fallbackSeq);
@@ -212,7 +218,7 @@ export function QuickAddItemModal({ bib, onClose, onSuccess }: QuickAddItemModal
           (refreshed.data as any).items || [],
           isRef ? "R" : "S",
           year,
-          "10001"
+          "1001"
         );
         setStructureAnalysis(newAnalysis);
         setCodePrefix(newAnalysis.basePrefix);
@@ -240,7 +246,15 @@ export function QuickAddItemModal({ bib, onClose, onSuccess }: QuickAddItemModal
       const targetBib = currentBib;
       const cleanPrefix =
         (structureAnalysis?.isLocked ? structureAnalysis.basePrefix : codePrefix.trim().replace(/\s+/g, "")) ||
-        `${isReferenceBook ? "R" : "S"}-${targetBib.publishYear || new Date().getFullYear()}-10001`;
+        `${isReferenceBook ? "R" : "S"}-${formatItemCodeYear(targetBib.publishYear || new Date().getFullYear())}-1001`;
+      if (!structureAnalysis?.isLocked) {
+        const prefixError = validateItemCodePrefix(cleanPrefix);
+        if (prefixError) {
+          setError(prefixError);
+          setSubmitting(false);
+          return;
+        }
+      }
       const startSeq = structureAnalysis ? structureAnalysis.nextSeq : (targetBib.totalItems || 0) + 1;
 
       const effectiveColTypeId = selectedColTypeId || targetBib.collectionTypeId || undefined;
@@ -506,11 +520,11 @@ export function QuickAddItemModal({ bib, onClose, onSuccess }: QuickAddItemModal
             value={codePrefix}
             onChange={(e) => {
               if (!structureAnalysis?.isLocked) {
-                setCodePrefix(e.target.value.replace(/\s+/g, ""));
+                setCodePrefix(sanitizeItemCodePrefixInput(e.target.value));
               }
             }}
             readOnly={structureAnalysis?.isLocked}
-            placeholder={isReferenceBook ? "Contoh: R-2026-10001" : "Contoh: S-2026-10001"}
+            placeholder={isReferenceBook ? "Contoh: R-26-1001" : "Contoh: S-26-1001"}
             className={cn(
               "w-full rounded-lg border px-3 py-2 text-sm font-mono font-semibold transition-colors",
               structureAnalysis?.isLocked
@@ -522,12 +536,12 @@ export function QuickAddItemModal({ bib, onClose, onSuccess }: QuickAddItemModal
           <p className="text-[11px] text-muted-foreground">
             Pola salinan baru:{" "}
             <span className="font-mono font-semibold text-foreground">
-              {codePrefix || (isReferenceBook ? "R-2026-10001" : "S-2026-10001")}-c{structureAnalysis ? structureAnalysis.nextSeq : 1}
+              {codePrefix || (isReferenceBook ? "R-26-1001" : "S-26-1001")}-c{structureAnalysis ? structureAnalysis.nextSeq : 1}
             </span>
             <span className="text-muted-foreground/80">
               {structureAnalysis && structureAnalysis.totalItems > 0
                 ? ` • Melanjutkan eksemplar ke-${structureAnalysis.nextSeq} (saat ini terdaftar ${structureAnalysis.totalItems} eksemplar).`
-                : " • Melanjutkan nomor urut buku perpustakaan."}
+                : " • Nomor urut buku maksimal 4 digit angka (0001-9999)."}
             </span>
           </p>
         </div>

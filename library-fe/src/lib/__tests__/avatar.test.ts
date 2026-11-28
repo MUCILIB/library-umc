@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { getUserAvatar } from "../avatar";
+import { API_BASE_URL } from "@/utils/api-config";
 
 describe("getUserAvatar", () => {
   it("should return the user's custom image if present", () => {
@@ -9,6 +10,16 @@ describe("getUserAvatar", () => {
       name: "User Name",
     };
     expect(getUserAvatar(user)).toBe("https://minio.dahono.site/library/profiles/custom-photo.jpg");
+  });
+
+  it("should resolve relative /api/ avatar URLs against API_BASE_URL", () => {
+    const expectedBase = API_BASE_URL.replace(/\/+$/, "");
+    const user = {
+      image: "/api/members/avatar/avatar-123.jpg",
+      email: "user@umc.ac.id",
+      name: "User Name",
+    };
+    expect(getUserAvatar(user)).toBe(`${expectedBase}/api/members/avatar/avatar-123.jpg`);
   });
 
   it("should return deterministic DiceBear waves SVG when image is missing or empty", () => {

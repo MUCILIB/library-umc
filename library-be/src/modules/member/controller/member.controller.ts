@@ -6,9 +6,12 @@ import { avatarStorageService } from "../../repository/service/storage.service";
 import {
   approveCardSchema,
   rejectCardSchema,
+  requestPhoneOtpSchema,
   updateCardExpirySchema,
-  updateProfileSchema
+  updateProfileSchema,
+  verifyPhoneOtpSchema
 } from "../validation/member.validation";
+import { phoneOtpService } from "../service/phone-otp.service";
 import {
   sendSuccess,
   sendError,
@@ -524,6 +527,71 @@ export class MemberController {
       });
 
       sendSuccess(res, "Pengajuan perpanjangan kartu member berhasil ditolak", result.data);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * POST /members/me/phone/request-otp — Kirim kode OTP WhatsApp untuk verifikasi nomor telepon
+   */
+  async requestPhoneOtp(req: Request, res: Response, next: NextFunction) {
+    try {
+      if (!req.user?.id) {
+        return sendError(res, "Tidak terautentikasi", 401);
+      }
+
+      const validation = requestPhoneOtpSchema.safeParse(req.body);
+      if (!validation.success) {
+        return sendValidationError(res, validation.error.flatten());
+      }
+
+      // Ensure member record exists before sending OTP
+      const memberRes = await memberService.getMemberByUserId(req.user.id);
+      if (!memberRes.success) {
+        return sendError(res, memberRes.message ?? "Data member tidak ditemukan", 404);
+      }
+
+      const result = await phoneOtpService.requestOtp(req.user.id, validation.data.phone);
+      if (!result.success) {
+        return sendError(res, result.message, 400);
+      }
+
+      sendSuccess(res, result.message, result.data);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * POST /members/me/phone/verify-otp — Verifikasi kode OTP dan simpan nomor telepon terverifikasi
+   */
+  async verifyPhoneOtp(req: Request, res: Response, next: NextFunction) {
+    try {
+      if (!req.user?.id) {
+        return sendError(res, "Tidak terautentikasi", 401);
+      }
+
+      const validation = verifyPhoneOtpSchema.safeParse(req.body);
+      if (!validation.success) {
+        return sendValidationError(res, validation.error.flatten());
+      }
+
+      const result = await memberService.verifyPhoneOtpAndSave(req.user.id, validation.data);
+      if (!result.success) {
+        return sendError(res, result.message, 400);
+      }
+
+      await auditService.createLog({
+        userId: req.user.id,
+        action: "update",
+        entity: "Users",
+        entityId: req.user.id,
+        ipAddress: req.ip,
+        detail: "verify_phone_otp"
+      });
+
+      sendSuccess(res, result.message, result.data);
     } catch (error) {
       next(error);
     }

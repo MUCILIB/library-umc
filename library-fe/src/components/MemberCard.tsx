@@ -1,3 +1,4 @@
+import { useRef } from "react";
 import {
   BadgeCheck,
   Clock3,
@@ -9,6 +10,12 @@ import {
 } from "lucide-react";
 import { type MemberProfile } from "@/services/memberService";
 import { getUserAvatar } from "@/lib/avatar";
+import { encodeCode128SvgData } from "@/utils/code128";
+import {
+  OwlLibraryMascot,
+  UmcSealEmblem
+} from "@/components/member-card/MemberCardArtwork";
+import { printMemberCardElement } from "@/components/member-card/printMemberCard";
 
 interface MemberCardProps {
   profile: MemberProfile | null;
@@ -21,55 +28,77 @@ interface MemberCardProps {
 const statusConfig = {
   not_requested: {
     label: "Belum Diajukan",
-    chipClass: "bg-slate-900 text-white",
-    accentClass: "from-slate-950 via-slate-900 to-red-900",
-    description:
-      "Kartu member belum dibuat. Ajukan kartu ke petugas agar bisa diproses.",
-    icon: ShieldAlert
+    badgeClass:
+      "bg-slate-100 text-slate-700 border-slate-300 dark:bg-slate-800/70 dark:text-slate-200 dark:border-slate-700",
+    icon: UserRound
   },
   pending: {
-    label: "Menunggu Persetujuan",
-    chipClass: "bg-amber-100 text-amber-800",
-    accentClass: "from-amber-950 via-red-900 to-slate-900",
-    description:
-      "Pengajuan kartu sedang diperiksa admin. Status ini akan berubah setelah disetujui.",
+    label: "Menunggu ACC",
+    badgeClass:
+      "bg-amber-50 text-amber-800 border-amber-300 dark:bg-amber-950/50 dark:text-amber-200 dark:border-amber-700/60",
     icon: Clock3
   },
   active: {
-    label: "Aktif",
-    chipClass: "bg-emerald-100 text-emerald-800",
-    accentClass: "from-red-950 via-red-800 to-slate-900",
-    description:
-      "Kartu aktif dan siap digunakan untuk peminjaman buku di perpustakaan.",
+    label: "Kartu Aktif",
+    badgeClass:
+      "bg-emerald-50 text-emerald-800 border-emerald-300 dark:bg-emerald-950/50 dark:text-emerald-200 dark:border-emerald-700/60",
     icon: BadgeCheck
   },
   rejected: {
-    label: "Ditolak",
-    chipClass: "bg-rose-100 text-rose-800",
-    accentClass: "from-rose-950 via-red-900 to-slate-900",
-    description:
-      "Pengajuan kartu ditolak. Cek alasan penolakan atau ajukan ulang setelah data diperbaiki.",
+    label: "Pengajuan Ditolak",
+    badgeClass:
+      "bg-rose-50 text-rose-800 border-rose-300 dark:bg-rose-950/50 dark:text-rose-200 dark:border-rose-700/60",
     icon: ShieldAlert
   },
   expired: {
-    label: "Kedaluwarsa",
-    chipClass: "bg-orange-100 text-orange-800",
-    accentClass: "from-orange-950 via-amber-900 to-slate-900",
-    description:
-      "Kartu perlu diperbarui sebelum bisa dipakai kembali untuk transaksi peminjaman.",
-    icon: RefreshCcw
+    label: "Masa Berlaku Habis",
+    badgeClass:
+      "bg-amber-50 text-amber-800 border-amber-300 dark:bg-amber-950/50 dark:text-amber-200 dark:border-amber-700/60",
+    icon: Sparkles
   }
 } as const;
 
 const formatDate = (value?: string | null) => {
   if (!value) return "-";
 
-  return new Date(value).toLocaleDateString("id-ID", {
-    day: "2-digit",
-    month: "short",
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return "-";
+
+  return parsed.toLocaleDateString("id-ID", {
+    day: "numeric",
+    month: "long",
     year: "numeric"
   });
 };
+
+const getMemberCategoryLabel = (memberType?: string, isExternal?: boolean) => {
+  if (isExternal || memberType === "external") return "Anggota Luar";
+  if (memberType === "student") return "Mahasiswa";
+  if (memberType === "lecturer") return "Dosen";
+  if (memberType === "staff") return "Tenaga Kependidikan";
+  return "Anggota";
+};
+
+const getIdentityLabel = (memberType?: string, isExternal?: boolean) => {
+  if (memberType === "student") return "NIM";
+  if (memberType === "lecturer") return "NIDN";
+  if (memberType === "staff") return "NIP / NIK";
+  if (isExternal || memberType === "external") return "No. ID";
+  return "NIM / ID";
+};
+
+interface BackCardRowProps {
+  label: string;
+  value: string;
+}
+
+const BackCardRow = ({ label, value }: BackCardRowProps) => (
+  <>
+    <span className="font-semibold text-[#111827]">{label}</span>
+    <span className="font-semibold text-[#111827]">:</span>
+    <span className="font-semibold text-[#111827] break-words">{value}</span>
+  </>
+);
 
 const MemberCard = ({
   profile,
@@ -78,240 +107,240 @@ const MemberCard = ({
   renewalLoading,
   onRequestRenewal
 }: MemberCardProps) => {
-  if (!profile) return null;
+  const printAreaRef = useRef<HTMLDivElement>(null);
 
-  const user = profile.user;
-  const status = statusConfig[profile.cardStatus] ?? statusConfig.not_requested;
+  if (!profile) {
+    return (
+      <div className="w-full max-w-[480px] rounded-2xl border border-border bg-card p-8 text-center text-sm text-muted-foreground shadow-sm">
+        Data profil kartu anggota belum tersedia.
+      </div>
+    );
+  }
+
+  const cardStatus = profile.cardStatus || "not_requested";
+  const status = statusConfig[cardStatus] ?? statusConfig.not_requested;
   const StatusIcon = status.icon;
 
-  const now = new Date();
-  const expiryDate = profile.cardExpiresAt ? new Date(profile.cardExpiresAt) : null;
-  const daysUntilExpiry = expiryDate
-    ? Math.ceil((expiryDate.getTime() - now.getTime()) / (1000 * 3600 * 24))
-    : null;
-  const isExpired = profile.cardStatus === "expired" || (daysUntilExpiry !== null && daysUntilExpiry <= 0);
-  const isExpiringSoon = daysUntilExpiry !== null && daysUntilExpiry > 0 && daysUntilExpiry <= 30;
-  const isRenewalPending = profile.cardRenewalStatus === "pending";
-
   const canRequest =
-    profile.cardStatus === "not_requested" ||
-    profile.cardStatus === "rejected";
-
+    cardStatus === "not_requested" || cardStatus === "rejected";
   const canRenew =
-    (profile.cardStatus === "active" || profile.cardStatus === "expired") &&
-    (isExpired || isExpiringSoon || !expiryDate) &&
-    !isRenewalPending;
+    cardStatus === "expired" && profile.cardRenewalStatus !== "pending";
+
+  const avatarSrc = getUserAvatar(profile.user);
+  const categoryLabel = getMemberCategoryLabel(
+    profile.memberType,
+    profile.isExternal
+  );
+  const identityLabel = getIdentityLabel(profile.memberType, profile.isExternal);
+
+  const displayCardNumber = profile.cardNumber || "Belum diterbitkan";
+  const barcodePayload = (
+    profile.cardNumber ||
+    profile.nimNidn ||
+    profile.id ||
+    "UMC-MEMBER"
+  ).trim();
+  const barcode = encodeCode128SvgData(barcodePayload, 8);
 
   return (
-    <div className="w-full max-w-4xl space-y-6">
-      <div className="relative overflow-hidden rounded-[32px] border border-white/60 bg-slate-950 shadow-[0_24px_80px_rgba(15,23,42,0.24)]">
-        <div
-          className={`absolute inset-0 bg-gradient-to-br ${status.accentClass}`}
-        />
-        <div className="absolute -right-16 -top-20 h-56 w-56 rounded-full bg-white/10 blur-3xl" />
-        <div className="absolute -bottom-12 left-0 h-40 w-40 rounded-full bg-red-400/20 blur-3xl" />
+    <div className="w-full max-w-[490px] space-y-5">
+      {/* Status & Actions Header */}
+      <div className="print:hidden flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-border bg-card px-4 py-3.5 shadow-xs">
+        <div className="flex items-center gap-2.5">
+          <span
+            className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-[11px] font-bold uppercase tracking-wider ${status.badgeClass}`}
+          >
+            <StatusIcon size={13} />
+            {status.label}
+          </span>
+          {profile.cardNumber ? (
+            <span className="hidden sm:inline font-mono text-xs font-semibold text-muted-foreground">
+              {profile.cardNumber}
+            </span>
+          ) : null}
+        </div>
 
-        <div className="relative p-6 sm:p-8 text-white">
-          <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
-            <div className="space-y-5">
-              <div className="inline-flex items-center gap-3 rounded-full border border-white/15 bg-white/10 px-4 py-2 backdrop-blur">
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white text-foreground shadow-sm">
-                  <Sparkles size={16} />
-                </div>
-                <div>
-                  <p className="text-[10px] font-black uppercase tracking-[0.35em] text-white/70">
-                    UMC Library
-                  </p>
-                  <p className="text-[11px] font-semibold text-white/60">
-                    Member access card
-                  </p>
-                </div>
-              </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={() => printMemberCardElement(printAreaRef.current)}
+            className="inline-flex items-center gap-1.5 rounded-xl border border-border bg-background px-3.5 py-2 text-xs font-bold uppercase tracking-wider text-foreground transition hover:bg-muted cursor-pointer"
+          >
+            <Printer size={14} />
+            Cetak
+          </button>
 
-              <div className="space-y-2">
-                <p className="text-[11px] font-black uppercase tracking-[0.32em] text-white/65">
-                  Kartu Member Digital
-                </p>
-                <h3 className="max-w-xl text-3xl font-black tracking-tight text-white sm:text-4xl">
-                  {user?.name || "Nama Anggota"}
-                </h3>
-                {profile.isExternal && (
-                  <div className="inline-flex items-center gap-1.5 rounded-md bg-gradient-to-r from-orange-500/80 to-amber-500/80 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-white shadow-sm ring-1 ring-white/20">
-                    <Sparkles size={12} className="opacity-80" />
-                    <span>Bukan Mahasiswa UMC</span>
-                  </div>
-                )}
-                <p className="max-w-2xl text-sm leading-6 text-white/75 sm:text-base">
-                  {status.description}
-                </p>
-              </div>
-            </div>
-
-            <div className="flex flex-col items-start gap-3 lg:items-end">
-              <span
-                className={`inline-flex items-center gap-2 rounded-full px-4 py-2 text-[11px] font-black uppercase tracking-[0.2em] ${status.chipClass}`}
-              >
-                <StatusIcon size={12} />
-                {status.label}
-              </span>
-              {profile.cardNumber ? (
-                <div className="rounded-2xl border border-white/10 bg-white/10 px-4 py-3 backdrop-blur">
-                  <p className="text-[10px] font-black uppercase tracking-[0.3em] text-white/55">
-                    Nomor Kartu
-                  </p>
-                  <p className="mt-1 font-mono text-sm font-bold tracking-[0.24em] text-white sm:text-base">
-                    {profile.cardNumber}
-                  </p>
-                </div>
+          {canRequest && onRequestCard ? (
+            <button
+              type="button"
+              onClick={onRequestCard}
+              disabled={requestLoading}
+              className="inline-flex items-center gap-1.5 rounded-xl bg-primary px-4 py-2 text-xs font-bold uppercase tracking-wider text-primary-foreground shadow-xs transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60 cursor-pointer"
+            >
+              {requestLoading ? (
+                <RefreshCcw size={14} className="animate-spin" />
               ) : (
-                <div className="rounded-2xl border border-white/10 bg-white/10 px-4 py-3 text-right backdrop-blur">
-                  <p className="text-[10px] font-black uppercase tracking-[0.3em] text-white/55">
-                    Nomor Kartu
-                  </p>
-                  <p className="mt-1 text-sm font-bold text-white/75">
-                    Belum tersedia
-                  </p>
-                </div>
+                <Sparkles size={14} />
               )}
-            </div>
-          </div>
-
-          <div className="mt-8 grid gap-5 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
-            <div className="rounded-[28px] border border-white/10 bg-white/10 p-5 backdrop-blur">
-              <div className="flex items-start gap-4">
-                <div className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-[24px] border border-white/10 bg-white/10 text-2xl font-black text-white shadow-inner">
-                  <img
-                    src={getUserAvatar(user)}
-                    alt={user?.name || "Member"}
-                    className="h-full w-full object-cover"
-                  />
-                </div>
-                <div className="min-w-0 space-y-2">
-                  <div>
-                    <p className="text-[10px] font-black uppercase tracking-[0.3em] text-white/55">
-                      Identitas
-                    </p>
-                    <h4 className="truncate text-xl font-black text-white">
-                      {user?.name || "Nama belum tersedia"}
-                    </h4>
-                  </div>
-                  <div className="space-y-1 text-sm text-white/75">
-                    <p>{user?.email || "Email belum tersedia"}</p>
-                    <p>{profile.nimNidn || "NIM/NIDN belum diisi"}</p>
-                    <p>{profile.faculty || "Fakultas belum diisi"}</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="grid gap-3 rounded-[28px] border border-white/10 bg-white/10 p-5 backdrop-blur">
-              <div className="flex items-center justify-between gap-3 rounded-2xl border border-white/10 bg-slate-950/20 px-4 py-3">
-                <div>
-                  <p className="text-[10px] font-black uppercase tracking-[0.3em] text-white/55">
-                    Diajukan
-                  </p>
-                  <p className="mt-1 text-sm font-bold text-white">
-                    {formatDate(profile.cardRequestedAt)}
-                  </p>
-                </div>
-                <UserRound size={18} className="text-white/60" />
-              </div>
-              <div className="flex items-center justify-between gap-3 rounded-2xl border border-white/10 bg-slate-950/20 px-4 py-3">
-                <div>
-                  <p className="text-[10px] font-black uppercase tracking-[0.3em] text-white/55">
-                    Disetujui
-                  </p>
-                  <p className="mt-1 text-sm font-bold text-white">
-                    {formatDate(profile.cardApprovedAt)}
-                  </p>
-                </div>
-                <BadgeCheck size={18} className="text-emerald-200" />
-              </div>
-              <div className="flex items-center justify-between gap-3 rounded-2xl border border-white/10 bg-slate-950/20 px-4 py-3">
-                <div>
-                  <p className="text-[10px] font-black uppercase tracking-[0.3em] text-white/55">
-                    Masa Berlaku
-                  </p>
-                  <p className={`mt-1 text-sm font-bold ${isExpired ? "text-rose-300 font-extrabold" : isExpiringSoon ? "text-amber-300" : "text-white"}`}>
-                    {profile.cardExpiresAt ? formatDate(profile.cardExpiresAt) : "-"}
-                  </p>
-                </div>
-                <Clock3 size={18} className={isExpired ? "text-rose-300" : "text-white/60"} />
-              </div>
-              <div className="flex items-center justify-between gap-3 rounded-2xl border border-white/10 bg-slate-950/20 px-4 py-3">
-                <div>
-                  <p className="text-[10px] font-black uppercase tracking-[0.3em] text-white/55">
-                    Ditolak
-                  </p>
-                  <p className="mt-1 text-sm font-bold text-white">
-                    {formatDate(profile.cardRejectedAt)}
-                  </p>
-                </div>
-                <ShieldAlert size={18} className="text-rose-200" />
-              </div>
-            </div>
-          </div>
-
-          {isRenewalPending ? (
-            <div className="mt-5 rounded-[22px] border border-amber-300/30 bg-amber-500/10 px-5 py-4 text-sm text-amber-50">
-              <p className="text-[10px] font-black uppercase tracking-[0.3em] text-amber-100/80">
-                Status Perpanjangan
-              </p>
-              <p className="mt-1 font-medium leading-6">
-                Pengajuan perpanjangan kartu Anda sedang diproses oleh petugas perpustakaan.
-              </p>
-            </div>
+              Ajukan Kartu
+            </button>
           ) : null}
 
-          {profile.cardRejectedReason ? (
-            <div className="mt-5 rounded-[22px] border border-rose-200/30 bg-rose-500/10 px-5 py-4 text-sm text-rose-50">
-              <p className="text-[10px] font-black uppercase tracking-[0.3em] text-rose-100/80">
-                Alasan Penolakan
-              </p>
-              <p className="mt-1 font-medium leading-6">
-                {profile.cardRejectedReason}
-              </p>
-            </div>
+          {canRenew && onRequestRenewal ? (
+            <button
+              type="button"
+              onClick={onRequestRenewal}
+              disabled={renewalLoading}
+              className="inline-flex items-center gap-1.5 rounded-xl bg-amber-500 px-4 py-2 text-xs font-bold uppercase tracking-wider text-slate-950 shadow-xs transition hover:bg-amber-400 disabled:cursor-not-allowed disabled:opacity-60 cursor-pointer"
+            >
+              {renewalLoading ? (
+                <RefreshCcw size={14} className="animate-spin" />
+              ) : (
+                <RefreshCcw size={14} />
+              )}
+              Ajukan Perpanjangan Kartu
+            </button>
           ) : null}
-
-          <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-white/55">
-              Tunjukkan kartu ini kepada petugas saat peminjaman.
-            </p>
-            <div className="flex flex-wrap gap-3">
-              <button
-                type="button"
-                onClick={() => window.print()}
-                className="inline-flex items-center justify-center gap-2 rounded-2xl border border-white/15 bg-white/10 px-5 py-3 text-[11px] font-black uppercase tracking-[0.18em] text-white transition hover:bg-white/20"
-              >
-                <Printer size={14} />
-                Cetak
-              </button>
-              {canRequest && onRequestCard ? (
-                <button
-                  type="button"
-                  onClick={() => void onRequestCard()}
-                  disabled={requestLoading}
-                  className="inline-flex items-center justify-center gap-2 rounded-2xl bg-card px-5 py-3 text-[11px] font-black uppercase tracking-[0.18em] text-foreground transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:bg-white/50"
-                >
-                  {requestLoading ? "Mengajukan..." : "Ajukan Kartu"}
-                </button>
-              ) : null}
-              {canRenew && onRequestRenewal ? (
-                <button
-                  type="button"
-                  onClick={() => void onRequestRenewal()}
-                  disabled={renewalLoading}
-                  className="inline-flex items-center justify-center gap-2 rounded-2xl bg-amber-400 hover:bg-amber-300 text-slate-950 px-5 py-3 text-[11px] font-black uppercase tracking-[0.18em] transition disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  <RefreshCcw size={14} className={renewalLoading ? "animate-spin" : ""} />
-                  {renewalLoading ? "Mengajukan..." : "Ajukan Perpanjangan Kartu"}
-                </button>
-              ) : null}
-            </div>
-          </div>
         </div>
       </div>
+
+      {/* Notices */}
+      {profile.cardRenewalStatus === "pending" ? (
+        <div className="print:hidden rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-xs font-medium text-amber-900 dark:border-amber-700/50 dark:bg-amber-950/40 dark:text-amber-200">
+          Permintaan perpanjangan kartu sedang menunggu persetujuan admin.
+        </div>
+      ) : null}
+
+      {profile.cardRejectedReason ? (
+        <div className="print:hidden rounded-xl border border-rose-300 bg-rose-50 px-4 py-3 text-xs font-medium text-rose-900 dark:border-rose-700/50 dark:bg-rose-950/40 dark:text-rose-200">
+          Alasan penolakan: {profile.cardRejectedReason}
+        </div>
+      ) : null}
+
+      {/* Card Faces Wrapper */}
+      <div ref={printAreaRef} className="space-y-5 print:space-y-4">
+        {/* FRONT CARD (Tampak Depan) */}
+        <article
+          aria-label="Kartu Perpustakaan UMC Tampak Depan"
+          className="relative overflow-hidden rounded-[18px] bg-[#49B097] px-6 py-5 sm:px-7 sm:py-6 text-[#111827] shadow-lg [print-color-adjust:exact] print:break-inside-avoid print:shadow-none min-h-[268px] sm:min-h-[290px] flex flex-col justify-between"
+        >
+          {/* Top Section: Title + Owl Illustration */}
+          <div className="flex items-start justify-between gap-2">
+            <div className="pt-1 z-10">
+              <h2 className="text-[22px] sm:text-[26px] font-black uppercase leading-[0.98] tracking-tight text-[#111827]">
+                KARTU
+                <br />
+                PERPUSTAKAAN
+              </h2>
+              <p className="mt-1.5 text-[10px] sm:text-[11px] font-bold uppercase tracking-[0.06em] text-[#111827]">
+                KARTU ANGGOTA RESMI
+              </p>
+            </div>
+
+            <div className="-mt-1 -mr-2 sm:-mr-1 shrink-0">
+              <OwlLibraryMascot className="h-36 w-36 sm:h-[164px] sm:w-[164px]" />
+            </div>
+          </div>
+
+          {/* Bottom Section: Card Number + Code 128 Barcode + UMC Seal */}
+          <div className="mt-2 flex items-end justify-between gap-4">
+            <div className="min-w-0">
+              <p className="mb-1.5 font-mono text-[11px] sm:text-xs font-bold tracking-wider text-[#111827]/75 truncate">
+                {displayCardNumber}
+              </p>
+              <div className="inline-block rounded-[8px] bg-white px-2.5 py-2 shadow-xs w-[176px] sm:w-[196px]">
+                <svg
+                  viewBox={`0 0 ${barcode.totalModules} 40`}
+                  preserveAspectRatio="none"
+                  className="block h-9 w-full"
+                  role="img"
+                  aria-label={`Barcode anggota ${barcodePayload}`}
+                >
+                  <rect
+                    x={0}
+                    y={0}
+                    width={barcode.totalModules}
+                    height={40}
+                    fill="#FFFFFF"
+                  />
+                  {barcode.bars.map((bar, idx) => (
+                    <rect
+                      key={`${bar.x}-${idx}`}
+                      x={bar.x}
+                      y={0}
+                      width={bar.width}
+                      height={40}
+                      fill="#111827"
+                    />
+                  ))}
+                </svg>
+              </div>
+            </div>
+
+            <UmcSealEmblem className="h-12 w-12 sm:h-14 sm:w-14 shrink-0 text-[#111827]" />
+          </div>
+        </article>
+
+        {/* BACK CARD (Tampak Belakang) */}
+        <article
+          aria-label="Kartu Perpustakaan UMC Tampak Belakang"
+          className="overflow-hidden rounded-[18px] shadow-lg [print-color-adjust:exact] print:break-inside-avoid print:shadow-none"
+        >
+          {/* Top Teal Header Band */}
+          <div className="flex items-center justify-between gap-4 bg-[#49B097] px-6 py-4 sm:px-7 sm:py-5 text-[#111827]">
+            <div>
+              <h2 className="text-[20px] sm:text-[24px] font-black uppercase leading-none tracking-tight text-[#111827]">
+                DATA ANGGOTA
+              </h2>
+              <p className="mt-1.5 text-[10px] sm:text-[11px] font-bold uppercase tracking-[0.06em] text-[#111827]">
+                KARTU PERPUSTAKAAN
+              </p>
+            </div>
+
+            <UmcSealEmblem className="h-11 w-11 sm:h-12 sm:w-12 shrink-0 text-[#111827]" />
+          </div>
+
+          {/* Bottom Cream Data Body */}
+          <div className="flex flex-row items-start gap-4 sm:gap-5 bg-[#F9ECC3] px-5 py-5 sm:px-7 sm:py-6 text-[#111827]">
+            {/* Portrait Photo */}
+            <div className="h-[112px] w-[92px] sm:h-[132px] sm:w-[108px] shrink-0 overflow-hidden rounded-[12px] border-[2px] border-[#111827] bg-white shadow-2xs">
+              <img
+                src={avatarSrc}
+                alt={profile.user?.name || "Foto Anggota"}
+                className="h-full w-full object-cover"
+              />
+            </div>
+
+            {/* Aligned Colon-Separated Fields */}
+            <div className="w-full min-w-0 grid grid-cols-[84px_10px_minmax(0,1fr)] gap-x-1 gap-y-1 text-[12px] sm:text-[13px] leading-snug">
+              <BackCardRow label="Nama" value={profile.user?.name || "-"} />
+              <BackCardRow
+                label={identityLabel}
+                value={profile.nimNidn || "-"}
+              />
+              <BackCardRow label="Kategori" value={categoryLabel} />
+              <BackCardRow label="Fakultas" value={profile.faculty || "-"} />
+              {profile.isExternal && profile.institution ? (
+                <BackCardRow label="Institusi" value={profile.institution} />
+              ) : null}
+              <BackCardRow label="NO. Telp" value={profile.phone || "-"} />
+              <BackCardRow
+                label="Alamat"
+                value={profile.originRegion || "-"}
+              />
+              <BackCardRow
+                label="Masa Aktif"
+                value={formatDate(profile.cardExpiresAt)}
+              />
+            </div>
+          </div>
+        </article>
+      </div>
+
+      {/* Footer note */}
+      <p className="print:hidden text-center text-xs font-medium text-muted-foreground">
+        Tunjukkan kartu ini (tampak depan &amp; belakang) kepada petugas saat peminjaman.
+      </p>
     </div>
   );
 };

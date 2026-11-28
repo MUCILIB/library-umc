@@ -6,6 +6,7 @@ export const getPopularBooksQuerySchema = z.object({
 
 export const exportLoansQuerySchema = z.object({
   format: z.enum(["csv", "pdf"]).optional().default("csv"),
+  delimiter: z.enum([",", ";"]).optional().default(","),
   status: z.string().optional(),
   from: z
     .string()
@@ -27,6 +28,7 @@ export const exportLoansQuerySchema = z.object({
 
 export const exportFinesQuerySchema = z.object({
   format: z.enum(["csv", "pdf"]).optional().default("csv"),
+  delimiter: z.enum([",", ";"]).optional().default(","),
   status: z.string().optional(),
   month: z
     .string()

@@ -125,7 +125,7 @@ describe("ItemService Unit Tests", () => {
       expect(code).toBe("PND-01-02");
     });
 
-    it("should generate S/R-year-sequence-copy format when callNumber is not set", async () => {
+    it("should generate S/R-year(2-digit)-sequence(4-digit)-copy format when callNumber is not set", async () => {
       (db.query.bibliographies.findFirst as any).mockResolvedValue({
         id: "bib-ref",
         title: "Kamus Besar Bahasa Indonesia",
@@ -139,7 +139,52 @@ describe("ItemService Unit Tests", () => {
       (db.query.items.findFirst as any).mockResolvedValue(null);
 
       const code = await itemService.generateItemCodePreview("bib-ref");
-      expect(code).toBe("R-2026-10001-01");
+      expect(code).toBe("R-26-1001-01");
+    });
+
+    it("should use 2-digit year and 4-digit sequence in generateCodePreview", async () => {
+      (db.query.items.findMany as any).mockResolvedValue([]);
+      (db.select as any).mockReturnValue({
+        from: vi.fn().mockResolvedValue([{ count: 0 }]),
+      });
+
+      expect(await itemService.generateCodePreview("S", 2023)).toBe("S-23-1001-c1");
+      expect(await itemService.generateCodePreview("S", 2024)).toBe("S-24-1001-c1");
+      expect(await itemService.generateCodePreview("R", 2026)).toBe("R-26-1001-c1");
+    });
+
+    it("should increment 4-digit book sequence across 2-digit year codes and continue copy number", async () => {
+      (db.query.bibliographies.findFirst as any).mockResolvedValue({
+        id: "bib-new",
+        title: "Algoritma",
+        publishYear: 2025,
+        collectionType: { code: "S", name: "Sirkulasi" },
+      });
+      (db.query.items.findMany as any)
+        .mockResolvedValueOnce([]) // allBibItems
+        .mockResolvedValueOnce([{ itemCode: "S-24-1005-c2" }]) // allRecentItems
+        .mockResolvedValueOnce([]); // existingCodes
+      (db.query.items.findFirst as any).mockResolvedValue(null);
+
+      const code = await itemService.generateItemCodePreview("bib-new");
+      expect(code).toBe("S-25-1006-01");
+
+      // Existing 2-digit copy sequence continues to -c4
+      (db.query.bibliographies.findFirst as any).mockResolvedValue({
+        id: "bib-existing",
+        title: "Basis Data",
+        publishYear: 2023,
+        collectionType: { code: "S", name: "Sirkulasi" },
+      });
+      (db.query.items.findMany as any).mockResolvedValue([
+        { itemCode: "S-23-5434-c1" },
+        { itemCode: "S-23-5434-c2" },
+        { itemCode: "S-23-5434-c3" },
+      ]);
+      (db.query.items.findFirst as any).mockResolvedValue(null);
+
+      const nextCopy = await itemService.generateItemCodePreview("bib-existing");
+      expect(nextCopy).toBe("S-23-5434-c4");
     });
 
     it("should create item and sync stock in transaction", async () => {
@@ -468,6 +513,38 @@ describe("ItemService Unit Tests", () => {
       // Canonical prefix should be the dominant standard prefix S-2024-2342
       expect(result.data.canonicalPrefix).toBe("S-2024-2342");
       expect(result.data.updatedCount).toBe(5);
+    });
+
+    it("should generate 2-digit year canonical prefix when standardizing legacy items", async () => {
+      (db.query.bibliographies.findFirst as any).mockResolvedValue({
+        id: "bib-legacy",
+        title: "Pengantar Sistem Informasi",
+        publishYear: 2026,
+        collectionType: { code: "S", name: "Sirkulasi" },
+      });
+      (db.query.items.findMany as any).mockResolvedValue([
+        { id: "1", itemCode: "ITEM-01", createdAt: new Date("2026-01-01") },
+        { id: "2", itemCode: "ITEM-02", createdAt: new Date("2026-01-02") },
+      ]);
+      (db.select as any).mockReturnValueOnce({
+        from: vi.fn().mockResolvedValue([{ count: 2 }]),
+      });
+
+      const mockTx = {
+        update: vi.fn().mockReturnValue({
+          set: vi.fn().mockReturnValue({
+            where: vi.fn().mockReturnValue({
+              returning: vi.fn().mockResolvedValue([{ id: "mock" }]),
+            }),
+          }),
+        }),
+      };
+      (db.transaction as any).mockImplementation(async (fn: any) => fn(mockTx));
+
+      const result = await itemService.standardizeCodes("bib-legacy");
+      expect(result.success).toBe(true);
+      expect(result.data.canonicalPrefix).toBe("S-26-1003");
+      expect(result.data.updatedCount).toBe(2);
     });
   });
 

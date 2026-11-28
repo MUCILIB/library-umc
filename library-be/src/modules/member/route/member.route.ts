@@ -4,6 +4,7 @@ import {
   isAuthenticated,
   requireRole
 } from "../../../middlewares/auth.middleware";
+import { authLimiter } from "../../../middlewares/rateLimiter";
 import { MemberController } from "../controller/member.controller";
 
 const router = Router();
@@ -93,6 +94,18 @@ router.post(
 );
 
 router.patch("/members/me", isAuthenticated, memberController.updateMyProfile);
+router.post(
+  "/members/me/phone/request-otp",
+  authLimiter,
+  isAuthenticated,
+  memberController.requestPhoneOtp
+);
+router.post(
+  "/members/me/phone/verify-otp",
+  authLimiter,
+  isAuthenticated,
+  memberController.verifyPhoneOtp
+);
 
 router.get(
   "/members/me/card",

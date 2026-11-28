@@ -17,9 +17,16 @@ import {
   Bookmark,
   Tag,
   Package,
+  Printer,
   Lock,
 } from "lucide-react";
-import { analyzeItemCodeStructure } from "@/utils/itemCodeHelper";
+import PrintBookLabelsModal from "./PrintBookLabelsModal";
+import {
+  analyzeItemCodeStructure,
+  formatItemCodeYear,
+  sanitizeItemCodePrefixInput,
+  validateItemCodePrefix,
+} from "@/utils/itemCodeHelper";
 import {
   ITEM_CREATE_STATUS_OPTIONS,
   ITEM_STATUS_OPTIONS,
@@ -125,6 +132,7 @@ function BibliographyForm({ bib, onClose, onSuccess }: BibliographyFormProps) {
   // Collection Types & GMD Options
   const [collectionTypes, setCollectionTypes] = useState<CollectionType[]>([]);
   const [gmdOptions, setGmdOptions] = useState<Gmd[]>([]);
+  const [showPrintLabelsModal, setShowPrintLabelsModal] = useState(false);
 
     // Duplicate detection
   useEffect(() => {
@@ -375,7 +383,7 @@ function BibliographyForm({ bib, onClose, onSuccess }: BibliographyFormProps) {
     itemApi.generateCode("new", `?collectionTypeCode=${prefix}&publishYear=${year}`)
       .then((res) => {
         const genCode = res.data?.itemCode || "";
-        const m = genCode.match(/^([A-Z0-9_.-]+-\d{4}-[A-Z0-9]+)/i);
+        const m = genCode.match(/^([A-Z0-9_.-]+-(?:\d{2}|\d{4})-[A-Z0-9]+)/i);
         if (m) setServerNewPrefix(m[1].toUpperCase());
       })
       .catch(() => {});
@@ -389,7 +397,7 @@ function BibliographyForm({ bib, onClose, onSuccess }: BibliographyFormProps) {
       bib?.publishYear ||
       new Date().getFullYear();
     const existing = bib ? itemsList : localNewItems;
-    const fallbackSeq = serverNewPrefix ? (serverNewPrefix.split("-")[2] || "10001") : "10001";
+    const fallbackSeq = serverNewPrefix ? (serverNewPrefix.split("-")[2] || "1001") : "1001";
     const analysis = analyzeItemCodeStructure(existing, prefix, year, fallbackSeq);
     if (!bib && localNewItems.length === 0 && serverNewPrefix) {
       analysis.basePrefix = serverNewPrefix;
@@ -532,10 +540,18 @@ function BibliographyForm({ bib, onClose, onSuccess }: BibliographyFormProps) {
       (formData.publishYear ? parseInt(formData.publishYear, 10) : null) ||
       bib?.publishYear ||
       new Date().getFullYear();
-    const fallbackPrefix = `${isReferenceBook ? "R" : "S"}-${defaultYear}-10001`;
+    const fallbackPrefix = `${isReferenceBook ? "R" : "S"}-${formatItemCodeYear(defaultYear)}-1001`;
     const cleanPrefix =
       (structureAnalysis.isLocked ? structureAnalysis.basePrefix : codePrefix.trim().replace(/\s+/g, "")) ||
       fallbackPrefix;
+
+    if (!structureAnalysis.isLocked) {
+      const prefixError = validateItemCodePrefix(cleanPrefix);
+      if (prefixError) {
+        setStep3Error(prefixError);
+        return;
+      }
+    }
 
     const startSeq = structureAnalysis.nextSeq;
 
@@ -1767,11 +1783,11 @@ function BibliographyForm({ bib, onClose, onSuccess }: BibliographyFormProps) {
                   onChange={(e) => {
                     if (!structureAnalysis.isLocked) {
                       setCustomCodePrefix(true);
-                      setCodePrefix(e.target.value.replace(/\s+/g, ""));
+                      setCodePrefix(sanitizeItemCodePrefixInput(e.target.value));
                     }
                   }}
                   readOnly={structureAnalysis.isLocked}
-                  placeholder={isReferenceBook ? "Contoh: R-2026-10001" : "Contoh: S-2026-10001"}
+                  placeholder={isReferenceBook ? "Contoh: R-26-1001" : "Contoh: S-26-1001"}
                   className={cn(
                     "w-full rounded-lg border px-3 py-2 text-sm font-mono font-semibold transition-colors",
                     structureAnalysis.isLocked
@@ -1782,12 +1798,12 @@ function BibliographyForm({ bib, onClose, onSuccess }: BibliographyFormProps) {
                 <p className="text-[11px] text-muted-foreground">
                   Pola salinan baru:{" "}
                   <span className="font-mono font-semibold text-foreground">
-                    {codePrefix || (isReferenceBook ? "R-2026-10001" : "S-2026-10001")}-c{structureAnalysis.nextSeq}
+                    {codePrefix || (isReferenceBook ? "R-26-1001" : "S-26-1001")}-c{structureAnalysis.nextSeq}
                   </span>
                   <span className="text-muted-foreground/80">
                     {structureAnalysis.totalItems > 0
                       ? ` • Melanjutkan eksemplar ke-${structureAnalysis.nextSeq} (saat ini terdaftar ${structureAnalysis.totalItems} eksemplar).`
-                      : " • Melanjutkan nomor urut buku perpustakaan."}
+                      : " • Nomor urut buku maksimal 4 digit angka (0001-9999)."}
                   </span>
                 </p>
               </div>
@@ -1856,15 +1872,27 @@ function BibliographyForm({ bib, onClose, onSuccess }: BibliographyFormProps) {
                 </div>
               )}
 
-              <div className="flex items-center justify-between">
+              <div className="flex flex-wrap items-center justify-between gap-2">
                 <h4 className="text-xs font-bold text-foreground uppercase tracking-wider">
                   SALINAN FISIK &amp; LOKASI BUKU
                 </h4>
-                <div className="text-sm font-medium text-muted-foreground">
-                  Jumlah Salinan:{" "}
-                  <span className="font-bold text-primary px-2.5 py-1 bg-primary/10 rounded-lg">
-                    {bib ? itemsList.length : localNewItems.length}
-                  </span>
+                <div className="flex items-center gap-2.5">
+                  {bib && itemsList.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setShowPrintLabelsModal(true)}
+                      className="inline-flex items-center gap-1.5 rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-1.5 text-xs font-semibold text-amber-700 hover:bg-amber-500/20 dark:text-amber-300 transition-colors cursor-pointer"
+                    >
+                      <Printer className="size-3.5" />
+                      Cetak Label &amp; Barcode ({itemsList.length})
+                    </button>
+                  )}
+                  <div className="text-sm font-medium text-muted-foreground">
+                    Jumlah Salinan:{" "}
+                    <span className="font-bold text-primary px-2.5 py-1 bg-primary/10 rounded-lg">
+                      {bib ? itemsList.length : localNewItems.length}
+                    </span>
+                  </div>
                 </div>
               </div>
 
@@ -2383,6 +2411,12 @@ function BibliographyForm({ bib, onClose, onSuccess }: BibliographyFormProps) {
         </div>
       </form>
 
+      {bib && (
+        <PrintBookLabelsModal
+          bib={showPrintLabelsModal ? bib : null}
+          onClose={() => setShowPrintLabelsModal(false)}
+        />
+      )}
     </div>
   );
 }

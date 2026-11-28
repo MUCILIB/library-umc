@@ -49,6 +49,7 @@ router.get("/bibliographies", publicApiLimiter, isAuthenticated, requirePermissi
 router.post("/bibliographies/deduplicate", publicApiLimiter, isAuthenticated, requireRole(["super_admin"]), (req, res, next) => bibliographyController.deduplicate(req, res, next));
 router.get("/bibliographies/:id", publicApiLimiter, (req, res, next) => bibliographyController.getById(req, res, next));
 router.get("/bibliographies/:id/items", publicApiLimiter, (req, res, next) => bibliographyController.getItems(req, res, next));
+router.get("/bibliographies/:id/labels/pdf", publicApiLimiter, isAuthenticated, requirePermission("bibliographies", "view"), (req, res, next) => bibliographyController.exportLabelsPdf(req, res, next));
 router.post("/bibliographies/:bibliographyId/items/standardize", publicApiLimiter, isAuthenticated, requireRole(["super_admin", "staff"]), (req, res, next) => itemController.standardize(req, res, next));
 router.post("/bibliographies", publicApiLimiter, isAuthenticated, requirePermission("bibliographies", "add"), (req, res, next) => bibliographyController.create(req, res, next));
 router.patch("/bibliographies", publicApiLimiter, isAuthenticated, requirePermission("bibliographies", "edit"), (req, res) => sendError(res, "ID bibliografi diperlukan", 400));

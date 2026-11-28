@@ -103,13 +103,10 @@ export class StorageService {
   }
 
   /**
-   * Membaca file PDF dari S3 atau local disk menjadi Buffer
+   * Membaca file PDF/gambar dari S3 atau local disk menjadi Buffer
    */
   async read(storageTarget: string): Promise<Buffer> {
-    if (this.isS3Key(storageTarget)) {
-      if (!this.isS3Enabled() || !this.s3Client) {
-        throw new Error("S3 storage credentials are not configured");
-      }
+    if (this.isS3Key(storageTarget) && this.isS3Enabled() && this.s3Client) {
       const cleanKey = storageTarget.replace(/^s3:\/\/[^/]+\//, "");
       const res = await this.s3Client.send(
         new GetObjectCommand({
@@ -124,11 +121,21 @@ export class StorageService {
       return Buffer.from(byteArray);
     }
 
-    // Local disk fallback
-    if (!fs.existsSync(storageTarget)) {
-      throw new Error(`File tidak ditemukan di server: ${storageTarget}`);
+    // Local disk fallback: check direct path first, then file inside this service's uploadDir
+    if (!this.isS3Key(storageTarget) && fs.existsSync(storageTarget)) {
+      return await fs.promises.readFile(storageTarget);
     }
-    return await fs.promises.readFile(storageTarget);
+
+    const localDirPath = path.join(this.uploadDir, path.basename(storageTarget));
+    if (fs.existsSync(localDirPath)) {
+      return await fs.promises.readFile(localDirPath);
+    }
+
+    if (this.isS3Key(storageTarget)) {
+      throw new Error("S3 storage credentials are not configured");
+    }
+
+    throw new Error(`File tidak ditemukan di server: ${storageTarget}`);
   }
 
   /**
