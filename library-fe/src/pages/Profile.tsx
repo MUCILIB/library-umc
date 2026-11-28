@@ -83,7 +83,11 @@ const validateField = (name: string, value: string): string => {
 const Profile = () => {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const { data: session, isPending: sessionLoading } = authClient.useSession();
+  const {
+    data: session,
+    isPending: sessionLoading,
+    refetch: refetchSession
+  } = authClient.useSession();
   const [profile, setProfile] = useState<MemberProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const tabParam = searchParams.get("tab");
@@ -104,6 +108,11 @@ const Profile = () => {
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
   const [isPasswordDialogOpen, setIsPasswordDialogOpen] = useState(false);
   const [passwordResetLoading, setPasswordResetLoading] = useState(false);
+  const [phoneOtpStep, setPhoneOtpStep] = useState<"idle" | "sent">("idle");
+  const [phoneOtpCode, setPhoneOtpCode] = useState("");
+  const [phoneOtpLoading, setPhoneOtpLoading] = useState(false);
+  const [phoneOtpDevCode, setPhoneOtpDevCode] = useState<string | null>(null);
+  const [phoneOtpCooldown, setPhoneOtpCooldown] = useState(0);
   const { success, error } = useToast();
   const currentUserId = session?.user?.id;
 
@@ -347,6 +356,68 @@ const Profile = () => {
     }
   };
 
+  useEffect(() => {
+    if (phoneOtpCooldown <= 0) return;
+    const timer = setInterval(() => {
+      setPhoneOtpCooldown((prev) => (prev > 1 ? prev - 1 : 0));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [phoneOtpCooldown]);
+
+  const handleRequestProfilePhoneOtp = async () => {
+    const cleanPhone = (formData.phone || "").trim();
+    const digits = cleanPhone.replace(/\D/g, "");
+    if (!cleanPhone || digits.length < 9 || digits.length > 15) {
+      error("Nomor Tidak Valid", "Nomor telepon harus berisi 9 hingga 15 digit angka.");
+      return;
+    }
+
+    try {
+      setPhoneOtpLoading(true);
+      const res = await memberService.requestPhoneOtp(cleanPhone);
+      setPhoneOtpStep("sent");
+      setPhoneOtpCode("");
+      setPhoneOtpDevCode(res.devOtpCode || null);
+      setPhoneOtpCooldown(res.cooldownSeconds || 60);
+      success(
+        "Kode OTP Dikirim",
+        res.provider === "simulation"
+          ? "Kode OTP simulasi telah dibuat."
+          : `Kode OTP dikirim ke WhatsApp ${res.maskedPhone}.`
+      );
+    } catch (err: any) {
+      error("Gagal Mengirim OTP", err?.message || "Gagal mengirim kode OTP");
+    } finally {
+      setPhoneOtpLoading(false);
+    }
+  };
+
+  const handleVerifyProfilePhoneOtp = async () => {
+    const cleanCode = phoneOtpCode.replace(/\D/g, "");
+    if (cleanCode.length !== 6) {
+      error("Kode OTP Tidak Valid", "Masukkan 6 digit kode OTP.");
+      return;
+    }
+
+    try {
+      setPhoneOtpLoading(true);
+      const updated = await memberService.verifyPhoneOtp({
+        phone: (formData.phone || "").trim(),
+        code: cleanCode,
+      });
+      setProfile(updated);
+      setFormData((prev) => ({ ...prev, phone: updated.phone || prev.phone }));
+      setPhoneOtpStep("idle");
+      setPhoneOtpCode("");
+      setPhoneOtpDevCode(null);
+      success("Nomor Terverifikasi", "Nomor telepon berhasil diverifikasi dengan kode OTP.");
+    } catch (err: any) {
+      error("Verifikasi Gagal", err?.message || "Kode OTP tidak valid");
+    } finally {
+      setPhoneOtpLoading(false);
+    }
+  };
+
   const handleUpdateProfile = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -413,7 +484,7 @@ const Profile = () => {
       setAvatarUploading(true);
       const res = await memberService.uploadMyAvatar(file);
       success("Foto profil berhasil diperbarui");
-      // Update local state profil
+      // Update local state profil & refresh session agar foto langsung tampil
       if (profile && profile.user) {
         setProfile({
           ...profile,
@@ -422,7 +493,11 @@ const Profile = () => {
             image: res.url
           }
         });
+      } else {
+        const refreshed = await memberService.getMyProfile();
+        setProfile(refreshed);
       }
+      await refetchSession?.();
     } catch (err: any) {
       error(err.message || "Gagal mengunggah foto profil");
     } finally {
@@ -998,29 +1073,97 @@ const Profile = () => {
                   </div>
 
                   <div className="space-y-1.5">
-                    <div className="flex items-center justify-between">
-                      <label className="text-xs font-semibold text-foreground">
-                        Nomor WhatsApp / Telepon
-                      </label>
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2">
+                        <label className="text-xs font-semibold text-foreground">
+                          Nomor WhatsApp / Telepon
+                        </label>
+                        {profile?.phone &&
+                        formData.phone?.trim() === profile.phone.trim() &&
+                        profile.phoneVerified ? (
+                          <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 px-2 py-0.5 text-[10px] font-semibold text-emerald-700 dark:text-emerald-300">
+                            <Check size={10} />
+                            Terverifikasi OTP
+                          </span>
+                        ) : (formData.phone || "").trim() ? (
+                          <span className="inline-flex items-center rounded-full bg-amber-500/10 border border-amber-500/30 px-2 py-0.5 text-[10px] font-semibold text-amber-700 dark:text-amber-300">
+                            Perlu Verifikasi OTP
+                          </span>
+                        ) : null}
+                      </div>
                       <span className="text-[10px] text-muted-foreground font-mono">
                         {(formData.phone || "").length}/20
                       </span>
                     </div>
-                    <input
-                      type="text"
-                      maxLength={20}
-                      value={formData.phone || ""}
-                      onChange={(e) =>
-                        handleInputChange("phone", e.target.value)
-                      }
-                      className={cn(
-                        "w-full bg-background border rounded-md py-2.5 px-3.5 text-sm font-mono text-foreground focus-visible:outline-none transition-all placeholder:text-muted-foreground",
-                        validationErrors.phone
-                          ? "border-destructive focus-visible:ring-1 focus-visible:ring-destructive"
-                          : "border-input focus-visible:ring-1 focus-visible:ring-ring"
-                      )}
-                      placeholder="081234567890"
-                    />
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        maxLength={20}
+                        value={formData.phone || ""}
+                        onChange={(e) => {
+                          handleInputChange("phone", e.target.value);
+                          setPhoneOtpStep("idle");
+                          setPhoneOtpCode("");
+                          setPhoneOtpDevCode(null);
+                        }}
+                        className={cn(
+                          "w-full bg-background border rounded-md py-2.5 px-3.5 text-sm font-mono text-foreground focus-visible:outline-none transition-all placeholder:text-muted-foreground",
+                          validationErrors.phone
+                            ? "border-destructive focus-visible:ring-1 focus-visible:ring-destructive"
+                            : "border-input focus-visible:ring-1 focus-visible:ring-ring"
+                        )}
+                        placeholder="081234567890"
+                      />
+                      {(formData.phone || "").trim() &&
+                        (!(
+                          profile?.phone &&
+                          formData.phone?.trim() === profile.phone.trim() &&
+                          profile.phoneVerified
+                        )) && (
+                          <button
+                            type="button"
+                            onClick={handleRequestProfilePhoneOtp}
+                            disabled={phoneOtpLoading || phoneOtpCooldown > 0 || Boolean(validationErrors.phone)}
+                            className="shrink-0 rounded-md border border-primary/40 bg-primary/10 px-3 py-2 text-xs font-semibold text-primary hover:bg-primary/20 disabled:opacity-50 cursor-pointer"
+                          >
+                            {phoneOtpLoading
+                              ? "Mengirim..."
+                              : phoneOtpCooldown > 0
+                                ? `Kirim Ulang (${phoneOtpCooldown}d)`
+                                : phoneOtpStep === "sent"
+                                  ? "Kirim Ulang OTP"
+                                  : "Kirim OTP"}
+                          </button>
+                        )}
+                    </div>
+                    {phoneOtpStep === "sent" && (
+                      <div className="mt-2 rounded-lg border border-border bg-muted/40 p-3 space-y-2">
+                        {phoneOtpDevCode && (
+                          <p className="text-[11px] text-blue-700 dark:text-blue-300">
+                            Mode Simulasi OTP: <strong className="font-mono">{phoneOtpDevCode}</strong>
+                          </p>
+                        )}
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="text"
+                            inputMode="numeric"
+                            maxLength={6}
+                            value={phoneOtpCode}
+                            onChange={(e) => setPhoneOtpCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                            placeholder="Masukkan 6 digit kode OTP"
+                            className="flex-1 bg-background border border-input rounded-md py-2 px-3 text-sm font-mono tracking-widest text-foreground"
+                          />
+                          <button
+                            type="button"
+                            onClick={handleVerifyProfilePhoneOtp}
+                            disabled={phoneOtpLoading || phoneOtpCode.length !== 6}
+                            className="shrink-0 rounded-md bg-primary px-3.5 py-2 text-xs font-semibold text-primary-foreground hover:bg-primary/90 disabled:opacity-50 cursor-pointer"
+                          >
+                            Verifikasi OTP
+                          </button>
+                        </div>
+                      </div>
+                    )}
                     {validationErrors.phone && (
                       <p className="text-xs text-destructive flex items-center gap-1 mt-1 font-medium">
                         <AlertCircle size={12} className="shrink-0" />

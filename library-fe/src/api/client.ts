@@ -313,6 +313,39 @@ export const bibliographyApi = {
       "/api/bibliographies/deduplicate",
       { method: "POST" }
     ),
+
+  fetchLabelsPdf: async (
+    id: string,
+    params?: { perPage?: number; itemIds?: string[] }
+  ): Promise<{ blob: Blob; filename: string }> => {
+    const search = new URLSearchParams();
+    if (params?.perPage) search.set("perPage", String(params.perPage));
+    if (params?.itemIds && params.itemIds.length > 0) {
+      search.set("itemIds", params.itemIds.join(","));
+    }
+    const qs = search.toString();
+    const response = await fetch(
+      `${API_BASE_URL}/api/bibliographies/${id}/labels/pdf${qs ? `?${qs}` : ""}`,
+      {
+        credentials: "include",
+        cache: "no-store",
+        headers: {
+          ...getAuthHeaders(),
+        },
+      }
+    );
+
+    if (!response.ok) {
+      const errJson = await response.json().catch(() => null);
+      throw new Error(errJson?.message || `Gagal membuat PDF label (${response.status})`);
+    }
+
+    const filename =
+      extractFilenameFromHeader(response.headers?.get?.("Content-Disposition")) ||
+      `label-buku_${params?.perPage || 6}-per-lembar.pdf`;
+    const blob = await response.blob();
+    return { blob, filename };
+  },
 };
 
 // ==========================================
@@ -376,7 +409,7 @@ export const itemApi = {
             };
           }
 
-          const prefix = customPrefix?.trim().toUpperCase().replace(/[\s/\\_]+/g, "-") || "S-2024-2342";
+          const prefix = customPrefix?.trim().toUpperCase().replace(/[\s/\\_]+/g, "-") || "S-24-2342";
           let updatedCount = 0;
           const updatedItems: Item[] = [];
 
@@ -839,7 +872,7 @@ export interface NonMemberGuestPayload {
   fullName: string;
   institution: string;
   purpose: string;
-  phone: string;
+  phone?: string;
   studyProgramId?: number | null;
   facultyId?: number | null;
 }

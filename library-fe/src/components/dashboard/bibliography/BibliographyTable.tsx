@@ -4,6 +4,7 @@ import {
   Package,
   Plus,
   Pencil,
+  Printer,
   Trash2,
 } from "lucide-react";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -28,6 +29,7 @@ export interface BibliographyTableProps {
   canDeleteBib: boolean;
   onViewItems?: (bib: Bibliography) => void;
   onQuickAddItem: (bib: Bibliography) => void;
+  onPrintLabels?: (bib: Bibliography) => void;
   onOpenDetail: (id: string) => void;
   onEditBib: (bib: Bibliography) => void;
   onDeleteBib: (bib: Bibliography) => void;
@@ -43,6 +45,7 @@ export function BibliographyTable({
   canDeleteBib,
   onViewItems,
   onQuickAddItem,
+  onPrintLabels,
   onOpenDetail,
   onEditBib,
   onDeleteBib,
@@ -281,6 +284,17 @@ export function BibliographyTable({
                       title="Lihat eksemplar"
                     >
                       <Package className="size-4" />
+                    </button>
+                  )}
+                  {onPrintLabels && (
+                    <button
+                      type="button"
+                      onClick={() => onPrintLabels(bib)}
+                      className="rounded-lg p-1.5 text-amber-600 hover:bg-amber-50 dark:bg-amber-950/60 hover:text-amber-700 dark:text-amber-400 transition-colors cursor-pointer"
+                      title="Cetak Label & Barcode PDF"
+                      aria-label={`Cetak label dan barcode untuk ${bib.title}`}
+                    >
+                      <Printer className="size-4" />
                     </button>
                   )}
                   <button

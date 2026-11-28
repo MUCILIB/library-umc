@@ -10,6 +10,7 @@ export interface MemberProfile {
   originRegion: string | null;
   institution: string | null;
   phone: string | null;
+  phoneVerified?: boolean;
   cardStatus: "not_requested" | "pending" | "active" | "rejected" | "expired";
   cardNumber: string | null;
   cardRequestedAt: string | null;
@@ -39,6 +40,15 @@ export interface UpdateProfilePayload {
   institution?: string;
   phone?: string;
   image?: string;
+}
+
+export interface RequestPhoneOtpData {
+  maskedPhone: string;
+  normalizedPhone: string;
+  expiresInSeconds: number;
+  cooldownSeconds: number;
+  provider: string;
+  devOtpCode?: string;
 }
 
 class MemberService {
@@ -99,6 +109,48 @@ class MemberService {
     const result = await response.json();
     if (!result.success) {
       throw new Error(result.message || "Gagal memperbarui profil");
+    }
+    return result.data;
+  }
+
+  async requestPhoneOtp(phone: string): Promise<RequestPhoneOtpData> {
+    const authHeaders = getAuthHeaders();
+    const response = await fetch(`${this.baseUrl}/api/members/me/phone/request-otp`, {
+      method: "POST",
+      credentials: "include",
+      headers: {
+        "Content-Type": "application/json",
+        ...authHeaders,
+      },
+      body: JSON.stringify({ phone }),
+    });
+
+    const result = await response.json();
+    if (!result.success) {
+      throw new Error(result.message || "Gagal mengirim kode OTP");
+    }
+    return result.data;
+  }
+
+  async verifyPhoneOtp(payload: {
+    phone: string;
+    code: string;
+    name?: string;
+  }): Promise<MemberProfile> {
+    const authHeaders = getAuthHeaders();
+    const response = await fetch(`${this.baseUrl}/api/members/me/phone/verify-otp`, {
+      method: "POST",
+      credentials: "include",
+      headers: {
+        "Content-Type": "application/json",
+        ...authHeaders,
+      },
+      body: JSON.stringify(payload),
+    });
+
+    const result = await response.json();
+    if (!result.success) {
+      throw new Error(result.message || "Gagal memverifikasi kode OTP");
     }
     return result.data;
   }

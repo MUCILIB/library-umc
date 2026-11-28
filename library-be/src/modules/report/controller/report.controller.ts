@@ -94,7 +94,7 @@ class ReportController {
         return sendValidationError(res, validation.error.flatten());
       }
 
-      const { format, status, from, to, studyProgramId, facultyId } = validation.data;
+      const { format, delimiter, status, from, to, studyProgramId, facultyId } = validation.data;
 
       const { data } = await reportService.getLoanReport({
         status,
@@ -191,7 +191,8 @@ class ReportController {
           { key: "borrowDate", header: "Tgl Pinjam" },
           { key: "dueDate", header: "Tgl Jatuh Tempo" },
           { key: "returnDate", header: "Tgl Kembali" }
-        ]
+        ],
+        delimiter
       );
     } catch (error) {
       next(error);
@@ -206,7 +207,7 @@ class ReportController {
         return sendValidationError(res, validation.error.flatten());
       }
 
-      const { format, status, month, year } = validation.data;
+      const { format, delimiter, status, month, year } = validation.data;
 
       const numericMonth = month ? Number(month) : undefined;
       const numericYear = year ? Number(year) : undefined;
@@ -269,7 +270,7 @@ class ReportController {
         { key: "status", header: "Status Denda" },
         { key: "createdAt", header: "Tgl Denda Dibuat" },
         { key: "paidAt", header: "Tgl Pembayaran" }
-      ]);
+      ], delimiter);
     } catch (error) {
       next(error);
     }

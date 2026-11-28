@@ -62,3 +62,30 @@ export const updateCardExpirySchema = z.object({
 export const rejectCardSchema = z.object({
   reason: z.string().min(3, "Reason is required").max(255)
 });
+
+export const requestPhoneOtpSchema = z.object({
+  phone: z
+    .string()
+    .trim()
+    .min(9, "Nomor telepon minimal 9 karakter")
+    .max(20, "Nomor telepon maksimal 20 karakter")
+    .regex(PHONE_REGEX, "Nomor telepon hanya boleh berisi angka dan simbol (+, -, ())")
+    .refine((val) => {
+      const digits = val.replace(/\D/g, "");
+      return digits.length >= 9 && digits.length <= 15;
+    }, "Nomor telepon wajib berisi 9 hingga 15 digit angka"),
+});
+
+export const verifyPhoneOtpSchema = requestPhoneOtpSchema.extend({
+  code: z
+    .string()
+    .trim()
+    .regex(/^\d{6}$/, "Kode OTP harus terdiri dari 6 digit angka"),
+  name: z
+    .string()
+    .min(2, "Nama minimal 2 karakter")
+    .max(100, "Nama maksimal 100 karakter")
+    .regex(FORBIDDEN_CHARS_REGEX, "Karakter seperti <, >, ;, \", \\ tidak diperbolehkan")
+    .optional()
+    .or(z.literal("")),
+});

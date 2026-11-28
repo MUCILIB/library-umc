@@ -5,7 +5,9 @@ import {
   updateBibliographySchema,
   bibliographyQuerySchema,
   checkDuplicateSchema,
+  bookLabelsPdfQuerySchema,
 } from "../validation/bibliography.validation";
+import { streamBookLabelsPdf } from "../service/book-label-pdf.service";
 import { sendSuccess, sendError, sendValidationError } from "../../../utils/api-utils";
 import auditService from "../../audit/service/audit.service";
 
@@ -98,6 +100,55 @@ export class BibliographyController {
       const bibItems = await bibliographyService.getItemsForBibliography(id);
       sendSuccess(res, "Items retrieved", bibItems);
     } catch (error) { next(error); }
+  }
+
+  async exportLabelsPdf(req: Request, res: Response, next: NextFunction) {
+    try {
+      const id = req.params.id as string;
+      const validation = bookLabelsPdfQuerySchema.safeParse(req.query);
+      if (!validation.success) {
+        return sendValidationError(res, validation.error.flatten());
+      }
+
+      const bib = await bibliographyService.getById(id);
+      if (!bib) return sendError(res, "Bibliography not found", 404);
+
+      const selectedIds = (validation.data.itemIds || "")
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean);
+
+      const allItems = bib.items || [];
+      const itemsToPrint =
+        selectedIds.length > 0
+          ? allItems.filter((item: any) => selectedIds.includes(item.id))
+          : allItems;
+
+      if (itemsToPrint.length === 0) {
+        return sendError(
+          res,
+          "Tidak ada eksemplar fisik yang dapat dicetak pada bibliografi ini",
+          400
+        );
+      }
+
+      streamBookLabelsPdf(
+        res,
+        {
+          id: bib.id,
+          title: bib.title,
+          classification: bib.classification,
+          callNumber: bib.callNumber,
+          unlistedAuthorsLabel: bib.unlistedAuthorsLabel,
+          authors: bib.authors,
+          items: allItems,
+        },
+        itemsToPrint,
+        validation.data.perPage
+      );
+    } catch (error) {
+      next(error);
+    }
   }
 
   async deduplicate(req: Request, res: Response, next: NextFunction) {

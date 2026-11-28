@@ -270,19 +270,26 @@ export default function RepositorySection() {
     }
   };
 
-  const filteredProposals = proposals.filter((p) => {
-    const term = searchTerm.toLowerCase();
-    const matchesSearch =
-      p.title.toLowerCase().includes(term) ||
-      p.authorName.toLowerCase().includes(term) ||
-      p.authorNim.toLowerCase().includes(term) ||
-      p.proposalNumber.toLowerCase().includes(term);
+  const filteredProposals = proposals
+    .filter((p) => {
+      const term = searchTerm.toLowerCase();
+      const matchesSearch =
+        p.title.toLowerCase().includes(term) ||
+        p.authorName.toLowerCase().includes(term) ||
+        p.authorNim.toLowerCase().includes(term) ||
+        p.proposalNumber.toLowerCase().includes(term);
 
-    const matchesCategory =
-      filterCategory === "all" || p.documentCategory === filterCategory;
+      const matchesCategory =
+        filterCategory === "all" || p.documentCategory === filterCategory;
 
-    return matchesSearch && matchesCategory;
-  });
+      return matchesSearch && matchesCategory;
+    })
+    .sort((a, b) => {
+      const aIsNew = a.status === "SUBMITTED" ? 0 : 1;
+      const bIsNew = b.status === "SUBMITTED" ? 0 : 1;
+      if (aIsNew !== bIsNew) return aIsNew - bIsNew;
+      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+    });
 
   const totalPages = Math.max(1, Math.ceil(filteredProposals.length / itemsPerPage));
   const paginatedProposals = filteredProposals.slice(

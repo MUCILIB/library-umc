@@ -168,7 +168,7 @@ export default function KlasifikasiSection() {
             <p className="mt-0.5 text-xs text-muted-foreground leading-relaxed">
               Buku koleksi umum yang dapat dipinjam keluar oleh mahasiswa & dosen. Format Barcode:{" "}
               <span className="font-mono font-semibold text-emerald-600 dark:text-emerald-400">
-                S-2026-10001-c1
+                S-26-1001-c1
               </span>
             </p>
           </div>
@@ -185,7 +185,7 @@ export default function KlasifikasiSection() {
               <strong className="text-amber-700 dark:text-amber-300 font-semibold">Hanya dibaca di tempat</strong>.
               Format:{" "}
               <span className="font-mono font-semibold text-amber-600 dark:text-amber-400">
-                R-2026-10002-c1
+                R-26-1002-c1
               </span>
             </p>
           </div>

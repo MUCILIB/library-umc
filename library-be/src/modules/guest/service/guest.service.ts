@@ -18,6 +18,25 @@ type ServiceResponse<T> = {
   meta?: any;
 };
 
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+function normalizeScanIdentifier(raw: string): string {
+  const trimmed = raw?.trim() || "";
+  if (trimmed.startsWith("{")) {
+    try {
+      const parsed = JSON.parse(trimmed) as Record<string, unknown>;
+      const candidate =
+        parsed.cardNumber ?? parsed.nimNidn ?? parsed.nim ?? parsed.memberId ?? parsed.id;
+      if (typeof candidate === "string" && candidate.trim()) {
+        return candidate.trim();
+      }
+    } catch {
+      // Bukan JSON valid, gunakan raw string apa adanya
+    }
+  }
+  return trimmed;
+}
+
 export class GuestService {
   private readonly CAMPUS_API_TIMEOUT = 5000; // 5 seconds
 
@@ -152,11 +171,11 @@ export class GuestService {
   }
 
   /**
-   * Kiosk Scan: Scan Member Card (KTM / Barcode / QR / NIM / Email)
+   * Kiosk Scan: Scan Member Card (KTM / Barcode / QR / NIM / Email / Member UUID)
    */
   async scanMember(memberIdentifier: string): Promise<ServiceResponse<any>> {
     try {
-      const trimmed = memberIdentifier?.trim();
+      const trimmed = normalizeScanIdentifier(memberIdentifier);
       if (!trimmed) {
         return {
           success: false,
@@ -165,15 +184,21 @@ export class GuestService {
         };
       }
 
-      // 1. Cari di tabel members berdasarkan cardNumber atau nimNidn
+      const isUUID = UUID_REGEX.test(trimmed);
+      const memberLookups = [
+        eq(members.cardNumber, trimmed),
+        eq(members.nimNidn, trimmed),
+        sql`LOWER(${members.cardNumber}) = LOWER(${trimmed})`,
+        sql`LOWER(${members.nimNidn}) = LOWER(${trimmed})`
+      ];
+      if (isUUID) {
+        memberLookups.push(eq(members.id, trimmed));
+      }
+
+      // 1. Cari di tabel members berdasarkan cardNumber, nimNidn, atau id (UUID)
       let memberRecord = await db.query.members.findFirst({
         where: and(
-          or(
-            eq(members.cardNumber, trimmed),
-            eq(members.nimNidn, trimmed),
-            sql`LOWER(${members.cardNumber}) = LOWER(${trimmed})`,
-            sql`LOWER(${members.nimNidn}) = LOWER(${trimmed})`
-          ),
+          or(...memberLookups),
           isNull(members.deletedAt)
         ),
         with: {
@@ -317,7 +342,7 @@ export class GuestService {
     fullName: string;
     institution: string;
     purpose: string;
-    phone: string;
+    phone?: string | null;
     studyProgramId?: number | null;
     facultyId?: number | null;
   }): Promise<ServiceResponse<any>> {
@@ -357,12 +382,13 @@ export class GuestService {
         }
       }
 
+      const cleanPhone = data.phone?.trim() || null;
       const guestData = {
         name: data.fullName,
-        identifier: data.phone || `GUEST-${Date.now()}`,
+        identifier: cleanPhone || `GUEST-${Date.now()}`,
         institution: data.institution,
         purpose: data.purpose,
-        phone: data.phone,
+        phone: cleanPhone,
         studyProgramId: data.studyProgramId || null,
         facultyId: facultyId,
         major: studyProgramName || data.institution,

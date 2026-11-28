@@ -171,6 +171,44 @@ describe("GuestService - Kiosk Scan & Non-Member", () => {
       expect(res.success).toBe(true);
       expect(res.data?.alreadyCheckedIn).toBe(true);
     });
+
+    it("harus mendukung scan menggunakan member UUID dan payload JSON QR", async () => {
+      const memberUuid = "11111111-2222-3333-4444-555555555555";
+      const mockMember = {
+        id: memberUuid,
+        cardNumber: "UMCLIB-2026-0099",
+        nimNidn: "23010099",
+        faculty: "Ekonomi",
+        user: {
+          name: "Rina",
+          email: "rina@umc.ac.id",
+        },
+      };
+
+      vi.mocked(db.query.members.findFirst).mockResolvedValue(mockMember as any);
+      vi.mocked(db.query.faculties.findFirst).mockResolvedValue(null as any);
+      vi.mocked(db.query.guestLogs.findFirst).mockResolvedValue(null as any);
+      insertMock.returning.mockResolvedValue([
+        {
+          id: "log-uuid",
+          memberId: memberUuid,
+          name: "Rina",
+          major: "Ekonomi",
+          faculty: "Ekonomi",
+          visitDate: new Date(),
+        },
+      ]);
+
+      const resUuid = await guestService.scanMember(memberUuid);
+      expect(resUuid.success).toBe(true);
+      expect(resUuid.data?.name).toBe("Rina");
+
+      const resJson = await guestService.scanMember(
+        JSON.stringify({ cardNumber: "UMCLIB-2026-0099" })
+      );
+      expect(resJson.success).toBe(true);
+      expect(resJson.data?.cardNumber).toBe("UMCLIB-2026-0099");
+    });
   });
 
   describe("createNonMemberGuest", () => {

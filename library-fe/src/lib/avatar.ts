@@ -1,3 +1,5 @@
+import { API_BASE_URL } from "@/utils/api-config";
+
 export interface AvatarUserLike {
   image?: string | null;
   email?: string | null;
@@ -6,13 +8,18 @@ export interface AvatarUserLike {
 }
 
 /**
- * Returns user image if provided and non-empty.
+ * Returns user image if provided and non-empty (resolving relative `/api/...` paths against API_BASE_URL).
  * Otherwise returns a deterministic DiceBear Waves SVG avatar URL.
  * The seed is trimmed and lowercased so identical users always get the exact same avatar.
  */
 export function getUserAvatar(user?: AvatarUserLike | null): string {
   if (user?.image && typeof user.image === "string" && user.image.trim() !== "") {
-    return user.image.trim();
+    const trimmed = user.image.trim();
+    if (trimmed.startsWith("/api/")) {
+      const normalizedBase = API_BASE_URL.replace(/\/+$/, "");
+      return `${normalizedBase}${trimmed}`;
+    }
+    return trimmed;
   }
 
   const rawSeed = user?.email || user?.name || user?.id || "library-user";
