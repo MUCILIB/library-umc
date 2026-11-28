@@ -14,6 +14,7 @@ import {
 } from "@/api/client";
 
 import QuickAddItemModal from "./bibliography/QuickAddItemModal";
+import PrintBookLabelsModal from "./bibliography/PrintBookLabelsModal";
 import DeleteBibliographyDialog from "./bibliography/DeleteBibliographyDialog";
 import BibliographyDetail from "./bibliography/BibliographyDetail";
 import BibliographyForm from "./bibliography/BibliographyForm";
@@ -64,6 +65,7 @@ export default function BibliographySection({
   const [showForm, setShowForm] = useState(false);
   const [editingBib, setEditingBib] = useState<Bibliography | null>(null);
   const [quickAddBib, setQuickAddBib] = useState<Bibliography | null>(null);
+  const [printLabelsBib, setPrintLabelsBib] = useState<Bibliography | null>(null);
   const { canAdd, canEdit, canDelete } = useRolePermissions();
   const limit = 10;
 
@@ -334,6 +336,11 @@ export default function BibliographySection({
           onEdit={handleEdit}
           onDelete={handleDelete}
           onViewItems={onViewItems}
+          onPrintLabels={(bib) => setPrintLabelsBib(bib)}
+        />
+        <PrintBookLabelsModal
+          bib={printLabelsBib}
+          onClose={() => setPrintLabelsBib(null)}
         />
         <DeleteBibliographyDialog
           bib={bibToDelete}
@@ -420,6 +427,7 @@ export default function BibliographySection({
         canDeleteBib={canDelete("bibliographies")}
         onViewItems={onViewItems}
         onQuickAddItem={(bib) => setQuickAddBib(bib)}
+        onPrintLabels={(bib) => setPrintLabelsBib(bib)}
         onOpenDetail={openDetail}
         onEditBib={handleEdit}
         onDeleteBib={handleDelete}
@@ -431,6 +439,12 @@ export default function BibliographySection({
         bib={quickAddBib}
         onClose={() => setQuickAddBib(null)}
         onSuccess={() => fetchData(page, searchTerm || undefined)}
+      />
+
+      {/* Modal Cetak Label & Barcode Buku */}
+      <PrintBookLabelsModal
+        bib={printLabelsBib}
+        onClose={() => setPrintLabelsBib(null)}
       />
 
       {/* Modal Konfirmasi Hapus Bibliografi & Eksemplar */}

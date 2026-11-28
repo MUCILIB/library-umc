@@ -295,6 +295,15 @@ export class ItemService {
     return crypto.randomBytes(20).toString("hex");
   }
 
+  private formatItemCodeYear(year?: number | string | null): string {
+    const raw = year !== null && year !== undefined ? String(year).trim() : "";
+    if (/^\d{2}$/.test(raw)) return raw;
+    if (/^\d{4,}$/.test(raw)) return raw.slice(-2);
+    const parsed = Number(raw);
+    const resolved = Number.isFinite(parsed) && parsed > 0 ? Math.trunc(parsed) : new Date().getFullYear();
+    return String(resolved).padStart(2, "0").slice(-2);
+  }
+
   private async getNextBookSequenceNumber(): Promise<string> {
     const allRecentItems = await db.query.items.findMany({
       where: isNull(items.deletedAt),
@@ -303,24 +312,24 @@ export class ItemService {
       limit: 1000,
     });
 
-    let maxSeq = 10000;
+    let maxSeq = 1000;
     for (const it of allRecentItems) {
-      const m = (it.itemCode || "").match(/^[A-Z0-9_.-]+-\d{4}-(\d{4,6})/i);
+      const m = (it.itemCode || "").match(/^[A-Z0-9_.-]+-(?:\d{2}|\d{4})-(\d{1,4})(?:-|$)/i);
       if (m) {
         const val = parseInt(m[1], 10);
-        if (!isNaN(val) && val > maxSeq) {
+        if (!isNaN(val) && val > maxSeq && val <= 9999) {
           maxSeq = val;
         }
       }
     }
 
-    if (maxSeq > 10000) {
+    if (maxSeq > 1000 && maxSeq < 9999) {
       return String(maxSeq + 1);
     }
 
     const [totalCount] = await db.select({ count: sql<number>`count(*)` }).from(items);
-    const nextNum = 10000 + Number(totalCount?.count || 0) + 1;
-    return String(nextNum);
+    const nextNum = 1000 + (Number(totalCount?.count || 0) % 8999) + 1;
+    return String(Math.min(9999, nextNum));
   }
 
   private async generateItemCode(bibliographyId: string, customPattern?: string): Promise<string> {
@@ -342,8 +351,8 @@ export class ItemService {
       // 1. Prioritas utama: jika buku sudah memiliki eksemplar berformat standar, pertahankan awalan yang sama!
       let establishedPrefix = "";
       for (const it of allBibItems) {
-        const m = it.itemCode.match(/^([SR]-\d{4}-[A-Z0-9]+)-c\d+$/i) ||
-                  it.itemCode.match(/^([SR]-\d{4}-[A-Z0-9]+)-\d+$/i);
+        const m = it.itemCode.match(/^([SR]-(?:\d{2}|\d{4})-[A-Z0-9]+)-c\d+$/i) ||
+                  it.itemCode.match(/^([SR]-(?:\d{2}|\d{4})-[A-Z0-9]+)-\d+$/i);
         if (m) {
           establishedPrefix = m[1].toUpperCase();
           break;
@@ -353,18 +362,18 @@ export class ItemService {
       if (establishedPrefix) {
         basePrefix = establishedPrefix;
       } else if ((bib as any).collectionType?.code) {
-        // Format Standar: S (Sirkulasi) atau R (Referensi)
+        // Format Standar: S (Sirkulasi) atau R (Referensi) dengan tahun 2 digit (YY)
         const isRef =
           (bib as any).collectionType?.code?.toUpperCase() === "R" ||
           (bib as any).collectionType?.canBeBorrowed === false ||
           bib.collectionTypeId === 2;
         const prefix = isRef ? "R" : String((bib as any).collectionType.code).trim().replace(/[\s/\\_]+/g, "-").toUpperCase();
-        const year = bib.publishYear || new Date().getFullYear();
+        const year = this.formatItemCodeYear(bib.publishYear);
 
-        const existingMatch = allBibItems.find(i => /^[A-Z0-9_.-]+-\d{4}-(\d{4,6})-/i.test(i.itemCode));
-        let seqNum = "10001";
+        const existingMatch = allBibItems.find(i => /^[A-Z0-9_.-]+-(?:\d{2}|\d{4})-(\d{1,4})-/i.test(i.itemCode));
+        let seqNum = "1001";
         if (existingMatch) {
-          const m = existingMatch.itemCode.match(/^[A-Z0-9_.-]+-\d{4}-(\d{4,6})-/i);
+          const m = existingMatch.itemCode.match(/^[A-Z0-9_.-]+-(?:\d{2}|\d{4})-(\d{1,4})-/i);
           if (m) seqNum = m[1];
         } else {
           seqNum = await this.getNextBookSequenceNumber();
@@ -374,15 +383,15 @@ export class ItemService {
       } else if (bib.callNumber && bib.callNumber.trim()) {
         basePrefix = bib.callNumber.trim().toUpperCase().replace(/[\s/\\_]+/g, "-");
       } else {
-        // Format Standar Default: S (Sirkulasi) atau R (Referensi)
+        // Format Standar Default: S (Sirkulasi) atau R (Referensi) dengan tahun 2 digit (YY)
         const isRef = bib.collectionTypeId === 2;
         const prefix = isRef ? "R" : "S";
-        const year = bib.publishYear || new Date().getFullYear();
+        const year = this.formatItemCodeYear(bib.publishYear);
 
-        const existingMatch = allBibItems.find(i => /^[A-Z0-9_.-]+-\d{4}-(\d{4,6})-/i.test(i.itemCode));
-        let seqNum = "10001";
+        const existingMatch = allBibItems.find(i => /^[A-Z0-9_.-]+-(?:\d{2}|\d{4})-(\d{1,4})-/i.test(i.itemCode));
+        let seqNum = "1001";
         if (existingMatch) {
-          const m = existingMatch.itemCode.match(/^[A-Z0-9_.-]+-\d{4}-(\d{4,6})-/i);
+          const m = existingMatch.itemCode.match(/^[A-Z0-9_.-]+-(?:\d{2}|\d{4})-(\d{1,4})-/i);
           if (m) seqNum = m[1];
         } else {
           seqNum = await this.getNextBookSequenceNumber();
@@ -432,7 +441,7 @@ export class ItemService {
 
   async generateCodePreview(collectionTypeCode?: string, publishYear?: number): Promise<string> {
     const prefix = collectionTypeCode?.toUpperCase() === "R" ? "R" : "S";
-    const year = publishYear || new Date().getFullYear();
+    const year = this.formatItemCodeYear(publishYear);
     const seqNum = await this.getNextBookSequenceNumber();
     return `${prefix}-${year}-${seqNum}-c1`;
   }
@@ -564,8 +573,8 @@ export class ItemService {
       // Cari prefix standar yang paling banyak digunakan atau terbaru pada buku ini
       const prefixCounts = new Map<string, number>();
       for (const it of activeItems) {
-        const match = it.itemCode.match(/^([SR]-\d{4}-[A-Z0-9]+)-c\d+$/i) ||
-                      it.itemCode.match(/^([SR]-\d{4}-[A-Z0-9]+)/i);
+        const match = it.itemCode.match(/^([SR]-(?:\d{2}|\d{4})-[A-Z0-9]+)-c\d+$/i) ||
+                      it.itemCode.match(/^([SR]-(?:\d{2}|\d{4})-[A-Z0-9]+)/i);
         if (match) {
           const p = match[1].toUpperCase();
           prefixCounts.set(p, (prefixCounts.get(p) || 0) + 1);
@@ -589,10 +598,10 @@ export class ItemService {
           (bib as any).collectionType?.canBeBorrowed === false ||
           bib.collectionTypeId === 2;
         const prefix = isRef ? "R" : "S";
-        const year = bib.publishYear || new Date().getFullYear();
+        const year = this.formatItemCodeYear(bib.publishYear);
         const [totalCount] = await db.select({ count: sql<number>`count(*)` }).from(items);
-        const nextNum = 10000 + Number(totalCount?.count || 0) + 1;
-        canonicalPrefix = `${prefix}-${year}-${nextNum}`;
+        const nextNum = 1000 + (Number(totalCount?.count || 0) % 8999) + 1;
+        canonicalPrefix = `${prefix}-${year}-${Math.min(9999, nextNum)}`;
       }
     }
 

@@ -1,6 +1,8 @@
 import { db } from "../../../db";
 import { members, Users } from "../../../db/schema";
 import { eq, and, or, isNull } from "drizzle-orm";
+import { normalizeIndonesianPhone } from "../../../config/whatsapp";
+import { phoneOtpService } from "./phone-otp.service";
 
 type ServiceResponse<T> = {
   success: boolean;
@@ -112,11 +114,19 @@ export class MemberService {
         }
       }
 
+      let phoneVerified = false;
+      try {
+        phoneVerified = await phoneOtpService.isPhoneVerified(userId, member.phone);
+      } catch {
+        phoneVerified = false;
+      }
+
       return {
         success: true,
         message: "Member retrieved successfully",
         data: {
           ...member,
+          phoneVerified,
           isExternal: member.memberType === "external"
         }
       };
@@ -777,7 +787,7 @@ export class MemberService {
         };
       }
 
-      // Validate phone number format (if provided)
+      // Validate phone number format & OTP verification when setting/changing phone
       if (data.phone && data.phone.trim() !== "") {
         const phoneRegex = /^[\d\s\-+()]+$/;
         if (!phoneRegex.test(data.phone)) {
@@ -786,6 +796,19 @@ export class MemberService {
             message: "Invalid phone number format",
             data: null
           };
+        }
+
+        const currentNormalized = normalizeIndonesianPhone(member.phone || "");
+        const nextNormalized = normalizeIndonesianPhone(data.phone.trim());
+        if (!currentNormalized || currentNormalized !== nextNormalized) {
+          const isVerified = await phoneOtpService.isPhoneVerified(userId, data.phone.trim());
+          if (!isVerified) {
+            return {
+              success: false,
+              message: "Nomor telepon wajib diverifikasi dengan kode OTP terlebih dahulu.",
+              data: null
+            };
+          }
         }
       }
 
@@ -838,16 +861,85 @@ export class MemberService {
         }
       });
 
+      let phoneVerified = false;
+      try {
+        phoneVerified = await phoneOtpService.isPhoneVerified(
+          userId,
+          updatedMemberWithUser?.phone
+        );
+      } catch {
+        phoneVerified = false;
+      }
+
       return {
         success: true,
         message: "Profile updated successfully",
         data: updatedMemberWithUser
+          ? {
+              ...updatedMemberWithUser,
+              phoneVerified,
+              isExternal: updatedMemberWithUser.memberType === "external"
+            }
+          : null
       };
     } catch (err) {
       console.error("[MemberService] Error updating profile:", err);
       return {
         success: false,
         message: "Failed to update profile",
+        data: null
+      };
+    }
+  }
+
+  /**
+   * Verify phone OTP and persist the verified phone number (plus optional name) to member profile
+   */
+  async verifyPhoneOtpAndSave(
+    userId: string,
+    payload: { phone: string; code: string; name?: string }
+  ): Promise<ServiceResponse<any>> {
+    try {
+      if (!userId) {
+        return { success: false, message: "User ID is required", data: null };
+      }
+
+      const memberResult = await this.getMemberByUserId(userId);
+      if (!memberResult.success || !memberResult.data) {
+        return { success: false, message: "Member not found", data: null };
+      }
+
+      const verifyRes = await phoneOtpService.verifyOtp(
+        userId,
+        payload.phone,
+        payload.code
+      );
+      if (!verifyRes.success || !verifyRes.data) {
+        return { success: false, message: verifyRes.message, data: null };
+      }
+
+      const updateRes = await this.updateProfile(userId, {
+        phone: verifyRes.data.displayPhone,
+        ...(payload.name && payload.name.trim() !== "" ? { name: payload.name.trim() } : {})
+      });
+
+      if (!updateRes.success) {
+        return updateRes;
+      }
+
+      return {
+        success: true,
+        message: "Nomor telepon berhasil diverifikasi dan disimpan.",
+        data: {
+          ...updateRes.data,
+          phoneVerified: true
+        }
+      };
+    } catch (err) {
+      console.error("[MemberService] Error verifying phone OTP:", err);
+      return {
+        success: false,
+        message: "Gagal memverifikasi nomor telepon",
         data: null
       };
     }

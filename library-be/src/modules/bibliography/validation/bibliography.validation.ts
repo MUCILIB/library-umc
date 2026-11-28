@@ -98,6 +98,18 @@ export const checkDuplicateSchema = z.object({
   message: "At least one of isbn, issn, title, or author is required",
 });
 
+export const bookLabelsPdfQuerySchema = z.object({
+  perPage: z.coerce
+    .number()
+    .int()
+    .refine((v) => [4, 6, 8, 10, 12].includes(v), {
+      message: "Jumlah label per halaman harus 4, 6, 8, 10, atau 12",
+    })
+    .default(6),
+  itemIds: z.string().optional(),
+});
+
 export type CreateBibliographyData = z.infer<typeof createBibliographySchema>;
 export type UpdateBibliographyData = z.infer<typeof updateBibliographySchema>;
 export type BibliographyQuery = z.infer<typeof bibliographyQuerySchema>;
+export type BookLabelsPdfQuery = z.infer<typeof bookLabelsPdfQuerySchema>;

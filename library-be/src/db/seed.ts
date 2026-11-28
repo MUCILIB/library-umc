@@ -229,7 +229,7 @@ async function seed() {
       for (let i = 0; i < Math.min(b.stock, 3); i++) {
         const isRef = b.title.toLowerCase().includes("kamus") || b.title.toLowerCase().includes("ensiklopedia");
         const prefix = isRef ? "R" : "S";
-        const year = b.year || 2024;
+        const year = String(b.year || 2024).slice(-2);
         const bookSeq = String(10000 + bibCount + 1);
         const itemCode = `${prefix}-${year}-${bookSeq}-c${i + 1}`;
         await db.insert(items).values({

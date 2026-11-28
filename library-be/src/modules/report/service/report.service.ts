@@ -20,6 +20,7 @@ import {
 import { eq, sql, and, desc, isNull } from "drizzle-orm";
 import PDFDocument from "pdfkit";
 import { type Response } from "express";
+import { ensurePdfSpace, renderPdfTable } from "../../../utils/pdf-table";
 
 export class ReportService {
   private getDatePrefix(): string {
@@ -839,19 +840,22 @@ export class ReportService {
     res: Response,
     filename: string,
     data: T[],
-    columns: { key: keyof T; header: string }[]
+    columns: { key: keyof T; header: string }[],
+    delimiter: "," | ";" = ","
   ): void {
+    const sep = delimiter === ";" ? ";" : ",";
     res.setHeader("Content-Type", "text/csv; charset=utf-8");
     res.setHeader(
       "Content-Disposition",
       `attachment; filename="${this.buildExportFilename(filename, "csv")}"`
     );
+    res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, private");
 
     // BOM for Excel UTF-8 compatibility
     res.write("\uFEFF");
 
     // Header row
-    res.write(columns.map((c) => `"${c.header}"`).join(",") + "\n");
+    res.write(columns.map((c) => `"${c.header}"`).join(sep) + "\n");
 
     // Data rows
     for (const row of data) {
@@ -860,7 +864,7 @@ export class ReportService {
           const val = row[c.key] ?? "";
           return `"${String(val).replace(/"/g, '""')}"`;
         })
-        .join(",");
+        .join(sep);
       res.write(line + "\n");
     }
 
@@ -910,8 +914,8 @@ export class ReportService {
     });
     doc.moveDown(0.8);
 
-    // Table Header (total width = 760)
-    const colWidths = [115, 165, 115, 135, 70, 80, 80];
+    // Table (total width = 760)
+    const colWidths = [110, 190, 110, 130, 65, 77, 78];
     const headers = [
       "Peminjam",
       "Judul Buku",
@@ -922,65 +926,37 @@ export class ReportService {
       "Tgl Kembali"
     ];
     const startX = 36;
-    let y = doc.y;
+    const tableRows = data.map((row) => [
+      row.memberName ?? "-",
+      row.bookTitle ?? "-",
+      row.faculty ?? "-",
+      row.studyProgram ?? "-",
+      row.status ?? "-",
+      row.borrowDate ?? "-",
+      row.returnDate ?? row.dueDate ?? "-"
+    ]);
 
-    doc.font("Helvetica-Bold").fontSize(8.5);
-    doc.rect(startX, y, 760, 18).fill("#2563EB");
-    doc.fill("white");
-    let x = startX + 4;
-    headers.forEach((h, i) => {
-      doc.text(h, x, y + 4, { width: colWidths[i] - 4, lineBreak: false });
-      x += colWidths[i];
-    });
-    doc.fill("black");
-    y += 18;
-
-    // Table Rows
-    doc.font("Helvetica").fontSize(7.8);
-    data.forEach((row, idx) => {
-      if (y > 520) {
-        doc.addPage();
-        y = 36;
-        doc.font("Helvetica-Bold").fontSize(8.5);
-        doc.rect(startX, y, 760, 18).fill("#2563EB");
-        doc.fill("white");
-        let hx = startX + 4;
-        headers.forEach((h, i) => {
-          doc.text(h, hx, y + 4, { width: colWidths[i] - 4, lineBreak: false });
-          hx += colWidths[i];
-        });
-        doc.fill("black").font("Helvetica").fontSize(7.8);
-        y += 18;
-      }
-      const bg = idx % 2 === 0 ? "#F1F5F9" : "white";
-      doc.rect(startX, y, 760, 15).fill(bg);
-      doc.fill("black");
-
-      x = startX + 4;
-      const cols = [
-        row.memberName ?? "-",
-        row.bookTitle ?? "-",
-        row.faculty ?? "-",
-        row.studyProgram ?? "-",
-        row.status ?? "-",
-        row.borrowDate ?? "-",
-        row.returnDate ?? row.dueDate ?? "-"
-      ];
-      cols.forEach((val, i) => {
-        doc.text(String(val).substring(0, 32), x, y + 4, {
-          width: colWidths[i] - 4,
-          lineBreak: false
-        });
-        x += colWidths[i];
-      });
-      y += 15;
+    const finalY = renderPdfTable(doc, {
+      startX,
+      startY: doc.y,
+      headers,
+      colWidths,
+      rows: tableRows,
+      headerBgColor: "#2563EB",
+      headerFontSize: 8.5,
+      rowFontSize: 7.8,
+      minHeaderHeight: 18,
+      minRowHeight: 16,
+      evenRowBgColor: "#F1F5F9",
+      oddRowBgColor: "#FFFFFF"
     });
 
-    doc.moveDown(1);
+    const footerY = ensurePdfSpace(doc, finalY + 10, 18);
     doc
+      .font("Helvetica")
       .fontSize(8)
-      .fill("#64748B")
-      .text(`Total: ${data.length} records`, startX);
+      .fillColor("#64748B")
+      .text(`Total: ${data.length} records`, startX, footerY);
 
     doc.end();
   }
@@ -1020,57 +996,38 @@ export class ReportService {
     });
     doc.moveDown(1);
 
-    const colWidths = [145, 140, 70, 70, 90];
+    const colWidths = [130, 175, 65, 65, 80];
     const headers = ["Member", "Judul Buku", "Status", "Tgl Bayar", "Jumlah"];
     const startX = 40;
-    let y = doc.y;
+    const tableRows = data.map((row) => [
+      row.memberName ?? "-",
+      row.bookTitle ?? "-",
+      row.status ?? "-",
+      row.paidAt ?? "-",
+      row.amount ?? "-"
+    ]);
 
-    doc.font("Helvetica-Bold").fontSize(9);
-    doc.rect(startX, y, 515, 16).fill("#B91C1C");
-    doc.fill("white");
-    let x = startX + 4;
-    headers.forEach((h, i) => {
-      doc.text(h, x, y + 3, { width: colWidths[i] - 4, lineBreak: false });
-      x += colWidths[i];
-    });
-    doc.fill("black");
-    y += 16;
-
-    doc.font("Helvetica").fontSize(8);
-    data.forEach((row, idx) => {
-      if (y > 740) {
-        doc.addPage();
-        y = 40;
-      }
-
-      const bg = idx % 2 === 0 ? "#F8FAFC" : "white";
-      doc.rect(startX, y, 515, 14).fill(bg);
-      doc.fill("black");
-
-      x = startX + 4;
-      const cols = [
-        row.memberName ?? "-",
-        row.bookTitle ?? "-",
-        row.status ?? "-",
-        row.paidAt ?? "-",
-        row.amount ?? "-"
-      ];
-
-      cols.forEach((val, i) => {
-        doc.text(String(val).substring(0, 28), x, y + 3, {
-          width: colWidths[i] - 4,
-          lineBreak: false
-        });
-        x += colWidths[i];
-      });
-      y += 14;
+    const finalY = renderPdfTable(doc, {
+      startX,
+      startY: doc.y,
+      headers,
+      colWidths,
+      rows: tableRows,
+      headerBgColor: "#B91C1C",
+      headerFontSize: 9,
+      rowFontSize: 8,
+      minHeaderHeight: 18,
+      minRowHeight: 15,
+      evenRowBgColor: "#F8FAFC",
+      oddRowBgColor: "#FFFFFF"
     });
 
-    doc.moveDown(1);
+    const footerY = ensurePdfSpace(doc, finalY + 10, 18);
     doc
+      .font("Helvetica")
       .fontSize(8)
-      .fill("#64748B")
-      .text(`Total: ${data.length} records`, startX);
+      .fillColor("#64748B")
+      .text(`Total: ${data.length} records`, startX, footerY);
 
     doc.end();
   }

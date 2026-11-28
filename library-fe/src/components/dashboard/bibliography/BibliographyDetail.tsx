@@ -2,6 +2,7 @@ import {
   ArrowLeft,
   Package,
   Pencil,
+  Printer,
   Trash2,
   Users,
   Tag,
@@ -27,6 +28,7 @@ export interface BibliographyDetailProps {
   onEdit: (bib: Bibliography) => void;
   onDelete: (bib: Bibliography) => void;
   onViewItems?: (bib: Bibliography) => void;
+  onPrintLabels?: (bib: Bibliography) => void;
 }
 
 export function BibliographyDetail({
@@ -36,6 +38,7 @@ export function BibliographyDetail({
   onEdit,
   onDelete,
   onViewItems,
+  onPrintLabels,
 }: BibliographyDetailProps) {
   if (loading) {
     return (
@@ -57,6 +60,16 @@ export function BibliographyDetail({
           Kembali ke daftar
         </button>
         <div className="flex gap-2">
+          {onPrintLabels && (
+            <button
+              type="button"
+              onClick={() => onPrintLabels(bib)}
+              className="flex items-center gap-2 rounded-lg bg-amber-600 px-4 py-2 text-sm font-medium text-white hover:bg-amber-700 transition-colors cursor-pointer"
+            >
+              <Printer className="size-4" />
+              Cetak Label &amp; Barcode
+            </button>
+          )}
           {onViewItems && (
             <button
               onClick={() => onViewItems(bib)}

@@ -17,6 +17,8 @@ vi.mock("@/services/memberService", () => ({
   default: {
     getMyProfile: vi.fn(),
     updateMyProfile: vi.fn(),
+    requestPhoneOtp: vi.fn(),
+    verifyPhoneOtp: vi.fn(),
   },
 }));
 
@@ -112,7 +114,7 @@ describe("MandatoryContactModal Component", () => {
         user: {
           id: "staff-member-1",
           name: "Staf",
-          role: "student", // role token mungkin student tapi data member staff
+          role: "student",
         },
       },
       isPending: false,
@@ -187,7 +189,7 @@ describe("MandatoryContactModal Component", () => {
     expect(screen.getByDisplayValue("Mahasiswa Baru")).toBeInTheDocument();
   });
 
-  it("memvalidasi panjang nomor telepon saat submit", async () => {
+  it("memvalidasi panjang nomor telepon sebelum mengirim OTP", async () => {
     vi.mocked(authClient.useSession).mockReturnValue({
       data: {
         user: {
@@ -212,16 +214,18 @@ describe("MandatoryContactModal Component", () => {
     const phoneInput = await screen.findByPlaceholderText("Contoh: 081234567890");
     fireEvent.change(phoneInput, { target: { value: "12345" } }); // kurang dari 9 digit
 
-    const submitBtn = screen.getByRole("button", { name: /Simpan & Lanjutkan/i });
+    const submitBtn = screen.getByRole("button", { name: /Kirim Kode OTP/i });
     fireEvent.click(submitBtn);
 
     expect(
-      await screen.findByText("Nomor telepon/WhatsApp wajib diisi dengan format yang benar (9-15 digit angka).")
+      await screen.findByText(
+        "Nomor telepon/WhatsApp wajib diisi dengan format yang benar (9-15 digit angka)."
+      )
     ).toBeInTheDocument();
-    expect(memberService.updateMyProfile).not.toHaveBeenCalled();
+    expect(memberService.requestPhoneOtp).not.toHaveBeenCalled();
   });
 
-  it("berhasil menyimpan nama dan nomor telepon saat form valid", async () => {
+  it("mengirim kode OTP lalu memverifikasi OTP dan menyimpan profil mahasiswa baru", async () => {
     vi.mocked(authClient.useSession).mockReturnValue({
       data: {
         user: {
@@ -241,10 +245,20 @@ describe("MandatoryContactModal Component", () => {
       user: { name: "Budi Santoso" },
     } as any);
 
-    vi.mocked(memberService.updateMyProfile).mockResolvedValue({
-      success: true,
-      message: "Profil diperbarui",
-      data: {},
+    vi.mocked(memberService.requestPhoneOtp).mockResolvedValue({
+      maskedPhone: "0812****7899",
+      normalizedPhone: "6281234567899",
+      expiresInSeconds: 300,
+      cooldownSeconds: 60,
+      provider: "simulation",
+      devOtpCode: "654321",
+    });
+
+    vi.mocked(memberService.verifyPhoneOtp).mockResolvedValue({
+      id: "mem-mhs-new",
+      userId: "mhs-new",
+      phone: "081234567899",
+      phoneVerified: true,
     } as any);
 
     render(<MandatoryContactModal />);
@@ -252,15 +266,26 @@ describe("MandatoryContactModal Component", () => {
     const phoneInput = await screen.findByPlaceholderText("Contoh: 081234567890");
     fireEvent.change(phoneInput, { target: { value: "081234567899" } });
 
-    const submitBtn = screen.getByRole("button", { name: /Simpan & Lanjutkan/i });
-    fireEvent.click(submitBtn);
+    fireEvent.click(screen.getByRole("button", { name: /Kirim Kode OTP/i }));
 
     await waitFor(() => {
-      expect(memberService.updateMyProfile).toHaveBeenCalledWith({
-        name: "Budi Santoso",
+      expect(memberService.requestPhoneOtp).toHaveBeenCalledWith("081234567899");
+      expect(screen.getByText("Verifikasi Kode OTP Nomor Telepon")).toBeInTheDocument();
+      expect(screen.getByText("654321")).toBeInTheDocument();
+    });
+
+    const otpInput = screen.getByPlaceholderText("Masukkan 6 digit kode OTP");
+    fireEvent.change(otpInput, { target: { value: "654321" } });
+
+    fireEvent.click(screen.getByRole("button", { name: /Verifikasi & Simpan/i }));
+
+    await waitFor(() => {
+      expect(memberService.verifyPhoneOtp).toHaveBeenCalledWith({
         phone: "081234567899",
+        code: "654321",
+        name: "Budi Santoso",
       });
-      expect(mockToastSuccess).toHaveBeenCalledWith("Profil Diperbarui", expect.any(String));
+      expect(mockToastSuccess).toHaveBeenCalledWith("Nomor Terverifikasi", expect.any(String));
       expect(screen.queryByText("Konfirmasi Kontak & Identitas Mahasiswa")).not.toBeInTheDocument();
     });
   });

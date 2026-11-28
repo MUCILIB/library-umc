@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { StorageService } from "../service/storage.service";
 import fs from "fs";
+import os from "os";
 import path from "path";
 
 describe("StorageService (TDD Seam)", () => {
@@ -59,18 +60,32 @@ describe("StorageService (TDD Seam)", () => {
     delete process.env.ACCESS_KEY;
     delete process.env.SECRET_KEY;
 
-    const storage = new StorageService();
-    const dummyBuffer = Buffer.from("%PDF-1.4 dummy content");
-    const filename = `test-${Date.now()}.pdf`;
+    const tmpRoot = fs.mkdtempSync(path.join(os.tmpdir(), "umc-storage-test-"));
+    const cwdSpy = vi.spyOn(process, "cwd").mockReturnValue(tmpRoot);
 
-    const savedPath = await storage.save(filename, dummyBuffer);
-    expect(savedPath).toContain(filename);
-    expect(fs.existsSync(savedPath)).toBe(true);
+    try {
+      const storage = new StorageService("avatars");
+      const dummyBuffer = Buffer.from("%PDF-1.4 dummy content");
+      const filename = `test-${Date.now()}.pdf`;
 
-    const readBuffer = await storage.read(savedPath);
-    expect(readBuffer.toString()).toBe(dummyBuffer.toString());
+      const savedPath = await storage.save(filename, dummyBuffer);
+      expect(savedPath).toContain(filename);
+      expect(fs.existsSync(savedPath)).toBe(true);
 
-    await storage.delete(savedPath);
-    expect(fs.existsSync(savedPath)).toBe(false);
+      const readBuffer = await storage.read(savedPath);
+      expect(readBuffer.toString()).toBe(dummyBuffer.toString());
+
+      const readByFilename = await storage.read(filename);
+      expect(readByFilename.toString()).toBe(dummyBuffer.toString());
+
+      const readByPrefixKey = await storage.read(`library/avatars/${filename}`);
+      expect(readByPrefixKey.toString()).toBe(dummyBuffer.toString());
+
+      await storage.delete(savedPath);
+      expect(fs.existsSync(savedPath)).toBe(false);
+    } finally {
+      cwdSpy.mockRestore();
+      fs.rmSync(tmpRoot, { recursive: true, force: true });
+    }
   });
 });

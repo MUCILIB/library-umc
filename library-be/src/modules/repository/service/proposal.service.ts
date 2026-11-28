@@ -12,7 +12,7 @@ import {
   faculties,
   siteSettings
 } from "../../../db/schema";
-import { eq, desc, and, inArray } from "drizzle-orm";
+import { eq, desc, and, inArray, sql } from "drizzle-orm";
 import {
   BadRequestError,
   NotFoundError,
@@ -192,7 +192,8 @@ export class ProposalService {
       query = query.where(and(...conditions)) as any;
     }
 
-    const proposals = await query.orderBy(desc(repositoryProposals.createdAt));
+    const statusPriority = sql`CASE WHEN ${repositoryProposals.status} = 'SUBMITTED' THEN 0 ELSE 1 END`;
+    const proposals = await query.orderBy(statusPriority, desc(repositoryProposals.createdAt));
     if (proposals.length === 0) return [];
 
     const proposalIds = proposals.map((p) => p.id);

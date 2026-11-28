@@ -35,6 +35,7 @@ export class ExportController {
       const csv = await exportService.exportBibliographies(filter);
       res.setHeader("Content-Type", "text/csv; charset=utf-8");
       res.setHeader("Content-Disposition", 'attachment; filename="bibliographies_export.csv"');
+      res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, private");
       res.send(csv);
     } catch (error) { next(error); }
   }
@@ -52,6 +53,7 @@ export class ExportController {
       const csv = await exportService.exportItems(filter);
       res.setHeader("Content-Type", "text/csv; charset=utf-8");
       res.setHeader("Content-Disposition", 'attachment; filename="items_export.csv"');
+      res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, private");
       res.send(csv);
     } catch (error) { next(error); }
   }

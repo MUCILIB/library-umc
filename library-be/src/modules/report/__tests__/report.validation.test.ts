@@ -39,6 +39,20 @@ describe("Report Validation Schema", () => {
     }
   });
 
+  it("menerima delimiter ; atau , untuk export loans dan fines serta menolak karakter lain", () => {
+    const loansSemi = exportLoansQuerySchema.safeParse({ format: "csv", delimiter: ";" });
+    expect(loansSemi.success && loansSemi.data.delimiter).toBe(";");
+
+    const loansComma = exportLoansQuerySchema.safeParse({ format: "csv", delimiter: "," });
+    expect(loansComma.success && loansComma.data.delimiter).toBe(",");
+
+    const finesSemi = exportFinesQuerySchema.safeParse({ format: "csv", delimiter: ";" });
+    expect(finesSemi.success && finesSemi.data.delimiter).toBe(";");
+
+    const invalid = exportLoansQuerySchema.safeParse({ format: "csv", delimiter: "|" });
+    expect(invalid.success).toBe(false);
+  });
+
   it("menolak month di luar range 1-12 untuk export fines", () => {
     const result = exportFinesQuerySchema.safeParse({ month: "13" });
     expect(result.success).toBe(false);
