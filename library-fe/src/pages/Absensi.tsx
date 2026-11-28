@@ -135,9 +135,11 @@ export default function Absensi() {
 
   // Fetch Study Programs from API with fallback
   useEffect(() => {
+    let active = true;
     studyProgramApi
       .list()
       .then((res) => {
+        if (!active) return;
         const raw = res.data || [];
         if (raw.length > 0) {
           setStudyProgramsList(
@@ -150,11 +152,15 @@ export default function Absensi() {
         }
       })
       .catch((err) => {
+        if (!active) return;
         console.error("Gagal memuat prodi:", err);
         setStudyProgramsList(
           FALLBACK_STUDY_PROGRAMS.map((name, idx) => ({ id: idx + 1, name }))
         );
       });
+    return () => {
+      active = false;
+    };
   }, []);
 
   // Direct Card / NIM Scan Attendance (without needing Nama & Prodi)
@@ -342,10 +348,18 @@ export default function Absensi() {
     }
   };
 
-  // Auto-dismiss success modal countdown
+  // Auto-dismiss success modal countdown & Escape shortcut
   useEffect(() => {
     if (!successData) return;
     setCountdown(4);
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setSuccessData(null);
+        focusNimInput();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
 
     const interval = setInterval(() => {
       setCountdown((prev) => {
@@ -359,7 +373,10 @@ export default function Absensi() {
       });
     }, 1000);
 
-    return () => clearInterval(interval);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      clearInterval(interval);
+    };
   }, [successData, focusNimInput]);
 
   const closeSuccessModal = () => {
